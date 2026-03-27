@@ -1,0 +1,2122 @@
+<html layout:decorate="~{layout_page}">
+<head>
+  <style>
+      .wj-flexgrid .wj-cell input.wj-column-selector {
+          margin-top: auto;
+      }
+  </style>
+</head>
+<th:block layout:fragment="content">
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>더존 API 연동서비스</h2>
+        <a class="bookmark toggle" title="북마크">
+          내 메뉴
+        </a>
+      </div>
+      <ul class="page-navi">
+        <li><img th:src="@{/images/icon/ico-nav-home.svg}" alt="홈아이콘"></li>
+        <li>서비스</li>
+        <li>더존 API 연동서비스</li>
+      </ul>
+    </div>
+    <div class="tab-wrap">
+      <ul class="tab-links">
+        <li>
+          <a href="#tab1" id="Sales" title="매출">매출</a>
+        </li>
+        <li>
+          <a href="#tab2" id="price" title="비용">비용</a>
+        </li>
+        <li>
+          <a href="#tab3" id="receipt" title="수금">수금</a>
+        </li>
+        <li>
+          <a href="#tab4" id="payment" title="지급">지급</a>
+        </li>
+      </ul>
+      <div class="tab-contents">
+        <section class="tab-item" id="tab1">
+          <section class="section">
+            <div class="section-top">
+              <div class="search-wrap">
+                <dl>
+                  <dt>
+                    <label>
+                      일자<span class="eq"></span>
+                    </label>
+                  </dt>
+                  <dd>
+                    <div class="srch-box">
+                      <input id="srchStartDt" name="srchStartDt" type="date"/>
+                      <span class="slow_sign">~</span>
+                      <input id="srchEndDt" name="srchEndDt" type="date"/>
+                    </div>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt>
+                    <label>
+                      거래처<span class="eq"></span>
+                    </label>
+                  </dt>
+                  <dd>
+                    <div class="srch-box">
+                      <input id="cboCompany" name="cboCompany" placeholder="거래처" type="text"/>
+                    </div>
+                  </dd>
+                </dl>
+
+                <dl>
+                  <dt>
+                    <label>
+                      발송구분
+                    </label>
+                  </dt>
+                  <dd>
+                    <select class="form-control2" id="sale_type" name="sale_type">
+                      <option value="all">전체</option>
+                      <option value="Y">발송</option>
+                      <option value="N" selected>미발송</option>
+                    </select>
+                  </dd>
+                </dl>
+
+                <dl>
+                  <dt>&nbsp;</dt>
+                  <dd>
+                    <li>
+                      <a class="btn btn-delete" id="btnSearch" title="검색">
+                        <!--                                        class 쓰이는 곳 찾고 없으면 클래스명 수정하기-->
+                        <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘">
+                        검색
+                      </a>
+                    </li>
+                  </dd>
+                </dl>
+              </div>
+              <div class="button-wrap">
+              <ul>
+                <li>
+                  <a class="btn btn-excell" id="btnSyncClient" title="거래처 동기화">
+                    거래처 동기화
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-excell" id="btnSend" title="더존 전송">
+                    더존 전송
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-excell" id="btnCancelSend" title="전송취소">
+                    전송취소
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-excell" id="btnDouZoneList" title="더존목록">
+                    더존목록
+                  </a>
+                </li>
+              </ul>
+            </div>
+            </div>
+            <div class="grid_box">
+
+              <div id="theGrid_saleList" style="height: 600px;"></div>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-item" id="tab2">
+          <section class="section">
+            <div class="section-top">
+              <div class="search-wrap">
+                <dl>
+                  <dt>
+                    <label>
+                      일자<span class="eq"></span>
+                    </label>
+                  </dt>
+                  <dd>
+                    <div class="srch-box">
+                      <input id="srchStartDt2" name="srchStartDt2" type="date"/>
+                      <span class="slow_sign">~</span>
+                      <input id="srchEndDt2" name="srchEndDt2" type="date"/>
+                    </div>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt>
+                    <label>
+                      거래처<span class="eq"></span>
+                    </label>
+                  </dt>
+                  <dd>
+                    <div class="srch-box">
+                      <input id="cboCompany2" name="cboCompany2" placeholder="거래처" type="text"/>
+                    </div>
+                  </dd>
+                </dl>
+
+                <dl>
+                  <dt>
+                    <label>
+                      발송구분
+                    </label>
+                  </dt>
+                  <dd>
+                    <select class="form-control2" id="price_type" name="price_type">
+                      <option value="all">전체</option>
+                      <option value="Y">발송</option>
+                      <option value="N" selected>미발송</option>
+                    </select>
+                  </dd>
+                </dl>
+
+                <dl>
+                  <dt>&nbsp;</dt>
+                  <dd>
+                    <li>
+                      <a class="btn btn-delete" id="btnSearch2" title="검색">
+                        <!--                                        class 쓰이는 곳 찾고 없으면 클래스명 수정하기-->
+                        <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘">
+                        검색
+                      </a>
+                    </li>
+                  </dd>
+                </dl>
+              </div>
+              <div class="button-wrap">
+                <ul>
+                  <li>
+                    <a class="btn btn-excell" id="btnSend2" title="더존 전송">
+                      더존 전송
+                    </a>
+                  </li>
+                  <li>
+                    <a class="btn btn-excell" id="btnCancelSend2" title="전송취소">
+                      전송취소
+                    </a>
+                  </li>
+                  <li>
+                    <a class="btn btn-excell" id="btnDouZoneList2" title="더존목록">
+                      더존목록
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="grid_box" id="priceList">
+
+              <div id="theGrid_priceList" style="height: 600px;"></div>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-item" id="tab3">
+          <section class="section">
+            <div class="section-top">
+              <div class="search-wrap">
+                <dl>
+                  <dt>
+                    <label>
+                      일자<span class="eq"></span>
+                    </label>
+                  </dt>
+                  <dd>
+                    <div class="srch-box">
+                      <input id="srchStartDt3" name="srchStartDt3" type="date"/>
+                      <span class="slow_sign">~</span>
+                      <input id="srchEndDt3" name="srchEndDt3" type="date"/>
+                    </div>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt>
+                    <label>
+                      거래처<span class="eq"></span>
+                    </label>
+                  </dt>
+                  <dd>
+                    <div class="srch-box">
+                      <input id="cboCompany3" name="cboCompany3" placeholder="거래처" type="text"/>
+                    </div>
+                  </dd>
+                </dl>
+
+                <dl>
+                  <dt>
+                    <label>
+                      발송구분
+                    </label>
+                  </dt>
+                  <dd>
+                    <select class="form-control2" id="receipt_type" name="receipt_type">
+                      <option value="all">전체</option>
+                      <option value="Y">발송</option>
+                      <option value="N" selected>미발송</option>
+                    </select>
+                  </dd>
+                </dl>
+
+                <dl>
+                  <dt>&nbsp;</dt>
+                  <dd>
+                    <li>
+                      <a class="btn btn-delete" id="btnSearch3" title="검색">
+                        <!--                                        class 쓰이는 곳 찾고 없으면 클래스명 수정하기-->
+                        <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘">
+                        검색
+                      </a>
+                    </li>
+                  </dd>
+                </dl>
+              </div>
+              <div class="button-wrap">
+                <ul>
+                  <li>
+                    <a class="btn btn-excell" id="btnSend3" title="더존 전송">
+                      더존 전송
+                    </a>
+                  </li>
+                  <li>
+                    <a class="btn btn-excell" id="btnCancelSend3" title="전송취소">
+                      전송취소
+                    </a>
+                  </li>
+                  <li>
+                    <a class="btn btn-excell" id="btnDouZoneList3" title="더존목록">
+                      더존목록
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="grid_box" id="receiptList">
+
+              <div id="theGrid_receiptList" style="height: 600px;"></div>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-item" id="tab4">
+          <section class="section">
+            <div class="section-top">
+              <div class="search-wrap">
+                <dl>
+                  <dt>
+                    <label>
+                      일자<span class="eq"></span>
+                    </label>
+                  </dt>
+                  <dd>
+                    <div class="srch-box">
+                      <input id="srchStartDt4" name="srchStartDt4" type="date"/>
+                      <span class="slow_sign">~</span>
+                      <input id="srchEndDt4" name="srchEndDt4" type="date"/>
+                    </div>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt>
+                    <label>
+                      거래처<span class="eq"></span>
+                    </label>
+                  </dt>
+                  <dd>
+                    <div class="srch-box">
+                      <input id="textCompany4" name="textCompany4" placeholder="거래처" type="text"/>
+                      <input id="cboCompanyHidden4" name="cboCompanyHidden4" type="hidden"/>
+                    </div>
+                  </dd>
+                </dl>
+
+                <dl>
+                  <dt>
+                    <label>
+                      발송구분
+                    </label>
+                  </dt>
+                  <dd>
+                    <select class="form-control2" id="payment_type" name="payment_type">
+                      <option value="all">전체</option>
+                      <option value="Y">발송</option>
+                      <option value="N" selected>미발송</option>
+                    </select>
+                  </dd>
+                </dl>
+
+                <dl>
+                  <dt>&nbsp;</dt>
+                  <dd>
+                    <li>
+                      <a class="btn btn-delete" id="btnSearch4" title="검색">
+                        <!--                                        class 쓰이는 곳 찾고 없으면 클래스명 수정하기-->
+                        <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘">
+                        검색
+                      </a>
+                    </li>
+                  </dd>
+                </dl>
+              </div>
+              <div class="button-wrap">
+                <ul>
+                  <li>
+                    <a class="btn btn-excell" id="btnSend4" title="더존 전송">
+                      더존 전송
+                    </a>
+                  </li>
+                  <li>
+                    <a class="btn btn-excell" id="btnCancelSend4" title="전송취소">
+                      전송취소
+                    </a>
+                  </li>
+                  <li>
+                    <a class="btn btn-excell" id="btnDouZoneList4" title="더존목록">
+                      더존목록
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="grid_box" id="paymentList">
+
+              <div id="theGrid_paymentList" style="height: 600px;"></div>
+            </div>
+          </section>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script id="SyncClientTemplate" type="text/x-tmpl">
+    <style>
+      #div_sync_client.content_wrap.popup{
+        display:flex; flex-direction:column; height:100%;
+      }
+      #div_sync_client .table-wrap{
+        flex:1; overflow-y:auto; padding-right:5px; min-height:0;
+      }
+      #div_sync_client .popup-button{
+        flex-shrink:0; padding:10px; background:#fff; border-top:1px solid #ddd;
+        display:flex; justify-content:center; gap:10px;
+      }
+      #div_sync_client .popup-button .btn-popup{
+        flex:0 0 auto; min-width:120px; padding:10px 24px;
+      }
+
+      #div_sync_client .sync-table-scroll{ overflow-y:auto; }
+      #div_sync_client .sync-table-scroll thead th{
+        position: sticky; top: 0; background:#EDEFF5; z-index:2;
+      }
+      #div_sync_client .sync-notice{
+      flex-shrink:0;
+      padding: 10px 12px;
+      background: #fff;
+      border-top: 1px solid #ddd;   /* 테이블과 구분 */
+      color: #333;
+      line-height: 0;
+
+      }
+
+    </style>
+
+    <div class="content_wrap popup" id="div_sync_client">
+      <div class="table-wrap">
+        <div class="sync-table-scroll">
+          <table class="item-table" id="syncClientTable">
+            <colgroup>
+              <col style="width: 6%">
+              <col style="width: 15%">
+              <col style="width: 15%">
+              <col style="width: 15%">
+              <col style="width: 35%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>선택</th>
+                <th>ACTS 코드</th>
+                <th>더존매칭 코드</th>
+                <th>아마란스 코드</th>
+                <th>거래처명</th>
+              </tr>
+            </thead>
+            <tbody id="syncClientTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="sync-notice">
+        ⚠ 아마란스 코드가 없는 거래처는 아마란스 미등록 또는 자동매칭 실패(사업자번호/거래처명 불일치) 건일 수 있습니다.
+      </div>
+
+      <div class="popup-button">
+        <button type="button" class="btn-popup" id="btnSyncClientSave">동기화</button>
+        <button type="button" class="btn-popup" id="modal-close-button">닫기</button>
+      </div>
+    </div>
+  </script>
+
+
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   class APIDouZoneServicePage {
+    constructor() {
+     this.url = '/api/api_DouZoneService';
+     this.grid = null;
+     this.grid2 = null;
+     this.grid3 = null;
+     this.grid4 = null;
+     this.viewData = new wijmo.collections.CollectionView();
+     this.viewData2 = new wijmo.collections.CollectionView();
+     this.viewData3 = new wijmo.collections.CollectionView();
+     this.viewData4 = new wijmo.collections.CollectionView();
+     this.init();
+
+    }
+
+    init() {
+     let _this = this;
+     _this.grid = new wijmo.grid.FlexGrid('#theGrid_saleList', {
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.All,
+      autoGenerateColumns: false,
+      showMarquee: true,
+      isReadOnly: true,
+      formatItem: (sender, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+        e.cell.style.textAlign = 'center';
+       }
+      },
+      columns: [
+       {binding: 'menuDt', header: '더존작성일자', visible: false},
+       {binding: 'menuSq', header: '더존작성번호', visible: false},
+       {binding: 'DATASEND_DIVISION', header: '더존 발핼여부', align: 'center', width: 80, visible: false},
+       {binding: 'misdate', header: '발행일자',visible: false},
+       {binding: 'saleDate', header: '일자-순번', align: 'center', width: 140},
+       {binding: 'saleType', header: '매출구분', align: 'center', width: 100},
+       {binding: 'custCode', header: '거래처코드', align: 'center', width: 100},
+       {binding: 'actcd', header: 'ACTS 코드', align: 'center', width: 100},
+       {binding: 'custName', header: '거래처명', align: 'left', width: '*'},
+       {binding: 'issueDate', header: '발행일자', align: 'center', width: 110},
+       {binding: 'acccd', header: '계정과목', align: 'center', width: 110},
+       {binding: 'supplyAmt', header: '공급가', align: 'right', width: 150},
+       {binding: 'vatAmt', header: '부가세', align: 'right', width: 150},
+       {binding: 'totalAmt', header: '합계', align: 'right', width: 150},
+       {binding: 'doozenNo', header: '더존발행번호', align: 'center', width: 150},
+       { binding: 'SUBJECT', header: '적요', align: 'left',width: 150, visible: false},
+      ],
+      itemsSource: _this.viewData,
+     });
+
+     new FlexGridContextMenu(_this.grid);
+     _this.grid.downloadFileName = '매출 목록';
+
+     let saleSelector = new wijmo.grid.selector.Selector(_this.grid, {
+      itemChecked: (s, e) => {
+      }
+     });
+     saleSelector.column = _this.grid.rowHeaders.columns[0];
+
+     _this.grid2 = new wijmo.grid.FlexGrid('#theGrid_priceList', {
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.All,
+      autoGenerateColumns: false,
+      showMarquee: true,
+      isReadOnly: true,
+      formatItem: (sender, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+        e.cell.style.textAlign = 'center';
+       }
+      },
+      columns: [
+       {binding: 'menuDt', header: '더존작성일자', visible: false},
+       {binding: 'menuSq', header: '더존작성번호', visible: false},
+       {binding: 'DATASEND_DIVISION', header: '더존 발핼여부', align: 'center', width: 80, visible: false},
+       {binding: 'PriceDate', header: '발행일자',visible: false},
+       { binding: 'mijDate',   header: '일자-순번',  align: 'center', width: 140 },
+       { binding: 'cltcd',     header: '거래처코드', align: 'center', width: 110 },
+       { binding: 'actcd',     header: 'ACTS 코드',  align: 'center', width: 110 },
+       { binding: 'cltnm',     header: '거래처명',   align: 'left',   width: '*'},
+       { binding: 'PriceDate',   header: '비용일자',   align: 'center', width: 110 },
+       { binding: 'djacccd',   header: '계정과목코드', align: 'center', width: 130 , visible: false},
+       { binding: 'accnm',     header: '계정과목',   align: 'center',   width: 110 },
+       { binding: 'amt',       header: '공급가',     align: 'right',  width: 120, format: 'n0' },
+       { binding: 'addamt',    header: '부가세',     align: 'right',  width: 120, format: 'n0' },
+       { binding: 'totalAmt',  header: '합계',       align: 'right',  width: 120, format: 'n0' },
+       { binding: 'dzIssueNo', header: '더존발행번호', align: 'center', width: 150 },
+       { binding: 'MISDATE',  header: 'mijdate',  visible: false },
+       { binding: 'MISNUM',   header: 'mijnum',   visible: false },
+       { binding: 'spjangcd', header: 'SPJANGCD',visible: false },
+       { binding: 'divicd', header: 'divicd', visible: false },
+       { binding: 'dzdivicd', header: 'dzdivicd', visible: false },
+       { binding: 'divinm', header: 'divinm', visible: false },
+       { binding: 'pjcd', header: '현장코드', visible: false},
+      ],
+      itemsSource: _this.viewData2,
+     });
+     _this.grid2.groupHeaderFormat = '일자-순번: {value} (건수: {count:n0})';
+
+     new FlexGridContextMenu(_this.grid2);
+     _this.grid2.downloadFileName = '비용 목록';
+
+     let saleSelector2 = new wijmo.grid.selector.Selector(_this.grid2, {
+      itemChecked: (s, e) => {
+
+      }
+     });
+     saleSelector2.column = _this.grid2.rowHeaders.columns[0];
+
+     _this.grid3 = new wijmo.grid.FlexGrid('#theGrid_receiptList', {
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.All,
+      autoGenerateColumns: false,
+      showMarquee: true,
+      isReadOnly: true,
+      formatItem: (sender, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+        e.cell.style.textAlign = 'center';
+       }
+      },
+      columns: [
+       {binding: 'menuDt', header: '더존작성일자', visible: false},
+       {binding: 'menuSq', header: '더존작성번호', visible: false},
+       {binding: 'rcvdate', header: '발행일자',visible: false},
+       {binding: 'relation_no', header: '일자 - 순번', align: 'center', width: 140},
+       {binding: 'DATASEND_DIVISION', header: '더존 발핼여부', align: 'center', width: 80, visible: false},
+       {binding: 'CUSTOMER_CD', header: '거래처코드', align: 'center', width: 110},
+       {binding: 'cltcd', header: 'ACTS 코드', align: 'center', width: 110},
+       {binding: 'CUSTOMER_NAME', header: '거래처명', align: 'left', width:'*'},
+       {binding: 'RELATION_DATE', header: '수금일자', align: 'center', width: 150},
+       {binding: 'djacccd', header: '계정과목', visible: false},
+       {binding: 'accnm', header: '계정과목', align: 'center', width: 150},
+       {binding: 'SUPPLY_PRICE', header: '수금액', align: 'right', width: 150},
+       {binding: 'SURTAX', header: '수수료', align: 'right', width: 150},
+       {binding: 'TOTAL_AMOUNT', header: '합계', align: 'right', width: 150},
+       {binding: 'IN_DT_SEQ', header: '더존발행번호', align: 'center', width: 150},
+       { binding: 'BANK_ACCT_CD', header: '계좌코드', visible: false },
+       { binding: 'SUBJECT', header: '적요', align: 'left',width: 150, visible: false },
+       { binding: 'MISDATE',  header: 'MISDATE', align: 'center', width: 130 , visible: false},
+       { binding: 'MISNUM',   header: 'MISNUM',  align: 'center', width: 130 , visible: false},
+       { binding: 'spjangcd', header: 'SPJANGCD',align: 'center', width: 130 , visible: false},
+      ],
+      itemsSource: _this.viewData3,
+     });
+
+     new FlexGridContextMenu(_this.grid3);
+     _this.grid3.downloadFileName = '수금 목록';
+
+     let saleSelector3 = new wijmo.grid.selector.Selector(_this.grid3, {
+      itemChecked: (s, e) => {
+
+      }
+     });
+     saleSelector3.column = _this.grid3.rowHeaders.columns[0];
+
+     _this.grid4 = new wijmo.grid.FlexGrid('#theGrid_paymentList', {
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.All,
+      autoGenerateColumns: false,
+      showMarquee: true,
+      isReadOnly: true,
+      formatItem: (sender, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+        e.cell.style.textAlign = 'center';
+       }
+      },
+      columns: [
+       {binding: 'menuDt', header: '더존작성일자', visible: false},
+       {binding: 'menuSq', header: '더존작성번호', visible: false},
+       {binding: 'mijdate', header: '발행일자',visible: false},
+       {binding: 'relation_no', header: '일자-순번', align: 'center', width: 140},
+       {binding: 'DATASEND_DIVISION', header: '더존 발핼여부', align: 'center', width: 80, visible: false},
+       {binding: 'CUSTOMER_CD', header: '거래처코드', align: 'center', width: 110},
+       {binding: 'cltcd', header: 'ACTS 코드', align: 'center', width: 110},
+       {binding: 'CUSTOMER_NAME', header: '거래처명', align: 'left', width: '*'},
+       {binding: 'RELATION_DATE', header: '지급일자', align: 'center', width: 150},
+       {binding: '', header: '계정과목코드', visible: false},
+       {binding: '', header: '계정과목', align: 'center', width: 150},
+       {binding: 'SUPPLY_PRICE', header: '공급가', align: 'right', width: 150},
+       {binding: 'SURTAX', header: '부가세', align: 'right', width: 150},
+       {binding: 'TOTAL_AMOUNT', header: '합계', align: 'right', width: 150},
+       {binding: 'IN_DT_SEQ', header: '더존발행번호', align: 'center', width: 150},
+       { binding: 'MISDATE',  header: 'MISDATE',  visible: false },
+       { binding: 'MISNUM',   header: 'MISNUM',   visible: false },
+       { binding: 'SPJANGCD', header: 'SPJANGCD', visible: false },
+      ],
+      itemsSource: _this.viewData4,
+     });
+
+     new FlexGridContextMenu(_this.grid4);
+     _this.grid4.downloadFileName = '지급 목록';
+
+     let saleSelector4 = new wijmo.grid.selector.Selector(_this.grid4, {
+      itemChecked: (s, e) => {
+
+      }
+     });
+     saleSelector4.column = _this.grid4.rowHeaders.columns[0];
+
+    }//init
+
+    btnDouZoneList(docuTy){
+     let _this = this;
+
+     let start, end, company;
+
+     // 🔹 docuTy 별로 사용하는 검색조건(날짜/거래처) 다르니까 여기서 분기
+     switch (docuTy) {
+      case '3': // 매출
+       start   = $('#srchStartDt').val();
+       end     = $('#srchEndDt').val();
+       company = $('#cboCompany').val();
+       break;
+      case '2': // 비용(매입)
+       start   = $('#srchStartDt2').val();
+       end     = $('#srchEndDt2').val();
+       company = $('#cboCompany2').val();
+       break;
+      case '4': // 수금
+       start   = $('#srchStartDt3').val();
+       end     = $('#srchEndDt3').val();
+       company = $('#cboCompany3').val();
+       break;
+      case '5': // 지급
+       start   = $('#srchStartDt4').val();
+       end     = $('#srchEndDt4').val();
+       company = $('#cboCompany4').val();
+       break;
+      default:
+       Alert.alert('', '전표유형(docuTy)이 설정되지 않았습니다.');
+       return;
+     }
+
+     let data = {
+      company: company,
+      start:   start,
+      end:     end,
+      docuTy:  docuTy,
+      action: 'read',
+     };
+
+     let fnsuccess = function (result) {
+      if (!result) return;
+
+      // 🔹 탭별로 다른 그리드(viewData)에 바인딩
+      switch (docuTy) {
+       case '3':   // 매출
+
+        // 🔸 doozenNo 기준 정렬 + 그룹핑
+        _this.viewData = new wijmo.collections.CollectionView(result.data, {
+         sortDescriptions: [
+          // 전표번호(doozenNo) 오름차순 정렬
+          { property: 'doozenNo', ascending: true },
+          // (필요하면 날짜 등 추가)
+          { property: 'menuDt', ascending: true },
+         ],
+         groupDescriptions: [
+          new wijmo.collections.PropertyGroupDescription('doozenNo', item => {
+           // 그룹 헤더에 보여줄 텍스트
+           const no   = item.doozenNo ?? '';
+           const cust = item.custName ?? '';   // 거래처명 등
+
+           return `더존번호: ${no} / 거래처: ${cust}`;
+          })
+         ]
+        });
+
+        _this.grid.itemsSource = _this.viewData;
+        break; // 매출
+       case '2':
+        // 🔸 doozenNo 기준 정렬 + 그룹핑
+        _this.viewData2 = new wijmo.collections.CollectionView(result.data, {
+         sortDescriptions: [
+          // 전표번호(doozenNo) 오름차순 정렬
+          { property: 'doozenNo', ascending: true },
+          // (필요하면 날짜 등 추가)
+          { property: 'menuDt', ascending: true },
+         ],
+         groupDescriptions: [
+          new wijmo.collections.PropertyGroupDescription('doozenNo', item => {
+           // 그룹 헤더에 보여줄 텍스트
+           const no   = item.dzIssueNo ?? '';
+           const cust = item.CUSTOMER_NAME ?? '';   // 거래처명 등
+
+           return `더존번호: ${no} / 거래처: ${cust}`;
+          })
+         ]
+        }); // 비용
+        _this.grid2.itemsSource = _this.viewData2;
+        break;
+
+       case '4':
+        _this.viewData3 = new wijmo.collections.CollectionView(result.data, {
+         sortDescriptions: [
+          // 전표번호(doozenNo) 오름차순 정렬
+          { property: 'IN_DT_SEQ', ascending: true },
+          // (필요하면 날짜 등 추가)
+          { property: 'menuDt', ascending: true },
+         ],
+         groupDescriptions: [
+          new wijmo.collections.PropertyGroupDescription('IN_DT_SEQ', item => {
+           // 그룹 헤더에 보여줄 텍스트
+           const no   = item.IN_DT_SEQ ?? '';
+           const cust = item.CUSTOMER_NAME ?? '';   // 거래처명 등
+
+           return `더존번호: ${no}`;
+          })
+         ]
+        }); // 비용
+        _this.grid3.itemsSource = _this.viewData3;
+        break; // 수금
+
+       case '5':
+        _this.viewData4 = new wijmo.collections.CollectionView(result.data, {
+         sortDescriptions: [
+          // 전표번호(doozenNo) 오름차순 정렬
+          { property: 'IN_DT_SEQ', ascending: true },
+          // (필요하면 날짜 등 추가)
+          { property: 'menuDt', ascending: true },
+         ],
+         groupDescriptions: [
+          new wijmo.collections.PropertyGroupDescription('IN_DT_SEQ', item => {
+           // 그룹 헤더에 보여줄 텍스트
+           const no   = item.IN_DT_SEQ ?? '';
+           const cust = item.CUSTOMER_NAME ?? '';   // 거래처명 등
+
+           return `더존번호: ${no} / 거래처: ${cust}`;
+          })
+         ]
+        });
+        _this.grid4.itemsSource = _this.viewData4;
+        break; // 지급
+      }
+     };
+
+     AjaxUtil.getAsyncData(_this.url + '/sales_DouZone_list', data, fnsuccess);
+    }
+
+    searchSalesDate() {
+     let _this = this;
+     let start = $('#srchStartDt').val();
+     let end = $('#srchEndDt').val();
+     let company = $('#cboCompany').val();
+     let sale_type = $('#sale_type').val();
+
+     let data = {
+      company: company,
+      start: start,
+      end: end,
+      sale_type: sale_type,
+      action: 'read',
+     };
+
+     let fnsuccess = function (result) {
+      if (!result) return;
+      // 🔹 일반 매출 조회는 그룹 없이 깔끔하게
+      _this.viewData = new wijmo.collections.CollectionView(result.data);
+      _this.grid.itemsSource = _this.viewData;
+     };
+
+     AjaxUtil.getAsyncData(_this.url + '/sales_read', data, fnsuccess);
+    }// 매출
+
+    // 숫자 변환 유틸 (콤마/문자 → 숫자)
+     toNumber(val, def = 0) {
+     if (val === null || val === undefined) return def;
+     const n = Number(String(val).replace(/,/g, ''));
+     return isNaN(n) ? def : n;
+    }
+
+    // 더존 계정코드 결정 유틸
+    // index: 1=매출, 2=부가세, 3=외상매출금 (추측입니다)
+    getDzAcctCd(row, defaultCd, index) {
+     // 필요에 따라 컬럼명 바꿔서 사용하세요 (djacccd1/2/3은 추측입니다)
+     const byIndex =
+      index === 1 ? (row.djacccd1 || row.djacccd_sales)
+       : index === 2 ? (row.djacccd2 || row.djacccd_vat)
+        : index === 3 ? (row.djacccd3 || row.djacccd_ar)
+         : null;
+
+     // 1순위: index별 코드
+     if (byIndex && String(byIndex).trim() !== '') {
+      return String(byIndex).trim();
+     }
+     // 2순위: 공통 djacccd 하나만 있는 경우 (세 줄 모두 같은 코드가 됨)
+     if (row.djacccd && String(row.djacccd).trim() !== '') {
+      return String(row.djacccd).trim();
+     }
+     // 3순위: 기존 getSalesAccountInfo 에서 내려온 기본 코드
+     if (defaultCd && String(defaultCd).trim() !== '') {
+      return String(defaultCd).trim();
+     }
+     return ''; // 최종적으로도 없으면 빈 값
+    }
+
+    // 🔹 공통 자동전표 전송 함수
+    DouZoneSend(docuTy) {
+     let _this = this;
+
+     // 1) docuTy별 grid 선택
+     let grid;
+     switch (docuTy) {
+      case '3': grid = _this.grid;  break; // 매출
+      case '2': grid = _this.grid2; break; // 비용(매입)
+      case '4': grid = _this.grid3; break; // 수금
+      case '5': grid = _this.grid4; break; // 지급
+      default:
+       Alert.alert('', '지원하지 않는 전표유형(docuTy)입니다.');
+       return;
+     }
+
+     // 2) 선택된 항목
+     let rawSelected = grid.selectedItems || [];
+     if (!rawSelected || rawSelected.length === 0) {
+      Alert.alert('', '전송할 데이터를 선택하세요.');
+      return;
+     }
+
+     let selectedRows = [];
+
+     // 🔹 비용(docuTy = '2')일 때만 "그룹 단위" 규칙 적용
+     if (docuTy === '2') {
+      const cv = grid.collectionView;
+
+      if (cv && cv.groups && cv.groups.length > 0) {
+       const selectedSet = new Set(rawSelected);
+
+       cv.groups.forEach(group => {
+        const headerSelected = selectedSet.has(group);
+        const items = group.items || [];
+        const selectedItems = items.filter(it => selectedSet.has(it));
+        const selectedCount = selectedItems.length;
+        const totalCount = items.length;
+
+        const anyChildSelected = selectedCount > 0;
+
+        // 부분 선택 금지
+        if (!headerSelected && anyChildSelected && selectedCount < totalCount) {
+         Alert.alert('', '비용 전표는 그룹 단위로만 전송할 수 있습니다.\n(해당 일자-순번 그룹 전체를 선택해 주세요.)');
+         selectedRows = [];
+         return;
+        }
+        if (headerSelected && anyChildSelected && selectedCount < totalCount) {
+         Alert.alert('', '비용 전표는 그룹 단위로만 전송할 수 있습니다.\n(해당 일자-순번 그룹 전체를 선택해 주세요.)');
+         selectedRows = [];
+         return;
+        }
+
+        if (headerSelected || anyChildSelected) {
+         selectedRows.push(...items); // 그룹 전체 전송
+        }
+       });
+
+       if (selectedRows.length === 0) {
+        Alert.alert('', '전송할 유효한 비용 전표 데이터가 없습니다.');
+        return;
+       }
+      } else {
+       selectedRows = rawSelected.slice();
+      }
+     } else {
+      selectedRows = rawSelected;
+     }
+
+     if (!selectedRows || selectedRows.length === 0) {
+      Alert.alert('', '전송할 유효한 전표 데이터가 없습니다.');
+      return;
+     }
+
+     // 3) confirm
+     Alert.confirm('', '데이터를 전송하시겠습니까?', function () {
+      const dty = docuTy;
+
+      // ✅ 수금이면 디테일 먼저 조회하고 -> 성공 콜백에서 전송 진행
+      if (dty === '4') {
+       try {
+        const keys = selectedRows.map(r => ({
+         cltcd:   (r.cltcd   ?? '').toString().trim(),
+         misdate: (r.MISDATE ?? '').toString().replace(/[^0-9]/g,''),
+         misnum:  (r.MISNUM  ?? '').toString().trim(),
+         rcvdate: (r.rcvdate ?? '').toString().replace(/[^0-9]/g,''),
+         rcvnum:  (r.rcvnum  ?? '').toString().trim(),
+        })).filter(k => k.cltcd && k.misdate && k.misnum && k.rcvdate && k.rcvnum);
+
+
+        // 중복 제거
+        const uniq = new Map();
+        keys.forEach(k => {
+         const kk = `${k.cltcd}|${k.rcvdate}|${k.rcvnum}`;
+         if (k.rcvdate && k.rcvnum) uniq.set(kk, k);
+        });
+
+        const payload = {
+         custcd: 'samjung',
+         spjangcd: (selectedRows[0].SPJANGCD || selectedRows[0].spjangcd || 'ZZ'),
+         keys: Array.from(uniq.values())
+        };
+        // console.log('selectedRows.length=', selectedRows?.length, selectedRows);
+
+        AjaxUtil.postJsonAsyncData(_this.url + '/receipt/details', payload, function(detailRes) {
+
+         // 원본 응답 전체
+         // console.log('[receipt/details] detailRes =', detailRes);
+         // console.dir(detailRes); // 펼쳐보기 좋음
+
+         if (!detailRes || detailRes.success === false) {
+          Alert.alert('', detailRes?.message || '수금 디테일 조회에 실패했습니다.');
+          return;
+         }
+
+         // ✅ 2) data만
+         const detailRows = detailRes.data || [];
+
+         // ✅ 3) map 구성 확인
+         const receiptDetailMap = buildReceiptDetailMap(detailRows);
+         // console.log('[receipt/details] map.size =', receiptDetailMap.size);
+
+         // ✅ 디테일 받은 다음에 전송 진행
+         _this._buildLinesAndSend(dty, selectedRows, receiptDetailMap);
+        });
+
+
+       } catch (e) {
+        console.error(e);
+        Alert.alert('', '수금 디테일 조회 준비 중 오류: ' + (e.message || e));
+       }
+       return;
+      }
+
+      // ✅ 수금이 아니면 바로 전송 진행
+      _this._buildLinesAndSend(dty, selectedRows, null);
+     });
+    }
+
+    // ✅ lines 만들고 /DouZoneSave 보내는 공통 함수
+    _buildLinesAndSend(dty, selectedRows, receiptDetailMap) {
+     let _this = this;
+
+     const coCd    = '1000';
+     const inDivCd = '1000';
+     const menuCd  = '11A10';
+
+     const lines = [];
+     let lineNo = 1;
+
+     const expenseGroupMap   = {};
+     const receiptDepositMap = {};
+     const receiptFeeMap     = {}; // 지급수수료 합산
+
+     const getDetailTotalAmt = (d) => {
+      // ✅ 수금액(=공급가 성격)
+      const net =
+       _this.toNumber(d.hamt ?? 0, 0) +
+       _this.toNumber(d.bamt ?? 0, 0) +
+       _this.toNumber(d.jamt ?? 0, 0) +
+       _this.toNumber(d.eamt ?? 0, 0) +
+       _this.toNumber(d.samt ?? 0, 0) +
+       _this.toNumber(d.damt ?? 0, 0) +
+       _this.toNumber(d.csamt ?? 0, 0) +
+       _this.toNumber(d.dcamt ?? 0, 0);
+
+      // ✅ 수수료(=mar 계열로 내려오는 케이스)
+      const fee =
+       _this.toNumber(d.jmar ?? 0, 0) +
+       _this.toNumber(d.bmar ?? 0, 0) +
+       _this.toNumber(d.gamt ?? 0, 0) +   // (이 컬럼이 수수료 성격이면 포함)
+       _this.toNumber(d.cmar ?? 0, 0) +
+       _this.toNumber(d.cdmar ?? 0, 0);
+
+      return net + fee; // ✅ 합계(99,000)로 외상매출금 생성
+     };
+
+     // ===============================
+     // ✅ 여기부터는 기존 forEach 로직을 그대로 옮김
+     // ===============================
+     selectedRows.forEach(row => {
+
+      // ✅ docuTy별 발행일자 컬럼 → menuDt
+      let rawDate = null;
+      switch (dty) {
+       case '3': rawDate = row.misdate;    break;
+       case '2': rawDate = row.PriceDate;  break;
+       case '4': rawDate = row.rcvdate;    break;
+       case '5': rawDate = row.mijdate;    break;
+      }
+
+      const menuDt = (rawDate || '').toString().replace(/[^0-9]/g, '');
+      if (!menuDt) {
+       console.warn('menuDt 없음으로 제외:', row);
+       return;
+      }
+
+      // 🔹 더존 원본 전표키
+      const misdate  = (row.MISDATE || row.RELATION_DATE || '').toString().replace(/[^0-9]/g, '');
+      const misnum   = (row.MISNUM  || row.RELATION_SEQ  || '').toString();
+      const spjangcd =  row.SPJANGCD || row.spjangcd || '';
+
+      // 계정/차대/계정명
+      let acctInfo;
+      switch (dty) {
+       case '3': acctInfo = getSalesAccountInfo(row);   break;
+       case '2': acctInfo = getPriceAccountInfo(row);   break;
+       case '4': acctInfo = getReceiptAccountInfo(row); break;
+       case '5': acctInfo = getPaymentAccountInfo(row); break;
+       default:  acctInfo = getSalesAccountInfo(row);
+      }
+      const { acctCd, drcrFg, acctNm } = acctInfo;
+
+      // 품의내역/적요
+      const rowSubject = row.SUBJECT || row.subject || '';
+      const defaultRmk = (function () {
+       switch (dty) {
+        case '3': return '매출';
+        case '2': return '비용';
+        case '4': return '수금';
+        case '5': return '지급';
+        default:  return '전표';
+       }
+      })();
+
+      let isuDoc, rmkDc;
+
+      if (dty === '2') {
+       // 비용 규칙
+       const companyName   = row.cltnm;
+       const matNameRaw    = row.pname || '';
+       const qtyRaw        = row.pqty  || row.PQTY  || '';
+       const unitRaw       = row.punit || row.PUNIT || '';
+       const unitPriceRaw  = row.puamt || row.PUAMT || '';
+
+       const qtyStr = qtyRaw ? (unitRaw ? `${qtyRaw}${unitRaw}` : `${qtyRaw}`) : '';
+       const unitPriceNum = _this.toNumber(unitPriceRaw, 0);
+       const unitPriceStr = unitPriceNum ? unitPriceNum.toLocaleString('ko-KR') : '';
+
+       const parts = [];
+       if (qtyStr)       parts.push(qtyStr);
+       if (unitPriceStr) parts.push(unitPriceStr);
+
+       const detailStr = parts.length ? ` (${parts.join(' * ')})` : '';
+       const matName = (matNameRaw || rowSubject || defaultRmk).trim();
+
+       rmkDc = `${matName}${detailStr}`.trim() || defaultRmk;
+       isuDoc = `${companyName} ${(rowSubject || '').trim()}`.trim() || defaultRmk;
+      } else {
+       const fieldName = row.ACTNM || row.actnm || '';
+       const subject   = row.SUBJECT || '';
+       isuDoc = (fieldName + ' ' + subject).trim() || defaultRmk;
+       rmkDc  = subject || defaultRmk;
+      }
+
+      // 공통
+      const common = {
+       inDivCd,
+       menuDt,
+       menuSq: null,
+       isuDoc,
+       docuTy: dty,
+       trCd: row.CUSTOMER_CD || row.custCode || row.cltcd || '',
+       trNm: row.custName || row.CUSTOMER_NAME || '',
+       attrCd: '1',
+       rmkDc,
+       regNb: row.saupnum || row.REGISTRATION_NO || '',
+       vatDivCd: '',
+       issDt: '',
+       jeonjaYn: '',
+       supAm: null,
+       misdate,
+       misnum,
+       spjangcd
+      };
+
+      // ───────── 매출(3) ─────────
+      if (dty === '3') {
+       const supplyAmt = _this.toNumber(row.supplyAmt ?? row.SUPPLY_PRICE, 0);
+       const vatAmt    = _this.toNumber(row.vatAmt    ?? row.SURTAX,       0);
+       const totalAmt  = _this.toNumber(row.totalAmt  ?? row.TOTAL_AMOUNT, 0);
+       const pjtCd     = row.pjcd_PR || row.pjcd_OR || '';
+
+       if (supplyAmt !== 0) {
+        lines.push({
+         ...common,
+         menuLnSq: lineNo++,
+         drcrFg:   drcrFg[1],
+         acctCd:   _this.getDzAcctCd(row, acctCd[1], 1),
+         acctNm:   acctNm[1],
+         acctAm:   supplyAmt,
+         ctDept:   row.dzdivicd,
+         pjtCd
+        });
+       }
+
+       if (vatAmt !== 0) {
+        lines.push({
+         ...common,
+         menuLnSq: lineNo++,
+         drcrFg:   drcrFg[2],
+         acctCd:   _this.getDzAcctCd(row, acctCd[2], 2),
+         acctNm:   acctNm[2],
+         acctAm:   vatAmt,
+         issDt:    common.menuDt,
+         jeonjaYn: '1',
+         supAm:    supplyAmt,
+         taxFg:    '11'
+        });
+       }
+
+       if (totalAmt !== 0) {
+        lines.push({
+         ...common,
+         menuLnSq: lineNo++,
+         drcrFg:   drcrFg[3],
+         acctCd:   _this.getDzAcctCd(row, acctCd[3], 3),
+         acctNm:   acctNm[3],
+         acctAm:   totalAmt,
+         ctDept:   row.dzdivicd,
+         pjtCd
+        });
+       }
+       return;
+      }
+
+      // ───────── 비용(2) ─────────
+      if (dty === '2') {
+       const supplyAmt = _this.toNumber(row.amt, 0);
+       const vatAmt    = _this.toNumber(row.addamt ?? row.SURTAX, 0);
+
+       const trCd = (row.CUSTOMER_CD || row.cltcd || row.trCd || '');
+       const trNm = (row.cltnm || row.trNm || row.CUSTOMER_NAME || '');
+       const ctDept   = row.dzdivicd || row.divicd || '';
+       const ctDeptNm = row.divinm   || '';
+       const pjtCd    = row.pjcd || row.pjcd_OR || '';
+
+       const groupKey = [common.menuDt, misdate, misnum, spjangcd].join('|');
+
+       if (!expenseGroupMap[groupKey]) {
+        expenseGroupMap[groupKey] = {
+         common: { ...common },
+         acctCd: { ...acctCd },
+         drcrFg: { ...drcrFg },
+         acctNm: { ...acctNm },
+         trCd, trNm, ctDept, ctDeptNm,
+         supplySum: 0,
+         vatSum: 0,
+         firstRow: row,
+        };
+       }
+
+       const grp = expenseGroupMap[groupKey];
+
+       if (supplyAmt !== 0) {
+        lines.push({
+         ...common,
+         menuLnSq: lineNo++,
+         drcrFg:   drcrFg[1],
+         acctCd:   _this.getDzAcctCd(row, acctCd[1], 1),
+         acctNm:   acctNm[1] || '원재료',
+         acctAm:   supplyAmt,
+         trCd, trNm, ctDept, ctDeptNm, pjtCd
+        });
+       }
+
+       grp.supplySum += supplyAmt;
+       grp.vatSum    += vatAmt;
+       return;
+      }
+
+      // ───────── 수금(4) ─────────
+      if (dty === '4') {
+       const totalAmt = _this.toNumber(row.totalAmt ?? row.TOTAL_AMOUNT ?? 0, 0);
+       const feeAmt   = _this.toNumber(row.SURTAX ?? row.feeAmt ?? row.FEE_AMOUNT ?? 0, 0);
+
+       let netAmt = _this.toNumber(row.SUPPLY_PRICE, 0);
+       if (netAmt === 0 && totalAmt !== 0) netAmt = totalAmt - feeAmt;
+
+       const receiptAmt = totalAmt;
+
+       const bankTrCd = (row.BANK_ACCT_CD || '').toString().trim();
+       const hasAccount = bankTrCd.length > 0;
+
+       const custTrCd = (row.CUSTOMER_CD || row.cltcd || '');
+       const custTrNm = (row.CUSTOMER_NAME || row.cltnm || '');
+       const pjtCd    = row.FIELD_CD || row.actcd || '';
+
+       const bankTrNm = row.BANK_NAME || '';
+
+       // 계좌 수금
+       if (hasAccount) {
+
+        // ① 보통예금 합산
+        if (netAmt !== 0) {
+         const dzAcctCd1 = _this.getDzAcctCd(row, acctCd[1], 1);
+         const key = `${bankTrCd}|${common.menuDt}`;
+
+         if (!receiptDepositMap[key]) {
+          receiptDepositMap[key] = {
+           common: {
+            ...common,
+            trCd: bankTrCd,
+            trNm: bankTrNm,
+            rmkDc: '외상매출금 입금'
+           },
+           drcrFg: drcrFg[1],
+           acctCd: dzAcctCd1,
+           acctNm: acctNm[1] || '보통예금',
+           netAmt: 0
+          };
+         }
+         receiptDepositMap[key].netAmt += netAmt;
+        }
+
+        // ② 지급수수료 합산
+        if (feeAmt !== 0) {
+         const dzAcctCd2 = _this.getDzAcctCd(row, acctCd[2], 2);
+         const feeKey = `${bankTrCd}|${common.menuDt}`;
+
+         if (!receiptFeeMap[feeKey]) {
+          receiptFeeMap[feeKey] = {
+           common: {
+            ...common,
+            trCd: bankTrCd,
+            trNm: bankTrNm,
+            ctDept: row.dzdivicd
+           },
+           drcrFg: drcrFg[2],
+           acctCd: dzAcctCd2,
+           acctNm: acctNm[2] || '지급수수료',
+           feeAmt: 0
+          };
+         }
+         receiptFeeMap[feeKey].feeAmt += feeAmt;
+        }
+
+        // ③ 외상매출금(디테일 기준으로 분리)
+        {
+         const rcvdate = (row.rcvdate ?? '').toString().replace(/[^0-9]/g, '');
+         const rcvnum  = (row.rcvnum  ?? '').toString().trim();
+         const dKey = `${rcvdate}|${rcvnum}`;
+
+         const details = receiptDetailMap?.get?.(dKey) || receiptDetailMap?.[dKey] || [];
+
+         // ✅ 디테일 있으면: misdate/misnum별로 외상매출금 라인 생성
+         if (Array.isArray(details) && details.length > 0) {
+
+          // 디테일 금액 합(검증용)
+          let sumDetail = 0;
+
+          details.forEach(d => {
+           const amt = getDetailTotalAmt(d);   // ✅ bamt만 보지 말고 합산 함수 사용
+           if (!amt) return;
+
+           sumDetail += amt;
+
+           // 적요(remark) 우선
+           const rmk = (d.remark ?? '').toString().trim() || common.rmkDc;
+
+           lines.push({
+            ...common,
+            menuLnSq: lineNo++,
+            drcrFg:   drcrFg[3],
+            acctCd:   _this.getDzAcctCd(row, acctCd[3], 3),
+            acctNm:   acctNm[3] || '외상매출금',
+            acctAm:   amt,                     // ✅ 8,459,000 / 88,000 처럼 디테일 금액
+            pjtCd,
+            ctDept:   row.dzdivicd,
+            trCd:     custTrCd,
+            trNm:     custTrNm,
+            rmkDc:    rmk,
+
+            // ✅ 핵심: 더존 원본키도 디테일 기준으로
+            misdate:  (d.misdate ?? common.misdate),
+            misnum:   (d.misnum  ?? common.misnum),
+           });
+          });
+
+          // ✅ 총액이랑 안 맞으면 로그로 확인 (데이터 이상/수수료 포함여부 등 체크용)
+          if (receiptAmt !== 0 && sumDetail !== receiptAmt) {
+           console.warn('[수금] 디테일합 != receiptAmt',
+            { dKey, receiptAmt, sumDetail, feeAmt, row });
+          }
+
+         } else {
+          // ✅ 디테일 없으면: 기존처럼 1줄
+          if (receiptAmt !== 0) {
+           lines.push({
+            ...common,
+            menuLnSq: lineNo++,
+            drcrFg:   drcrFg[3],
+            acctCd:   _this.getDzAcctCd(row, acctCd[3], 3),
+            acctNm:   acctNm[3] || '외상매출금',
+            acctAm:   receiptAmt,
+            pjtCd,
+            ctDept:   row.dzdivicd,
+            trCd:     custTrCd,
+            trNm:     custTrNm,
+            rmkDc:    common.rmkDc
+           });
+          }
+         }
+        }
+        return;
+
+      }
+
+       // 무계좌 수금
+       if (receiptAmt !== 0) {
+        lines.push({
+         ...common,
+         menuLnSq: lineNo++,
+         drcrFg:   drcrFg[1],
+         acctCd:   _this.getDzAcctCd(row, acctCd[1], 1),
+         acctNm:   acctNm[1] || '외상매출금',
+         acctAm:   receiptAmt,
+         trCd: custTrCd,
+         trNm: custTrNm,
+         pjtCd,
+         ctDept: row.dzdivicd
+        });
+       }
+       return;
+      }
+
+      // ⚠️ 지급(5) 로직은 추후 추가
+     });
+
+     // ✅ 수금(4) : 보통예금/지급수수료 합산 라인 생성
+     if (dty === '4') {
+      Object.keys(receiptDepositMap).forEach(key => {
+       const info = receiptDepositMap[key];
+       if (!info || info.netAmt === 0) return;
+       lines.push({
+        ...info.common,
+        menuLnSq: lineNo++,
+        drcrFg: info.drcrFg,
+        acctCd: info.acctCd,
+        acctNm: info.acctNm,
+        acctAm: info.netAmt
+       });
+      });
+
+      Object.keys(receiptFeeMap).forEach(key => {
+       const info = receiptFeeMap[key];
+       if (!info || info.feeAmt === 0) return;
+       lines.push({
+        ...info.common,
+        menuLnSq: lineNo++,
+        drcrFg: info.drcrFg,
+        acctCd: info.acctCd,
+        acctNm: info.acctNm,
+        acctAm: info.feeAmt
+       });
+      });
+     }
+
+     // ✅ 비용(2): 그룹별 부가세대급금 + 외상매입금 2줄 생성
+     if (dty === '2') {
+      Object.keys(expenseGroupMap).forEach(key => {
+       const grp = expenseGroupMap[key];
+       const repRow = grp.firstRow;
+       const pjtCd = repRow.pjcd ||repRow.pjcd_OR || '';
+
+       // ① 부가세대급금(차변)
+       if (grp.vatSum !== 0) {
+        // ✅ vatDivCd 결정 로직
+        const vatDivCd = (repRow.vatDivCd && repRow.vatDivCd.trim() !== '')
+         ? repRow.vatDivCd    // SQL에서 가져온 값
+         : '1000';            // 기본값
+
+        lines.push({
+         ...grp.common,
+         menuLnSq: lineNo++,
+         drcrFg:   grp.drcrFg[2],
+         acctCd:   _this.getDzAcctCd(repRow, grp.acctCd[2], 2),
+         acctNm:   grp.acctNm[2] || '부가세대급금',
+         acctAm:   grp.vatSum,
+         vatDivCd: vatDivCd,
+         issDt:    grp.common.menuDt,
+         jeonjaYn: '1',
+         supAm:    grp.supplySum,
+         taxFg:    '21',
+         trCd:     grp.trCd,
+         trNm:     grp.trNm,
+         ctDept:   grp.ctDept,
+         ctDeptNm: grp.ctDeptNm,
+         rmkDc:    '부가세'
+        });
+       }
+
+       // ② 외상매입금(대변) = 공급가 + 부가세
+       const payableSum = grp.supplySum + grp.vatSum;
+       if (payableSum !== 0) {
+        lines.push({
+         ...grp.common,
+         menuLnSq: lineNo++,
+         drcrFg:   grp.drcrFg[3],
+         acctCd:   _this.getDzAcctCd(repRow, grp.acctCd[3], 3),
+         acctNm:   grp.acctNm[3] || '외상매입금',
+         acctAm:   payableSum,
+         trCd:     grp.trCd,
+         trNm:     grp.trNm,
+         ctDept:   grp.ctDept,
+         ctDeptNm: grp.ctDeptNm,
+         pjtCd
+        });
+       }
+      });
+     }
+
+     if (lines.length === 0) {
+      Alert.alert('', '전송할 유효한 전표 데이터가 없습니다.');
+      return;
+     }
+
+     const data = { coCd, menuCd, docuTy: dty, data: lines };
+
+     AjaxUtil.postJsonAsyncData(_this.url + '/DouZoneSave', data, function (result) {
+      if (!result) {
+       Alert.alert('', '서버 응답이 없습니다.');
+       return;
+      }
+
+      if (result.success) {
+       Alert.alert('', result.message || '더존 자동전표 전송이 완료되었습니다.');
+
+       switch (dty) {
+        case '3': page.searchSalesDate();   break;
+        case '2': page.searchPriceDate();   break;
+        case '4': page.searchReceiptDate(); break;
+        case '5': page.searchPaymentDate(); break;
+       }
+      } else {
+       Alert.alert('', result.message || '전송 중 오류가 발생했습니다.');
+      }
+     });
+    }
+
+    DouZoneSalesDelete(docuTy) {
+     let _this = this;
+
+     // 1) docuTy 별로 사용할 그리드 선택
+     let grid;
+     switch (docuTy) {
+      case '3': grid = _this.grid;  break;  // 매출
+      case '2': grid = _this.grid2; break;  // 비용(매입)
+      case '4': grid = _this.grid3; break;  // 수금
+      case '5': grid = _this.grid4; break;  // 지급
+      default:
+       Alert.alert('', '전표유형(docuTy)이 설정되지 않았습니다.');
+       return;
+     }
+
+     // 🔹 여러 건 선택 가능
+     const rows = grid.selectedItems;
+
+     if (!rows || rows.length === 0) {
+      Alert.alert('', '삭제할 더존 전표를 선택하세요.');
+      return;
+     }
+
+     // ✅ 여기서 rows.length 사용해서 공통 confirm 표시
+     Alert.confirm('', `선택된 ${rows.length}건의 더존 전표를 삭제하시겠습니까?`, () => {
+
+      // 🔸 방식 B: 다건 삭제용 payload 구성 (items 배열)
+      const items = rows.map(row => {
+       const item = {
+        menuDt: (row.menuDt || '').toString().replace(/[^0-9]/g, ''),
+        menuSq: Number(row.menuSq || 0),
+       };
+
+      switch (docuTy) {
+       case '3': // 매출
+        item.saleDate = row.saleDate || '';       // 일자-순번
+        item.dzIssueNo = row.doozenNo || '';      // 더존발행번호
+        item.custName = row.custName || '';       // 거래처명
+        break;
+
+       case '2': // 비용
+        item.saleDate = row.mijDate || '';        // 일자-순번
+        item.dzIssueNo = row.dzIssueNo || '';     // 더존발행번호
+        item.custName = row.cltnm || '';          // 거래처명
+        break;
+
+       case '4': // 수금
+        item.saleDate = row.relation_no || '';    // 일자-순번
+        item.dzIssueNo = row.IN_DT_SEQ || '';     // 더존발행번호
+        item.custName = row.CUSTOMER_NAME || '';  // 거래처명
+        break;
+
+       case '5': // 지급
+        item.saleDate = row.relation_no || '';    // 일자-순번
+        item.dzIssueNo = row.IN_DT_SEQ || '';     // 더존발행번호
+        item.custName = row.CUSTOMER_NAME || '';  // 거래처명
+        break;
+      }
+
+      return item;
+     });
+
+      const payload = {
+       docuTy: docuTy,
+       items: items,
+       coCd:  '1000',
+       menuCd: '11A10'   // 필요 시 사용
+      };
+
+      AjaxUtil.postJsonAsyncData(_this.url + '/sales_DouZoneDelete', payload, (res) => {
+       if (res && res.success) {
+        Alert.alert('', res.message || `선택된 ${rows.length}건의 더존 전표가 삭제되었습니다.`);
+        // 🔹 삭제 후 동일 docuTy로 재조회
+        _this.btnDouZoneList(docuTy);
+       } else {
+        Alert.alert('', res?.message || '삭제 중 오류가 발생했습니다.');
+       }
+      });
+     });
+    }
+
+    searchPriceDate() {
+     let _this = this;
+     const start      = $('#srchStartDt2').val();
+     const end        = $('#srchEndDt2').val();
+     const company    = $('#cboCompany2').val();
+     const price_type = $('#price_type').val();
+
+     let data = {
+      company: company,
+      start: start,
+      end: end,
+      price_type: price_type,
+     };
+
+     let fnsuccess = function (result) {
+      if (result && result.data) {
+
+       // 🔹 결과로 CollectionView 생성
+       _this.viewData2 = new wijmo.collections.CollectionView(result.data);
+
+       // 🔹 MISDATE + MISNUM 조합으로 그룹 키 생성
+       let gd = new wijmo.collections.PropertyGroupDescription(
+        null, // propertyName 대신 커스텀 그룹 함수 사용
+        function (item) {
+         // 서버에서 오는 키가 MISDATE / MISNUM 또는 소문자일 수도 있으니 둘 다 케어
+         let date = item.MISDATE || item.misdate || '';
+         let num  = item.MISNUM  || item.misnum  || '';
+         return date + '-' + num; // 원하는 형식으로 조합
+        }
+       );
+       _this.viewData2.groupDescriptions.push(gd);
+
+       // 🔹 그리드에 바인딩
+       _this.grid2.itemsSource = _this.viewData2;
+      }
+     };
+
+     AjaxUtil.getAsyncData(_this.url + '/price_read', data, fnsuccess);
+    } // 비용 검색
+
+    searchReceiptDate(){
+     let _this = this;
+     const start = $('#srchStartDt3').val();
+     const end   = $('#srchEndDt3').val();
+     const company = $('#cboCompany3').val();  // 코드
+     const receipt_type = $('#receipt_type').val();
+
+     let data = {
+      company: company,
+      start: start,
+      end: end,
+      receipt_type: receipt_type,
+     };
+
+     let fnsuccess = function (result) {
+      if (result && result.data) {
+       // 🔹 수금 탭도 그룹 없이 새 CollectionView
+       _this.viewData3 = new wijmo.collections.CollectionView(result.data);
+       _this.grid3.itemsSource = _this.viewData3;
+      }
+     };
+
+     AjaxUtil.getAsyncData( _this.url + '/receipt_read', data, fnsuccess);
+    }//수금 검색
+
+    searchPaymentDate(){
+     let _this = this;
+     const start = $('#srchStartDt4').val();
+     const end   = $('#srchEndDt4').val();
+     const company = $('#textCompany4').val();  //명칭
+     const payment_type = $('#payment_type').val();
+
+     let data = {
+      company: company,
+      start: start,
+      end: end,
+      payment_type: payment_type,
+     };
+
+     let fnsuccess = function (result) {
+      if (result && result.data) {
+       // 🔹 지급 탭도 그룹 없이 새 CollectionView
+       _this.viewData4 = new wijmo.collections.CollectionView(result.data);
+       _this.grid4.itemsSource = _this.viewData4;
+      }
+     };
+
+     AjaxUtil.getAsyncData( _this.url + '/payment_read', data, fnsuccess);
+    }//지금 검색
+
+    // 거래처 동기화 처리
+    showSyncClient() {
+     const _this = this;
+
+     // 1) 팝업 열기
+     const content = tmpl('SyncClientTemplate', {});
+     const $content = $(content);
+
+     const modal = new PopupDraggable('거래처 동기화');
+     modal.open({ width: 1100, height: 500, $content });
+
+     $content.find('#modal-close-button').on('click', function () {
+      modal.close();
+      $content.remove();
+     });
+
+     AjaxUtil.showLoading();
+     const listUrl = '/api/api_DouZoneService/SyncClientList';
+     AjaxUtil.getAsyncData(listUrl, {}, function (result) {
+
+      const $tbody = $content.find('#syncClientTbody');
+      $tbody.empty();
+
+      const rowCount = Array.isArray(result?.data) ? result.data.length : 0;
+      const $scrollWrap = $content.find('.sync-table-scroll');
+
+      if (rowCount >= 6) {
+       $scrollWrap.css({
+        'max-height': '350px',
+        'overflow-y': 'auto',
+        'overflow-x': 'hidden'
+       });
+      } else {
+       $scrollWrap.css({
+        'max-height': '',
+        'overflow-y': '',
+        'overflow-x': ''
+       });
+      }
+
+      if (rowCount > 0) {
+       for (const it of result.data) {
+        $tbody.append(`
+          <tr class="sync-row">
+            <td class="tc"><input type="checkbox" class="row-check"></td>
+            <td><input type="text" class="cltcd"   value="${it.cltcd   ?? ''}" readonly></td>
+            <td><input type="text" class="emcltcd" value="${it.emcltcd ?? ''}" readonly></td>
+            <td><input type="text" class="dzcltcd" value="${it.dzcltcd ?? ''}" readonly></td>
+            <td><input type="text" class="cltnm"   value="${it.cltnm   ?? ''}" readonly></td>
+          </tr>
+        `);
+       }
+      } else {
+       $tbody.append(`<tr><td colspan="5" class="tc">조회 데이터가 없습니다.</td></tr>`);
+      }
+
+     }, function () {
+      Alert.alert('', '거래처 조회 실패');
+     });
+
+     // 4) 동기화(저장) 버튼 (가능하면 비동기로 추천)
+     $content.find('#btnSyncClientSave').off('click').on('click', function () {
+      const rows = [];
+
+      $content.find('#syncClientTbody tr.sync-row').each(function () {
+       const $tr = $(this);
+       if (!$tr.find('.row-check').is(':checked')) return;
+
+       rows.push({
+        cltcd:   $tr.find('.cltcd').val(),     // ACTS
+        emcltcd: $tr.find('.emcltcd').val(),   // 더존매칭
+        dzcltcd: $tr.find('.dzcltcd').val(),   // 아마란스
+        cltnm:   $tr.find('.cltnm').val(),     // 거래처명
+       });
+      });
+
+      if (rows.length === 0) {
+       Alert.alert('', '동기화할 행을 선택하세요.');
+       return;
+      }
+
+      const saveUrl = '/api/api_DouZoneService/SyncClientSave';
+
+      AjaxUtil.showLoading();
+      AjaxUtil.postJsonAsyncData(saveUrl, { rows }, function (saveRes) {
+       if (saveRes && (saveRes.success === true || saveRes.result === true)) {
+        Alert.alert('', '동기화가 완료되었습니다.');
+        modal.close();
+        $content.remove();
+        $('#btnSearch').trigger('click');
+       } else {
+        Alert.alert('', saveRes?.message || '동기화 실패');
+       }
+      }, function () {
+       Alert.alert('', '동기화 실패');
+      });
+     });
+    }
+
+   }//APIDouZoneServicePage
+
+   // ✅ (추가) rcvdate|rcvnum → detail rows 로 맵 구성
+   function buildReceiptDetailMap(detailRows) {
+    const map = new Map();
+    (detailRows || []).forEach(d => {
+     const rcvdate = (d.rcvdate || d.RCVDATE || '').toString().replace(/[^0-9]/g, '');
+     const rcvnum  = (d.rcvnum  || d.RCVNUM  || '').toString().trim();
+     const key = `${rcvdate}|${rcvnum}`;
+     if (!map.has(key)) map.set(key, []);
+     map.get(key).push(d);
+    });
+    return map;
+   }
+
+   // 🔹 매출 전표용 계정/차대/계정명 구하기
+   function getSalesAccountInfo(row) {
+    const relationDiv = row.relation_division || row.relationDivision || ''; // 'MT','OD' 등
+    const gubun       = (row.gubun ?? '').toString();                         // '11','12','13','14','15'...
+
+    const acctCd = {};   // 계정코드
+    const drcrFg = {};   // 차대구분
+    const acctNm = {};   // 계정명(11A02 LIKE 검색용)
+
+    // 차대구분 패턴 (매출)
+    drcrFg[1] = '4'; // 매출 (수익)
+    drcrFg[2] = '4'; // 부가세
+    drcrFg[3] = '3'; // 외상매출금
+
+    // ① 매출 계정 (라인1) - gubun 기준 매핑
+    if (gubun === '11') {                 // 유지보수
+     acctCd[1] = '4040200';
+     acctNm[1] = '보수료';
+    } else if (gubun === '12') {          // 수리공사
+     acctCd[1] = '4070000';
+     acctNm[1] = '공사매출';
+    } else if (gubun === '13') {          // 부품교체
+     acctCd[1] = '4040100';
+     acctNm[1] = '수리부품';
+    } else if (gubun === '14') {          // 신규설치
+     acctCd[1] = '4040000';
+     acctNm[1] = '제품매출';
+    } else if (gubun === '15') {          // 매출기타
+     acctCd[1] = '4040300';
+     acctNm[1] = '기타매출';
+    } else {
+     // 예외/빈값일 때 기본값 (원래 relationDiv 로 하던 로직을 여기로 모음)
+     if (relationDiv === 'MT') {
+      acctCd[1] = '4040200';
+      acctNm[1] = '보수료';
+     } else {
+      acctCd[1] = '4040100';
+      acctNm[1] = '수리부품';
+     }
+    }
+
+    // ② 부가세 (라인2)
+    acctCd[2] = '2550000';
+    acctNm[2] = '부가세예수';
+
+    // ③ 외상매출금 (라인3)
+    acctCd[3] = '1080000';
+    acctNm[3] = '외상매출금';
+
+   /* // 디버깅 로그
+    console.log('[getSalesAccountInfo]',
+     'relationDiv=', relationDiv,
+     'gubun=', gubun,
+     'acctCd1=', acctCd[1],
+     'acctNm1=', acctNm[1],
+     'row=', row
+    );*/
+
+    return { acctCd, drcrFg, acctNm };
+   }
+
+   /*function getSalesAccountInfo(row) {
+    const relationDiv = row.relation_division || row.relationDivision; // 'MT','14' 등
+    const gubun       = row.gubun;                                     // '11','12','15'...
+
+    const acctCd = {};   // 계정코드 (내부코드 or 임시코드)
+    const drcrFg = {};   // 차대구분
+    const acctNm = {};   // 계정명(더존 11A02 LIKE 검색용)
+
+    // 차대구분 패턴 (매출)
+    drcrFg[1] = '4'; // 매출 (수익)
+    drcrFg[2] = '4'; // 부가세
+    drcrFg[3] = '3'; // 외상매출금
+
+    // ① 매출 계정 (라인1)
+    if (relationDiv === 'MT') {
+     // 유지보수
+     acctCd[1] = '4040200';
+     acctNm[1] = '보수료';   // 🔹 11A02에서 LIKE 검색할 때 쓸 키워드
+    } else if (relationDiv === '14') {// 신규설치
+
+     if (gubun === '12') {          // 공사
+      acctCd[1] = '4070000';
+      acctNm[1] = '공사수익';
+     } else if (gubun === '15') { //매출 기타
+      acctCd[1] = '4040300';
+      acctNm[1] = '매출기타';
+     } else if (gubun === '13'){  //부품교체
+      acctCd[1] = '4040100';
+      acctNm[1] = '수리부품';
+     }else {
+      acctCd[1] = '4040000';
+      acctNm[1] = '제품매출';
+     }
+
+    } else {
+     // relation_division 컬럼이 없거나 기타일 때 기본
+     acctCd[1] = '4040100';
+     acctNm[1] = '수리부품';
+    }
+
+    // ② 부가세 (라인2)
+    acctCd[2] = '2550000';
+    acctNm[2] = '부가세예수';        // 🔹 더존 부가세 계정명 일부
+
+    // ③ 외상매출금 (라인3)
+    acctCd[3] = '1080000';
+    acctNm[3] = '외상매출금';        // 🔹 더존 외상매출금 계정명 일부
+
+    console.log('[getSalesAccountInfo]',
+     'relationDiv=', relationDiv,
+     'gubun=', gubun,
+     'acctCd1=', acctCd[1],
+     'acctNm1=', acctNm[1],
+     'row=', row
+    );
+
+    return { acctCd, drcrFg, acctNm };
+   }*/
+
+   // 🔹 비용 전표용 계정/차대/계정명 구하기
+   function getPriceAccountInfo(row) {
+    const acctCd = {};   // 계정코드
+    const drcrFg = {};   // 차대구분
+    const acctNm = {};   // 계정명(더존 11A02 LIKE 검색용)
+
+    // ls_logic_cd = '21' 인 비용(매입) 로직
+
+    // ① 원재료 (라인1)
+    const rawAcctCd = row.djacccd || row.acctCd || row.acccd || '';
+    acctCd[1] = rawAcctCd;
+
+    // ★ 여기 고정값으로 변경
+    acctCd[1] = '1490000';
+    acctNm[1] = '원재료';
+
+    // ② 부가세 대급금 (라인2)
+    acctCd[2] = '1350000';
+    acctNm[2] = '부가세대급금';
+
+    // ③ 외상매입금 (라인3)
+    acctCd[3] = '2510000';
+    acctNm[3] = '외상매입금';
+
+    // 차대구분
+    drcrFg[1] = '3';
+    drcrFg[2] = '3';
+    drcrFg[3] = '4';
+
+    return { acctCd, drcrFg, acctNm };
+   }
+
+   // 🔹 수금 계정/차대 정보 반환
+   function getReceiptAccountInfo(row) {
+    const accountNo =
+     (row.accountNo ||
+      row.ACCOUNT_NO ||
+      row.bankAccount ||
+      '').toString().trim();
+
+    const hasAccount = accountNo.length > 0;
+
+    const acctCd = {};
+    const drcrFg = {};
+    const acctNm = {};
+
+    // 차대구분
+    drcrFg[1] = '3';   // 차변: 보통예금
+    drcrFg[2] = '3';   // 차변: 지급수수료
+    drcrFg[3] = '4';   // 대변: 외상매출
+
+    if (hasAccount) {
+     // 💰 계좌 수금 (입금)
+     acctCd[1] = '10300001'; // 보통예금(더존코드)
+     acctNm[1] = '보통예금';
+
+     acctCd[2] = '8310000';  // 지급수수료(더존코드)
+     acctNm[2] = '지급수수료';
+
+     acctCd[3] = '1080000';  // 외상매출금(더존코드)
+     acctNm[3] = '외상매출금';
+
+    } else {
+     // 💸 무계좌 수금 → 외상매출만 대체
+     acctCd[1] = '1080000';
+     acctNm[1] = '외상매출금';
+
+     acctCd[2] = '';
+     acctNm[2] = '';
+
+     acctCd[3] = '';
+     acctNm[3] = '';
+    }
+
+    return { acctCd, drcrFg, acctNm };
+   }
+
+   function getPaymentAccountInfo(row){
+
+   }
+   let page = null;
+
+   $(document).ready(function (e) {
+    page = new APIDouZoneServicePage();
+
+    $('#srchStartDt').val(CommonUtil.getYYYYMMDDMonthFirst());
+    $('#srchEndDt').val(CommonUtil.getYYYYMMDD());
+
+    $('#srchStartDt2').val(CommonUtil.getYYYYMMDDMonthFirst());
+    $('#srchEndDt2').val(CommonUtil.getYYYYMMDD());
+
+    $('#srchStartDt3').val(CommonUtil.getYYYYMMDDMonthFirst());
+    $('#srchEndDt3').val(CommonUtil.getYYYYMMDD());
+
+    $('#srchStartDt4').val(CommonUtil.getYYYYMMDDMonthFirst());
+    $('#srchEndDt4').val(CommonUtil.getYYYYMMDD());
+
+    page.searchSalesDate();
+
+    $('#btnSyncClient').click(function (e){
+     page.showSyncClient();
+    });
+
+    $('#btnDouZoneList').click(function (e) {
+     page.btnDouZoneList('3');   // 매출
+    });
+
+    $('#btnDouZoneList2').click(function (e) {
+     page.btnDouZoneList('2');   // 비용(매입)
+    });
+
+    $('#btnDouZoneList3').click(function (e) {
+     page.btnDouZoneList('4');   // 수금
+    });
+
+    $('#btnDouZoneList4').click(function (e) {
+     page.btnDouZoneList('5');   // 지급
+    });
+
+    $('#btnSend').click(function (e){
+     page.DouZoneSend('3');   // 매출
+    });
+    $('#btnSend2').click(function (e){
+     page.DouZoneSend('2');   // 비용
+    });
+    $('#btnSend3').click(function (e){
+     page.DouZoneSend('4');   // 수금
+    });
+    $('#btnSend4').click(function (e){
+     page.DouZoneSend('5');   // 지급
+    });
+
+    $('#btnCancelSend').click(function (e){
+     page.DouZoneSalesDelete('3');
+    });//더존 삭제 요청 매출
+    $('#btnCancelSend2').click(function (e){
+     page.DouZoneSalesDelete('2');
+    });//더존 삭제 요청 비용
+    $('#btnCancelSend3').click(function (e){
+     page.DouZoneSalesDelete('4');
+    });//더존 삭제 요청 수금
+    $('#btnCancelSend4').click(function (e){
+     page.DouZoneSalesDelete('5');
+    });//더존 삭제 요청 지급
+
+    $('#btnSearch').click(function (e) {
+     page.searchSalesDate();
+    });// 매출 검색
+    $('#btnSearch2').click(function (e) {
+     page.searchPriceDate();
+    }); //비용 검색
+    $('#btnSearch3').click(function (e) {
+     page.searchReceiptDate();
+    }); //수금 검색
+    $('#btnSearch4').click(function (e) {
+     page.searchPaymentDate();
+    }); //지급 검색
+
+    $('#accountListExcel').click(function (e) {
+     page.accountListExcel();
+    }); //지급 검색
+
+    $('#cboCompany').on('keydown', function (e) {
+     if (e.key === 'Enter') {
+      e.preventDefault();          // 기본 엔터 행동(폼 submit 등) 막기
+      page.searchSalesDate();    // 매출 검색 호출
+     }
+    });
+    $('#cboCompany2').on('keydown', function (e) {
+     if (e.key === 'Enter') {
+      e.preventDefault();          // 기본 엔터 행동(폼 submit 등) 막기
+      page.searchPriceDate();    // 비용 검색 호출
+     }
+    });
+    $('#cboCompany3').on('keydown', function (e) {
+     if (e.key === 'Enter') {
+      e.preventDefault();          // 기본 엔터 행동(폼 submit 등) 막기
+      page.searchReceiptDate();    // 수금 검색 호출
+     }
+    });
+
+    $('#textCompany4').on('keydown', function (e) {
+     if (e.key === 'Enter') {
+      e.preventDefault();          // 기본 엔터 행동(폼 submit 등) 막기
+      page.searchPaymentDate();    // 지급 검색 호출
+     }
+    });
+
+    // 탭 클릭 시마다 해당 탭 검색 실행
+    $('.tab-links a').on('click', function (e) {
+     e.preventDefault();
+
+     const target = $(this).attr('href');
+
+     // 탭 전환 처리
+     $('.tab-item').hide();
+     $(target).show();
+
+     // 탭별 검색 실행
+     switch (target) {
+      case '#tab1':          // 매출
+       $('#btnSearch').trigger('click');
+       break;
+      case '#tab2':          // 비용
+       $('#btnSearch2').trigger('click');
+       break;
+      case '#tab3':          // 수금
+       $('#btnSearch3').trigger('click');
+       break;
+      case '#tab4':          // 지급
+       $('#btnSearch4').trigger('click');
+       break;
+     }
+    });
+
+   });
+  </script>
+</th:block>
+</html>

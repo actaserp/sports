@@ -1,0 +1,205 @@
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml">
+<head>
+    <style>
+        .wj-header {
+            text-align: center !important;
+        }
+    </style>
+</head>
+
+<th:block layout:fragment="content">
+    <div class="layout-contents">
+        <div class="page-title-wrap">
+            <div class="left">
+                <h2>사업장 메뉴 관리</h2>
+                <a title="북마크" class="bookmark toggle">내메뉴</a>
+            </div>
+            <ul class="page-navi">
+                <li><img th:src="@{/images/icon/ico-nav-home.svg}" alt="홈아이콘"></li>
+                <li>시스템관리</li>
+                <li>사업장 메뉴 관리</li>
+            </ul>
+        </div>
+        <section class="section">
+            <div class="section-top">
+                <form id="searchForm" autocomplete="off">
+                    <div class="search-wrap">
+                        <dl>
+                            <dt>
+                                <label for="cboSpjang">사업장<span class="eq"></span></label>
+                            </dt>
+                            <dd>
+                                <select class="form-control2" id="cboSpjang" name="cboSpjang"></select>
+                            </dd>
+                        </dl>
+                        <dl>
+                            <dt>
+                                <label for="cboMenuFolder">메뉴폴더<span class="eq"></span></label>
+                            </dt>
+                            <dd>
+                                <select class="form-control2" id="cboMenuFolder" name="cboMenuFolder"></select>
+                            </dd>
+                        </dl>
+                        <dl>
+                            <dd>
+                                <div class="srch-box" style="margin-top: 20px">
+                                    전체선택<input type="checkbox" id="AllcheckEnabled">
+                                </div>
+                            </dd>
+                        </dl>
+                    </div>
+                </form>
+                <div class="button-wrap">
+                    <ul>
+                        <li>
+                            <a class="btn btn-edit" id="btnSave" title="저장">
+                                <img th:src="@{/images/icon/ico-save.svg}" alt="저장 아이콘">
+                                저장
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="container-fluid">
+                <div id="theGrid" style="max-height: 690px;"></div>
+            </div>
+            <div class="btn-wrap"></div>
+        </section>
+    </div>
+
+    <footer style="margin-top: 24px;">
+        <p>Copyrightⓒ 0000 corp. All rights reserved.</p>
+    </footer>
+</th:block>
+
+<th:block layout:fragment="scripts">
+    <script type="text/javascript">
+
+        var theGrid;
+        var viewdata;
+
+        document.readyState === 'complete' ? init() : window.onload = init;
+
+        let menuGroupName = new wijmo.collections.PropertyGroupDescription('폴더', function (item) {
+            return item.folder_name;
+        });
+
+        function init() {
+            theGrid = new wijmo.grid.FlexGrid('#theGrid', {
+                autoGenerateColumns: false,
+                showMarquee: true,
+                columns: [
+                    {binding: 'name',    header: '메뉴명',   width: 300, align: 'left', isReadOnly: true},
+                    {binding: 'enabled', header: '활성화',   width: 120, align: 'center', dataType: wijmo.DataType.Boolean, isReadOnly: false},
+                    {binding: '',        header: '',          width: '*'},
+                ],
+                formatItem: function (s, e) {
+                    if (e.panel.cellType == wijmo.grid.CellType.Cell) {
+                        var col = s.columns[e.col];
+                        if (col.binding == 'name') {
+                            e.cell.style.pointerEvents = 'none';
+                            e.cell.style.userSelect = 'none';
+                        }
+                    }
+                }
+            });
+
+            theGrid.rowHeaders.columns.splice(0, 1);
+
+            document.getElementById('AllcheckEnabled').addEventListener('change', function () {
+                for (var i = 0; i < theGrid.rows.length; i++) {
+                    theGrid.setCellData(i, 'enabled', this.checked);
+                }
+            });
+
+            $('#btnSave').click(saveData);
+
+            $('#cboSpjang, #cboMenuFolder').change(function () {
+                searchData();
+            });
+
+            searchData();
+        }
+
+        function searchData() {
+            let spjangcd = $('#cboSpjang').val();
+            let folder_id = $('#cboMenuFolder').val();
+            if (!spjangcd) {
+                grid_binding([]);
+                return;
+            }
+
+            $.ajax({
+                url: '/api/system/tenantmenu/read',
+                type: 'GET',
+                data: {spjangcd: spjangcd, folder_id: folder_id},
+                async: false,
+                success: function (data) {
+                    if (data && data.success && Array.isArray(data.data)) {
+                        grid_binding(data.data);
+                    } else {
+                        grid_binding([]);
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error('Error:', textStatus, errorThrown);
+                }
+            });
+        }
+
+        function grid_binding(data) {
+            let filtered = data
+                // .filter(item => !item.is_folder)
+                .map(item => ({
+                    menu_code:   item.menu_code,
+                    folder_name: item.folder_name,
+                    name:        item.name,
+                    enabled:     item.enabled,
+                    tm_id:       item.tm_id
+                }));
+
+            viewdata = new wijmo.collections.CollectionView(filtered);
+            viewdata.groupDescriptions.push(menuGroupName);
+            theGrid.itemsSource = viewdata;
+        }
+
+        function saveData() {
+            let spjangcd = $('#cboSpjang').val();
+            if (!spjangcd) {
+                Alert.alert('', '사업장을 선택하세요.');
+                return;
+            }
+
+            let items = [];
+            let sourceCollection = theGrid.itemsSource.sourceCollection || [];
+            sourceCollection.forEach(item => {
+                items.push({
+                    menu_code: item.menu_code,
+                    enabled:   !!item.enabled
+                });
+            });
+
+            let data = {cbospjangcd: spjangcd, Q: JSON.stringify(items)};
+
+            Alert.confirm('', '저장하시겠습니까?', function () {
+                let fnSuccess = function (result) {
+                    if (result.success) {
+                        Alert.alert('', '저장되었습니다.');
+                        searchData();
+                    } else {
+                        console.error('저장 실패:', result.message);
+                    }
+                };
+                AjaxUtil.postAsyncData('/api/system/tenantmenu/save', data, fnSuccess);
+            });
+        }
+
+        $(document).ready(function () {
+            AjaxUtil.fillSelectOptions($('#cboSpjang'), 'spjang', 'choose', '');
+            AjaxUtil.fillSelectOptions($('#cboMenuFolder'), 'menu_folder', 'all', '');
+        });
+
+    </script>
+</th:block>
+</html>

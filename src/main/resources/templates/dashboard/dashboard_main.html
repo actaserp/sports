@@ -1,0 +1,532 @@
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml">
+<head>
+<style>
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 9999; /* z-index를 더 높임 */
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    /* 공통 Modal 컨텐츠 스타일 */
+    .modal-content {
+        background: white;
+        border-radius: 8px;
+        margin: 10% auto;
+        padding: 20px;
+        width: 600px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+        position: relative;
+        top: 15%;
+    }
+
+    .btn-popup-close img {
+        float: right;
+    }
+
+    #modalGrid {
+        height: auto; /* 높이를 자동으로 조정 */
+        max-height: 500px; /* 필요에 따라 최대 높이를 지정 */
+        overflow-y: auto; /* 스크롤 활성화 */
+    }
+
+    /* 체크박스를 수직 및 수평 중앙 정렬 */
+    .wj-cell.wj-header .wj-cell-element,
+    .wj-cell.wj-header input[type="checkbox"],
+    .wj-cell input[type="checkbox"] {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .section-card-wrap {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 10px;
+    }
+
+    .fetchCard {
+        flex: 0 0 calc(16.66% - 10px); /* 카드 너비를 반응형으로 조절 */
+        padding: 10px;
+        box-sizing: border-box;
+        width: auto;
+        cursor: pointer;
+    }
+</style>
+</head>
+<th:block layout:fragment="content">
+
+    <div class="layout-contents">
+        <!-- Page Title -->
+        <div class="page-title-wrap">
+            <div class="left">
+                <h2>Dashboard</h2>
+                <!-- <a id="toggleButton" onclick="toggleSearchWrap()"><img src="/images/icon/ico-down.png" alt="알람 아이콘"></a> -->
+                <!--                <a href="#" title="북마크" class="bookmark toggle">-->
+                <!--                    내메뉴-->
+                <!--                </a>-->
+            </div>
+            <ul class="page-navi">
+                <li><img src="/images/icon/ico-nav-home.svg" alt="홈아이콘"></li>
+                <li>Dashboard</li>
+            </ul>
+        </div>
+        <div style="display: flex; gap: 5px;">
+            <!-- 왼쪽: 캘린더 (60%) -->
+            <section style="flex: 6; height: 800px; box-sizing: border-box; border-radius: 10px;">
+                <div class="title-wrap">
+                    <h3>발주 현황</h3>
+                </div>
+                <div class="calendar-wrapper">
+                    <div id="calendar"></div>
+                </div>
+            </section>
+
+            <!-- 오른쪽: 현황 카드 및 그리드 (40%) -->
+            <div style="flex: 4; display: grid; flex-direction: column;">
+
+                <!-- 상단 카드 섹션 -->
+                <section style="box-sizing: border-box;margin-bottom: 0;">
+                    <div style="margin-bottom: 15px">
+                        <h3 id="year-status"></h3>
+                    </div>
+                    <div class="tab-contents">
+                        <div class="row">
+                            <div class="section-card-wrap"
+                                 style="display: flex; align-items: stretch; flex-wrap: nowrap; gap: 5px;">
+                                <section class="fetchCard" data-search-type="1"
+                                         style="background-color: #37474F; color: #fff; flex: 0.5; padding: 5px;">
+                                    <div class="title"><h3>프로젝트 등록</h3></div>
+                                    <div class="projectCnt" style="font-size: 32px; text-align: right; font-weight: 700;">
+                                        -<span class="small-unit" style="font-size: 0.5em; opacity: 0.5;"> 건</span>
+                                    </div>
+                                </section>
+
+                                <section class="fetchCard" data-search-type="2"
+                                         style="background-color: #00695C; color: #fff; flex: 0.5; padding: 5px;">
+                                    <div class="title"><h3>발주등록</h3></div>
+                                    <div class="baljuCnt" style="font-size: 32px; text-align: right;">
+                                        -<span class="small-unit" style="font-size: 0.5em; opacity: 0.5;"> 건</span>
+                                    </div>
+                                </section>
+
+                                <section class="fetchCard" data-search-type="3"
+                                         style="background-color: #283593; color: #fff; flex: 0.5; padding: 5px;">
+                                    <div class="title"><h3>발주출고</h3></div>
+                                    <div class="chulCnt" style="font-size: 32px; text-align: right;">
+                                        -<span class="small-unit" style="font-size: 0.5em; opacity: 0.5;"> 건</span>
+                                    </div>
+                                </section>
+
+                                <section class="fetchCard" data-search-type="4"
+                                         style="background-color: #512DA8; color: #fff; flex: 0.5; padding: 5px;">
+                                    <div class="title"><h3>공장출고</h3></div>
+                                    <div class="facCnt" style="font-size: 32px; text-align: right;">
+                                        -<span class="small-unit" style="font-size: 0.5em; opacity: 0.5;"> 건</span>
+                                    </div>
+                                </section>
+
+                                <section class="fetchCard" data-search-type="5"
+                                         style="background-color: #6D4C41	; color: #fff; flex: 0.5; padding: 5px;">
+                                    <div class="title"><h3>현장확인</h3></div>
+                                    <div class="hyunCnt" style="font-size: 32px; text-align: right;">
+                                        -<span class="small-unit" style="font-size: 0.5em; opacity: 0.5;"> 건</span>
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- 하단 그리드 섹션 -->
+                <section style="flex: 1; box-sizing: border-box;">
+                    <div class="tab-item-sub" id="tab1_2">
+                        <div class="section-top">
+                            <div class="search-wrap">
+                                <dl>
+                                    <dt>조회일자<span class="eq">*</span></dt>
+                                    <dd>
+                                        <ul class="date-box">
+                                            <li><input type="date" id="startDate" name="startDate"></li>
+                                            <li><input type="date" id="endDate" name="endDate"></li>
+                                            <li>
+                                                <a class="btn btn-delete" id="btn-srch"
+                                                   onclick="fetchListData();">
+                                                    <img src="/images/icon/btn-srch.svg" alt="검색 아이콘"> 검색
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+                        <div class="container-fluid" style="padding-left: 0; padding-right: 0;">
+                            <div class="col-12" style="margin-bottom: 10px;">
+                                <div id="theGrid" style="width: 100%; height: 490px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div> <!--//layout-contents end -->
+</th:block>
+
+<th:block layout:fragment="scripts">
+    <script type="text/javascript">
+        let theGrid;
+        var viewdata;
+        let calendar; // 전역으로 calendar 변수 선언
+
+        // 시작일 input에 올해 1월 1일을 설정합니다
+        document.readyState === 'complete' ? init() : window.onload = init;
+
+        // 초반 페이지 진입시 그리드 바인딩 시작
+        function init() {
+
+            const today = new Date(); // 한국시간으로 따로 조정 안 함 (로컬 시간 기준 사용)
+            const year = today.getFullYear();
+            const month = today.getMonth(); // 0부터 시작 (7월은 6)
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+
+            // 현지 시간 기준 포맷 함수 사용
+            document.getElementById("startDate").value = formatDateLocal(firstDay);
+            document.getElementById("endDate").value = formatDateLocal(lastDay);
+
+            fetchListData();
+            initCalendar();
+        }
+
+        function formatDateLocal(date) {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // '.fetchCard' 클래스를 가진 모든 요소에 대해 클릭 이벤트 설정
+        $('.fetchCard').click(function () {
+            // 클릭된 카드의 data-search-type 속성 값 가져오기
+            const searchTypeValue = $(this).data('search-type');
+            fetchListData(searchTypeValue);  // 해당 값을 fetchListData 함수로 전달
+        });
+
+        function fetchListData(searchTypeValue) {
+            let data2 = []; // 데이터를 담을 배열
+            $.ajax({
+                url: '/api/sjdashboard/read',
+                type: 'GET',
+                data: {
+                    'startDate': $('#startDate').val(),
+                    'endDate': $('#endDate').val(),
+                    'search_type': searchTypeValue
+                },
+                async: false,
+                success: function (data) {
+                    data2 = data.data;
+                }
+            })
+
+            viewdata = new wijmo.collections.CollectionView(data2);
+            if (!theGrid) {
+                theGrid = new wijmo.grid.FlexGrid('#theGrid', {
+                    autoGenerateColumns: false,
+                    showMarquee: true,
+                    isReadOnly: true,
+                    selectionMode: wijmo.grid.SelectionMode.Row,
+                    formatItem: (sender, e) => {
+                        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+                            e.cell.style.textAlign = 'center';
+                        }
+                        if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+                            const col = sender.columns[e.col];
+
+                            if (col.binding === 'reqdate' || col.binding === 'ichdate') {
+                                const raw = e.cell.textContent?.trim();
+                                if (/^\d{8}$/.test(raw)) {
+                                    const formatted = `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+                                    e.cell.textContent = formatted;
+                                }
+                            }
+                        }
+                    },
+                    columns: [
+                        {binding: 'ordflag', header: '진행구분', align: 'center', width: 130},
+                        {binding: 'reqdate', header: '등록일자', align: 'center', width: 120},
+                        {binding: 'project_nm', header: '프로젝트명', align: 'left', width: 140},
+                        {binding: 'actnm', header: '현장명', align: 'left', width: 150},
+                        {binding: 'ichdate', header: '납기일자', align: 'center', width: 120}
+                    ],
+                    itemsSource: viewdata // 빈 객체가 추가된 배열 사용
+                });
+                attachDoubleClickEvent(theGrid);   //더블클릭 이벤트
+                // 선택이 변경될 때, 현재 항목 업데이트
+                theGrid.rowHeaders.columns.splice(0, 1);
+                new FlexGridContextMenu(theGrid);
+                window.downloadFileName = 'Dashboard';
+            } else {
+                // 이미 FlexGrid이 존재하는 경우, 데이터만 업데이트
+                theGrid.itemsSource = viewdata; // 빈 객체가 추가된 배열 사용
+            }
+        }
+
+        function initCalendar() {
+            var calendarEl = document.getElementById('calendar');
+            let prevYear = null;
+            if (calendarEl) {
+                // FullCalendar 설정
+                calendar = new FullCalendar.Calendar(calendarEl, {
+                    locale: 'ko',
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth'
+                    },
+                    initialView: 'dayGridMonth',
+                    height: 714,
+                    dayHeaderFormat: {weekday: 'short'},
+                    views: {
+                        dayGridMonth: {
+                            dayCellContent: function (arg) {
+                                return arg.dayNumberText.replace('일', '');
+                            }
+                        }
+                    },
+                    datesSet: function (info) {
+                        const centerDate = calendar.getDate();
+                        const currentYear = centerDate.getFullYear();
+                        document.getElementById('year-status').innerText = `${currentYear}년 현황`;
+                        const start = info.startStr.replaceAll('-', '');
+                        const end = new Date(info.end - 1).toISOString().slice(0, 10).replaceAll('-', '');
+
+                        // 보이는 월의 내역 카운트
+                        fetchCalendarEvents(start, end);
+
+                        // 보이는 년도의 내역 카운트
+                        if (prevYear !== currentYear) {
+                            fetchYearCount(currentYear);
+                            prevYear = currentYear;
+                        }
+                    },
+                    dateClick: function (info) {
+                        document.getElementById("startDate").value = info.dateStr;
+                        document.getElementById("endDate").value = info.dateStr;
+                        fetchListData();
+                    },
+                    events: [] // 기본 이벤트는 빈 배열로 설정
+                });
+
+                // 공휴일 데이터 가져오기
+                fetchHolidays().then(holidays => {
+                    // console.log("holidays : ", holidays);
+                    holidays.forEach(holiday => {
+                        calendar.addEvent({
+                            title: holiday.name, // 공휴일 이름
+                            start: holiday.date,  // 공휴일 날짜
+                            backgroundColor: '#ec193a',
+                            borderColor: '#EC193A',
+                            textColor: 'white',
+                            extendedProps: { isHoliday: true }
+                        });
+                    });
+                    setTimeout(() => {
+                        calendar.render(); // 캘린더 렌더링
+                        console.log('캘린더가 렌더링되었습니다.');
+                    }, 500); // 500ms 딜레이
+                }).catch(error => {
+                    console.error('공휴일 데이터를 가져오는 데 실패했습니다:', error);
+                });
+
+            }
+        }
+
+        // 공휴일 데이터를 가져오는 함수
+        async function fetchHolidays() {
+            const currentYear = new Date().getFullYear();
+            const yearsToFetch = [currentYear - 1, currentYear, currentYear + 1]; // 전년도, 현재 연도, 다음 연도 배열 생성
+
+            const holidays = [];
+
+            for (const year of yearsToFetch) {
+                const yearHolidays = await fetchHolidaysForYear(year);
+                holidays.push(...yearHolidays);
+            }
+            return holidays;
+        }
+
+        // 주문현황 데이터를 가져오는 함수
+        function fetchCalendarEvents(start, end) {
+            $.ajax({
+                url: '/api/sjdashboard/read_month',
+                type: 'GET',
+                data: { startDate: start, endDate: end },
+                success: function (res) {
+                    const colorMap = {
+                        '프로젝트 등록': { bg: '#37474F', border: '#263238' },
+                        '발주등록': { bg: '#00695C', border: '#004D40' },
+                        '발주출고': { bg: '#283593', border: '#1A237E' },
+                        '공장출고': { bg: '#512DA8', border: '#311B92' },
+                        '현장확인': { bg: '#6D4C41', border: '#4E342E' }
+                    };
+
+                    const events = res.data.map(item => {
+                        // title 접두사만 추출
+                        const baseTitle = Object.keys(colorMap).find(prefix => item.title.startsWith(prefix));
+                        const color = colorMap[baseTitle] || { bg: '#00aaff', border: '#0077aa' };
+
+                        return {
+                            title: item.title,
+                            start: item.start.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3'),
+                            backgroundColor: color.bg,
+                            borderColor: color.border,
+                            textColor: 'white'
+                        };
+                    });
+
+                    calendar.getEvents().forEach(e => {
+                        if (!e.extendedProps || !e.extendedProps.isHoliday) e.remove();
+                    });
+
+                    events.forEach(ev => calendar.addEvent(ev));
+                }
+            });
+        }
+
+        async function fetchHolidaysForYear(year) {
+            return new Promise((resolve, reject) => {
+                var xhr = new XMLHttpRequest();
+                var url = 'http://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo';
+                var queryParams = '?' + encodeURIComponent('serviceKey') + '=' + 'R3P3syhq6qRP0cz8mbV2J5t%2B32WwaSN9sH8ZW4k59oKAU3Ze0WvcljMrN36OJqxs38%2F780hMD4QfhCiDZQNUyA%3D%3D';
+                queryParams += '&' + encodeURIComponent('solYear') + '=' + encodeURIComponent(year);
+                queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('30');
+
+                xhr.open('GET', url + queryParams);
+                xhr.onreadystatechange = function () {
+                    if (this.readyState == 4) {
+                        if (this.status == 200) {
+                            var parser = new DOMParser();
+                            var xmlDoc = parser.parseFromString(this.responseText, "text/xml");
+
+                            // XML에서 원하는 데이터 추출
+                            var items = xmlDoc.getElementsByTagName("item");
+                            let holidays = [];
+                            for (var i = 0; i < items.length; i++) {
+                                var locdate = items[i].getElementsByTagName("locdate")[0].textContent;
+                                var dateName = items[i].getElementsByTagName("dateName")[0].textContent;
+
+                                holidays.push({date: locdate, name: dateName});
+                            }
+                            resolve(holidays);
+                        } else {
+                            console.error('오류 발생. HTTP 상태 코드:', this.status);
+                            reject(this.status);
+                        }
+                    }
+                };
+
+                xhr.send();
+            });
+        }
+
+        function fetchYearCount(year) {
+            $.ajax({
+                url: '/api/sjdashboard/yearCount',
+                type: 'GET',
+                data: { year: year },
+                async: false,
+                success: function (data) {
+                    const data2 = data?.data ?? [];
+
+                    // 초기화: 모든 카드에 - 건 표시
+                    $('.projectCnt').html('-<span class="small-unit" style="font-size: 0.5em; opacity: 0.5;"> 건</span>');
+                    $('.baljuCnt').html('-<span class="small-unit" style="font-size: 0.5em; opacity: 0.5;"> 건</span>');
+                    $('.chulCnt').html('-<span class="small-unit" style="font-size: 0.5em; opacity: 0.5;"> 건</span>');
+                    $('.facCnt').html('-<span class="small-unit" style="font-size: 0.5em; opacity: 0.5;"> 건</span>');
+                    $('.hyunCnt').html('-<span class="small-unit" style="font-size: 0.5em; opacity: 0.5;"> 건</span>');
+
+                    // 데이터 있을 때만 갱신
+                    data2.forEach(item => {
+                        const cnt = item.ordflag_count;
+                        const html = `${cnt}<span class="small-unit" style="font-size: 0.5em; opacity: 0.5;"> 건</span>`;
+
+                        switch (item.ordflag) {
+                            case '프로젝트 등록':
+                                $('.projectCnt').html(html);
+                                break;
+                            case '발주등록':
+                                $('.baljuCnt').html(html);
+                                break;
+                            case '발주출고':
+                                $('.chulCnt').html(html);
+                                break;
+                            case '공장출고':
+                                $('.facCnt').html(html);
+                                break;
+                            case '현장확인':
+                                $('.hyunCnt').html(html);
+                                break;
+                            default:
+                                console.warn("정의되지 않은 ordflag:", item.ordflag);
+                        }
+                    });
+                }
+            });
+        }
+
+        // 더블 클릭 이벤트 핸들러 수정
+        function attachDoubleClickEvent(grid) {
+            let lastClickTime = 0;
+
+            grid.hostElement.addEventListener('click', function (e) {
+                const now = new Date().getTime();
+
+                if (now - lastClickTime < 300) { // 300ms 이내 두 번 클릭 → 더블 클릭 처리
+                    const ht = grid.hitTest(e);
+
+                    if (ht.cellType === wijmo.grid.CellType.Cell) { // 셀을 클릭한 경우만 처리
+                        const rowData = grid.rows[ht.row].dataItem; // 클릭한 행 데이터
+
+                        if (!rowData ) {
+                            console.warn("유효한 rowData가 없습니다.");
+                            return;
+                        }
+
+                        const isProject = rowData.ordflag === '프로젝트 등록';
+                        const pageId = isProject ? 'project_list' : 'wm_balju_list';
+                        const pageTitle = isProject ? '프로젝트 등록' : '외주발주현황';
+
+                        // sessionStorage에 저장
+                        sessionStorage.setItem("tabAction", "toggle");
+                        sessionStorage.setItem("sessionDate", rowData.reqdate);
+                        sessionStorage.setItem("sessionPN", rowData.project_nm);
+
+                        sessionStorage.setItem("sessionIchDate", rowData.ichdate);
+                        sessionStorage.setItem("sessionAN", rowData.actnm);
+
+                        window.parent.postMessage({
+                            action: "addTab",
+                            id: pageId,
+                            title: pageTitle,
+                            url: '/gui/' + pageId + '/default',
+                            active: true,
+                            allowClose: true,
+                        });
+                    }
+                }
+                lastClickTime = now;
+            });
+        }
+
+    </script>
+</th:block>
+</html>
+
