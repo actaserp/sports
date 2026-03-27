@@ -114,6 +114,8 @@ public class CustomerCurrentService {
                 User user = userRepository.findBySpjangcd(spjangcd)
                         .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + spjangcd));
                 user.setActive(true);
+                user.setSpjangcd("ZZ");
+                user.setDbKey(spjangcd);
                 userRepository.save(user);
 
                 // 3. user_group insert
