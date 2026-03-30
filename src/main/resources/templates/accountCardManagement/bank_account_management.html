@@ -1,0 +1,542 @@
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml">
+<head>
+  <style>
+      .wj-header {
+          text-align: center !important;
+      }
+  </style>
+</head>
+
+<th:block layout:fragment="content">
+  <div class="layout-contents">
+    <!-- Page Title -->
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>계좌번호 관리</h2>
+        <a title="북마크" class="bookmark toggle">
+          내메뉴
+        </a>
+      </div>
+      <ul class="page-navi">
+        <li><img th:src="@{/images/icon/ico-nav-home.svg}" alt="홈아이콘"></li>
+        <li>계좌·카드 관리</li>
+        <li>계좌번호관리</li>
+      </ul>
+    </div>
+
+    <div style="display: flex; gap: 5px">
+      <section class="section" style="width: 60%;">
+        <div class="section-top">
+          <div class="search-wrap">
+            <dl>
+              <dt>
+                <label>은행명</label>
+              </dt>
+              <dd>
+                <div class="srch-box">
+                  <select class="form-control2" id="banknmCombo" name="banknmCombo"></select>
+                </div>
+              </dd>
+            </dl>
+
+            <dl>
+              <dt>
+                <label>계좌번호</label>
+              </dt>
+              <dd>
+                <div class="srch-box">
+                  <input type="text" id="accountnum" name="accountnum" class="form-control2"/>
+                </div>
+              </dd>
+            </dl>
+
+            <dl>
+              <dt><span class="eq"></span></dt>
+              <dd>
+                <li>
+                  <a class="btn btn-delete" title="검색" id="btnSearch">
+                    <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘">
+                    검색
+                  </a>
+                </li>
+              </dd>
+            </dl>
+          </div>
+        </div> <!--//section-top end -->
+        <div class="container-fluid">
+          <p id="selectedItem"></p>
+          <div id="theGrid" style=""></div>
+        </div>
+        <div class="btn-wrap">
+        </div>
+      </section>
+      <section style="width: 40%;">
+        <div class="section-top">
+          <div class="search-wrap">
+            <ul>
+              <li>
+                <!-- <a class="btn btn-excell" title="신규등록" id="btnNew" >
+                     <img src="/images/icon/ico-plus.svg" alt="등록 아이콘">
+                     신규등록
+                 </a>-->
+                <button type="button" class="btn-default" id="btnNew" name="btnNew"
+                        style="height: 36px; width:115px;"><i
+                    class="fas fa-plus"></i>신규등록
+                </button>
+              </li>
+
+              <li>
+                <!-- <a class="btn btn-edit" id="btnSave" title="저장">
+                     <img src="/images/icon/ico-save.svg" alt="저장 아이콘">
+                     저장
+                 </a>-->
+                <button type="button" class="btn-default y_write_auth" id="btnSave"
+                        style="float:none; height: 36px; width:115px;">
+                  <i class="fas fa-save"></i>저장
+                </button>
+              </li>
+
+
+              <li>
+                <!--  <a class="btn btn-delete" title="삭제" id="btnDel">
+                      <img src="/images/icon/ico-delete.svg" alt="삭제 아이콘">
+                      삭제
+                  </a>-->
+                <button type="button" class="btn-danger y_write_auth" id="btnDel"
+                        style="float:none; height: 36px; width:115px;"><i
+                    class="fas fa-trash"></i>삭제
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="table-wrap" style=" overflow-x: auto;">
+          <form id="materialGroupForm">
+            <table class="write-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;"
+                   id="detail_box">
+              <caption style="text-align: left; margin-bottom: 8px;">등록테이블</caption>
+              <colgroup>
+                <col class="wp30">
+                <col class="wp70">
+              </colgroup>
+              <input type="hidden" id="id" name="id"/>
+              <tbody>
+              <tr>
+                <th style="text-align: center; width: 5%; padding: 5px; border: 1px solid #ddd;">
+                  <label for=""><span class="eq">*</span>은행명</label>
+                </th>
+                <td style="width: 15%; padding: 5px; border: 1px solid #ddd;">
+                  <select type="text" id="bankid" name="bankid" disabled
+                          style="width: 100%;"></select>
+                </td>
+
+              </tr>
+              <tr>
+                <th style="text-align: center; width: 7%; padding: 5px; border: 1px solid #ddd;">
+                  <label for="accountNumber"><span class="eq">*</span>계좌번호</label>
+                </th>
+                <td style="width: 15%; padding: 5px; border: 1px solid #ddd;">
+                  <input type="text" id="accountNumber" name="accountNumber" disabled
+                         style="width: 100%;">
+                </td>
+              </tr>
+
+              <tr>
+                <th style="text-align: center; padding: 5px; border: 1px solid #ddd;">
+                  <label for="accountPw"><span class="eq">*</span>계좌 비밀번호</label>
+                </th>
+                <td style="padding: 5px; border: 1px solid #ddd;">
+                  <input type="password" id="accountPw" name="accountPw" style="width: 100%;">
+                </td>
+              </tr>
+
+              <tr>
+                <th style="text-align: center; width: 5%; padding: 5px; border: 1px solid #ddd;">
+                  <label><span class="eq">*</span>계좌명칭</label>
+                </th>
+                <td style="width: 15%; padding: 5px; border: 1px solid #ddd;">
+                  <input type="text" id="accountName" name="accountName" disabled
+                         style="width: 100%;">
+                </td>
+
+              </tr>
+              <tr>
+                <th style="text-align: center; width: 5%; padding: 5px; border: 1px solid #ddd;">
+                  <label for="accountType">계좌유형</label>
+                </th>
+                <td style="width: 15%; padding: 5px; border: 1px solid #ddd;">
+                  <select id="accountType" name="accountType" style="width: 100%;">
+                    <option value="">선택</option>
+                    <option value="0">법인</option>
+                    <option value="1">개인</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <th style="text-align: center; width: 5%; padding: 5px; border: 1px solid #ddd;">
+                  <label><span class="eq">*</span>인터넷뱅킹아이디</label><br>
+                  <span style="color: tomato">(국민은행인 경우만 )</span>
+                </th>
+                <td style="width: 15%; padding: 5px; border: 1px solid #ddd;">
+                  <input type="text" id="onlineid" name="onlineid"
+                         style="width: 100%;" disabled>
+                </td>
+
+
+              </tr>
+              <tr>
+                <th style="text-align: center; width: 5%; padding: 5px; border: 1px solid #ddd;">
+                  <label><span class="eq">*</span>조회전용아이디</label><br>
+                  <span style="color: tomato">(아이엠뱅크, 신한은행, 신협중앙회인 경우만)</span>
+                </th>
+                <td style="width: 15%; padding: 5px; border: 1px solid #ddd;">
+                  <input type="text" id="viewid" name="viewid"
+                         style="width: 100%;" disabled>
+                </td>
+
+
+              </tr>
+              <tr>
+                <th style="text-align: center; width: 5%; padding: 5px; border: 1px solid #ddd;">
+                  <label><span class="eq">*</span>조회전용비밀번호</label><br>
+                  <span style="color: tomato">(아이엠뱅크, 신한은행, 신협중앙회인 경우만)</span>
+                </th>
+                <td style="width: 15%; padding: 5px; border: 1px solid #ddd;">
+                  <input type="text" id="viewpw" name="viewpw"
+                         style="width: 100%;" disabled>
+                </td>
+
+
+              </tr>
+              <tr>
+                <th style="text-align: center; width: 5%; padding: 5px; border: 1px solid #ddd;">
+                  <label><span class="eq">*</span>지급수수료</label><br>
+                </th>
+                <td style="width: 15%; padding: 5px; border: 1px solid #ddd;">
+                  <input type="text" id="mijamt" name="mijamt"
+                         style="width: 100%;" disabled>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </form>
+        </div>
+        <!--//tab-wrap end-->
+      </section>
+    </div>
+  </div> <!--//layout-contents end -->
+
+  <footer style="margin-top: 24px;">
+    <p>Copyrightⓒ 0000 corp. All rights reserved.</p>
+  </footer>
+
+</th:block>
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   class bank_account_managementPage {
+    constructor() {
+     this.url = '/api/account_management/bank_management';
+     this.grid = null;
+     this.viewData = new wijmo.collections.CollectionView();
+     this.init();
+    }
+    init(){
+     let _this = this;
+
+     this.grid = new wijmo.grid.FlexGrid('#theGrid', {
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      showMarquee: true,
+      isReadOnly: true,
+      formatItem: (sender, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+        e.cell.style.textAlign = 'center';
+       }
+      },
+      columns: [
+       {binding: 'bank', header: '은행코드', visible: false},
+       {binding: 'bankname', header: '은행명', width: 150, align: 'center'},
+       {binding: 'accountNumber', header: '계좌번호', width: 150, align: 'center'},
+       {binding: 'accountName', header: '계좌명칭', width: 150, align: 'center'},
+       {binding: 'onlineid', header: '인터넷뱅킹아이디', width: 200, align: 'center'},
+       {binding: 'viewid', header: '조회전용아이디', width: 200, align: 'center'},
+       {binding: 'viewpw', header: '조회전용비밀번호', width: 200, align: 'center'},
+       {binding: 'mijamt', header: '지급수수료(원)', width: 150, align: 'center'},
+       {binding: 'popyn', header: '예금연동', width: 100, align: 'center'}
+      ],
+      itemsSource: this.viewData, // 데이터를 설정할 배열
+     });
+
+     new FlexGridContextMenu(this.grid);
+     this.grid.downloadFileName = '계좌목록';
+
+     this.grid.hostElement.addEventListener('dblclick', function (e) {
+      let items = _this.grid.selectedItems;
+      if (items.length === 0) {
+       return false;
+      }
+
+      let item = items[0];
+      _this.bindDetailData(item);
+     });
+
+     AjaxUtil.fillSelectOptions($('#banknmCombo'), 'bankid', 'choose', false);
+     AjaxUtil.fillSelectOptions($('#bankid'), 'bankid', 'choose', false);
+
+    }//init
+
+    searchMainData() {
+     let _this = this;
+     let bankid = $('#banknmCombo').val();      // 은행명
+     let accountnum = $('#accountnum').val();   // 계좌번호
+     let url = this.url + '/read';
+
+     let data = {
+      bankid: bankid,
+      accountnum: accountnum,
+      spjangcd: 'ZZ'
+     };
+
+     let fnsuccess = function (result) {
+      if (result != null && result.success) {
+       _this.viewData.sourceCollection = result.data;
+      } else {
+       console.log('Error occurred');
+      }
+
+      $('#materialGroupForm')[0].reset();
+      $('#materialGroupForm').find('#id').val('');
+
+      $('#detail_box').find('input, select').each(function () {
+       if (!$(this).is(':disabled')) {
+        $(this).attr('disabled', 'disabled');
+       }
+      });
+     };
+
+     AjaxUtil.getAsyncData(url, data, fnsuccess);
+    }//searchMainData
+
+    bindDetailData(data) {
+     if (!data) return;
+
+     // 먼저 상세영역 활성화
+     $('#detail_box').find('input, select').each(function () {
+      $(this).removeAttr('disabled');
+     });
+
+     // 값 바인딩
+     $('#id').val(data.id || data.accid || '');
+     $('#bankid').val(data.bank || '');
+     $('#accountNumber').val(data.accountNumber || '');
+     $('#accountName').val(data.accountName || '');
+     $('#accountType').val(data.accountType || '');
+     $('#onlineid').val(data.onlineid || '');
+     $('#viewid').val(data.viewid || '');
+     $('#viewpw').val(data.viewpw || '');
+     $('#mijamt').val(data.mijamt || '');
+     $('#accountPw').val(data.accountPw || '');
+
+    }//bindDetailData
+
+    //저장
+    saveAccount() {
+     let _this = this;
+     let url = this.url + '/save';
+
+     // disabled 된 값도 포함해서 가져오기 위해 직접 수집
+     let data = {
+
+      bankid: $('#bankid').val() || '', //은행
+      accountNumber: $('#accountNumber').val() || '',
+      accountPw: $('#accountPw').val() || '',
+      accountName: $('#accountName').val() || '',
+      accountType: $('#accountType').val() || '',
+      onlineid: $('#onlineid').val() || '',
+      viewid: $('#viewid').val() || '',
+      viewpw: $('#viewpw').val() || '',
+      mijamt: ($('#mijamt').val() || '').replaceAll(',', ''),
+      spjangcd: 'ZZ'
+     };
+
+     // ===== 유효성 검사 =====
+     if (!data.bankid) {
+      Alert.alert('', '은행명을 선택해주세요.');
+      $('#bankid').focus();
+      return;
+     }
+
+     if (!data.accountNumber) {
+      Alert.alert('', '계좌번호를 입력해주세요.');
+      $('#accountNumber').focus();
+      return;
+     }
+
+     if (!data.accountPw) {
+      Alert.alert('', '계좌 비밀번호를 입력해주세요.');
+      $('#accountPw').focus();
+      return;
+     }
+
+     if (!data.accountName) {
+      Alert.alert('', '계좌명칭을 입력해주세요.');
+      $('#accountName').focus();
+      return;
+     }
+
+     // 숫자형 체크
+     if (data.mijamt && isNaN(Number(data.mijamt))) {
+      Alert.alert('', '지급수수료는 숫자만 입력해주세요.');
+      $('#mijamt').focus();
+      return;
+     }
+
+     // 은행별 조건 예시
+     // 필요 시 bankid 값 기준으로 분기 추가
+     /*
+     if (data.bankid === '004' && !data.onlineid) {
+         Alert.alert('', '국민은행은 인터넷뱅킹아이디가 필요합니다.');
+         $('#onlineid').focus();
+         return;
+     }
+     */
+
+     Alert.confirm('', '저장하시겠습니까?', function () {
+      let fnsuccess = function (result) {
+       if (result && result.success) {
+        Notify.success(result.message || '저장되었습니다.');
+
+        _this.searchMainData();
+
+        // 저장 후 상세영역 초기화
+        $('#materialGroupForm')[0].reset();
+        $('#materialGroupForm').find('#id').val('');
+
+        $('#detail_box').find('input, select').each(function () {
+         $(this).attr('disabled', 'disabled');
+        });
+       } else {
+        Alert.alert('', result.message || '저장 중 오류가 발생했습니다.');
+       }
+      };
+
+      let fnfailure = function (xhr, status, error) {
+       Alert.alert('', '저장 중 서버 오류가 발생했습니다.');
+       console.log('saveAccount error:', xhr, status, error);
+      };
+
+      AjaxUtil.postAsyncData(url, data, fnsuccess, fnfailure);
+     });
+    }//saveAccount
+
+    //삭제
+    deleteAccount() {
+     let _this = this;
+     let url = this.url + '/delete';
+
+     let id = $('#id').val() || '';
+     let bankid = $('#bankid').val() || '';
+     let accountNumber = $('#accountNumber').val() || '';
+
+     if (!id && (!bankid || !accountNumber)) {
+      Alert.alert('', '삭제할 계좌를 먼저 선택해주세요.');
+      return;
+     }
+
+     Alert.confirm('', '삭제하시겠습니까?', function () {
+      let data = {
+       id: id,
+       bankid: bankid,
+       accountNumber: accountNumber,
+       spjangcd: 'ZZ'
+      };
+
+      let fnsuccess = function (result) {
+       if (result && result.success) {
+        Notify.success(result.message || '삭제되었습니다.');
+
+        _this.searchMainData();
+
+        $('#materialGroupForm')[0].reset();
+        $('#materialGroupForm').find('#id').val('');
+
+        $('#detail_box').find('input, select').each(function () {
+         $(this).attr('disabled', 'disabled');
+        });
+       } else {
+        Alert.alert('', result.message || '삭제 중 오류가 발생했습니다.');
+       }
+      };
+
+      let fnfailure = function (xhr, status, error) {
+       Alert.alert('', '삭제 중 서버 오류가 발생했습니다.');
+       console.log('deleteAccount error:', xhr, status, error);
+      };
+
+      AjaxUtil.postAsyncData(url, data, fnsuccess, fnfailure);
+     });
+    }
+
+   }//page
+
+   let page = null;
+
+   $(document).ready(function (e) {
+
+    page = new bank_account_managementPage();
+
+    page.searchMainData();
+
+    AjaxUtil.fillSelectOptions($('#cboMaterialType'), 'system_code', 'all', false, 'mat_type');
+    AjaxUtil.fillSelectOptions($('#material_type'), 'system_code', 'choose', false, 'mat_type');
+
+
+    // 검색버튼
+    $('#btnSearch').click(function (e) {
+     page.searchMainData();
+    });
+
+    // 엔터키 검색
+    $('#accountnum').on('keypress', function (e) {
+     if (e.keyCode === 13) {
+      page.searchMainData();
+     }
+    });
+
+    // 신규버튼
+    $('#btnNew').click(function (e) {
+
+     $('#materialGroupForm')[0].reset();
+     $('#materialGroupForm').find('#id').val('');
+
+     $('#detail_box').find('input, select').each(function () {
+      const id = this.id;
+
+      if ($(this).is(':disabled')) {
+       $(this).removeAttr('disabled');
+      }
+     });
+
+     //page.setButtonDisable(true, false, true);
+     setButtonState();
+    });
+
+    // 저장버튼
+    $('#btnSave').click(function (e) {
+     page.saveAccount();
+    });
+
+    // 삭제버튼
+    $('#btnDel').click(function (e) {
+     page.deleteAccount();
+    });
+
+
+   });
+
+  </script>
+</th:block>
+<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+</html>

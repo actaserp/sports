@@ -1,0 +1,572 @@
+<html layout:decorate="~{layout_page}">
+<head>
+  <style>
+      .button140px {
+          width: 140px;
+      }
+
+      .wp100per {
+          width: 100% !important;
+      }
+
+      #wj-popup {
+          border: 1px solid #aaa;
+          background-color: #fdfdfd;
+          box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+      }
+
+      .btn-code-action {
+          padding: 2px 6px;
+          font-size: 12px;
+          height: 24px;
+          line-height: 1;
+          border: none;
+          border-radius: 4px;
+          background-color: #007bff;
+          color: white;
+          cursor: pointer;
+      }
+
+      .wijmo-cltcd-input {
+          width: 100%;
+          border: none !important;
+          text-align: center;
+          background-color: white;
+      }
+
+      .wijmo-cltcd-div {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100%;
+      }
+
+      .row-red {
+          background-color: #EDEFF5 !important;
+          color: black;
+          font-weight: bold;
+      }
+      .grid-guide-box {
+          background: #eef3ff;
+          border-left: 4px solid #2f5cff;
+          padding: 6px 10px;
+          font-size: 13px;
+          margin-bottom: 6px;
+          color: #333;
+      }
+  </style>
+</head>
+<th:block layout:fragment="content">
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>카드지급</h2>
+        <a class="bookmark toggle" title="북마크">
+          내 메뉴
+        </a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>입금관리</li>
+        <li>카드지급</li>
+      </ul>
+    </div>
+    <form autocomplete="off" id="searchForm">
+      <section class="section" style="padding-top: 10px; padding-bottom: 0px;">
+        <div class="section-top">
+          <div class="search-wrap">
+            <dl>
+              <dt>
+                <label>
+                  조회 기간<span class="eq"></span>
+                </label>
+              </dt>
+              <dd>
+                <div class="srch-box">
+                  <input id="searchfrdate" name="searchfrdate" type="date"/>
+                  <span class="slow_sign">~</span>
+                  <input id="searchtodate" name="searchtodate" type="date"/>
+                </div>
+              </dd>
+            </dl>
+
+            <!--<dl>
+              <dt>
+                <label>
+                  구분
+                </label>
+              </dt>
+              <dd>
+                <select class="form-control2" id="tradetype" name="tradetype">
+                  <option value="">전체</option>
+                  <option value="0">입금</option>
+                  <option value="1">출금</option>
+                </select>
+              </dd>
+            </dl>-->
+
+            <dl>
+              <dt>
+                <label>
+                  거래처<span class="eq"></span>
+                </label>
+              </dt>
+              <dd>
+                <div class="srch-box">
+                  <input id="cboCompany" name="cboCompany" placeholder="입력 후 엔터를 눌러 검색하세요." type="text"/>
+                  <input id="cboCompanyHidden" name="cboCompanyHidden" type="hidden"/>
+                  <input id="cltflag" name="cltflag" type="hidden"/>
+                </div>
+              </dd>
+            </dl>
+
+            <dl>
+              <dt>
+                <label>
+                  카드번호
+                </label>
+              </dt>
+              <dd>
+                <input id="accountName" name="accountName" placeholder="입력 후 엔터를 눌러 검색하세요." type="text"/>
+                <input id="accountNameHidden" name="accountNameHidden" type="hidden"/>
+              </dd>
+            </dl>
+
+
+            <dl>
+              <dt>&nbsp;</dt>
+              <dd>
+                <li>
+                  <button class="btn btn-delete" id="btnSearch" title="검색" type="button">
+                    <!--                                        class 쓰이는 곳 찾고 없으면 클래스명 수정하기-->
+                    <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
+                    검색
+                  </button>
+                </li>
+              </dd>
+            </dl>
+
+            <!--<dl>
+              <dt>&nbsp;</dt>
+              <dd>
+                <li>
+                  <a class="btn btn-delete" id="btnSetting" title="검색">
+                    &lt;!&ndash;class 쓰이는 곳 찾고 없으면 클래스명 수정하기&ndash;&gt;
+                    <img alt="등록 아이콘" src="/images/icon/ico-plus.svg">
+                    설정
+                  </a>
+                </li>
+              </dd>
+            </dl>-->
+
+          </div>
+        </div>
+      </section>
+    </form>
+
+    <section class="section">
+      <div class="grid_box" id="divList">
+        <div class="title_box">
+          <!-- <span class="right_align rpt" data-labelCd="출하 지시 목록">출하지시 목록</span>-->
+          <ul>
+            <!--<li class="right_align rpt"  style="margin-right: 5px">
+                <a class="btn btn-excell" title="등록" id="">
+                    <img src="/images/icon/ico-plus.svg" alt="등록 아이콘">
+                    저장
+                </a>
+            </li>-->
+            <li class="right_align rpt" style="margin-right: 5px">
+              <a class="btn btn-edit" id="btnAddNew" title="전표생성">
+                <img alt="추가 아이콘" th:src="@{/images/icon/ico-edit.svg}">
+                전표생성
+              </a>
+            </li>
+            <li class="right_align rpt" style="margin-right: 5px">
+              <a class="btn btn-edit" id="btnPayCancel" title="전표생성">
+                <img alt="추가 아이콘" th:src="@{/images/icon/ico-edit.svg}">
+                전표생성 취소
+              </a>
+            </li>
+            <li class="right_align rpt" style="margin-right: 5px">
+              <a class="btn btn-delete" id="btnBulkEdit" title="저장">
+                <img alt="저장 아이콘" th:src="@{/images/icon/ico-edit.svg}">
+                저장
+              </a>
+            </li>
+            <!--<li class="right_align rpt" style="margin-right: 5px">
+              <a class="btn btn-delete" id="btnEdit" title="수정">
+                <img alt="수정 아이콘" src="/images/icon/ico-edit.svg">
+                수정
+              </a>
+            </li>
+            <li class="right_align rpt" style="margin-right: 5px">
+              <a class="btn btn-edit" id="btnDelete" title="삭제">
+                <img alt="삭제 아이콘" src="/images/icon/ico-delete.svg">
+                삭제
+              </a>
+            </li>-->
+          </ul>
+        </div>
+
+        <div id="theGrid_CardHistory" style="height: 540px;"></div>
+        <div id="memo-popup" style="display: none; position: absolute; z-index: 9999;">
+          <textarea id="memo-textarea" style="width: 300px; height: 100px;"></textarea>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!--설정팝업-->
+  <script type="text/x-tmpl" id="cardSettingTemplate">
+    <div class="content_wrap popup">
+        <section class="section">
+            <div style="display:block;">
+                <div class="title-box">
+                    <ul>
+                        <span style="float:left; line-height:3; color:tomato;">
+                            바로빌 연동 카드 목록을 조회한 후 선택한 카드의 사용내역을 수집합니다.
+                        </span>
+                    </ul>
+
+                    <ul>
+                    <li class="right_align rpt" style="margin:10px 5px;">
+                        <a class="btn btn-excell" title="카드목록조회" id="btnLoadBaroCardList">
+                            <img th:src="@{/images/icon/btn-srch.svg}" alt="조회 아이콘">
+                            카드목록 조회
+                        </a>
+                    </li>
+                    <ul/>
+
+                </div>
+            </div>
+
+            <div class="title-box">
+                <ul style="display:flex; align-items:center; list-style:none; padding:0; margin:0; width:100%;">
+                    <li>
+                        <span style="margin-right:5px;">거래수집기간</span>
+                    </li>
+                    <li>
+                        <input type="date" id="cardCollectFrDate" name="cardCollectFrDate" /> ~
+                        <input type="date" id="cardCollectToDate" name="cardCollectToDate" />
+                    </li>
+                    <li>
+                        <span style="color:tomato; margin-left:5px;">* 최대 200일</span>
+                    </li>
+
+                    <li class="right_align rpt" style="margin:10px 0px; margin-left:auto;">
+                        <a class="btn btn-excell" title="카드내역수집" id="btnRequestSelectedCardHistory">
+                            <img th:src="@{/images/icon/ico-plus.svg}" alt="수집 아이콘">
+                            선택카드 내역수집
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div id="cardSettingGrid" style="height:350px; display:block;"></div>
+        </section>
+    </div>
+  </script>
+
+  <!--사업 팝업-->
+  <script type="text/x-tmpl" id="businmTemplate">
+    <div class="content_wrap popup">
+        <section class="section">
+            <div id="BusinessGrid" style="height:350px; display:block;"></div>
+        </section>
+    </div>
+  </script>
+
+  <!-- 관명 팝업 -->
+  <script type="text/x-tmpl" id="accnmTemplate">
+    <div class="content_wrap popup">
+        <section class="section">
+            <div id="AccGrid" style="height:350px; display:block;"></div>
+        </section>
+    </div>
+  </script>
+
+  <!-- 항명 팝업 -->
+  <script type="text/x-tmpl" id="it1Template">
+    <div class="content_wrap popup">
+        <section class="section">
+            <div id="It1Grid" style="height:350px; display:block;"></div>
+        </section>
+    </div>
+  </script>
+
+  <!-- 목명 팝업 -->
+  <script type="text/x-tmpl" id="it2Template">
+    <div class="content_wrap popup">
+        <section class="section">
+            <div id="It2Grid" style="height:350px; display:block;"></div>
+        </section>
+    </div>
+  </script>
+
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script src="/js/cycle/CardInputHandler.js"></script>
+  <th:block th:replace="/common/popup_card :: popup_card" />
+  <script type="text/javascript">
+   class CardAssignmentPage {
+    constructor() {
+     this.url = '/api/account_management/card_assignment';
+     this.grid = null;
+     this.viewData = new wijmo.collections.CollectionView();
+     this.init();
+    }
+    init() {
+     let _this = this;
+
+     // 재원
+     this.mssecOptions = AjaxUtil.getSelectDataWithNull('mssec', 'choose');
+
+     let dicMssec = {};
+     $.each(this.mssecOptions, function (idx, item) {
+      dicMssec[item.value] = item.text;
+     });
+
+     // DataMap 생성
+     let mssecMap = new wijmo.grid.DataMap(this.mssecOptions, 'value', 'text');
+
+     _this.grid = new wijmo.grid.FlexGrid('#theGrid_CardHistory', {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      showMarquee: true,
+      allowSorting: 'MultiColumn',
+      selectionMode: wijmo.grid.SelectionMode.Cell,
+      isReadOnly: false,
+      imeEnabled: true,
+      formatItem: (s, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+        e.cell.style.textAlign = 'center';
+       }
+      },
+      columns: [
+       {
+        binding: 'selected',
+        header: '선택',
+        width: 70,
+        align: 'center',
+        dataType: wijmo.DataType.Boolean,
+        isReadOnly: false
+       },
+       {
+        binding: 'slip_cancel_yn',
+        header: '전표취소',
+        width: 90,
+        align: 'center',
+        dataType: wijmo.DataType.Boolean,
+        isReadOnly: false
+       },
+       {binding: 'apv_dt', header: '일자', width: 120, align: 'center', isReadOnly: true},
+       {binding: 'apv_no', header: '처리', width: 100, align: 'center', isReadOnly: true, visible: false},
+       {binding: 'mijdate', header: '전표일자', width: 100, align: 'center', isReadOnly: true},
+
+       {binding: 'biz_no', header: 'biz_no', visible: false},
+       {binding: 'card_no', header: 'card_no', visible: false},
+       {binding: 'biz_no', header: 'biz_no', visible: false},
+       {binding: 'bnkcode', header: 'bnkcode', visible: false},
+       {binding: 'buy_sum', header: '승인금액', width: 160, align: 'left', isReadOnly: true},
+       {binding: 'bsdate', header: '사업코드1', visible: false},
+       {binding: 'bseccd', header: '사업코드2', visible: false},
+       {binding: 'buiscd', header: '사업코드', visible: false},
+       {binding: 'busim', header: '사업명', width: 300, align: 'left', isReadOnly: true},
+       {binding: 'acccd', header: '관코드', visible: false},
+       {binding: 'accnm', header: '관명', width: 120, align: 'left', isReadOnly: true},
+       {binding: 'it1cd', header: '항코드',visible: false },
+       {binding: 'it1nm', header: '항', width: 100, align: 'left', isReadOnly: true},
+       {binding: 'it2cd', header: '목코드', visible: false},
+       {binding: 'it2nm', header: '목', width: 100, align: 'left', isReadOnly: true},
+       {binding: 'summy', header: '산출내역', width: 200, align: 'left', isReadOnly: true},
+       {binding: 'mssec', header: '재원코드', visible: false},
+       {binding: 'mssecnm', header: '재원', width: 100, align: 'left',},
+       {binding: 'subject', header: '적요', width: 200, align: 'left', isReadOnly: false},
+       {binding: 'remark', header: '비고', width: 200, align: 'left', isReadOnly: false},
+       {binding: 'paydate', header: '지급전표일자', width: 160, align: 'center', isReadOnly: true},
+       {binding: 'paynum', header: '지급전표번호', width: 140, align: 'center', isReadOnly: true},
+
+       {binding: 'mest_nm', header: '가맹점', width: 160, align: 'left', isReadOnly: true},
+      ],
+      itemsSource: this.viewData,
+     });
+
+     _this.grid.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     new FlexGridContextMenu(this.grid);
+     _this.grid.downloadFileName = '카드지급 내역';
+
+     // footer 합계행 추가
+     _this.grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+
+     // '일자' 컬럼 위치에 합계 표시
+     const apvDtColIndex = _this.grid.columns.findIndex(c => c.binding === 'apv_dt');
+     if (apvDtColIndex > -1) {
+      _this.grid.columnFooters.setCellData(0, apvDtColIndex, '합계');
+     }
+
+     // 금액 컬럼 aggregate 지정
+     const buySumCol = _this.grid.columns.getColumn('buy_sum');
+     if (buySumCol) {
+      buySumCol.aggregate = wijmo.Aggregate.Sum;
+     }
+
+     // 데이터 로드 후 초기 선택 해제
+     _this.grid.loadedRows.addHandler(() => {
+      setTimeout(() => {
+       _this.grid.select(-1, -1);
+      }, 0);
+     });
+
+    }//init
+
+    searchMainData() {
+     let _this = this;
+     let url = this.url + '/read';
+
+     let start = $('#searchfrdate').val();
+     let end = $('#searchtodate').val();
+
+     let data = {
+      'start': start,
+      'end': end,
+      accountName: $('#accountName').val(),
+      tradetype: $('#tradetype').val(),
+
+     };
+
+     let fnsuccess = function (result) {
+      if (result != null) {
+       _this.viewData.sourceCollection = result.data;
+      }
+     };
+     AjaxUtil.getAsyncData(url, data, fnsuccess);
+
+    }
+    newCardAssignmentSave(){
+     let _this = this;
+
+     let items = _this.viewData ? _this.viewData.items : [];
+     let selectedItems = items.filter(item => item.selected === true);
+
+     if (!selectedItems || selectedItems.length === 0) {
+      Alert.alert('', '선택된 데이터가 없습니다.');
+      return;
+     }
+
+     let invalidRows = selectedItems.filter(item =>
+      !item.busim || !item.accnm || !item.it1nm || !item.it2nm || !item.mssec
+     );
+
+     if (invalidRows.length > 0) {
+      Alert.alert('', '선택된 행 중 필수값(사업명, 관명, 항, 목, 재원)이 없는 데이터가 있습니다.');
+      return;
+     }
+
+     let data = {
+      items: JSON.stringify(selectedItems)
+     };
+
+     let fnsuccess = function (res) {
+      if (res.success) {
+       Notify.success('전표가 생성되었습니다.');
+       _this.searchMainData();
+      } else {
+       Alert.alert('', res.message || '전표 생성 중 오류가 발생했습니다.');
+      }
+     };
+
+     AjaxUtil.postAsyncData(this.url + '/createPaymentSlip', data, fnsuccess);
+    }
+
+    //지급 전표 생성 취소
+    newPaySlipCancel(){
+     let _this = this;
+
+     let items = _this.viewData ? _this.viewData.items : [];
+     let selectedItems = items.filter(item => item.slip_cancel_yn === true);
+
+     if (!selectedItems || selectedItems.length === 0) {
+      Alert.alert('', '전표취소할 데이터를 선택해주세요.');
+      return;
+     }
+
+     // paydate, paynum이 없는 항목 체크 (지급전표가 생성되지 않은 항목)
+     let noSlipItems = selectedItems.filter(item =>
+      (!item.paydate || item.paydate.trim() === '') ||
+      (!item.paynum || item.paynum.trim() === '')
+     );
+
+     if (noSlipItems.length > 0) {
+      Alert.alert('', '지급전표가 생성되지 않은 항목이 포함되어 있습니다.');
+      return;
+     }
+
+     Alert.confirm('', '선택한 지급전표를 취소하시겠습니까?', function(){
+      let cancelData = {
+       items: JSON.stringify(selectedItems.map(item => ({
+        biz_no: item.biz_no,
+        card_no: item.card_no,
+        apv_dt: item.apv_dt,
+        apv_no: item.apv_no,
+        paydate: item.paydate,
+        paynum: item.paynum
+       })))
+      };
+
+      let fnsuccess = function(res){
+       if(res.success){
+        Notify.success('지급 전표가 취소되었습니다.');
+        _this.searchMainData(); // 재조회
+       } else {
+        Alert.alert('', res.message || '지급 전표 취소에 실패했습니다.');
+       }
+      };
+
+      AjaxUtil.postAsyncData(_this.url + '/PaymentCancelSlip', cancelData, fnsuccess);
+     });
+    }
+
+   }//page
+
+   let page = null;
+
+   $(document).ready(function (e) {
+    page = new CardAssignmentPage();
+
+    let fr = new Date();
+    fr.setDate(1);
+    fr.setMonth(fr.getMonth() - 1);
+
+    $('#searchfrdate').val(CommonUtil.formatYYYYMMDD(fr));
+    $('#searchtodate').val(getNowDate());
+
+    page.searchMainData();
+
+    $('#btnSearch').on('click', function () {
+     page.searchMainData();
+    });
+
+    $('#accountName').on('keydown', function (e) {
+      if (e.key === 'Enter' || e.keyCode === 13) {
+       page.searchMainData();
+      }
+    });
+
+    //전표 생성
+    $('#btnAddNew').on('click', function (e){
+     e.preventDefault();
+     page.newCardAssignmentSave();
+    });
+
+    //전표 생성 취소
+    $('#btnPayCancel').on('click', function (e){
+     e.preventDefault();
+     page.newPaySlipCancel();
+    });
+
+   })
+  </script>
+</th:block>
+</html>
