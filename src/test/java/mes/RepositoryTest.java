@@ -33,19 +33,7 @@ public class RepositoryTest {
 	
 	@Autowired
 	BomRepository bomRepository;
-		
-	@Test
-	public void bomTest() {
-		
-		Optional<Bom> optBom = this.bomRepository.findById(1);
-		Bom bom = optBom.get();
-		System.out.println(bom);
-		
-		Bom bom2 = this.bomRepository.getBomById(1);
-		System.out.println(bom2);
-		
-	
-	}
+
 	
 	@Test
     public void userTest() {    	
