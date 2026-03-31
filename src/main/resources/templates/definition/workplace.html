@@ -528,7 +528,7 @@
 
         function sendAjaxRequest(url) {
           $.ajax({
-            url: withCtx(url),
+            url: url,
             type: 'POST',
             data: formData,
             processData: false,

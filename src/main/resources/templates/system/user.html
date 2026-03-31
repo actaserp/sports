@@ -4,9 +4,9 @@
         .wj-header {
             text-align: center !important;
         }
-         #getPersonId {
-             color: white !important;
-         }
+        #getPersonId {
+            color: white !important;
+        }
     </style>
 </head>
 
@@ -27,271 +27,275 @@
             </ul>
         </div>
         <div style="display: flex; gap: 5px;">
-        <section class="section" style="flex: 0 0 40%;">
-            <div class="section-top">
-                <div class="search-wrap">
-                    <dl>
-                        <dt>
-                            <label>사용자그룹</label>
-                        </dt>
-                        <dd>
-                            <div class="srch-box">
-                                <select class="form-control2" id="cboUserGroup" name="cboUserGroup"
-                                        style="border-radius: 5px 5px 5px 5px; width: 120px;"></select>
-                            </div>
-                        </dd>
-                    </dl>
+            <section class="section" style="flex: 0 0 40%;">
+                <div class="section-top">
+                    <div class="search-wrap">
+                        <dl>
+                            <dt>
+                                <label>사용자그룹</label>
+                            </dt>
+                            <dd>
+                                <div class="srch-box">
+                                    <select class="form-control2" id="cboUserGroup" name="cboUserGroup"
+                                            style="border-radius: 5px 5px 5px 5px; width: 120px;"></select>
+                                </div>
+                            </dd>
+                        </dl>
 
-                    <dl>
-                        <dt>
-                            <label for="txtName">
-                                이름
-                            </label>
-                        </dt>
-                        <dd>
-                            <div class="srch-box">
-                                <input class="form-control2" id="txtName" name="txtName" style="width: 120px;"/>
-                            </div>
-                        </dd>
-                    </dl>
+                        <dl>
+                            <dt>
+                                <label for="txtName">
+                                    이름
+                                </label>
+                            </dt>
+                            <dd>
+                                <div class="srch-box">
+                                    <input class="form-control2" id="txtName" name="txtName" style="width: 120px;"/>
+                                </div>
+                            </dd>
+                        </dl>
 
-                    <dl>
-                        <dt>
-                            <label for="username">
-                                ID
-                            </label>
-                        </dt>
-                        <dd>
-                            <div class="srch-box">
-                                <input class="form-control2" id="username" name="username" style="width: 120px;"/>
-                            </div>
-                        </dd>
-                    </dl>
-                    <dl>
-                        <dt>
-                            <label>부서</label>
-                        </dt>
-                        <dd>
-                            <div class="srch-box">
-                                <select class="form-control2" id="txtDepart" name="txtDepart"
-                                        style="border-radius: 5px 5px 5px 5px; width: 120px;"></select>
-                            </div>
-                        </dd>
-                    </dl>
+                        <dl>
+                            <dt>
+                                <label for="username">
+                                    ID
+                                </label>
+                            </dt>
+                            <dd>
+                                <div class="srch-box">
+                                    <input class="form-control2" id="username" name="username" style="width: 120px;"/>
+                                </div>
+                            </dd>
+                        </dl>
+                        <dl>
+                            <dt>
+                                <label>부서</label>
+                            </dt>
+                            <dd>
+                                <div class="srch-box">
+                                    <select class="form-control2" id="txtDepart" name="txtDepart"
+                                            style="border-radius: 5px 5px 5px 5px; width: 120px;"></select>
+                                </div>
+                            </dd>
+                        </dl>
 
-                    <dl>
-                        <dt><span class="eq"></span></dt>
-                        <dd>
-                            <li>
-                                <a class="btn btn-delete" title="검색" id="btnSearch" style="width: 30px">
-                                    <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘" style="margin-right:2px;">
-                                </a>
-                            </li>
-                        </dd>
-                    </dl>
+                        <dl>
+                            <dt><span class="eq"></span></dt>
+                            <dd>
+                                <li>
+                                    <a class="btn btn-delete" title="검색" id="btnSearch" style="width: 30px">
+                                        <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘" style="margin-right:2px;">
+                                    </a>
+                                </li>
+                            </dd>
+                        </dl>
+                    </div>
+                </div> <!--//section-top end -->
+                <div class="container-fluid">
+                    <p id="selectedItem"></p>
+                    <div id="theGrid" style=""></div>
                 </div>
-            </div> <!--//section-top end -->
-            <div class="container-fluid">
-                <p id="selectedItem"></p>
-                <div id="theGrid" style=""></div>
-            </div>
-            <div class="btn-wrap">
-            </div>
-        </section>
+                <div class="btn-wrap">
+                </div>
+            </section>
 
 
-        <div class="tab-wrap" style="flex: 0 0 60%; min-width: 0;">
-            <ul class="tab-links">
-                <li><a href="#tab_basic">기본정보</a></li>
-                <li><a href="#tab_user_grp">사용자 그룹</a></li>
-            </ul>
-            <div>
-                <section class="tab-item" id="tab_basic" style="border-top-left-radius: 0;">
-                    <div class="section-top">
-                        <div class="button-wrap">
-                            <ul>
-                                <li>
-                                    <!-- <a class="btn btn-excell" title="신규등록" id="btnNew">
-                                         <img th:src="@{/images/icon/ico-plus.svg}" alt="등록 아이콘">
-                                         신규등록
-                                     </a>-->
-                                    <!-- <button type="button" class="btn btn-excel" id="btnNew" name="btnNew" title="신규">
-                                         <img th:src="@{/images/icon/ico-plus.svg}" alt="등록 아이콘">
-                                         신규</button>-->
-                                    <button type="button" class="btn-excell btn-default" id="btnNew" name="btnNew" title="신규"
-                                            style="height: 36px; width:115px;">
-                                        <i class="fas fa-plus"></i> 신규등록
-                                    </button>
-                                </li>
+            <div class="tab-wrap" style="flex: 0 0 60%; min-width: 0;">
+                <ul class="tab-links">
+                    <li><a href="#tab_basic">기본정보</a></li>
+                    <li><a href="#tab_user_grp">사용자 그룹</a></li>
+                </ul>
+                <div>
+                    <section class="tab-item" id="tab_basic" style="border-top-left-radius: 0;">
+                        <div class="section-top">
+                            <div class="button-wrap">
+                                <ul>
+                                    <li>
+                                        <!-- <a class="btn btn-excell" title="신규등록" id="btnNew">
+                                             <img th:src="@{/images/icon/ico-plus.svg}" alt="등록 아이콘">
+                                             신규등록
+                                         </a>-->
+                                        <!-- <button type="button" class="btn btn-excel" id="btnNew" name="btnNew" title="신규">
+                                             <img th:src="@{/images/icon/ico-plus.svg}" alt="등록 아이콘">
+                                             신규</button>-->
+                                        <button type="button" class="btn-excell btn-default" id="btnNew" name="btnNew" title="신규"
+                                                style="height: 36px; width:115px;">
+                                            <i class="fas fa-plus"></i> 신규등록
+                                        </button>
+                                    </li>
 
-                                <li>
-                                    <!-- <li>
-                                 <a class="btn btn-edit" id="btnSave" title="저장">
-                                     <img th:src="@{/images/icon/ico-save.svg}" alt="저장 아이콘">
-                                     저장
-                                 </a>
-                             </li>-->
-                                    <!-- <button type="button" class="btn btn-edit" id="btnSave" title="저장">
-                                         <img th:src="@{/images/icon/ico-save.svg}" alt="저장 아이콘">저장
-                                     </button>-->
-                                    <button type="button" class="btn-edit btn-default" id="btnSave" title="저장"
-                                            style="height: 36px; width:115px;">
-                                        <i class="fas fa-save"></i></button>
-                                </li>
+                                    <li>
+                                        <!-- <li>
+                                     <a class="btn btn-edit" id="btnSave" title="저장">
+                                         <img th:src="@{/images/icon/ico-save.svg}" alt="저장 아이콘">
+                                         저장
+                                     </a>
+                                 </li>-->
+                                        <!-- <button type="button" class="btn btn-edit" id="btnSave" title="저장">
+                                             <img th:src="@{/images/icon/ico-save.svg}" alt="저장 아이콘">저장
+                                         </button>-->
+                                        <button type="button" class="btn-edit btn-default" id="btnSave" title="저장"
+                                                style="height: 36px; width:115px;">
+                                            <i class="fas fa-save"></i></button>
+                                    </li>
 
-                                <li>
-                                    <!--  <a class="btn btn-delete" title="삭제" id="btnDel">
-                                    <img th:src="@{/images/icon/ico-delete.svg}" alt="삭제 아이콘">
-                                    삭제
-                                </a>-->
-                                    <!--<button type="button" class="btn btn-delete" id="btnDel" title="삭제">
+                                    <li>
+                                        <!--  <a class="btn btn-delete" title="삭제" id="btnDel">
                                         <img th:src="@{/images/icon/ico-delete.svg}" alt="삭제 아이콘">
                                         삭제
-                                    </button>-->
+                                    </a>-->
+                                        <!--<button type="button" class="btn btn-delete" id="btnDel" title="삭제">
+                                            <img th:src="@{/images/icon/ico-delete.svg}" alt="삭제 아이콘">
+                                            삭제
+                                        </button>-->
 
-                                    <button type="button" class="btn-delete btn-danger" id="btnDel" title="삭제"
-                                            style="height: 36px; width:115px;">
-                                        <i class="fas fa-trash"></i>삭제
-                                    </button>
-                                </li>
-                                <li>
-                                    <!-- <a class="btn btn-delete" title="검색" id="btnPassSetting"  data-popup="popup1"
-                                   onclick="showPopup()">
-                                    패스워드 설정
-                                </a>-->
-                                    <!-- <button type="button" class="btn btn-delete" id="btnPassSetting" data-popup="popup1"><i
-                                             class="fas fa-cog"></i> 패스워드 설정
-                                     </button>-->
-                                    <button type="button" class="btn-delete btn-default" id="btnPassSetting"
-                                            style="height: 36px; width:115px;">
-                                        <i class="fas fa-cog"></i> 패스워드 설정
-                                    </button>
-                                </li>
-                                <li>
-                                    <button type="button" class="btn-delete btn-default" id="btnSearchComp"
-                                            style="height: 36px; width:115px;">
-                                        거래처 검색
-                                    </button>
-                                </li>
-                            </ul>
+                                        <button type="button" class="btn-delete btn-danger" id="btnDel" title="삭제"
+                                                style="height: 36px; width:115px;">
+                                            <i class="fas fa-trash"></i>삭제
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <!-- <a class="btn btn-delete" title="검색" id="btnPassSetting"  data-popup="popup1"
+                                       onclick="showPopup()">
+                                        패스워드 설정
+                                    </a>-->
+                                        <!-- <button type="button" class="btn btn-delete" id="btnPassSetting" data-popup="popup1"><i
+                                                 class="fas fa-cog"></i> 패스워드 설정
+                                         </button>-->
+                                        <button type="button" class="btn-delete btn-default" id="btnPassSetting"
+                                                style="height: 36px; width:115px;">
+                                            <i class="fas fa-cog"></i> 패스워드 설정
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button type="button" class="btn-delete btn-default" id="btnSearchComp"
+                                                style="height: 36px; width:115px;">
+                                            거래처 검색
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="table-wrap" style=" overflow-x: auto;">
+                                <form id="userForm">
+                                    <table class="write-table"
+                                           style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                                        <caption style="text-align: left; margin-bottom: 8px;">상세테이블</caption>
+                                        <input type="hidden" id="id" name="id"/>
+                                        <tbody>
+                                        <tr>
+                                            <th>
+                                                <label for="login_id">ID</label>
+                                            </th>
+                                            <td>
+                                                <input type="text" id="login_id" name="login_id" style="width: 100%;">
+                                            </td>
+
+                                            <th>
+                                                <label for="personid">사번</label>
+                                            </th>
+                                            <td colspan="3">
+                                                <input type="text" id="person_code" name="person_code" style="width: 35%;" readonly>
+                                                <input type="hidden" id="personid" name="personid" style="width: 35%;" readonly>
+                                                <input type="text" id="personname" name="personname" style="width: 35%;" readonly>
+                                                <a class="btn btn-navy" title="자료가져오기" id="getPersonId">사번찾기</a>
+                                            </td>
+
+                                        </tr>
+                                        <tr>
+                                            <th>
+                                                <label for="Name">이름</label>
+                                            </th>
+                                            <td>
+                                                <input type="text" id="Name" name="Name" style="width: 100%;">
+                                            </td>
+                                            <th>
+                                                <label for="Name">전화번호</label>
+                                            </th>
+                                            <td>
+                                                <input type="text" id="tel" name="tel" class="phone-format" style="width: 100%;">
+                                            </td>
+
+                                            <th>
+                                                <label for="email">Email</label>
+                                            </th>
+                                            <td>
+                                                <input type="text" style="width: 100%;" id="email" name="email">
+                                            </td>
+
+
+                                        </tr>
+
+                                        <tr>
+                                            <th>
+                                                <label for="UserGroup_id">사용자그룹</label>
+                                            </th>
+                                            <td>
+                                                <select style="width: 100%;" id="UserGroup_id" name="UserGroup_id"></select>
+                                            </td>
+                                            <th>
+                                                <label for="is_active">활성화 여부</label>
+                                            </th>
+                                            <td style=" vertical-align: middle;">
+                                                <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                                                    <input type="checkbox" id="is_active">
+                                                </div>
+                                            </td>
+                                            <th>
+                                                <label for="Factory_id">소속 공장</label>
+                                            </th>
+                                            <td>
+                                                <select style="width: 100%;" id="Factory_id" name="Factory_id"></select>
+                                            </td>
+
+
+
+                                        </tr>
+                                        <tr>
+                                            <th>
+                                                <label for="Depart_id">부서</label>
+                                            </th>
+                                            <td>
+                                                <select style="width: 100%;" id="Depart_id" name="Depart_id"></select>
+                                            </td>
+                                            <th>
+                                                <label for="lang_code">언어</label>
+                                            </th>
+                                            <td>
+                                                <select style="width: 100%;" id="lang_code" name="lang_code"></select>
+                                            </td>
+                                            <!--                                        <th><label for="spjangcd">사업장</label></th>-->
+                                            <!--                                        <td>-->
+                                            <!--                                            <select style="width: 100%;" id="spjangcd" name="spjangcd"></select>-->
+                                            <!--                                        </td>-->
+
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </form>
+                            </div>
                         </div>
-                        <div class="table-wrap" style=" overflow-x: auto;">
-                            <form id="userForm">
-                                <table class="write-table"
-                                       style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-                                    <caption style="text-align: left; margin-bottom: 8px;">상세테이블</caption>
-                                    <input type="hidden" id="id" name="id"/>
-                                    <input type="hidden" id="spjangcd" name="spjangcd"/>
-                                    <tbody>
-                                    <tr>
-                                        <th>
-                                            <label for="login_id">ID</label>
-                                        </th>
-                                        <td>
-                                            <input type="text" id="login_id" name="login_id" style="width: 100%;">
-                                        </td>
+                    </section>
 
-                                        <th>
-                                            <label for="personid">사번</label>
-                                        </th>
-                                        <td colspan="3">
-                                            <input type="text" id="person_code" name="person_code" style="width: 35%;" readonly>
-                                            <input type="hidden" id="personid" name="personid" style="width: 35%;" readonly>
-                                            <input type="text" id="personname" name="personname" style="width: 35%;" readonly>
-                                            <a class="btn btn-navy" title="자료가져오기" id="getPersonId">사번찾기</a>
-                                        </td>
-
-                                    </tr>
-                                    <tr>
-                                        <th>
-                                            <label for="Name">이름</label>
-                                        </th>
-                                        <td>
-                                            <input type="text" id="Name" name="Name" style="width: 100%;">
-                                        </td>
-                                        <th>
-                                            <label for="Name">전화번호</label>
-                                        </th>
-                                        <td>
-                                            <input type="text" id="tel" name="tel" class="phone-format" style="width: 100%;">
-                                        </td>
-
-                                        <th>
-                                            <label for="email">Email</label>
-                                        </th>
-                                        <td>
-                                            <input type="text" style="width: 100%;" id="email" name="email">
-                                        </td>
-
-
-                                    </tr>
-
-                                    <tr>
-                                        <th>
-                                            <label for="UserGroup_id">사용자그룹</label>
-                                        </th>
-                                        <td>
-                                            <select style="width: 100%;" id="UserGroup_id" name="UserGroup_id"></select>
-                                        </td>
-                                        <th>
-                                            <label for="is_active">활성화 여부</label>
-                                        </th>
-                                        <td style=" vertical-align: middle;">
-                                            <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
-                                                <input type="checkbox" id="is_active">
-                                            </div>
-                                        </td>
-                                        <th>
-                                            <label for="Depart_id">부서</label>
-                                        </th>
-                                        <td>
-                                            <select style="width: 100%;" id="Depart_id" name="Depart_id"></select>
-                                        </td>
-
-
-
-                                    </tr>
-                                    <tr>
-
-                                        <th style="display: none;">
-                                            <label for="lang_code">언어</label>
-                                        </th>
-                                        <td style="display: none;">
-                                            <select style="width: 100%;" id="lang_code" name="lang_code"></select>
-                                        </td>
-<!--                                        <th><label for="spjangcd">사업장</label></th>-->
-<!--                                        <td>-->
-<!--                                            <select style="width: 100%;" id="spjangcd" name="spjangcd"></select>-->
-<!--                                        </td>-->
-
-                                    </tr>
-                                    </tbody>
-                                </table>
-                            </form>
+                    <section class="tab-item" id="tab_user_grp" style="border-top-left-radius: 0;">
+                        <input type="hidden" id="user_pk"/>
+                        <div class="section-top">
+                            <div class="button-wrap">
+                                <ul>
+                                    <li>
+                                        <button type="button" class="btn-excell btn-default" id="btnUserGroupSave" title="저장"
+                                                style="height: 36px; width:115px;">
+                                            <i class="fas fa-save"></i></button>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="container-fluid">
+                                <p id="selectedItem"></p>
+                                <div id="user_group_grid" style=""></div>
+                            </div>
                         </div>
-                    </div>
-                </section>
-
-                <section class="tab-item" id="tab_user_grp" style="border-top-left-radius: 0;">
-                    <input type="hidden" id="user_pk"/>
-                    <div class="section-top">
-                        <div class="button-wrap">
-                            <ul>
-                                <li>
-                                    <button type="button" class="btn-excell btn-default" id="btnUserGroupSave" title="저장"
-                                            style="height: 36px; width:115px;">
-                                        <i class="fas fa-save"></i></button>
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="container-fluid">
-                            <p id="selectedItem"></p>
-                            <div id="user_group_grid" style=""></div>
-                        </div>
-                    </div>
-                </section>
+                    </section>
+                </div>
             </div>
-        </div>
         </div>
     </div> <!--//layout-contents end -->
     <footer style="margin-top: 24px;">
@@ -444,8 +448,12 @@
     <th:block th:replace="/common/ax5_uploader :: ax5_uploader"></th:block>
     <th:block th:replace="/common/upload_one_image_box :: upload_one_image_box"></th:block>
     <th:block th:replace="/common/popup_select_user_code :: popup_select_user_code"></th:block>
+    <!--  연락처 및 사업번호 등 포맷 js파일  -->
+    <script th:src="@{/js/InputFormat.js}"></script>
     <script type="text/javascript">
-        
+        attachTelFormatterAll('.phone-format'); // 연락처 포맷 메서드
+        attachBizNumberFormatterAll('.biz-number'); // 사업자번호 포맷 메서드
+
         var theGrid;
         var viewdata;
         var theGrid2;
@@ -460,9 +468,9 @@
             {binding: 'tel', header: '전화번호', width: 180, align: 'center'},
             {binding: 'email', header: '이메일', width: 200, align: 'center'},
             {binding: 'group_name', header: '사용자그룹', width: 120, align: 'center'},
-            // {binding: 'factory_name', header: '소속공장', width: 150, align: 'center'},
+            {binding: 'factory_name', header: '소속공장', width: 150, align: 'center'},
             {binding: 'dept_name', header: '부서', width: 150, align: 'center'},
-            // {binding: 'lang_code', header: '언어', width: 100, align: 'center'},
+            {binding: 'lang_code', header: '언어', width: 100, align: 'center'},
             {
                 binding: 'is_active',
                 header: '활성화',
@@ -547,8 +555,7 @@
                 document.getElementById('person_code').value = selectedItem.personcode;
                 document.getElementById('personid').value = selectedItem.personid;
                 document.getElementById('personname').value = selectedItem.first_name;
-                document.getElementById('spjangcd').value = selectedItem.spjangcd || '';
-                document.getElementById('is_active').checked = selectedItem.is_active === true;
+                document.getElementById('is_active').checked = selectedItem.is_active === true; // 체크박스 상태 설정
 
 
                 function setSelectValue(selectId, valueToMatch) {
@@ -712,19 +719,23 @@
 
         function saveUser() {
             let url = '/api/system/user/save';
+            //데이터입력체크루틴 누락
             let data = FormUtil.extractForm($('#userForm'));
 
             data.is_active = $('#is_active').is(':checked');
-            data.spjangcd = $('#spjangcd').val();
+            // let spjangcd = $('#spjangcd').val();
+            // if (!spjangcd) {
+            //     Alert.alert('', '사업장을 선택해주세요.');
+            //     return;
+            // }
+            // data.spjangcd = spjangcd;
+
 
             if (!data.login_id) {
                 Alert.alert('', '사번을 입력해 주세요');
                 return;
             } else if (!data.Name) {
                 Alert.alert('', '이름을 입력해 주세요');
-                return;
-            } else if (!data.spjangcd) {
-                Alert.alert('', '사번 찾기를 통해 직원을 선택해주세요.');
                 return;
             }/*else if(!data.UserGroup_id){
                 Alert.alert('','사용자그룹을 선택해 주세요');
@@ -981,105 +992,111 @@
 
 
         function showGetPerson() {
-            let xusersGrid;
-            let selectedXuser = null;
+            let _this = this;
+            let viewdata4;
+            let theGrid4;
+            let selectedItem = null;
 
             let content = tmpl('getPersonTemplate', {});
             let $content = $(content);
 
-            // $content를 body에 직접 붙여서 wijmo 그리드가 DOM에서 초기화되도록 함
-            $('body').append($content);
-
             let popContainer = new PopupDraggable('사번찾기');
-            popContainer.open({ width: 870, height: 520, $content });
+            popContainer.open({ width: 800, height: 500, $content });
 
-            // 그리드 초기화 (DOM 삽입 후 실행)
-            xusersGrid = new wijmo.grid.FlexGrid($content.find('#person-grid')[0], {
-                autoGenerateColumns: false,
-                showMarquee: true,
-                isReadOnly: true,
-                selectionMode: wijmo.grid.SelectionMode.Row,
-                columns: [
-                    { binding: 'perid',    header: '사번',     width: 120, align: 'center' },
-                    { binding: 'pernm',    header: '이름',     width: 150, align: 'center' },
-                    { binding: 'spjangcd', header: '사업장코드', width: 120, align: 'center' },
-                    { binding: 'useyn',    header: '사용여부',  width: 80,  align: 'center' },
-                    { binding: 'userid',   header: '연결 아이디', width: 150, align: 'center' },
-                    { binding: '',         header: '',          width: '*' },
-                ],
-                itemsSource: null
-            });
-            xusersGrid.rowHeaders.columns.splice(0, 1);
+            let $searchName = $content.find('#searchName');
+            let $searchCode = $content.find('#searchCode');
+            let $btnSearch = $content.find('#btnSubjectSearch');
 
-            // 데이터 조회
-            function fetchXusersList() {
-                let perid = $content.find('#searchCode').val() || '';
-                let pernm = $content.find('#searchName').val() || '';
+            // 사번 조회 함수
+            function fetchPersonList() {
+                let searchCode = $searchCode.val();
+                let searchName = $searchName.val();
+
                 $.ajax({
-                    url: '/api/system/user/getXusersList',
+                    url: '/api/system/user/getPerson',
                     type: 'GET',
-                    data: { perid: perid, pernm: pernm },
-                    success: function (res) {
-                        xusersGrid.itemsSource = new wijmo.collections.CollectionView(res.data || []);
+                    data: {
+                        searchCode: searchCode,
+                        searchName: searchName,
+                        spjangcd: sessionStorage.getItem('spjangcd'),
                     },
-                    error: function () {
-                        Alert.alert('', 'TB_XUSERS 조회 중 오류가 발생했습니다.');
+                    async: false,
+                    success: function (res) {
+                        let data2 = res.data || [];
+
+                        viewdata4 = new wijmo.collections.CollectionView(data2);
+
+                        if (theGrid4) {
+                            theGrid4.itemsSource = viewdata4;
+                        }
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.error('Error fetching person data:', textStatus, errorThrown);
                     }
                 });
             }
 
-            // 선택 적용 후 팝업 닫기
-            function applyXuserSelection(item) {
-                if (!item) {
-                    Alert.alert('', '직원을 선택해주세요.');
-                    return;
-                }
-                $('#person_code').val(item.perid);
-                $('#Name').val(item.pernm || '');
-                $('#personname').val(item.pernm || '');
-                $('#spjangcd').val(item.spjangcd || '');
+            // 그리드 먼저 생성
+            theGrid4 = new wijmo.grid.FlexGrid('#person-grid', {
+                autoGenerateColumns: false,
+                showMarquee: true,
+                columns: [
+                    { binding: 'code', header: '사번', width: 100, align: 'center' },
+                    { binding: 'name', header: '이름', width: 150, align: 'center' },
+                    { binding: 'dept_name', header: '부서', width: 150, align: 'center' },
+                    { binding: 'dept_id', header: '부서id', width: 150, align: 'center', visible:false},
+                    { binding: '', header: '', width: '*', align: 'center' },
+                ],
+                isReadOnly: true,
+                itemsSource: null
+            });
 
-                // userid가 있으면 login_id에 채우고, 없으면 비워서 직접 입력하도록 포커스
-                if (item.userid) {
-                    $('#login_id').val(item.userid);
-                } else {
-                    $('#login_id').val('');
+            theGrid4.rowHeaders.columns.splice(0, 1);
+
+
+            fetchPersonList();
+
+
+            $btnSearch.click(() => {
+                fetchPersonList();
+            });
+
+
+            $searchCode.add($searchName).on('keydown', function (e) {
+                if (e.keyCode === 13) {
+                    fetchPersonList();
+                }
+            });
+
+            theGrid4.selectionChanged.addHandler((s, e) => {
+                selectedItem = s.collectionView.currentItem;
+            });
+
+            $content.find('#btnAccountSave').click(() => {
+                if (selectedItem) {
+                    $('#personid').val(selectedItem.id);
+                    $('#Depart_id').val(selectedItem.dept_id);
+                    $('#personname').val(selectedItem.name);
                     popContainer.close();
-                    $('#login_id').focus();
-                    return;
+                } else {
+                    Alert.alert('', '사번을 선택해주세요.');
                 }
-                popContainer.close();
-            }
-
-            // 행 선택 추적 (row 인덱스로 직접 접근)
-            xusersGrid.selectionChanged.addHandler(function(s, e) {
-                var row = s.selection.row;
-                selectedXuser = (row >= 0 && row < s.rows.length) ? (s.rows[row].dataItem || null) : null;
             });
 
-            // 더블클릭 선택
-            xusersGrid.hostElement.addEventListener('dblclick', function (e) {
-                applyXuserSelection(selectedXuser);
-            });
-
-            // 선택 버튼
-            $content.find('#btnAccountSave').on('click', function () {
-                applyXuserSelection(selectedXuser);
-            });
-
-            // 검색 버튼 / 엔터키
-            $content.find('#btnSubjectSearch').on('click', function () { fetchXusersList(); });
-            $content.find('#searchCode, #searchName').on('keydown', function (e) {
-                if (e.keyCode === 13) fetchXusersList();
-            });
-
-            // 닫기 버튼
-            $content.find('#modal-close-button').on('click', function () {
+            theGrid4.hostElement.addEventListener('dblclick', function (e) {
+                let items = theGrid4.selectedItems;
+                if (items.length === 0) {
+                    return false;
+                }
+                const selectedItem = items[0];
+                console.log('person info : ', selectedItem);
+                $('#person_code').val(selectedItem.code);
+                $('#personid').val(selectedItem.id);
+                $('#Depart_id').val(selectedItem.dept_id);
+                $('#personname').val(selectedItem.name);
                 popContainer.close();
             });
 
-            // 초기 데이터 로드
-            fetchXusersList();
         }
 
         /*this.close();*/

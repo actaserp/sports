@@ -4,6 +4,7 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
+import mes.app.common.TenantContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -315,6 +316,8 @@ public class SystemService {
 	}
 
 	public List<Map<String, Object>> getSystemLogList(Timestamp start, Timestamp end, String type, String source) {
+		String spjangcd = TenantContext.getDbKey();
+
 		String sql = """
         SELECT 
             ROW_NUMBER() OVER (ORDER BY sl."_created" DESC) AS row_num,
@@ -325,6 +328,7 @@ public class SystemService {
             TO_CHAR(sl."_created", 'yyyy-mm-dd hh24:mi:ss') AS created
         FROM sys_log sl
         WHERE sl."_created" BETWEEN :start AND :end
+        and sl.spjangcd = :spjangcd
     """;
 
 		if (StringUtils.hasText(type)) {
@@ -342,8 +346,9 @@ public class SystemService {
 		namedParameters.addValue("end", end, java.sql.Types.TIMESTAMP);
 		namedParameters.addValue("type", type);
 		namedParameters.addValue("source", source);
+		namedParameters.addValue("spjangcd", spjangcd);
 
-		return this.sqlRunner.getRows(sql, namedParameters);
+		return this.mainSqlRunner.getRows(sql, namedParameters);
 	}
 
 
@@ -357,7 +362,7 @@ public class SystemService {
     	MapSqlParameterSource namedParameters = new MapSqlParameterSource();
     	namedParameters.addValue("log_id", id);
 
-    	return this.sqlRunner.getRow(sql, namedParameters);
+    	return this.mainSqlRunner.getRow(sql, namedParameters);
     }
 
 	public Map<String, Object> getLabelCodeLangDetail(String guiCode, String labelCode, String langCode,

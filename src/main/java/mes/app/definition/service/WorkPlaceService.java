@@ -3,6 +3,7 @@ package mes.app.definition.service;
 import mes.app.common.TenantContext;
 import mes.domain.services.SqlRunner;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Service;
 
@@ -11,15 +12,17 @@ import java.util.Map;
 
 @Service
 public class WorkPlaceService {
+
     @Autowired
+    @Qualifier("mainSqlRunner")
     SqlRunner sqlRunner;
 
     // 세무서 이름 조회
     public String getTaxnm(String taxcd){
 
         MapSqlParameterSource dicParam = new MapSqlParameterSource();
-				String tenantId = TenantContext.get();
-				dicParam.addValue("spjangcd", tenantId);
+        String tenantId = TenantContext.get();
+        dicParam.addValue("spjangcd", tenantId);
         dicParam.addValue("taxcd", taxcd);
         String sql = """
 			select taxnm

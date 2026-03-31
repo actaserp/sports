@@ -127,13 +127,12 @@ public class UserController {
 			@RequestParam(value="is_active", required = false) Boolean is_active,
 			@RequestParam(value="personid", required = false) String personid,
 			@RequestParam(value="tel", required = false) String tel,
-			@RequestParam(value="spjangcd", required = false) String spjangcd,
 			HttpServletRequest request,
 			Authentication auth
 			) {
 
 		AjaxResult result = new AjaxResult();
-		String dbKey = TenantContext.getDbKey(); // DB 라우팅 키 (limitSql 전용)
+		String spjangcd = TenantContext.getDbKey(); // DB 라우팅 키 (limitSql 전용)
 		
 		String sql = null;
 		User user = null;
@@ -145,7 +144,10 @@ public class UserController {
 		if(is_active == null) {
 			is_active = false;
 		}
-		
+
+		if(lang_code == null || lang_code.isEmpty()) {
+			lang_code = "kr";
+		}
 				
 		// new data일 경우
 		if (id==null) {
@@ -161,7 +163,7 @@ public class UserController {
 			""";
 
 			MapSqlParameterSource limitParam = new MapSqlParameterSource();
-			limitParam.addValue("spjangcd", dbKey);
+			limitParam.addValue("spjangcd", spjangcd);
 
 			Map<String, Object> limitMap = this.sqlRunner.getRow(limitSql, limitParam);
 
@@ -207,9 +209,8 @@ public class UserController {
 			// user_profile 존재 여부 확인
 			MapSqlParameterSource countParam = new MapSqlParameterSource();
 			countParam.addValue("User_id", id);
-			countParam.addValue("spjangcd", spjangcd);
 			Map<String, Object> countRow = this.sqlRunner.getRow(
-					"SELECT COUNT(*) AS cnt FROM user_profile WHERE \"User_id\" = :User_id AND TRIM(LOWER(\"spjangcd\")) = TRIM(LOWER(:spjangcd))",
+					"SELECT COUNT(*) AS cnt FROM user_profile WHERE \"User_id\" = :User_id",
 					countParam
 			);
 			int count = countRow != null ? ((Number) countRow.get("cnt")).intValue() : 0;
