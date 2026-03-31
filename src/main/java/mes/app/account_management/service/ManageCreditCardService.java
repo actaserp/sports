@@ -23,7 +23,6 @@ public class ManageCreditCardService {
 
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("txtcardnm", "%" + txtcardnm + "%");	//카드명
-		param.addValue("txtcardnum", "%" + txtcardnum + "%");	//카드번호
 		String tenantId = TenantContext.get();
 		param.addValue("spjangcd", tenantId);
 
@@ -61,10 +60,12 @@ public class ManageCreditCardService {
        and cardnm like :txtcardnm
       """;
 		}
-		if(txtcardnum != null || !txtcardnum.isEmpty()){
+
+		if (txtcardnum != null && !txtcardnum.isEmpty()) { //카드번호
 			sql += """
-						and cardnum like :txtcardnum
-						""";
+            and replace(replace(a.cardnum, '-', ''), ' ', '') like :txtcardnum
+        """;
+			param.addValue("txtcardnum", "%" + txtcardnum.replace("-", "").replace(" ", "") + "%");
 		}
 
 		return sqlRunner.getRows(sql, param);

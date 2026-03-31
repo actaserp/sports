@@ -12,6 +12,7 @@ import mes.domain.model.AjaxResult;
 import mes.domain.services.SqlRunner;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.security.core.Authentication;
@@ -27,6 +28,10 @@ import java.util.*;
 @Slf4j
 @Service
 public class CardHistoryService {
+
+	@Autowired
+	@Qualifier("mainSqlRunner")
+	SqlRunner mainSqlRunner;
 
 	@Autowired
 	SqlRunner sqlRunner;
@@ -114,6 +119,8 @@ public class CardHistoryService {
 		return sqlRunner.getRows(sql, param);
 	}
 
+
+
 	public List<Map<String, Object>> getbaroCardList() {
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		String tenantId = TenantContext.get();
@@ -124,12 +131,12 @@ public class CardHistoryService {
 					a.cardnum ,
 					a.cardnm,
 					c.cdcode,
+					a.spjangcd, 
 			  	c.nm as cardco,
 					a.baroid
 					from tb_iz010 a
 					left join tb_xcard c on a.cardco = c.cd
-					where a.spjangcd = :spjangcd
-					and a.useyn ='1' and a.cdflag ='1'
+					where a.useyn ='1' and a.cdflag ='1'
 			""";
 		return sqlRunner.getRows(sql, param);
 	}
@@ -264,7 +271,7 @@ public class CardHistoryService {
 					break;
 				}
 
-/*				log.info("[바로빌 응답] currentPage={}, maxPageNum={}, countPerPage={}, maxIndex={}",
+				/*log.info("[바로빌 응답] currentPage={}, maxPageNum={}, countPerPage={}, maxIndex={}",
 					result.getCurrentPage(), result.getMaxPageNum(), result.getCountPerPage(), result.getMaxIndex());*/
 
 				if (result.getCurrentPage() < 0) {
@@ -313,12 +320,12 @@ public class CardHistoryService {
 					dicParam.addValue("bizNo", logItem.getUseKey());
 
 					String checkSql = """
-        SELECT COUNT(*) AS cnt
-        FROM TB_bank_cdsave
-        WHERE custcd   = :custcd
-          AND spjangcd = :spjangcd
-          AND bnkcode  = :bnkcode
-          AND biz_no   = :bizNo
+					SELECT COUNT(*) AS cnt
+					FROM TB_bank_cdsave
+					WHERE custcd   = :custcd
+						AND spjangcd = :spjangcd
+						AND bnkcode  = :bnkcode
+						AND biz_no   = :bizNo
         """;
 
 					List<Map<String, Object>> checkResult = this.sqlRunner.getRows(checkSql, dicParam);
@@ -501,12 +508,10 @@ public class CardHistoryService {
 
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("it1nm", it1nm);
-		param.addValue("tiosec", "2");
 
 		String sql = """
 			select it1cd ,it1nm from tb_x0003 
 			where useyn='1'
-			and tiosec = :tiosec
 			 and replace(isnull(it1nm, ''), ' ', '') like '%' + replace(:it1nm, ' ', '') + '%'
 			""";
 		return sqlRunner.getRows(sql, param);
@@ -516,12 +521,10 @@ public class CardHistoryService {
 
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("it2nm", it2nm);
-		param.addValue("tiosec", "2");
 
 		String sql = """
 			select it2cd ,it2nm from tb_x0004
 			where useyn='1'
-			and tiosec = :tiosec
 			and replace(isnull(it2nm, ''), ' ', '') like '%' + replace(:it2nm, ' ', '') + '%'
 			""";
 		return sqlRunner.getRows(sql, param);
@@ -660,7 +663,7 @@ public class CardHistoryService {
 	}
 
 	// 카드내역 스케줄러
-	public void collectCardHistoryByScheduler() {
+	/*public void collectCardHistoryByScheduler() {
 
 		// 조회 기간 (어제 ~ 오늘)
 		LocalDate today = LocalDate.now();
@@ -705,6 +708,7 @@ public class CardHistoryService {
 				for (Map<String, Object> card : cards) {
 					String cardNum = getString(card.get("cardnum"));
 					String id      = getString(card.get("baroid"));
+					String spjangcd1 = getString(card.get("spjangcd"));
 
 					if (cardNum.isEmpty() || id.isEmpty()) {
 						log.warn("스케줄러 카드정보 누락 cardNum={}, id={}", cardNum, id);
@@ -714,7 +718,7 @@ public class CardHistoryService {
 					cardNum = cardNum.replace("-", "").replace(" ", "");
 
 					int savedCount = collectPeriodCardApprovalLog(
-						spjangcd, custcd, corpNum, id, cardNum, startDate, endDate
+						spjangcd1, custcd, corpNum, id, cardNum, startDate, endDate
 					);
 
 					totalSavedCount += savedCount;
@@ -737,6 +741,124 @@ public class CardHistoryService {
 			WHERE db_key IS NOT NULL AND db_key <> ''
 		""";
 		return sqlRunner.getRows(sql, new MapSqlParameterSource());
+	}*/
+
+	public void collectCardHistoryByScheduler() {
+
+		LocalDate today = LocalDate.now();
+		LocalDate yesterday = today.minusDays(1);
+		String startDate = yesterday.format(DateTimeFormatter.BASIC_ISO_DATE);
+		String endDate = today.format(DateTimeFormatter.BASIC_ISO_DATE);
+
+		TenantContext.clear();
+		List<Map<String, Object>> tenants = getTenantList();
+
+		if (tenants.isEmpty()) {
+			log.info("스케줄러 - 등록된 사업장 없음");
+			return;
+		}
+
+		for (Map<String, Object> tenant : tenants) {
+			String spjangcd = getString(tenant.get("spjangcd")); // "TO", "UV" - 라우팅용
+			String custcd   = getString(tenant.get("custcd"));   // "S_KCF", "S_KALF" - 외부DB 조회용
+
+			try {
+				// 1. 외부 DB 라우팅
+				TenantContext.set(spjangcd);
+				TenantContext.setDbKey(spjangcd);
+
+				// 2. 외부 DB에서 custcd 기준으로 사업장 목록 조회
+				List<Map<String, String>> bizList = getBizInfoFromTenantDb(custcd);
+
+				if (bizList.isEmpty()) {
+					log.warn("스케줄러 - 외부DB 사업장 없음, custcd={}", custcd);
+					continue;
+				}
+
+				for (Map<String, String> bizInfo : bizList) {
+					String realSpjangcd = bizInfo.get("spjangcd");
+					String corpNum      = bizInfo.get("saupnum").replace("-", "").trim();
+					String realCustcd   = bizInfo.get("custcd");
+
+					if (corpNum.isEmpty()) {
+						log.warn("스케줄러 - 사업자번호 없음, spjangcd={}", realSpjangcd);
+						continue;
+					}
+
+					// SQL 필터용 spjangcd를 외부 DB 실제 값으로 교체
+					TenantContext.set(realSpjangcd);
+
+					List<Map<String, Object>> cards = getbaroCardList();
+
+					if (cards == null || cards.isEmpty()) {
+						log.info("스케줄러 - 등록된 카드 없음, spjangcd={}", realSpjangcd);
+						continue;
+					}
+
+					int totalSavedCount = 0;
+
+					for (Map<String, Object> card : cards) {
+						String cardNum = getString(card.get("cardnum"));
+						String id      = getString(card.get("baroid"));
+
+						if (cardNum.isEmpty() || id.isEmpty()) {
+							log.warn("스케줄러 카드정보 누락 cardNum={}, id={}", cardNum, id);
+							continue;
+						}
+
+						cardNum = cardNum.replace("-", "").replace(" ", "");
+
+						int savedCount = collectPeriodCardApprovalLog(
+							realSpjangcd, realCustcd, corpNum, id, cardNum, startDate, endDate
+						);
+
+						totalSavedCount += savedCount;
+					}
+
+					log.info("스케줄러 카드내역 수집 완료 - spjangcd={}, 저장건수={}", realSpjangcd, totalSavedCount);
+				}
+
+			} catch (Exception e) {
+				log.error("스케줄러 카드내역 수집 오류 - spjangcd={}", spjangcd, e);
+			} finally {
+				TenantContext.clear();
+			}
+		}
+	}
+
+	// Main DB에서 spjangcd, custcd 조회
+	private List<Map<String, Object>> getTenantList() {
+		String sql = """
+        SELECT spjangcd, custcd
+        FROM tb_tenant_db
+        WHERE spjangcd IS NOT NULL AND spjangcd <> ''
+    """;
+		return mainSqlRunner.getRows(sql, new MapSqlParameterSource());
+	}
+
+	// 외부 DB에서 custcd 기준으로 사업장 목록 조회
+	private List<Map<String, String>> getBizInfoFromTenantDb(String custcd) {
+		String sql = """
+        SELECT spjangcd, custcd, saupnum
+        FROM tb_xa012
+        WHERE custcd = :custcd
+    """;
+		MapSqlParameterSource param = new MapSqlParameterSource();
+		param.addValue("custcd", custcd);
+
+		List<Map<String, Object>> rows = sqlRunner.getRows(sql, param);
+
+		List<Map<String, String>> result = new ArrayList<>();
+
+		for (Map<String, Object> row : rows) {
+			Map<String, String> info = new HashMap<>();
+			info.put("spjangcd", row.get("spjangcd") == null ? "" : String.valueOf(row.get("spjangcd")).trim());
+			info.put("custcd",   row.get("custcd")   == null ? "" : String.valueOf(row.get("custcd")).trim());
+			info.put("saupnum",  row.get("saupnum")  == null ? "" : String.valueOf(row.get("saupnum")).trim());
+			result.add(info);
+		}
+
+		return result;
 	}
 
 	@Transactional
@@ -1295,6 +1417,5 @@ public class CardHistoryService {
 			return 1;
 		}
 	}
-
 
 }

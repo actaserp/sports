@@ -306,7 +306,7 @@
 </th:block>
 
 <th:block layout:fragment="scripts">
-  <script src="/js/cycle/CardInputHandler.js"></script>
+  <script th:src="@{/js/cycle/CardInputHandler.js}"></script>
   <th:block th:replace="/common/popup_card :: popup_card" />
   <script type="text/javascript">
    class CardAssignmentPage {

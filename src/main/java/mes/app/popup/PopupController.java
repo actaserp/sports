@@ -852,4 +852,69 @@ public class PopupController {
 		return result;
 	}
 
+	@GetMapping("/search_Card")
+	public List<Map<String, Object>> getSearchCardList(
+		@RequestParam(value = "CardName", required = false) String CardName,
+		@RequestParam(value = "CardNumber", required = false) String CardNumber) {
+
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+
+		String tenantId = TenantContext.get();
+		paramMap.addValue("spjangcd", tenantId);
+
+		String sql = """
+        select a.cardnum,
+					 a.cardnm,
+					 a.cardperson,
+					 case
+							 when a.cardclafi = '1' then '법인'
+							 when a.cardclafi = '2' then '개인'
+					 end as cardType,
+					 a.remark
+					 from tb_iz010 a
+					 where 1=1 and a.useyn ='1'
+					 and a.spjangcd =:spjangcd
+    """;
+
+		if (CardName != null && !CardName.trim().isEmpty()) {
+			sql += " and a.cardnm like :CardName ";
+			paramMap.addValue("CardName", "%" + CardName.trim() + "%");
+		}
+
+		if (CardNumber != null && !CardNumber.trim().isEmpty()) {
+			CardNumber = CardNumber.replace("-", "").replace(" ", "").trim();
+
+			sql += "  and replace(replace(a.cardnum, '-', ''), ' ', '') like :CardNumber ";
+			paramMap.addValue("CardNumber", "%" + CardNumber + "%");
+		}
+
+		return this.sqlRunner.getRows(sql, paramMap);
+	}
+
+	@GetMapping("/search_business")
+	public List<Map<String, Object>> getSearchbusiness(
+		@RequestParam(value = "busim", required = false) String busim) {
+		MapSqlParameterSource param = new MapSqlParameterSource();
+		param.addValue("busim", busim);
+		String sql = """
+			select
+					bsdate,
+					bseccd,
+					busicd as buiscd,
+					businm as busim
+			from tb_x0002
+			""";
+
+		if (busim != null && !busim.trim().isEmpty()) {
+			sql += " replace(businm,' ','') like '%' + replace(:busim,' ','') + '%' ";
+			param.addValue("param", "%" + busim.trim() + "%");
+		}
+
+		sql += """
+			order by bsdate DESC
+			""";
+
+		return this.sqlRunner.getRows(sql, param);
+	}
+
 	}

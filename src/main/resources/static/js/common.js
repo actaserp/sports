@@ -311,6 +311,39 @@ var CommonUtil = {
         var first = new Date(d.getFullYear(), d.getMonth(), 1);
         return this.formatYYYYMMDD(first);
     },
+
+    // 날짜 차이(포함 기준 최대 200일 허용)
+    getDateDiffDays(frDate, toDate) {
+        let fr = new Date(frDate);
+        let to = new Date(toDate);
+        return Math.floor((to - fr) / (1000 * 60 * 60 * 24));
+    },
+
+    // 종료일 기준으로 시작일을 최대 200일 범위로 보정
+    adjustMax200Days(frDate, toDate) {
+        if (!frDate || !toDate) {
+            return { frDate, toDate, adjusted: false };
+        }
+
+        let diffDays = this.getDateDiffDays(frDate, toDate);
+
+        if (diffDays > 199) {
+            let newFr = new Date(toDate);
+            newFr.setDate(newFr.getDate() - 199);
+
+            return {
+                frDate: this.formatYYYYMMDD(newFr),
+                toDate: toDate,
+                adjusted: true
+            };
+        }
+
+        return {
+            frDate,
+            toDate,
+            adjusted: false
+        };
+    },
     zeoPadding: function (number, length){
 		var str = '' + number;
 	    while (str.length < length) {

@@ -308,8 +308,8 @@
 </th:block>
 
 <th:block layout:fragment="scripts">
-  <script src="/js/cycle/CardInputHandler.js"></script>
   <th:block th:replace="/common/popup_card :: popup_card" />
+  <script th:src="@{/js/cycle/CardInputHandler.js}"></script>
   <script type="text/javascript">
    class CardHistoryPage {
     constructor() {
@@ -1252,6 +1252,10 @@
       Alert.alert('', '수집기간을 입력해주세요.');
       return;
      }
+
+     const frDateObj = new Date(frDate.slice(0,4), frDate.slice(4,6) - 1, frDate.slice(6,8));
+     const toDateObj = new Date(toDate.slice(0,4), toDate.slice(4,6) - 1, toDate.slice(6,8));
+     const diffDays = Math.floor((toDateObj - frDateObj) / (1000 * 60 * 60 * 24));
 
      if (diffDays > 199) {
       Alert.alert('', '수집기간은 최대 200일까지 가능합니다.');
