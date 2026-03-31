@@ -2,6 +2,7 @@ package mes.app.definition;
 
 import lombok.extern.slf4j.Slf4j;
 import mes.Encryption.EncryptionUtil;
+import mes.app.common.TenantContext;
 import mes.app.definition.service.ManageCreditCardsSecvice;
 import mes.domain.entity.TB_DA003Id;
 import mes.domain.entity.TB_IZ010;
@@ -32,12 +33,12 @@ public class ManageCreditCardsController {
   TB_IZ010Repository tb_iz010Repository;
 
   @GetMapping("/read")
-  public AjaxResult getCreditCardsList(@RequestParam(value ="spjangcd") String spjangcd,
-                                   @RequestParam(value = "txtcardnm", required = false) String txtcardnm,
+  public AjaxResult getCreditCardsList(@RequestParam(value = "txtcardnm", required = false) String txtcardnm,
                                    @RequestParam(value = "txtcardnum", required = false) String txtcardnum,
                                    HttpServletRequest request) {
 //    log.info("신용카드 등록 read - spjangcd:{}, txtcardnm: {}, txtcardnum:{}",spjangcd,  txtcardnm, txtcardnum);
 
+    String spjangcd = request.getParameter("spjangcd");
     List<Map<String, Object>> items = this.cardsSecvice.getCreditCardsList(spjangcd,txtcardnm, txtcardnum);
 
     AjaxResult result = new AjaxResult();

@@ -660,80 +660,83 @@ public class CardHistoryService {
 	}
 
 	// 카드내역 스케줄러
-	@Transactional
 	public void collectCardHistoryByScheduler() {
 
-		try {
+		// 조회 기간 (어제 ~ 오늘)
+		LocalDate today = LocalDate.now();
+		LocalDate yesterday = today.minusDays(1);
+		String startDate = yesterday.format(DateTimeFormatter.BASIC_ISO_DATE);
+		String endDate = today.format(DateTimeFormatter.BASIC_ISO_DATE);
 
-			TenantContext.set("ZZ");
-			String spjangcd = TenantContext.get();
+		// Main DB에서 전체 사업장 목록 조회 (dbKey=null → RoutingDataSource가 Main DB 사용)
+		TenantContext.clear();
+		List<Map<String, Object>> tenants = getAllTenants();
 
-			if (spjangcd == null || spjangcd.isEmpty()) {
-				log.warn("스케줄러 - 사업장 정보 없음:{} ",spjangcd);
-				return;
-			}
+		if (tenants.isEmpty()) {
+			log.info("스케줄러 - 등록된 사업장 없음");
+			return;
+		}
 
-			Map<String, String> bizInfo = getBizInfoBySpjangcd(spjangcd);
-
-			String custcd = bizInfo.get("custcd");
-			String corpNum = bizInfo.get("saupnum").replace("-", "").trim();
+		for (Map<String, Object> tenant : tenants) {
+			String spjangcd = getString(tenant.get("spjangcd"));
+			String dbKey    = getString(tenant.get("db_key"));
+			String custcd   = getString(tenant.get("custcd"));
+			String corpNum  = getString(tenant.get("saupnum")).replace("-", "").trim();
 
 			if (corpNum.isEmpty()) {
-				log.warn("스케줄러 - 사업자번호 없음");
-				return;
+				log.warn("스케줄러 - 사업자번호 없음, spjangcd={}", spjangcd);
+				continue;
 			}
 
-			List<Map<String, Object>> cards = getbaroCardList();
+			try {
+				// 사업장 DB로 라우팅
+				TenantContext.set(spjangcd);
+				TenantContext.setDbKey(dbKey);
 
-			if (cards.isEmpty()) {
-				log.info("스케줄러 - 등록된 카드 없음");
-				return;
-			}
+				List<Map<String, Object>> cards = getbaroCardList();
 
-			if (cards == null || cards.isEmpty()) {
-				log.info("스케줄러 - 등록된 카드 없음");
-				return;
-			}
-
-			// 조회 기간 (어제 ~ 오늘)
-			LocalDate today = LocalDate.now();
-			LocalDate yesterday = today.minusDays(1);
-
-			String startDate = yesterday.format(DateTimeFormatter.BASIC_ISO_DATE);
-			String endDate = today.format(DateTimeFormatter.BASIC_ISO_DATE);
-
-			int totalSavedCount = 0;
-
-			for (Map<String, Object> card : cards) {
-
-				String cardNum = card.get("cardnum") == null ? "" : card.get("cardnum").toString();
-				String id = card.get("baroid") == null ? "" : card.get("baroid").toString();
-
-				if (cardNum.isEmpty() || id.isEmpty()) {
-					log.warn("스케줄러 카드정보 누락 cardNum={}, id={}", cardNum, id);
+				if (cards == null || cards.isEmpty()) {
+					log.info("스케줄러 - 등록된 카드 없음, spjangcd={}", spjangcd);
 					continue;
 				}
 
-				cardNum = cardNum.replace("-", "").replace(" ", "");
+				int totalSavedCount = 0;
 
-				int savedCount = collectPeriodCardApprovalLog(
-					spjangcd,
-					custcd,
-					corpNum,
-					id,
-					cardNum,
-					startDate,
-					endDate
-				);
+				for (Map<String, Object> card : cards) {
+					String cardNum = getString(card.get("cardnum"));
+					String id      = getString(card.get("baroid"));
 
-				totalSavedCount += savedCount;
+					if (cardNum.isEmpty() || id.isEmpty()) {
+						log.warn("스케줄러 카드정보 누락 cardNum={}, id={}", cardNum, id);
+						continue;
+					}
+
+					cardNum = cardNum.replace("-", "").replace(" ", "");
+
+					int savedCount = collectPeriodCardApprovalLog(
+						spjangcd, custcd, corpNum, id, cardNum, startDate, endDate
+					);
+
+					totalSavedCount += savedCount;
+				}
+
+				log.info("스케줄러 카드내역 수집 완료 - spjangcd={}, 저장건수={}", spjangcd, totalSavedCount);
+
+			} catch (Exception e) {
+				log.error("스케줄러 카드내역 수집 오류 - spjangcd={}", spjangcd, e);
+			} finally {
+				TenantContext.clear();
 			}
-
-			log.info("스케줄러 카드내역 수집 완료 - 저장건수={}", totalSavedCount);
-
-		} catch (Exception e) {
-			log.error("스케줄러 카드내역 수집 오류", e);
 		}
+	}
+
+	private List<Map<String, Object>> getAllTenants() {
+		String sql = """
+			SELECT spjangcd, db_key, custcd, saupnum
+			FROM tb_xa012
+			WHERE db_key IS NOT NULL AND db_key <> ''
+		""";
+		return sqlRunner.getRows(sql, new MapSqlParameterSource());
 	}
 
 	@Transactional

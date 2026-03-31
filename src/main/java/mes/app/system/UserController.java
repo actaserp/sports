@@ -103,6 +103,16 @@ public class UserController {
 		return result;
 	}
 	
+	@GetMapping("/getXusersList")
+	public AjaxResult getXusersList(
+			@RequestParam(value="perid", required = false, defaultValue = "") String perid,
+			@RequestParam(value="pernm", required = false, defaultValue = "") String pernm
+	) {
+		AjaxResult result = new AjaxResult();
+		result.data = this.userService.getXusersList(perid, pernm);
+		return result;
+	}
+
 	@PostMapping("/save")
 	@Transactional
 	public AjaxResult saveUser(
@@ -117,12 +127,13 @@ public class UserController {
 			@RequestParam(value="is_active", required = false) Boolean is_active,
 			@RequestParam(value="personid", required = false) String personid,
 			@RequestParam(value="tel", required = false) String tel,
+			@RequestParam(value="spjangcd", required = false) String spjangcd,
 			HttpServletRequest request,
 			Authentication auth
 			) {
-		
+
 		AjaxResult result = new AjaxResult();
-		String spjangcd = TenantContext.getDbKey();
+		String dbKey = TenantContext.getDbKey(); // DB 라우팅 키 (limitSql 전용)
 		
 		String sql = null;
 		User user = null;
@@ -145,12 +156,12 @@ public class UserController {
 				left join user_profile up on up.spjangcd = xa.spjangcd and up."User_id" in (
 					select id from auth_user where spjangcd = :spjangcd and is_active = true
 				)
-				where xa.spjangcd = :spjangcd
+				where xa.db_key = :spjangcd
 				group by bp.user_limit
 			""";
 
 			MapSqlParameterSource limitParam = new MapSqlParameterSource();
-			limitParam.addValue("spjangcd", spjangcd);
+			limitParam.addValue("spjangcd", dbKey);
 
 			Map<String, Object> limitMap = this.sqlRunner.getRow(limitSql, limitParam);
 
@@ -194,11 +205,14 @@ public class UserController {
 			}
 
 			// user_profile 존재 여부 확인
-			int count = jdbcTemplate.queryForObject(
-					"SELECT COUNT(*) FROM user_profile WHERE \"User_id\" = ? AND TRIM(LOWER(spjangcd)) = TRIM(LOWER(?))",
-					Integer.class,
-					id, spjangcd
+			MapSqlParameterSource countParam = new MapSqlParameterSource();
+			countParam.addValue("User_id", id);
+			countParam.addValue("spjangcd", spjangcd);
+			Map<String, Object> countRow = this.sqlRunner.getRow(
+					"SELECT COUNT(*) AS cnt FROM user_profile WHERE \"User_id\" = :User_id AND TRIM(LOWER(\"spjangcd\")) = TRIM(LOWER(:spjangcd))",
+					countParam
 			);
+			int count = countRow != null ? ((Number) countRow.get("cnt")).intValue() : 0;
 
 			if (count == 0) {
 				// user_profile에 없으면 insert 수행

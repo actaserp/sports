@@ -1839,12 +1839,14 @@
         $('#sendMessage').val('');
         $('#userSearch').val('');
 
-        AjaxUtil.fillSelectOptions($('#cboUserGroup'), 'user_group',  2);
+        var myGroupId = sessionStorage.getItem('groupid') || '';
 
-        currentGroup = '2';
-        $('#cboUserGroup').val('2');
+        AjaxUtil.fillSelectOptions($('#cboUserGroup'), 'user_group', myGroupId);
 
-        loadUsersByGroup('2');
+        currentGroup = myGroupId;
+        $('#cboUserGroup').val(myGroupId);
+
+        loadUsersByGroup(myGroupId);
     }
 
     function openHistoryModal() {

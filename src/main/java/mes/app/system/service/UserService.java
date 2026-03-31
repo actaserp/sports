@@ -18,8 +18,12 @@ public class UserService {
 	
 	@Autowired
 	@Qualifier("mainSqlRunner")
-	SqlRunner sqlRunner;
-	
+	SqlRunner mainSqlRunner;   // Main DB 전용 (auth_user, user_profile, user_group 등)
+
+	@Autowired
+	SqlRunner tenantSqlRunner; // 테넌트 DB 전용 (TB_XUSERS 등 사업장 DB 테이블)
+
+
 	// 사용자 리스트 조회
 	public List<Map<String, Object>> getUserList(boolean superUser, Integer group, String keyword, String username, Integer departId, String spjangcd){
 		
@@ -80,11 +84,11 @@ public class UserService {
         
         sql += "order by ug.\"Name\", up.\"Name\"";
         
-        List<Map<String, Object>> items = this.sqlRunner.getRows(sql, dicParam);
-        
+        List<Map<String, Object>> items = this.mainSqlRunner.getRows(sql, dicParam);
+
         return items;
 	}
-	
+
 	// 사용자 상세정보 조회
 	public Map<String, Object> getUserDetail(Integer id){
 		
@@ -113,8 +117,8 @@ public class UserService {
             where au.id = :id
 		    """;
         
-        Map<String, Object> item = this.sqlRunner.getRow(sql, dicParam);
-        
+        Map<String, Object> item = this.mainSqlRunner.getRow(sql, dicParam);
+
         return item;
 	}
 	
@@ -136,7 +140,7 @@ public class UserService {
 	            and ug.spjangcd = :spjangcd
         		""";
         
-        List<Map<String, Object>> items = this.sqlRunner.getRows(sql, dicParam);
+        List<Map<String, Object>> items = this.mainSqlRunner.getRows(sql, dicParam);
         return items;
 	}
 
@@ -162,8 +166,25 @@ public class UserService {
                 order by p.id
                 """;
 
-		List<Map<String, Object>> items = this.sqlRunner.getRows(sql, dicParam);
+		List<Map<String, Object>> items = this.mainSqlRunner.getRows(sql, dicParam);
 		return items;
+	}
+
+	// 테넌트 DB의 TB_XUSERS에서 직원 목록 조회 (사번 선택 팝업용)
+	public List<Map<String, Object>> getXusersList(String perid, String pernm) {
+		MapSqlParameterSource dicParam = new MapSqlParameterSource();
+		dicParam.addValue("perid", "%" + (perid == null ? "" : perid) + "%");
+		dicParam.addValue("pernm", "%" + (pernm == null ? "" : pernm) + "%");
+
+		String sql = """
+			SELECT userid, perid, pernm, spjangcd, useyn
+			FROM TB_XUSERS
+			WHERE perid LIKE :perid
+			  AND pernm LIKE :pernm
+			ORDER BY perid
+			""";
+
+		return this.tenantSqlRunner.getRows(sql, dicParam);
 	}
 
 }

@@ -1511,7 +1511,6 @@
             const data = {
                 txtcardnum: keyword,
                 txtcardnm: '',
-                spjangcd: sessionStorage.getItem('spjangcd')
             };
 
             const result = AjaxUtil.getSyncData('/api/transaction/manageCreditCard/read', data);

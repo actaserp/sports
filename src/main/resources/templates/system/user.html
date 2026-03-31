@@ -181,6 +181,7 @@
                                        style="width: 100%; border-collapse: collapse; table-layout: fixed;">
                                     <caption style="text-align: left; margin-bottom: 8px;">상세테이블</caption>
                                     <input type="hidden" id="id" name="id"/>
+                                    <input type="hidden" id="spjangcd" name="spjangcd"/>
                                     <tbody>
                                     <tr>
                                         <th>
@@ -241,26 +242,21 @@
                                             </div>
                                         </td>
                                         <th>
-                                            <label for="Factory_id">소속 공장</label>
+                                            <label for="Depart_id">부서</label>
                                         </th>
                                         <td>
-                                            <select style="width: 100%;" id="Factory_id" name="Factory_id"></select>
+                                            <select style="width: 100%;" id="Depart_id" name="Depart_id"></select>
                                         </td>
 
 
 
                                     </tr>
                                     <tr>
-                                        <th>
-                                            <label for="Depart_id">부서</label>
-                                        </th>
-                                        <td>
-                                            <select style="width: 100%;" id="Depart_id" name="Depart_id"></select>
-                                        </td>
-                                        <th>
+
+                                        <th style="display: none;">
                                             <label for="lang_code">언어</label>
                                         </th>
-                                        <td>
+                                        <td style="display: none;">
                                             <select style="width: 100%;" id="lang_code" name="lang_code"></select>
                                         </td>
 <!--                                        <th><label for="spjangcd">사업장</label></th>-->
@@ -448,11 +444,7 @@
     <th:block th:replace="/common/ax5_uploader :: ax5_uploader"></th:block>
     <th:block th:replace="/common/upload_one_image_box :: upload_one_image_box"></th:block>
     <th:block th:replace="/common/popup_select_user_code :: popup_select_user_code"></th:block>
-<!--  연락처 및 사업번호 등 포맷 js파일  -->
-    <script th:src="@{/js/InputFormat.js}"></script>
     <script type="text/javascript">
-        attachTelFormatterAll('.phone-format'); // 연락처 포맷 메서드
-        attachBizNumberFormatterAll('.biz-number'); // 사업자번호 포맷 메서드
         
         var theGrid;
         var viewdata;
@@ -468,9 +460,9 @@
             {binding: 'tel', header: '전화번호', width: 180, align: 'center'},
             {binding: 'email', header: '이메일', width: 200, align: 'center'},
             {binding: 'group_name', header: '사용자그룹', width: 120, align: 'center'},
-            {binding: 'factory_name', header: '소속공장', width: 150, align: 'center'},
+            // {binding: 'factory_name', header: '소속공장', width: 150, align: 'center'},
             {binding: 'dept_name', header: '부서', width: 150, align: 'center'},
-            {binding: 'lang_code', header: '언어', width: 100, align: 'center'},
+            // {binding: 'lang_code', header: '언어', width: 100, align: 'center'},
             {
                 binding: 'is_active',
                 header: '활성화',
@@ -555,7 +547,8 @@
                 document.getElementById('person_code').value = selectedItem.personcode;
                 document.getElementById('personid').value = selectedItem.personid;
                 document.getElementById('personname').value = selectedItem.first_name;
-                document.getElementById('is_active').checked = selectedItem.is_active === true; // 체크박스 상태 설정
+                document.getElementById('spjangcd').value = selectedItem.spjangcd || '';
+                document.getElementById('is_active').checked = selectedItem.is_active === true;
 
 
                 function setSelectValue(selectId, valueToMatch) {
@@ -719,23 +712,19 @@
 
         function saveUser() {
             let url = '/api/system/user/save';
-            //데이터입력체크루틴 누락
             let data = FormUtil.extractForm($('#userForm'));
 
             data.is_active = $('#is_active').is(':checked');
-            // let spjangcd = $('#spjangcd').val();
-            // if (!spjangcd) {
-            //     Alert.alert('', '사업장을 선택해주세요.');
-            //     return;
-            // }
-            // data.spjangcd = spjangcd;
-
+            data.spjangcd = $('#spjangcd').val();
 
             if (!data.login_id) {
                 Alert.alert('', '사번을 입력해 주세요');
                 return;
             } else if (!data.Name) {
                 Alert.alert('', '이름을 입력해 주세요');
+                return;
+            } else if (!data.spjangcd) {
+                Alert.alert('', '사번 찾기를 통해 직원을 선택해주세요.');
                 return;
             }/*else if(!data.UserGroup_id){
                 Alert.alert('','사용자그룹을 선택해 주세요');
@@ -992,111 +981,105 @@
 
 
         function showGetPerson() {
-            let _this = this;
-            let viewdata4;
-            let theGrid4;
-            let selectedItem = null;
+            let xusersGrid;
+            let selectedXuser = null;
 
             let content = tmpl('getPersonTemplate', {});
             let $content = $(content);
 
+            // $content를 body에 직접 붙여서 wijmo 그리드가 DOM에서 초기화되도록 함
+            $('body').append($content);
+
             let popContainer = new PopupDraggable('사번찾기');
-            popContainer.open({ width: 800, height: 500, $content });
+            popContainer.open({ width: 870, height: 520, $content });
 
-            let $searchName = $content.find('#searchName');
-            let $searchCode = $content.find('#searchCode');
-            let $btnSearch = $content.find('#btnSubjectSearch');
+            // 그리드 초기화 (DOM 삽입 후 실행)
+            xusersGrid = new wijmo.grid.FlexGrid($content.find('#person-grid')[0], {
+                autoGenerateColumns: false,
+                showMarquee: true,
+                isReadOnly: true,
+                selectionMode: wijmo.grid.SelectionMode.Row,
+                columns: [
+                    { binding: 'perid',    header: '사번',     width: 120, align: 'center' },
+                    { binding: 'pernm',    header: '이름',     width: 150, align: 'center' },
+                    { binding: 'spjangcd', header: '사업장코드', width: 120, align: 'center' },
+                    { binding: 'useyn',    header: '사용여부',  width: 80,  align: 'center' },
+                    { binding: 'userid',   header: '연결 아이디', width: 150, align: 'center' },
+                    { binding: '',         header: '',          width: '*' },
+                ],
+                itemsSource: null
+            });
+            xusersGrid.rowHeaders.columns.splice(0, 1);
 
-            // 사번 조회 함수
-            function fetchPersonList() {
-                let searchCode = $searchCode.val();
-                let searchName = $searchName.val();
-
+            // 데이터 조회
+            function fetchXusersList() {
+                let perid = $content.find('#searchCode').val() || '';
+                let pernm = $content.find('#searchName').val() || '';
                 $.ajax({
-                    url: '/api/system/user/getPerson',
+                    url: '/api/system/user/getXusersList',
                     type: 'GET',
-                    data: {
-                        searchCode: searchCode,
-                        searchName: searchName,
-                        spjangcd: sessionStorage.getItem('spjangcd'),
-                    },
-                    async: false,
+                    data: { perid: perid, pernm: pernm },
                     success: function (res) {
-                        let data2 = res.data || [];
-
-                        viewdata4 = new wijmo.collections.CollectionView(data2);
-
-                        if (theGrid4) {
-                            theGrid4.itemsSource = viewdata4;
-                        }
+                        xusersGrid.itemsSource = new wijmo.collections.CollectionView(res.data || []);
                     },
-                    error: function (jqXHR, textStatus, errorThrown) {
-                        console.error('Error fetching person data:', textStatus, errorThrown);
+                    error: function () {
+                        Alert.alert('', 'TB_XUSERS 조회 중 오류가 발생했습니다.');
                     }
                 });
             }
 
-            // 그리드 먼저 생성
-            theGrid4 = new wijmo.grid.FlexGrid('#person-grid', {
-                autoGenerateColumns: false,
-                showMarquee: true,
-                columns: [
-                    { binding: 'code', header: '사번', width: 100, align: 'center' },
-                    { binding: 'name', header: '이름', width: 150, align: 'center' },
-                    { binding: 'dept_name', header: '부서', width: 150, align: 'center' },
-                    { binding: 'dept_id', header: '부서id', width: 150, align: 'center', visible:false},
-                    { binding: '', header: '', width: '*', align: 'center' },
-                ],
-                isReadOnly: true,
-                itemsSource: null
-            });
-
-            theGrid4.rowHeaders.columns.splice(0, 1);
-
-
-            fetchPersonList();
-
-
-            $btnSearch.click(() => {
-                fetchPersonList();
-            });
-
-
-            $searchCode.add($searchName).on('keydown', function (e) {
-                if (e.keyCode === 13) {
-                    fetchPersonList();
+            // 선택 적용 후 팝업 닫기
+            function applyXuserSelection(item) {
+                if (!item) {
+                    Alert.alert('', '직원을 선택해주세요.');
+                    return;
                 }
-            });
+                $('#person_code').val(item.perid);
+                $('#Name').val(item.pernm || '');
+                $('#personname').val(item.pernm || '');
+                $('#spjangcd').val(item.spjangcd || '');
 
-            theGrid4.selectionChanged.addHandler((s, e) => {
-                selectedItem = s.collectionView.currentItem;
-            });
-
-            $content.find('#btnAccountSave').click(() => {
-                if (selectedItem) {
-                    $('#personid').val(selectedItem.id);
-                    $('#Depart_id').val(selectedItem.dept_id);
-                    $('#personname').val(selectedItem.name);
-                    popContainer.close();
+                // userid가 있으면 login_id에 채우고, 없으면 비워서 직접 입력하도록 포커스
+                if (item.userid) {
+                    $('#login_id').val(item.userid);
                 } else {
-                    Alert.alert('', '사번을 선택해주세요.');
+                    $('#login_id').val('');
+                    popContainer.close();
+                    $('#login_id').focus();
+                    return;
                 }
+                popContainer.close();
+            }
+
+            // 행 선택 추적 (row 인덱스로 직접 접근)
+            xusersGrid.selectionChanged.addHandler(function(s, e) {
+                var row = s.selection.row;
+                selectedXuser = (row >= 0 && row < s.rows.length) ? (s.rows[row].dataItem || null) : null;
             });
 
-            theGrid4.hostElement.addEventListener('dblclick', function (e) {
-                let items = theGrid4.selectedItems;
-                if (items.length === 0) {
-                    return false;
-                }
-                const selectedItem = items[0];
-                console.log('person info : ', selectedItem);
-                $('#person_code').val(selectedItem.code);
-                $('#personid').val(selectedItem.id);
-                $('#Depart_id').val(selectedItem.dept_id);
-                $('#personname').val(selectedItem.name);
+            // 더블클릭 선택
+            xusersGrid.hostElement.addEventListener('dblclick', function (e) {
+                applyXuserSelection(selectedXuser);
+            });
+
+            // 선택 버튼
+            $content.find('#btnAccountSave').on('click', function () {
+                applyXuserSelection(selectedXuser);
+            });
+
+            // 검색 버튼 / 엔터키
+            $content.find('#btnSubjectSearch').on('click', function () { fetchXusersList(); });
+            $content.find('#searchCode, #searchName').on('keydown', function (e) {
+                if (e.keyCode === 13) fetchXusersList();
+            });
+
+            // 닫기 버튼
+            $content.find('#modal-close-button').on('click', function () {
                 popContainer.close();
             });
 
+            // 초기 데이터 로드
+            fetchXusersList();
         }
 
         /*this.close();*/

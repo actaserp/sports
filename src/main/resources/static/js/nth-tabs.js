@@ -173,7 +173,7 @@
 
                                 // 북마크 상태 저장
                                 $.ajax({
-                                    url: withCtx('/api/system/bookmark/save'),
+                                    url: '/api/system/bookmark/save',
                                     type: 'POST',
                                     data: {
                                         menucode: menuCode,
