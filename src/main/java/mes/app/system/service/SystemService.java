@@ -273,7 +273,7 @@ public class SystemService {
 			String sql = """
                 insert into bookmark ("User_id", "MenuCode", _created) values(:user_id, :menucode, now())
                 """;
-			return this.sqlRunner.execute(sql, namedParameters);
+			return this.mainSqlRunner.execute(sql, namedParameters);
 		} else {
 			// isbookmark가 'true'일 경우, 북마크 삭제
 			String sql = """
