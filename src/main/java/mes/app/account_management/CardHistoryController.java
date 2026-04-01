@@ -20,12 +20,13 @@ public class CardHistoryController {
 	CardHistoryService cardHistoryService;
 
 	@GetMapping("/read")
-	public AjaxResult getCardHistoryList(@RequestParam(value = "start") String start,
-																			 @RequestParam(value = "end") String end,
-																			 @RequestParam(value = "tradetype", required = false) String tradetype,
-																			 @RequestParam(value = "CardNo", required = false) String CardNo){
+	public AjaxResult getCardHistoryList(    @RequestParam("start") String start,
+																					 @RequestParam("end") String end,
+																					 @RequestParam(value = "CardNo", required = false) String cardNo,
+																					 @RequestParam(value = "accflag", required = false) String accflag) {
 
-		List<Map<String, Object>> items = this.cardHistoryService.getCardHistoryList(start, end, tradetype,CardNo);
+		List<Map<String, Object>> items = this.cardHistoryService.getCardHistoryList(start, end, cardNo, accflag);
+
 
 		AjaxResult result = new AjaxResult();
 		result.data = items;

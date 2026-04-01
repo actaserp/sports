@@ -95,6 +95,7 @@ public class ComboService {
 		this._dicFunc_.put("workcenter", this.workcenter);
 		this._dicFunc_.put("workcd", this.workcd);
 		this._dicFunc_.put("iotype", this.iotype);
+		this._dicFunc_.put("mssec", this.mssec);
 	}
 
 	public List<Map<String, Object>> getComboList(String comboType, String cond1, String cond2, String cond3){
@@ -941,24 +942,24 @@ public class ComboService {
 		return this.sqlRunner.getRows(sql, dicParam);
 	};
 
-	ComboDataFunction trade=(String cond1, String cond2, String cond3)-> {
-		String sql = "select \"trid\" as Value, ioflag, \"tradenm\" as text from tb_trade where 1=1 ";
-		/*if (StringUtils.hasText(cond1)) {
-			sql +="and \"Equipment_id\" = cast(:cond1 as Integer) ";
-		}
-		if (StringUtils.hasText(cond2)) {
-			sql +="and \"tag_group_id\" = cast(:cond2 as Integer) ";
-		}
-		if (StringUtils.hasText(cond3)) {
-			sql +="and \"DASConfig_id\" = cast(:cond3 as Integer) ";
-		}*/
-		sql += " order by \"trid\" ";
-		MapSqlParameterSource dicParam = new MapSqlParameterSource();
-		dicParam.addValue("cond1", cond1);
-		dicParam.addValue("cond2", cond2);
-		dicParam.addValue("cond3", cond3);
-		return this.sqlRunner.getRows(sql, dicParam);
-	};
+//	ComboDataFunction trade=(String cond1, String cond2, String cond3)-> {
+//		String sql = "select \"trid\" as Value, ioflag, \"tradenm\" as text from tb_trade where 1=1 ";
+//		/*if (StringUtils.hasText(cond1)) {
+//			sql +="and \"Equipment_id\" = cast(:cond1 as Integer) ";
+//		}
+//		if (StringUtils.hasText(cond2)) {
+//			sql +="and \"tag_group_id\" = cast(:cond2 as Integer) ";
+//		}
+//		if (StringUtils.hasText(cond3)) {
+//			sql +="and \"DASConfig_id\" = cast(:cond3 as Integer) ";
+//		}*/
+//		sql += " order by \"trid\" ";
+//		MapSqlParameterSource dicParam = new MapSqlParameterSource();
+//		dicParam.addValue("cond1", cond1);
+//		dicParam.addValue("cond2", cond2);
+//		dicParam.addValue("cond3", cond3);
+//		return this.sqlRunner.getRows(sql, dicParam);
+//	};
 	
 	ComboDataFunction task_master=(String cond1, String cond2, String cond3)-> {  
 		String sql = "select id as value, \"TaskName\" as text from task_master where 1=1 ";
@@ -1007,6 +1008,37 @@ public class ComboService {
         dicParam.addValue("cond1", cond1);
         return this.sqlRunner.getRows(sql, dicParam);	
 	};
+
+	ComboDataFunction mssec = (String cond1, String cond2, String cond3) -> { //확인
+		String sql = "select mssec as value, mssecnm as text from tb_x0005 where 1=1";
+
+		MapSqlParameterSource dicParam = new MapSqlParameterSource();
+		dicParam.addValue("cond1", cond1);
+		dicParam.addValue("cond2", cond2);
+		dicParam.addValue("cond3", cond3);
+		return this.sqlRunner.getRows(sql, dicParam);
+	};
+
+	// 거래구분
+	ComboDataFunction trade=(String cond1, String cond2, String cond3)-> {
+		String sql = "select acccd as value, drcr as ioflag, accnm as text " +
+									 "from tb_ac001 " +
+									 "where 1=1 and useyn ='1'";
+
+		MapSqlParameterSource dicParam = new MapSqlParameterSource();
+
+		// cond1이 있을 때만 필터링
+		if (cond1 != null && !cond1.isEmpty()) {
+			sql += " and drcr = :cond1";
+			dicParam.addValue("cond1", cond1);
+		}
+
+		dicParam.addValue("cond2", cond2);
+		dicParam.addValue("cond3", cond3);
+
+		return this.sqlRunner.getRows(sql, dicParam);
+	};
+
 	/* 템플리트
 	
 	public ComboDataFunction template=(String cond1, String cond2, String cond3)-> {

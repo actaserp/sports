@@ -105,7 +105,7 @@
               </dd>
             </dl>-->
 
-            <dl>
+            <!--<dl>
               <dt>
                 <label>
                   거래처<span class="eq"></span>
@@ -118,7 +118,7 @@
                   <input id="cltflag" name="cltflag" type="hidden"/>
                 </div>
               </dd>
-            </dl>
+            </dl>-->
 
             <dl>
               <dt>
@@ -132,6 +132,20 @@
               </dd>
             </dl>
 
+            <dl>
+              <dt>
+                <label>
+                  발행구분
+                </label>
+              </dt>
+              <dd>
+                <select class="form-control2" id="accflag" name="accflag" >
+                  <option value="">전체</option>
+                  <option value="0">미발행</option>
+                  <option value="1">발행</option>
+                </select>
+              </dd>
+            </dl>
 
             <dl>
               <dt>&nbsp;</dt>
@@ -432,8 +446,8 @@
       'start': start,
       'end': end,
       accountName: $('#accountName').val(),
-      tradetype: $('#tradetype').val(),
-
+      accountNameHidden: $('#accountNameHidden').val(),
+      accflag: $('#accflag').val(),
      };
 
      let fnsuccess = function (result) {
@@ -549,9 +563,9 @@
     });
 
     $('#accountName').on('keydown', function (e) {
-      if (e.key === 'Enter' || e.keyCode === 13) {
-       page.searchMainData();
-      }
+     if (e.key === 'Enter' || e.keyCode === 13) {
+      page.searchMainData();
+     }
     });
 
     //전표 생성

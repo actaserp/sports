@@ -27,14 +27,14 @@ public class CardAssignmentService {
 	@Autowired
 	private ObjectMapper objectMapper;
 
-	public List<Map<String, Object>> getCardAssignmentList(String start, String end, String comp, String accountName) {
+	public List<Map<String, Object>> getCardAssignmentList(String start, String end, String accountName, String accflag) {
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		String tenantId = TenantContext.get();
 		param.addValue("spjangcd", tenantId);
 		param.addValue("start", start);
 		param.addValue("end", end);
-		param.addValue("comp", comp);
-		param.addValue("accountName", accountName);
+		param.addValue("card_no", accountName);
+		param.addValue("accflag", accflag);	//발행구분
 
 		String sql = """
 			select
@@ -85,6 +85,26 @@ public class CardAssignmentService {
 			where spjangcd = :spjangcd
 			and mijdate between :start and :end
 			""";
+
+		if (accountName != null && !accountName.trim().isEmpty()) {
+			sql += """
+        and replace(card_no, '-', '') like :card_no
+    """;
+
+			param.addValue("card_no", "%" + accountName.trim().replace("-", "") + "%");
+		}
+
+		if (accflag != null && !accflag.trim().isEmpty()) {
+			sql += """
+        and CASE
+              WHEN ISNULL(NULLIF(b.acc_spdate, ''), '') <> ''
+               AND ISNULL(NULLIF(b.acc_spnum, ''), '') <> ''
+              THEN '1'
+              ELSE '0'
+            END = :accflag
+    """;
+			param.addValue("accflag", accflag.trim());
+		}
 
 		return sqlRunner.getRows(sql, param);
 

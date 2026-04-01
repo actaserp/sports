@@ -89,22 +89,6 @@
                 </div>
               </dd>
             </dl>
-
-            <!--<dl>
-              <dt>
-                <label>
-                  구분
-                </label>
-              </dt>
-              <dd>
-                <select class="form-control2" id="tradetype" name="tradetype">
-                  <option value="">전체</option>
-                  <option value="0">입금</option>
-                  <option value="1">출금</option>
-                </select>
-              </dd>
-            </dl>-->
-
             <dl>
               <dt>
                 <label>
@@ -132,6 +116,20 @@
               </dd>
             </dl>
 
+            <dl>
+              <dt>
+                <label>
+                  발행구분
+                </label>
+              </dt>
+              <dd>
+                <select class="form-control2" id="accflag" name="accflag" >
+                  <option value="">전체</option>
+                  <option value="0">미발행</option>
+                  <option value="1">발행</option>
+                </select>
+              </dd>
+            </dl>
 
             <dl>
               <dt>&nbsp;</dt>
@@ -166,43 +164,42 @@
 
     <section class="section">
       <div class="grid_box" id="divList">
-        <div class="title_box">
-          <!-- <span class="right_align rpt" data-labelCd="출하 지시 목록">출하지시 목록</span>-->
-          <ul>
-            <!--<li class="right_align rpt"  style="margin-right: 5px">
-                <a class="btn btn-excell" title="등록" id="">
-                    <img src="/images/icon/ico-plus.svg" alt="등록 아이콘">
-                    저장
-                </a>
-            </li>-->
-            <li class="right_align rpt" style="margin-right: 5px">
+        <div class="title_box" style="display:flex; align-items:center; width:100%;">
+          <dl style="display:flex; align-items:center; margin:0;">
+            <dt style="margin-right:8px;">
+              <label>발행구분</label>
+            </dt>
+            <dd style="margin:0;">
+              <select class="form-control2" id="slipType" name="slipType">
+                <option value="0">개별전표</option>
+                <option value="1">통합전표</option>
+              </select>
+            </dd>
+          </dl>
+
+          <ul style="display:flex; align-items:center; gap:5px; margin:0 0 0 auto; padding:0; list-style:none;">
+            <li class="right_align rpt">
               <a class="btn btn-edit" id="btnAddNew" title="전표생성">
-                <img alt="추가 아이콘" th:src="@{/images/icon/ico-edit.svg}">
+                <img alt="추가 아이콘"th:src="@{/images/icon/ico-edit.svg}">
                 전표생성
               </a>
             </li>
-            <li class="right_align rpt" style="margin-right: 5px">
+            <li class="right_align rpt">
+              <a class="btn btn-edit" id="btnCancel" title="전표생성 취소">
+                <img alt="추가 아이콘" th:src="@{/images/icon/ico-edit.svg}">
+                전표생성 취소
+              </a>
+            </li>
+            <li class="right_align rpt">
               <a class="btn btn-delete" id="btnBulkEdit" title="저장">
                 <img alt="저장 아이콘" th:src="@{/images/icon/ico-edit.svg}">
                 저장
               </a>
             </li>
-            <li class="right_align rpt" style="margin-right: 5px">
-              <a class="btn btn-delete" id="btnEdit" title="수정">
-                <img alt="수정 아이콘" th:src="@{/images/icon/ico-edit.svg}">
-                수정
-              </a>
-            </li>
-            <li class="right_align rpt" style="margin-right: 5px">
-              <a class="btn btn-edit" id="btnDelete" title="삭제">
-                <img alt="삭제 아이콘" th:src="@{/images/icon/ico-delete.svg}">
-                삭제
-              </a>
-            </li>
           </ul>
         </div>
 
-        <div id="theGrid_CardHistory" style="height: 540px;"></div>
+        <div id="theGrid_BankHistory" style="height: 540px;"></div>
         <div id="memo-popup" style="display: none; position: absolute; z-index: 9999;">
           <textarea id="memo-textarea" style="width: 300px; height: 100px;"></textarea>
         </div>
@@ -300,16 +297,15 @@
 </th:block>
 
 <th:block layout:fragment="scripts">
-  <script src="/js/cycle/AccountInputHandler.js"></script>
+  <th:block th:replace="/common/popup_account :: popup_account" />
+  <th:block th:replace="/common/popup_company_employee_bank_card.html :: popup_company"></th:block>
+  <script th:src="@{/js/cycle/AccountInputHandler.js}"></script>
   <script type="text/javascript">
-   class CardHistoryPage {
+   class BankHistoryPage {
     constructor() {
-     this.url = '/api/account_management/card_assignment';
+     this.url = '/api/account_management/bank_assignment';
      this.grid = null;
-     this.cardSettingGrid = null;
-     this.cardSettingPopup = null;
      this.viewData = new wijmo.collections.CollectionView();
-     this.cardViewData = new wijmo.collections.CollectionView();
      this.init();
     }
     init() {
@@ -326,37 +322,50 @@
      // DataMap 생성
      let mssecMap = new wijmo.grid.DataMap(this.mssecOptions, 'value', 'text');
 
-     _this.grid = new wijmo.grid.FlexGrid('#theGrid_CardHistory', {
+     _this.grid = new wijmo.grid.FlexGrid('#theGrid_BankHistory', {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
       autoGenerateColumns: false,
       showMarquee: true,
       allowSorting: 'MultiColumn',
       selectionMode: wijmo.grid.SelectionMode.Cell,
       isReadOnly: false,
       imeEnabled: true,
+      frozenColumns: 2,
       formatItem: (s, e) => {
        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+        const binding = s.columns[e.col].binding;
+
         // 기본값 먼저 초기화
         e.cell.style.textAlign = 'center';
         e.cell.style.color = '';
         e.cell.style.fontWeight = '';
+
+        // 강조할 헤더만 다시 적용
+        if (
+         binding === 'busim' ||
+         binding === 'accnm' ||
+         binding === 'accnm2' ||
+         binding === 'it1nm' ||
+         binding === 'it2nm' ||
+         binding === 'mssecnm' ||
+         binding === 'mssec' ||
+         binding === 'summy'  ||
+         binding === 'subject'
+        ) {
+         e.cell.style.color = '#5567ff';
+         e.cell.style.fontWeight = 'bold';
+        }
        }
       },
       columns: [
-       {binding: 'apv_dt', header: '일자', width: 100, align: 'center', isReadOnly: true},
-       {binding: 'apv_no', header: '입출구분', width: 120, align: 'center', isReadOnly: true},
-       {binding: 'apv_tm', header: '입금액', width: 100, align: 'right', isReadOnly: true},
-       {binding: '', header: '적요', width: 230, align: 'left', isReadOnly: true},
-       {binding: 'acccd', header: '관코드', visible: false},
-       {binding: 'accnm', header: '관명', width: 100, align: 'left', isReadOnly: true},
-       {binding: 'it1cd', header: '항코드',visible: false },
-       {binding: 'it1nm', header: '항', width: 100, align: 'left', isReadOnly: true},
-       {binding: 'it2cd', header: '목코드', visible: false},
-       {binding: 'it2nm', header: '목', width: 100, align: 'left', isReadOnly: true},
-       {binding: 'summy', header: '산출내역', width: 140, align: 'left', isReadOnly: true},
-
-       {binding: '', header: '제목', width: 250, align: 'left', isReadOnly: true},
-       {binding: '', header: '발행여부', width: 160, align: 'left', isReadOnly: true},
-       {binding: '', header: '전표일자/번호', width: 160, align: 'left', isReadOnly: true},
+       {
+        binding: 'selected',
+        header: '선택',
+        width: 70,
+        align: 'center',
+        dataType: wijmo.DataType.Boolean,
+        isReadOnly: false
+       },
        {
         binding: 'slip_cancel_yn',
         header: '전표취소',
@@ -364,15 +373,60 @@
         align: 'center',
         dataType: wijmo.DataType.Boolean,
         isReadOnly: false
-       }
+       },
+       { binding: 'custcd', header: 'custcd', visible: false },
+       { binding: 'spjangcd', header: 'spjangcd', visible: false },
+       { binding: 'bnkcode', header: 'bnkcode', visible: false },
+       { binding: 'fintech_use_num', header: 'fintech_use_num', visible: false },
+       { binding: 'bank_tran_id', header: 'bank_tran_id', visible: false },
+       {binding: 'tran_date', header: '일자', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'inout_type', header: '입출구분', width: 120, align: 'center', isReadOnly: true},
+       {binding: 'tran_amt', header: '입금액', width: 100, align: 'right', isReadOnly: true},
+       {binding: 'wdr_amt', header: '출금액',  visible: false},
+       {binding: 'cltcd', header: '거래처',  visible: false},
+       {binding: 'subject', header: '적요', width: 230, align: 'left', isReadOnly: false},
+
+       {binding: 'bsdate', header: '사업코드1', visible: false},
+       {binding: 'bseccd', header: '사업코드2', visible: false},
+       {binding: 'buiscd', header: '사업코드', visible: false},
+       {binding: 'busim', header: '사업명', width: 300, align: 'left', isReadOnly: false},
+       {binding: 'acccd', header: '관코드', visible: false},
+       {binding: 'accnm', header: '관명', width: 150, align: 'left', isReadOnly: false},
+       {binding: 'acccd2', header: '상대계정코드', visible: false },
+       {binding: 'accnm2', header: '상대계정명', width: 150, align: 'left', isReadOnly: false },
+       {binding: 'it1cd', header: '항코드',visible: false },
+       {binding: 'it1nm', header: '항', width: 150, align: 'left', isReadOnly: false},
+       {binding: 'it2cd', header: '목코드', visible: false},
+       {binding: 'it2nm', header: '목', width: 150, align: 'left', isReadOnly: false},
+       {binding: 'mssec', header: '재원', width: 100, align: 'left', dataMap: mssecMap},
+       {binding: 'summy', header: '산출내역', width: 140, align: 'left', isReadOnly: false},
+
+       {binding: '', header: '제목', width: 250, align: 'left', isReadOnly: true, visible: false},
+       {binding: 'acc_spdate', header: '전표일자', visible: false},
+       {binding: 'acc_spnum', header: '전표번호', visible: false},
+       {binding: 'acc_spdate_num', header: '전표일자/번호', width: 160, align: 'left', isReadOnly: true},
+
       ],
       itemsSource: this.viewData,
      });
 
      _this.grid.keyActionEnter = wijmo.grid.KeyAction.None;
 
+     // 재원 수정 완료 시 자동 체크 갱신
+     _this.grid.cellEditEnded.addHandler((s, e) => {
+      const item = s.rows[e.row]?.dataItem;
+      const col = s.columns[e.col];
+
+      if (!item || !col) return;
+
+      if (col.binding === 'mssec') {
+       _this.updateRowSelected(item);
+       s.collectionView.refresh();
+      }
+     });
+
      new FlexGridContextMenu(this.grid);
-     _this.grid.downloadFileName = '저표분개 내역';
+     _this.grid.downloadFileName = '전표분개 내역';
 
      // footer 합계행 추가
      _this.grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
@@ -396,8 +450,734 @@
       }, 0);
      });
 
+     _this.grid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') {
+       return;
+      }
+
+      const g = _this.grid;
+      const sel = g.selection;
+
+      if (!sel || sel.row < 0 || sel.col < 0) {
+       return;
+      }
+
+      const col = g.columns[sel.col];
+      if (!col) {
+       return;
+      }
+
+      e.preventDefault();
+
+      let item = g.rows[sel.row].dataItem;
+
+      let inputValue = '';
+      if (g.activeEditor) {
+       inputValue = g.activeEditor.value ? g.activeEditor.value.trim() : '';
+      } else {
+       inputValue = g.getCellData(sel.row, sel.col, true);
+       inputValue = inputValue ? inputValue.toString().trim() : '';
+      }
+
+      g.finishEditing();
+
+      // 적요에서 엔터 -> 같은 행의 사업명으로 이동
+      if (col.binding === 'subject') {
+       item[col.binding] = inputValue;
+       _this.moveToCellAndEdit(sel.row, 'busim');
+       return;
+      }
+
+      // 사업명에서 엔터 -> 사업 조회 팝업
+      if (col.binding === 'busim') {
+       item[col.binding] = inputValue;
+       _this.searchBusim(item, sel.row);
+       return;
+      }
+
+      // 관명에서 엔터 -> 관 조회 팝업
+      if (col.binding === 'accnm') {
+       item[col.binding] = inputValue;
+       _this.searchAccnm(item, sel.row);
+       return;
+      }
+
+      // 상대계정명에서 엔터 -> 상대계정 조회 팝업
+      if (col.binding === 'accnm2') {
+       item[col.binding] = inputValue;
+       _this.searchAccnm2(item, sel.row);
+       return;
+      }
+
+      // 항에서 엔터 -> 항 조회 팝업
+      if (col.binding === 'it1nm') {
+       item[col.binding] = inputValue;
+       _this.searchIt1nm(item, sel.row);
+       return;
+      }
+
+      // 목에서 엔터 -> 목 조회 팝업
+      if (col.binding === 'it2nm') {
+       item[col.binding] = inputValue;
+       _this.searchIt2nm(item, sel.row);
+       return;
+      }
+
+      // 재원에서 엔터 -> 산출내역으로 이동
+      if (col.binding === 'mssec') {
+       _this.moveToCellAndEdit(sel.row, 'summy');
+       return;
+      }
+
+      // 산출내역에서 엔터 -> 다음 행의 적요로 이동
+      if (col.binding === 'summy') {
+       item[col.binding] = inputValue;
+       const nextRow = sel.row + 1;
+       if (nextRow < g.rows.length) {
+        _this.moveToCellAndEdit(nextRow, 'subject');
+       }
+       return;
+      }
+
+      // 그 외 일반 이동
+      const nextPos = _this.findNextEditableCell(sel.row, sel.col);
+      if (!nextPos) return;
+
+      g.select(nextPos.row, nextPos.col);
+      g.scrollIntoView(nextPos.row, nextPos.col, true);
+      g.startEditing(true);
+     });
+
     }//init
 
+    // 사업명 조회
+    searchBusim(item, rowIndex) {
+     let _this = this;
+     let url = '/api/account_management/card_history/findBusim';
+     let data = {
+      busim: item.busim
+     };
+
+     let fnsuccess = function (res) {
+      let list = res.data || [];
+
+      if (!list || list.length === 0) {
+       Alert.alert('', '사업 조회 결과가 없습니다.');
+       return;
+      }
+
+      _this.showBusimPopup(list, rowIndex);
+     };
+
+     AjaxUtil.getAsyncData(url, data, fnsuccess);
+    }
+
+    showBusimPopup(dataList, rowIndex) {
+     let _this = this;
+
+     _this.selectedRowIndexForPopup = rowIndex;
+
+     // 기존 팝업이 있으면 제거
+     if (_this.busimPopup) {
+      _this.busimPopup.close();
+      _this.busimPopup = null;
+     }
+
+     // 템플릿 HTML 가져오기
+     let content = tmpl('businmTemplate', {});
+
+     // 팝업 열기
+     _this.busimPopup = new PopupDraggable('사업 조회');
+     _this.busimPopup.open({ width: 700, height: 420, $content: $(content) });
+
+     // 팝업 안의 그리드 생성
+     _this.businessGrid = new wijmo.grid.FlexGrid('#BusinessGrid', {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: [
+       { binding: 'bsdate', header: '사업코드1', width: 90, align: 'center' },
+       { binding: 'bseccd', header: '사업코드2', width: 90, align: 'center' },
+       { binding: 'buiscd', header: '사업코드', width: 90, align: 'center' },
+       { binding: 'busim', header: '사업명', width: '*', align: 'left' }
+      ],
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+     // 엔터 키 기본 동작 비활성화
+     _this.businessGrid.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     // 공통 선택 함수
+     const selectCurrentBusim = function () {
+      let sel = _this.businessGrid.selection;
+      if (!sel || sel.row < 0) {
+       return;
+      }
+
+      let selectedItem = _this.businessGrid.rows[sel.row].dataItem;
+      _this.applyBusimData(selectedItem, _this.selectedRowIndexForPopup);
+
+      if (_this.busimPopup) {
+       _this.busimPopup.close();
+       _this.busimPopup = null;
+      }
+
+      _this.businessGrid = null;
+     };
+
+     // 첫 행 선택 + 포커스
+     setTimeout(function () {
+      if (_this.businessGrid && _this.businessGrid.rows.length > 0) {
+       _this.businessGrid.select(0, 0);
+       _this.businessGrid.focus();
+      }
+     }, 50);
+
+     // 더블클릭 선택
+     _this.businessGrid.hostElement.addEventListener('dblclick', function () {
+      selectCurrentBusim();
+     });
+
+     // Enter 선택
+     _this.businessGrid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectCurrentBusim();
+      }
+     });
+    }
+
+    applyBusimData(selectedItem, rowIndex) {
+     let g = this.grid;
+     let rowItem = g.rows[rowIndex].dataItem;
+
+     rowItem.bsdate = selectedItem.bsdate || '';
+     rowItem.bseccd = selectedItem.bseccd || '';
+     rowItem.buiscd = selectedItem.buiscd || '';
+     rowItem.busim = selectedItem.busim || '';
+
+     this.updateRowSelected(rowItem);
+
+     g.collectionView.refresh();
+
+     // 다음 컬럼으로 이동
+     this.moveToCellAndEdit(rowIndex, 'accnm');
+    }
+
+    //관명 조회
+    searchAccnm(item, rowIndex) {
+     let _this = this;
+     let url = '/api/account_management/card_history/findAccnm';
+     let data = {
+      accnm: item.accnm
+     };
+
+     let fnsuccess = function (res) {
+      let list = res.data || [];
+
+      if (!list || list.length === 0) {
+       Alert.alert('', '관 조회 결과가 없습니다.');
+       return;
+      }
+
+      _this.showAccnmPopup(list, rowIndex);
+     };
+
+     AjaxUtil.getAsyncData(url, data, fnsuccess);
+    }
+
+    showAccnmPopup(dataList, rowIndex) {
+     let _this = this;
+
+     _this.selectedRowIndexForPopup = rowIndex;
+
+     if (_this.accnmPopup) {
+      _this.accnmPopup.close();
+      _this.accnmPopup = null;
+     }
+
+     let content = tmpl('accnmTemplate', {});
+
+     _this.accnmPopup = new PopupDraggable('관 조회');
+     _this.accnmPopup.open({ width: 700, height: 420, $content: $(content) });
+
+     _this.accGrid = new wijmo.grid.FlexGrid('#AccGrid', {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: [
+       { binding: 'acccd', header: '관코드', width: 100, align: 'center' },
+       { binding: 'accnm', header: '관명', width: '*', align: 'left' }
+      ],
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+
+     // 엔터 키 기본 동작 비활성화
+     _this.accGrid.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const selectCurrentAccnm = function () {
+      let sel = _this.accGrid.selection;
+      if (!sel || sel.row < 0) {
+       return;
+      }
+
+      let selectedItem = _this.accGrid.rows[sel.row].dataItem;
+      _this.applyAccnmData(selectedItem, _this.selectedRowIndexForPopup);
+
+      if (_this.accnmPopup) {
+       _this.accnmPopup.close();
+       _this.accnmPopup = null;
+      }
+
+      _this.accGrid = null;
+     };
+
+     setTimeout(function () {
+      if (_this.accGrid && _this.accGrid.rows.length > 0) {
+       _this.accGrid.select(0, 0);
+       _this.accGrid.focus();
+      }
+     }, 50);
+
+     _this.accGrid.hostElement.addEventListener('dblclick', function () {
+      selectCurrentAccnm();
+     });
+
+     _this.accGrid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectCurrentAccnm();
+      }
+     });
+    }
+
+    applyAccnmData(selectedItem, rowIndex) {
+     let g = this.grid;
+     let rowItem = g.rows[rowIndex].dataItem;
+
+     rowItem.acccd = selectedItem.acccd || '';
+     rowItem.accnm = selectedItem.accnm || '';
+
+     this.updateRowSelected(rowItem);
+
+     g.collectionView.refresh();
+     // 다음 컬럼으로 이동
+     this.moveToCellAndEdit(rowIndex, 'accnm2');
+    }
+
+    // 상대계정 조회
+    searchAccnm2(item, rowIndex) {
+     let _this = this;
+     let url = '/api/account_management/card_history/findAccnm';
+     let data = {
+      accnm: item.accnm2
+     };
+
+     let fnsuccess = function (res) {
+      let list = res.data || [];
+
+      if (!list || list.length === 0) {
+       Alert.alert('', '상대계정 조회 결과가 없습니다.');
+       return;
+      }
+
+      _this.showAccnm2Popup(list, rowIndex);
+     };
+
+     AjaxUtil.getAsyncData(url, data, fnsuccess);
+    }
+
+    showAccnm2Popup(dataList, rowIndex) {
+     let _this = this;
+
+     _this.selectedRowIndexForPopup = rowIndex;
+
+     if (_this.accnm2Popup) {
+      _this.accnm2Popup.close();
+      _this.accnm2Popup = null;
+     }
+
+     let content = tmpl('accnmTemplate', {});
+
+     _this.accnm2Popup = new PopupDraggable('상대계정 조회');
+     _this.accnm2Popup.open({ width: 700, height: 420, $content: $(content) });
+
+     _this.acc2Grid = new wijmo.grid.FlexGrid('#AccGrid', {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: [
+       { binding: 'acccd', header: '계정코드', width: 100, align: 'center' },
+       { binding: 'accnm', header: '계정명', width: '*', align: 'left' }
+      ],
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+
+     _this.acc2Grid.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const selectCurrentAccnm2 = function () {
+      let sel = _this.acc2Grid.selection;
+      if (!sel || sel.row < 0) {
+       return;
+      }
+
+      let selectedItem = _this.acc2Grid.rows[sel.row].dataItem;
+      _this.applyAccnm2Data(selectedItem, _this.selectedRowIndexForPopup);
+
+      if (_this.accnm2Popup) {
+       _this.accnm2Popup.close();
+       _this.accnm2Popup = null;
+      }
+
+      _this.acc2Grid = null;
+     };
+
+     setTimeout(function () {
+      if (_this.acc2Grid && _this.acc2Grid.rows.length > 0) {
+       _this.acc2Grid.select(0, 0);
+       _this.acc2Grid.focus();
+      }
+     }, 50);
+
+     _this.acc2Grid.hostElement.addEventListener('dblclick', function () {
+      selectCurrentAccnm2();
+     });
+
+     _this.acc2Grid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectCurrentAccnm2();
+      }
+     });
+    }
+
+    applyAccnm2Data(selectedItem, rowIndex) {
+     let g = this.grid;
+     let rowItem = g.rows[rowIndex].dataItem;
+
+     rowItem.acccd2 = selectedItem.acccd || '';
+     rowItem.accnm2 = selectedItem.accnm || '';
+
+     this.updateRowSelected(rowItem);
+
+     g.collectionView.refresh();
+     // 다음 컬럼으로 이동
+     this.moveToCellAndEdit(rowIndex, 'it1nm');
+    }
+
+    //항 조회
+    searchIt1nm(item, rowIndex) {
+     let _this = this;
+     let url = '/api/account_management/card_history/findIt1nm';
+     let data = {
+      it1nm: item.it1nm
+     };
+
+     let fnsuccess = function (res) {
+      let list = res.data || [];
+
+      if (!list || list.length === 0) {
+       Alert.alert('', '항 조회 결과가 없습니다.');
+       return;
+      }
+
+      _this.showIt1Popup(list, rowIndex);
+     };
+
+     AjaxUtil.getAsyncData(url, data, fnsuccess);
+    }
+
+    showIt1Popup(dataList, rowIndex) {
+     let _this = this;
+
+     _this.selectedRowIndexForPopup = rowIndex;
+
+     if (_this.it1Popup) {
+      _this.it1Popup.close();
+      _this.it1Popup = null;
+     }
+
+     let content = tmpl('it1Template', {});
+
+     _this.it1Popup = new PopupDraggable('항 조회');
+     _this.it1Popup.open({ width: 700, height: 420, $content: $(content) });
+
+     _this.it1Grid = new wijmo.grid.FlexGrid('#It1Grid', {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: [
+       { binding: 'it1cd', header: '항코드', width: 100, align: 'center' },
+       { binding: 'it1nm', header: '항명', width: '*', align: 'left' }
+      ],
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+     // 엔터 키 기본 동작 비활성화
+     _this.it1Grid.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const selectCurrentIt1 = function () {
+      let sel = _this.it1Grid.selection;
+      if (!sel || sel.row < 0) {
+       return;
+      }
+
+      let selectedItem = _this.it1Grid.rows[sel.row].dataItem;
+      _this.applyIt1Data(selectedItem, _this.selectedRowIndexForPopup);
+
+      if (_this.it1Popup) {
+       _this.it1Popup.close();
+       _this.it1Popup = null;
+      }
+
+      _this.it1Grid = null;
+     };
+
+     setTimeout(function () {
+      if (_this.it1Grid && _this.it1Grid.rows.length > 0) {
+       _this.it1Grid.select(0, 0);
+       _this.it1Grid.focus();
+      }
+     }, 50);
+
+     _this.it1Grid.hostElement.addEventListener('dblclick', function () {
+      selectCurrentIt1();
+     });
+
+     _this.it1Grid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectCurrentIt1();
+      }
+     });
+    }
+
+    applyIt1Data(selectedItem, rowIndex) {
+     let g = this.grid;
+     let rowItem = g.rows[rowIndex].dataItem;
+
+     rowItem.it1cd = selectedItem.it1cd || '';
+     rowItem.it1nm = selectedItem.it1nm || '';
+
+     this.updateRowSelected(rowItem);
+
+     g.collectionView.refresh();
+
+     // 다음 컬럼으로 이동
+     this.moveToCellAndEdit(rowIndex, 'it2nm');
+    }
+
+    //목 조회
+    searchIt2nm(item, rowIndex) {
+     let _this = this;
+     let url = '/api/account_management/card_history/findIt2nm';
+     let data = {
+      it2nm: item.it2nm
+     };
+
+     let fnsuccess = function (res) {
+      let list = res.data || [];
+
+      if (!list || list.length === 0) {
+       Alert.alert('', '목 조회 결과가 없습니다.');
+       return;
+      }
+
+      _this.showIt2Popup(list, rowIndex);
+     };
+
+     AjaxUtil.getAsyncData(url, data, fnsuccess);
+    }
+
+    showIt2Popup(dataList, rowIndex) {
+     let _this = this;
+
+     _this.selectedRowIndexForPopup = rowIndex;
+
+     if (_this.it2Popup) {
+      _this.it2Popup.close();
+      _this.it2Popup = null;
+     }
+
+     let content = tmpl('it2Template', {});
+
+     _this.it2Popup = new PopupDraggable('목 조회');
+     _this.it2Popup.open({ width: 700, height: 420, $content: $(content) });
+
+     _this.it2Grid = new wijmo.grid.FlexGrid('#It2Grid', {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: [
+       { binding: 'it2cd', header: '목코드', width: 100, align: 'center' },
+       { binding: 'it2nm', header: '목명', width: '*', align: 'left' }
+      ],
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+
+     // 엔터 키 기본 동작 비활성화
+     _this.it2Grid.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const selectCurrentIt2 = function () {
+      let sel = _this.it2Grid.selection;
+      if (!sel || sel.row < 0) {
+       return;
+      }
+
+      let selectedItem = _this.it2Grid.rows[sel.row].dataItem;
+      _this.applyIt2Data(selectedItem, _this.selectedRowIndexForPopup);
+
+      if (_this.it2Popup) {
+       _this.it2Popup.close();
+       _this.it2Popup = null;
+      }
+
+      _this.it2Grid = null;
+     };
+
+     setTimeout(function () {
+      if (_this.it2Grid && _this.it2Grid.rows.length > 0) {
+       _this.it2Grid.select(0, 0);
+       _this.it2Grid.focus();
+      }
+     }, 50);
+
+     _this.it2Grid.hostElement.addEventListener('dblclick', function () {
+      selectCurrentIt2();
+     });
+
+     _this.it2Grid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectCurrentIt2();
+      }
+     });
+    }
+
+    applyIt2Data(selectedItem, rowIndex) {
+     let g = this.grid;
+     let rowItem = g.rows[rowIndex].dataItem;
+
+     rowItem.it2cd = selectedItem.it2cd || '';
+     rowItem.it2nm = selectedItem.it2nm || '';
+
+     this.updateRowSelected(rowItem);
+
+     g.collectionView.refresh();
+
+     this.moveToMssecAndOpen(sel.row);
+    }
+
+    isRowReadyForSave(item) {
+     return !!(
+      item.buiscd &&
+      item.acccd &&
+      item.acccd2 &&
+      item.it1cd &&
+      item.it2cd &&
+      item.mssec &&
+      item.summy
+     );
+    }
+
+    updateRowSelected(item) {
+     item.selected = this.isRowReadyForSave(item);
+    }
+
+    //다음칸 이동 공통함수
+    moveToCellAndEdit(rowIndex, binding) {
+     let g = this.grid;
+     const nextCol = g.columns.getColumn(binding);
+
+     if (!nextCol) return;
+
+     setTimeout(() => {
+      g.select(rowIndex, nextCol.index);
+      g.scrollIntoView(rowIndex, nextCol.index, true);
+      g.focus(); // 또는 g.hostElement.focus();
+      g.startEditing(true);
+     }, 50);
+    }
+    moveToMssecAndOpen(rowIndex) {
+     let g = this.grid;
+     const col = g.columns.getColumn('mssec');
+
+     if (!col) return;
+
+     setTimeout(() => {
+      g.select(rowIndex, col.index);
+      g.scrollIntoView(rowIndex, col.index, true);
+      g.focus();
+      g.startEditing(true);
+
+      setTimeout(() => {
+       const editor = g.activeEditor;
+       if (editor) {
+        editor.focus();
+        editor.dispatchEvent(new Event('click')); // 클릭 이벤트 발생
+        editor.dispatchEvent(new KeyboardEvent('keydown', {
+         key: 'ArrowDown',
+         code: 'ArrowDown',
+         keyCode: 40,
+         which: 40,
+         bubbles: true
+        })); // 아래 화살표 키 이벤트 발생
+       }
+      }, 30);
+     }, 50);
+    }
+    //일반이동
+    findNextEditableCell(row, col) {
+     const g = this.grid;
+     const rowCount = g.rows.length;
+     const colCount = g.columns.length;
+
+     for (let r = row; r < rowCount; r++) {
+      let startCol = (r === row) ? col + 1 : 0;
+
+      for (let c = startCol; c < colCount; c++) {
+       if (this.isEditableCell(r, c)) {
+        return {row: r, col: c};
+       }
+      }
+     }
+
+     return null;
+    }
+
+    isEditableCell(row, col) {
+     const g = this.grid;
+     const column = g.columns[col];
+     const gridRow = g.rows[row];
+
+     if (!column || !gridRow) {
+      return false;
+     }
+
+     if (column.isReadOnly) {
+      return false;
+     }
+
+     if (!(gridRow instanceof wijmo.grid.Row)) {
+      return false;
+     }
+
+     if (!column.visible) {
+      return false;
+     }
+
+     return true;
+    }
+
+    //검색/조회
     searchMainData() {
      let _this = this;
      let url = this.url + '/read';
@@ -408,191 +1188,292 @@
      let data = {
       'start': start,
       'end': end,
+      cboCompanyHidden: $('#cboCompanyHidden').val(),
+      cltflag: $('#cltflag').val(),
+      accountNameHidden: $('#accountNameHidden').val(),
       accountName: $('#accountName').val(),
-      tradetype: $('#tradetype').val(),
-
+      accflag: $('#accflag').val(),
      };
 
      let fnsuccess = function (result) {
       if (result != null) {
-       _this.viewData.sourceCollection = result.data;
+
+       // CollectionView 생성
+       _this.viewData = new wijmo.collections.CollectionView(result.data);
+
+       // acc_spdate + acc_spnum 조합으로 그룹핑
+       let gd = new wijmo.collections.PropertyGroupDescription(
+        null,
+        function (item) {
+         let date = item.acc_spdate || '';
+         let num  = item.acc_spnum  || '';
+
+         // 둘 다 없으면 미연결로 별도 그룹
+         if (!date.trim() && !num.trim()) {
+          return '미발행';
+         }
+
+         return date + '/' + num;
+        }
+       );
+
+       _this.viewData.groupDescriptions.push(gd);
+
+       // 그리드에 바인딩
+       _this.grid.itemsSource = _this.viewData;
       }
      };
      AjaxUtil.getAsyncData(url, data, fnsuccess);
 
     }
 
-    openCardSettingPopup() {
-     let _this = this;
-     let content = tmpl('cardSettingTemplate', {});
-     let $content = $(content);
-
-     _this.cardSettingPopup = new PopupDraggable('카드 연동 설정');
-     _this.cardSettingPopup.open({
-      width: 950,
-      height: 500,
-      $content: $content
-     });
-
-     _this.initCardSettingGrid();
-     _this.bindCardSettingEvents();
-
-     $('#cardCollectFrDate').val($('#searchfrdate').val());
-     $('#cardCollectToDate').val($('#searchtodate').val());
-
-     _this.loadBaroCardList();
-    }
-
-    bindCardSettingEvents() {
+    //전표생성
+    newAccountSave() {
      let _this = this;
 
-     $('#btnLoadBaroCardList').off('click').on('click', function () {
-      _this.loadBaroCardList();
-     });
+     let items = _this.viewData ? _this.viewData.items : [];
+     let selectedItems = items.filter(item => item.selected === true);
 
-     $('#btnRequestSelectedCardHistory').off('click').on('click', function () {
-      _this.requestSelectedCardHistory();
-     });
-    }
-
-    initCardSettingGrid() {
-     let _this = this;
-
-     _this.cardViewData = new wijmo.collections.CollectionView([]);
-
-     _this.cardSettingGrid = new wijmo.grid.FlexGrid('#cardSettingGrid', {
-      autoGenerateColumns: false,
-      showMarquee: true,
-      allowSorting: 'MultiColumn',
-      selectionMode: wijmo.grid.SelectionMode.Row,
-      isReadOnly: false,
-      imeEnabled: true,
-      columns: [
-       { binding: 'selected', header: '선택', width: 70, align: 'center', dataType: wijmo.DataType.Boolean, isReadOnly: false },
-       { binding: 'cardnum', header: '카드번호', width: '*', align: 'center', isReadOnly: true },
-       { binding: 'cardnm', header: '카드명', width: 180, align: 'left', isReadOnly: true },
-       { binding: 'cardco', header: '카드사', width: 120, align: 'center', isReadOnly: true },
-       // { binding: 'cardperson', header: '카드소유자', width: 120, align: 'center', isReadOnly: true },
-       { binding: 'baroid', header: '바로빌ID', width: '*', align: 'center', isReadOnly: true },
-       // { binding: 'useyn', header: '사용여부', width: 80, align: 'center', isReadOnly: true }
-      ],
-      itemsSource: _this.cardViewData
-     });
-
-     new FlexGridContextMenu(_this.cardSettingGrid);
-     _this.cardSettingGrid.downloadFileName = '연동카드목록';
-
-     // footer 필요하면
-     _this.cardSettingGrid.columnFooters.rows.push(new wijmo.grid.GroupRow());
-     const cardnumColIndex = _this.cardSettingGrid.columns.findIndex(c => c.binding === 'cardnum');
-     if (cardnumColIndex > -1) {
-      _this.cardSettingGrid.columnFooters.setCellData(0, cardnumColIndex, '선택');
-     }
-
-     _this.cardSettingGrid.hostElement.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-       const sel = _this.cardSettingGrid.selection;
-       if (!sel || sel.row < 0 || sel.col < 0) return;
-
-       const col = _this.cardSettingGrid.columns[sel.col];
-       const item = _this.cardSettingGrid.rows[sel.row].dataItem;
-
-       if (col.binding === 'selected') {
-        item.selected = !item.selected;
-        _this.cardSettingGrid.invalidate();
-        e.preventDefault();
-       }
-      }
-     });
-    }
-
-    loadBaroCardList() {
-     let _this = this;
-
-     AjaxUtil.getAsyncData(this.url + '/baroCardList', {}, function (res) {
-      let ok = res && (res.success === true || Array.isArray(res.data));
-
-      if (ok) {
-       let list = Array.isArray(res.data) ? res.data : [];
-       let data = list.map(function (item) {
-        return {
-         selected: false,
-         cardnum: item.cardnum || '',
-         cardnm: item.cardnm || '',
-         cardco: item.cardco || '',
-         cardperson: item.cardperson || '',
-         baroid: item.baroid || '',
-         useyn: item.useyn || ''
-        };
-       });
-
-       _this.cardViewData = new wijmo.collections.CollectionView(data);
-       _this.cardSettingGrid.itemsSource = _this.cardViewData;
-       _this.cardSettingGrid.refresh();
-
-       console.log('grid rows = ', _this.cardSettingGrid.rows.length);
-
-       if (_this.cardSettingGrid.rows.length > 0) {
-        _this.cardSettingGrid.select(0, 0);
-       }
-      } else {
-       Alert.alert('', res.message || '카드목록 조회 중 오류가 발생했습니다.');
-      }
-     });
-    }
-
-    //선택카드 내역 수집 요청
-    requestSelectedCardHistory() {
-     let _this = this;
-
-     let frDate = ($('#cardCollectFrDate').val() || '').replaceAll('-', '');
-     let toDate = ($('#cardCollectToDate').val() || '').replaceAll('-', '');
-
-     if (!frDate || !toDate) {
-      Alert.alert('', '수집기간을 입력해주세요.');
+     if (!selectedItems || selectedItems.length === 0) {
+      Alert.alert('', '선택된 데이터가 없습니다.');
       return;
      }
 
-     let selectedCards = this.cardViewData.items.filter(function (item) {
-      return item.selected === true;
-     });
+     // 필수값 체크: 관명, 항, 목, 산출내역
+     let invalidRows = selectedItems.filter(item =>
+      !item.acccd || !item.it1cd || !item.it2cd || !item.summy
+     );
 
-     if (selectedCards.length === 0) {
-      Alert.alert('', '선택된 카드가 없습니다.');
+     if (invalidRows.length > 0) {
+      Alert.alert('', '선택된 행 중 필수값(관명, 항, 목, 산출내역)이 없는 데이터가 있습니다.');
       return;
      }
 
-     let param = {
-      searchfrdate: frDate,
-      searchtodate: toDate,
-      cards: JSON.stringify(selectedCards.map(function (item) {
-       return {
-        cardnum: item.cardnum,
-        baroid: item.baroid
-       };
-      }))
+     // 이미 전표가 생성된 항목 체크
+     let alreadyCreated = selectedItems.filter(item =>
+      item.acc_spdate && item.acc_spdate.trim() !== ''
+     );
+
+     if (alreadyCreated.length > 0) {
+      Alert.alert('', '이미 전표가 생성된 항목이 포함되어 있습니다.');
+      return;
+     }
+
+     Alert.confirm('', '선택한 항목의 전표를 생성하시겠습니까?', function(){
+
+      // console.log('selectedItems 개수:', selectedItems.length);
+      // console.log('selectedItems:', JSON.stringify(selectedItems));
+
+      let data = {
+       items: JSON.stringify(selectedItems.map(item => ({
+        custcd: item.custcd,
+        spjangcd: item.spjangcd,
+        bnkcode: item.bnkcode,
+        fintech_use_num: item.fintech_use_num,
+        bank_tran_id: item.bank_tran_id,
+        tran_date: item.tran_date,
+        inout_type: item.inout_type,
+        tran_amt: item.tran_amt,
+        wdr_amt: item.wdr_amt,
+        subject: item.subject,
+        acccd: item.acccd,
+        accnm: item.accnm,
+        acccd2: item.acccd2,
+        accnm2 : item.accnm2 ,
+        it1cd: item.it1cd,
+        it1nm: item.it1nm,
+        it2cd: item.it2cd,
+        it2nm: item.it2nm,
+        summy: item.summy,
+        bsdate: item.bsdate ,
+        bseccd: item.bseccd ,
+        buiscd: item.buiscd ,
+        busim: item.busim,
+        cltcd : item.cltcd
+       }))),
+       slipType :$('#slipType').val()
+      };
+
+      let fnsuccess = function (res) {
+       if (res.success) {
+        Notify.success('전표가 생성되었습니다.');
+        _this.searchMainData();
+       } else {
+        Alert.alert('', res.message || '전표 생성 중 오류가 발생했습니다.');
+       }
+      };
+
+      AjaxUtil.postAsyncData(_this.url + '/createSlip', data, fnsuccess);
+     });
+    }
+
+    //전표 생성 취소
+    newSlipCancel(){
+     let _this = this;
+
+     let items = _this.viewData ? _this.viewData.items : [];
+     let selectedItems = items.filter(item => item.slip_cancel_yn === true);
+
+     if (!selectedItems || selectedItems.length === 0) {
+      Alert.alert('', '취소할 전표를 선택해주세요.');
+      return;
+     }
+
+     // 전표가 생성되지 않은 항목 체크
+     let noSlipItems = selectedItems.filter(item =>
+      !item.acc_spdate || item.acc_spdate.trim() === ''
+     );
+
+     if (noSlipItems.length > 0) {
+      Alert.alert('', '전표가 생성되지 않은 항목이 포함되어 있습니다.');
+      return;
+     }
+
+     Alert.confirm('', '선택한 전표를 취소하시겠습니까?', function(){
+      console.log('cancelData selectedItems:', JSON.stringify(selectedItems));
+      let cancelData = {
+       items: JSON.stringify(selectedItems.map(item => ({
+        custcd: item.custcd,
+        spjangcd: item.spjangcd,
+        bnkcode: item.bnkcode,
+        fintech_use_num: item.fintech_use_num,
+        bank_tran_id: item.bank_tran_id,
+        tran_date: item.tran_date,
+        acc_spdate: item.acc_spdate,
+        acc_spnum:item.acc_spnum,
+        acc_spdate_num: item.acc_spdate_num
+       })))
+      };
+
+      let fnsuccess = function(res){
+       if(res.success){
+        Notify.success('전표가 취소되었습니다.');
+        _this.searchMainData(); // 재조회
+       } else {
+        Alert.alert('', res.message || '전표 취소에 실패했습니다.');
+       }
+      };
+
+      AjaxUtil.postAsyncData(_this.url + '/cancelSlip', cancelData, fnsuccess);
+     });
+    }
+
+    // 은행 입출금 내역 저장
+    BankSave() {
+     let _this = this;
+
+     let rows = this.viewData.items.filter(item => item.selected === true);
+
+     if (rows.length === 0) {
+      Alert.alert('', '선택된 행이 없습니다.');
+      return;
+     }
+
+     // 필수값 체크
+     // 상대코드까지 필수라면 !item.acccd2 도 추가
+     let invalid = rows.filter(item =>
+      !item.acccd ||
+      !item.it1cd ||
+      !item.it2cd ||
+      !item.summy ||
+      !item.mssec ||
+      !item.bsdate ||
+      !item.bseccd ||
+      !item.buiscd ||
+      !item.busim
+     );
+
+     if (invalid.length > 0) {
+      Alert.alert('', '관/항/목/재원/사업코드/사업명/산출내역을 모두 입력한 행만 저장할 수 있습니다.');
+      return;
+     }
+
+     // 이미 전표가 생성된 항목 체크
+     let alreadyCreated = rows.filter(item =>
+      item.acc_spdate_num && item.acc_spdate_num.trim() !== ''
+     );
+
+     if (alreadyCreated.length > 0) {
+      Alert.alert('', '이미 전표가 생성된 항목이 포함되어 있습니다. 전표가 생성되지 않은 항목만 저장할 수 있습니다.');
+      return;
+     }
+
+     let saveRows = rows.map(item => {
+      return {
+       custcd: item.custcd,
+       spjangcd: item.spjangcd,
+       bnkcode: item.bnkcode,
+       fintech_use_num: item.fintech_use_num,
+       bank_tran_id: item.bank_tran_id,
+       tran_date: item.tran_date ? item.tran_date.replace(/-/g, '') : '',
+       inout_type: item.inout_type,
+       tran_amt: item.tran_amt,
+
+       subject: item.subject || '',
+       acccd: item.acccd || '',
+       accnm: item.accnm || '',
+       it1cd: item.it1cd || '',
+       it1nm: item.it1nm || '',
+       it2cd: item.it2cd || '',
+       it2nm: item.it2nm || '',
+       summy: item.summy || '',
+
+       mssec: item.mssec || '',
+       bsdate: item.bsdate || '',
+       bseccd: item.bseccd || '',
+       buiscd: item.buiscd || '',
+       busim: item.busim || '',
+
+       // 백엔드에서 getString(item, "acccd2") 로 받는다면 이렇게 맞춰야 함
+       acccd2: item.acccd2 || ''
+      };
+     });
+
+     let data = {
+      items: JSON.stringify(saveRows)
      };
 
-     AjaxUtil.postAsyncData(this.url + '/requestCardHistory', param, function (res) {
+     AjaxUtil.postAsyncData(this.url + '/saveSelected', data, function(res) {
       if (res.success) {
-       Notify.success(res.message || '카드내역 수집이 완료되었습니다.');
+       Notify.success('저장되었습니다.');
        _this.searchMainData();
-
-       if (_this.cardSettingPopup && _this.cardSettingPopup.close) {
-        _this.cardSettingPopup.close();
-       }
       } else {
-       Alert.alert('', res.message || '카드내역 수집 중 오류가 발생했습니다.');
+       Alert.alert('', res.message || '저장 실패');
       }
      });
     }
 
+
    }//page
+
+   function companyPopupOpenCustom(intputId, hiddenid, hiddenflag){
+
+    const value = document.getElementById(intputId).value;
+
+    let poppage = new PopCompComponentCustom(value);
+
+    let result = AjaxUtil.getSyncData('/api/popup/search_Comp_Custom', { item2 : value, spjangcd : getSpjangcdFromSession() });
+
+    let searchcallback = function (items) {
+
+     document.getElementById(intputId).focus();
+
+     document.getElementById(intputId).value = items.item2;
+     document.getElementById(hiddenid).value = items.id;
+     document.getElementById(hiddenflag).value = items.cltflag;
+    };
+    if(result && result.data.length === 1){
+     searchcallback(result.data[0]);   ``
+     return;
+    }
+
+    poppage.show(searchcallback, result.data);
+   }
 
    let page = null;
 
    $(document).ready(function (e) {
-    page = new CardHistoryPage();
+    page = new BankHistoryPage();
 
     let fr = new Date();
     fr.setDate(1);
@@ -607,15 +1488,34 @@
      page.searchMainData();
     });
 
-    //설정버튼 클릭
-    $('#btnSetting').on('click', function () {
-     page.openCardSettingPopup();
+    //저장버튼 클릭
+    $('#btnBulkEdit').on('click', function (e) {
+     e.preventDefault();
+     page.BankSave();
+    });
+
+    //전표 생성
+    $('#btnAddNew').on('click', function (e){
+     e.preventDefault();
+     page.newAccountSave();
+    });
+
+    //전표 생성 취소
+    $('#btnCancel').on('click', function (e){
+     e.preventDefault();
+     page.newSlipCancel();
     });
 
     AccountInputHandler.bind({
      accnumSelector: '#accountName',
      accidSelector: '#accountNameHidden',
      minLength: 2 // 최소 검색 길이 조절 가능
+    });
+
+    $('#cboCompany').on('keydown', function(e){
+     if(e.key === 'Enter' || e.keyCode === 13){
+      companyPopupOpenCustom('cboCompany', 'cboCompanyHidden', 'cltflag');
+     }
     });
 
    })

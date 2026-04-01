@@ -213,7 +213,7 @@
                     <ul>
                         <li class="right_align rpt"  style="margin: 10px 0px">
                             <a class="btn btn-excell" title="등록" id="btnSettingSave">
-                                <img src="/images/icon/ico-plus.svg" alt="등록 아이콘">
+                                <img th:src="@{/images/icon/ico-plus.svg}" alt="등록 아이콘">
                                 계좌정보 저장
                             </a>
                         </li>
@@ -222,7 +222,7 @@
                     <ul >
                         <li class="right_align rpt"  style="margin: 10px 5px">
                             <a class="btn btn-excell" title="팝빌연동확인" id="MemberShipCheck">
-                                <img src="/images/icon/ico-plus.svg" alt="팝빌연동확인 아이콘">
+                                <img th:src="@{/images/icon/ico-plus.svg}" alt="팝빌연동확인 아이콘">
                                 팝빌연동확인
                             </a>
                         </li>
@@ -255,7 +255,7 @@
                         </li>
                         <li class="right_align rpt" style="margin: 10px 0px; margin-left: auto;">
                             <a class="btn btn-excell" title="등록" id="AccountCollection">
-                                <img src="/images/icon/ico-plus.svg" alt="등록 아이콘">
+                                <img th:src="@{/images/icon/ico-plus.svg}" alt="등록 아이콘">
                                 계좌내역수집
                             </a>
                         </li>
@@ -297,7 +297,7 @@
                                     <div class="pw-wrapper" style="position: relative; width: 100%;">
                                         <input type="password" class="wp100per pw-input" name="PopBillPw" />
                                         <img class="pw-toggle"
-                                             src="/images/icon/btn-show.svg"
+                                             th:src="@{/images/icon/btn-show.svg}"
                                              alt="비밀번호 보기"
                                              style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; cursor: pointer;" />
                                     </div>
@@ -328,7 +328,7 @@
                                     <div class="pw-wrapper" style="position: relative; width: 100%; margin-top: 10px;">
                                         <input type="password" class="wp100per pw-input" maxlength='4' id="PaymentPw" name="PaymentPw" />
                                         <img class="pw-toggle"
-                                             src="/images/icon/btn-show.svg"
+                                             th:src="@{/images/icon/btn-show.svg}"
                                              alt="비밀번호 보기"
                                              style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
                                                     width: 20px; height: 20px; cursor: pointer;" />
@@ -399,7 +399,7 @@
                                     <div class="pw-wrapper" style="position: relative; width: 100%; margin-top: 10px;">
                                         <input type="password" class="wp100per pw-input" id="viewpw" name="viewpw" />
                                         <img class="pw-toggle"
-                                             src="/images/icon/btn-show.svg"
+                                             th:src="@{/images/icon/btn-show.svg}"
                                              alt="비밀번호 보기"
                                              style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
                                                     width: 20px; height: 20px; cursor: pointer;" />
@@ -481,7 +481,7 @@
                              placeholder="검색버튼을 클릭하여 거래처를 검색하세요"/>
                             &nbsp;
                             <a class="btn btn-delete" title="검색" id="btnCompanySearch" style='width: 120px'>
-                                <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">
+                                <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘">
                                 거래처 검색
                             </a>
                         </td>
@@ -513,7 +513,7 @@
                             <input type="hidden" id="accountId" name="accountId">
                             &nbsp;
                             <a class="btn btn-delete" title="검색" id="btnAccountSearch" style='width: 120px'>
-                                <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">
+                                <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘">
                                 계좌 검색
                             </a>
                         </td>
@@ -529,7 +529,7 @@
                             <input type="hidden" id="projno" name="projno">
                             &nbsp;
                             <a class="btn btn-delete" title="검색" id="btnProjnoSearch" style='width: 120px'>
-                                <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">
+                                <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘">
                                 검색
                             </a>
                         </td>
@@ -635,7 +635,7 @@
 <th:block layout:fragment="scripts">
     <th:block th:replace="/common/popup_account :: popup_account" />
     <th:block th:replace="/common/popup_company_employee_bank_card.html :: popup_company"></th:block>
-    <script src="/js/cycle/AccountInputHandler.js"></script>
+    <script th:src="@{/js/cycle/AccountInputHandler.js}"></script>
     <script type="text/javascript">
         let tradetypeList;
 
@@ -661,7 +661,6 @@
                 this.grid2 = null;
                 this.setting_grid = null;
                 tradetypeList = AjaxUtil.fillSelectOptions($('#transactionTypeId'), 'trade', 'choose', false);
-
                 this.head_id = 0;
                 this.ship_state = '';
                 this.issue_yn = '';
@@ -691,7 +690,11 @@
                     selectionMode: wijmo.grid.SelectionMode.Row, // 행 단위 선택
                     isReadOnly: false,
                     columns: [
-                        { binding: 'id', header: '아이디', width: 10, visible: false, align: 'center', isReadOnly : true },
+                        { binding: 'custcd', header: 'custcd', visible: false },
+                        { binding: 'spjangcd', header: 'spjangcd', visible: false },
+                        { binding: 'bnkcode', header: 'bnkcode', visible: false },
+                        { binding: 'fintech_use_num', header: 'fintech_use_num', visible: false },
+                        //{ binding: 'id', header: '아이디', width: 10, visible: false, align: 'center', isReadOnly : true },
                         { binding: 'trade_date', header: '일자', width: 100, align: 'center', isReadOnly : true },
                         { binding: 'inoutFlag', header: '입출구분', width: 80, align: 'center', isReadOnly : true },
                         { binding: 'input_money', header: '입금액', width: 100, format: 'n0', aggregate: 'Sum', align: 'right', isReadOnly : true },
@@ -1150,21 +1153,21 @@
                 modalContainer.open({width: 1000, height: 800, $content});
 
                 filterAndBindTradeTypes($('#inoutFlag').val(), tradetypeList, 'transactionTypeId');
-                //AjaxUtil.fillSelectOptions($('#transactionTypeId'), 'trade', 'choose', false);
+                AjaxUtil.fillSelectOptions($('#transactionTypeId'), 'trade', 'choose', false);
 
                 //키입력 핸들러
                 $('#clientName, #projectNumber, #accountNumber').on('keydown', function(e){
                     if(e.key === 'Enter' || e.keyCode === 13){
-                       const keydownId = this.id;
+                        const keydownId = this.id;
 
-                       switch (keydownId){
-                           case 'clientName' : companyPopupOpenCustom('clientName', 'clientId', 'clientFlag');
+                        switch (keydownId){
+                            case 'clientName' : companyPopupOpenCustom('clientName', 'clientId', 'clientFlag');
                                 break;
-                           case 'projectNumber' : ProjectPopupOpen('projectNumber', 'projno');
+                            case 'projectNumber' : ProjectPopupOpen('projectNumber', 'projno');
                                 break;
-                           case 'accountNumber' : _this.AccountPopupOpen('accountNumber', 'accountId');
+                            case 'accountNumber' : _this.AccountPopupOpen('accountNumber', 'accountId');
                                 break;
-                       }
+                        }
                     }
                 });
                 //클릭 핸들러
@@ -1228,8 +1231,8 @@
                     $('#clientFlag').val(data.cltflag);
                     $('#accountId').val(data.accountid);
 
-                    $('#projno').val(data.projno);
-                    $('#projectNumber').val(data.projnm);
+                    // $('#projno').val(data.projno);
+                    // $('#projectNumber').val(data.projnm);
                 }
             }
 
@@ -1346,18 +1349,18 @@
                     selectionMode: wijmo.grid.SelectionMode.Row, // 행 단위 선택
                     isReadOnly: false,
                     columns: [
-                        {binding: 'accountid', header: '계좌id', width: '*', align: 'center', isReadOnly: true, visible: false},
-                        {binding: 'popyn', header: '은행연동', width: '*', align: 'center', isReadOnly: true},
+                        {binding: 'accountid', header: '계좌id', width: '*', align: 'center', isReadOnly: true, visible: false},  //visible: false
+                        {binding: 'popyn', header: '은행연동', width: 90, align: 'center', isReadOnly: true},
                         {binding: 'bank', header: '금융기관', width: '*', align: 'center', isReadOnly: true},
                         {binding: 'bankname', header: '금융기관명', width: '*', align: 'center', isReadOnly: true},
-                        {binding: 'managementnum', header: '관리코드', width: '*', align: 'center', isReadOnly: true},
+                        {binding: 'managementnum', header: '관리코드', width: '*', align: 'center', isReadOnly: true, visible: false},
                         {binding: 'accountnumber', header: '계좌번호', width: '*', align: 'center', isReadOnly: true},
                         {binding: 'accountname', header: '계좌명칭', width: '*', align: 'center', isReadOnly: false},
                         {binding: 'onlinebankid', header: '온라인뱅크아이디', width: '*', align: 'center', isReadOnly: false},
                         {binding: 'viewid', header: '조회전용아이디', width: '*', align: 'center', isReadOnly: false},
                         {binding: 'viewpw', header: '조회전용비밀번호', width: '*', align: 'center', isReadOnly: false},
                         {binding: 'paymentpw', header: '결제비밀번호', width: '*', align: 'center', isReadOnly: false},
-                        { binding: 'accounttype', header: '계좌유형', width: '*',
+                        {binding: 'accounttype', header: '계좌유형', width: '*',
                             dataMap:  getTradeTypeDataMap(accounttype), align: 'center',
                             cellTemplate: '${text}'
                         },
@@ -1408,7 +1411,7 @@
                         {binding: 'trdate', header: '일자', width: '*', align: 'center', isReadOnly: true},
                         { binding: 'accin', header: '입금금액', width: '*', align: 'right', format: 'n0', isReadOnly: true },
                         { binding: 'accout', header: '출금금액', width: '*', align: 'right', format: 'n0', isReadOnly: true },
-                        {binding: 'JumunNumber', header: '수수료', width: '*', align: 'center', isReadOnly: true},
+                        {binding: 'Jumunnumber', header: '수수료', width: '*', align: 'center', isReadOnly: true},
                         {binding: 'remark1', header: '적요', width: '*', align: 'center', isReadOnly: true},
                     ],
                     itemsSource: this.viewData4,
@@ -1427,6 +1430,20 @@
                     }
                 })
                 _this.searchRegisterAccount();
+
+                // 탭 기능 초기화 (이 부분을 추가)
+                $('.tab-links a:first').addClass('active');
+                $('.tab-item:first').addClass('active');
+
+                $('.tab-links a').on('click', function(e) {
+                    e.preventDefault();
+
+                    $('.tab-links a').removeClass('active');
+                    $('.tab-item').removeClass('active');
+
+                    $(this).addClass('active');
+                    $($(this).attr('href')).addClass('active');
+                });
 
                 $('#anchor').click();
                 $('#transactionFrDate').val(getNowDateMinus7());
@@ -1502,24 +1519,31 @@
             }
 
 
-            MemberShipCheck(){
+            MemberShipCheck() {
                 let _this = this;
-                /*let selectedItem = _this.setting_grid.selectedItems;
+                let selectedItems = _this.setting_grid.selectedItems;
 
-                if(selectedItem.length < 1){
+                if (!selectedItems || selectedItems.length < 1) {
                     Alert.alert('', '연동 확인할 계좌를 선택해주세요.');
                     return;
-                }*/
-
-                //TODO: 테스트를 위해서 하드코딩함.
-                let param = {
-                    spjangcd : getSpjangcdFromSession()  //1778602466
                 }
+
+                let param = {
+                    spjangcd: getSpjangcdFromSession()
+                };
 
                 let result = AjaxUtil.getSyncData('/BaseService/checkIsMember', param);
 
-                Alert.alert('', result.message);
+                if (!result) {
+                    Alert.alert('', '서버 응답이 없습니다.');
+                    return;
+                }
 
+                if (result.success) {
+                    Alert.alert('', result.message || '연동회원 확인이 완료되었습니다.');
+                } else {
+                    Alert.alert('', result.message || '연동회원 확인 중 오류가 발생했습니다.');
+                }
             }
 
 
@@ -1543,9 +1567,9 @@
                     frdate : frdate,
                     todate : todate,
                     managementnum : SelecteItem[0].managementnum,
+                    accountnumber:  SelecteItem[0].accountnumber,
                     accountid : SelecteItem[0].accountid,
                     bankname : SelecteItem[0].bankname,
-                    spjangcd : getSpjangcdFromSession()
                 }
 
                 let fnSuccess = function(res){
@@ -1596,9 +1620,9 @@
                 Alert.confirm('', '저장 하시겠습니까?',function (){
 
                     let result = AjaxUtil.getSyncData('/EasyFinBankService/updateBankAccount', form,
-                    function(){
-                        confirmDialog.close();
-                    });
+                        function(){
+                            confirmDialog.close();
+                        });
 
                     ApiSuccessMessage(result);
                     if(result.success){
@@ -1725,7 +1749,7 @@
 
 
                     document.getElementById(intputId).value = items.accountNumber;
-                    document.getElementById(hiddenid).value = items.accid;
+                    document.getElementById(hiddenid).value = items.bankId;
 
                     const bank = document.getElementById('bankName');
                     if(bank){
@@ -1754,20 +1778,58 @@
                 let _this = this;
                 let SelectedItems = _this.theGrid_TransactionHistory.selectedItems;
 
-
-
                 if(SelectedItems.length < 1){
                     Alert.alert('', '삭제할 행을 선택해주세요.');
                     return;
                 }
 
-                Alert.alert('', '삭제하시겠습니까?', function(){
-                    const idList = SelectedItems.map(item => item.id);
+                Alert.confirm('', '삭제하시겠습니까?', function(){
+                    let successCount = 0;
+                    let failCount = 0;
+                    let errorMessages = [];
 
-                    let result = AjaxUtil.postSyncData(_this.url + '/delete', { idList :idList.join(',')});
-                    ApiSuccessMessage(result);
+                    SelectedItems.forEach(item => {
+                        const params = {
+                            custcd: item.custcd,
+                            spjangcd: item.spjangcd || '',
+                            bnkcode: item.bnkcode,
+                            fintechUseNum: item.fintech_use_num
+                        };
+
+                        // console.log('삭제 요청 파라미터:', params); // 디버깅용
+
+                        try {
+                            let result = AjaxUtil.postSyncData(_this.url + '/delete', params);
+
+                            // console.log('삭제 결과:', result); // 디버깅용
+
+                            if(result && result.success){
+                                successCount++;
+                            } else {
+                                failCount++;
+                                if(result && result.message){
+                                    errorMessages.push(result.message);
+                                }
+                            }
+                        } catch(e) {
+                            console.error('삭제 오류:', e);
+                            failCount++;
+                            errorMessages.push('삭제 중 오류 발생');
+                        }
+                    });
+
+                    if(failCount > 0){
+                        let msg = `${successCount}건 삭제, ${failCount}건 실패`;
+                        if(errorMessages.length > 0){
+                            msg += '\n오류: ' + errorMessages[0];
+                        }
+                        Alert.alert('', msg);
+                    } else {
+                        Alert.alert('', `${successCount}건이 삭제되었습니다.`);
+                    }
+
                     _this.searchMainData();
-                })
+                });
             }
 
             reset(){
@@ -1780,7 +1842,47 @@
                 $('#birth').prop('readonly', false);
             }
 
-            SettingFormSaveAccount(){
+            SettingFormSaveAccount() {
+                let _this = this;
+                let dataMap = getTradeTypeDataMap(accounttype);
+
+                Alert.confirm('', '저장하시겠습니까?', function () {
+
+                    let selRow = _this.setting_grid.selection.row;
+
+                    if (selRow < 0) {
+                        Alert.alert('', '선택된 행이 없습니다.');
+                        return;
+                    }
+
+                    let selectedItem = _this.setting_grid.rows[selRow]?.dataItem;
+
+                    if (!selectedItem) {
+                        Alert.alert('', '선택된 데이터가 없습니다.');
+                        return;
+                    }
+
+                    const mapped = { ...selectedItem };
+
+                    if (typeof mapped.accounttype === 'string') {
+                        const found = dataMap.getDisplayValues().find(text => text === mapped.accounttype);
+                        if (found) {
+                            mapped.accounttype = dataMap.getKeyValue(found);
+                        }
+                    }
+
+                    let list = [mapped];   // 선택한 한 건만 배열로 보냄
+
+                    let result = AjaxUtil.postJsonSyncData(_this.url + '/AccountEdit', list);
+                    ApiSuccessMessage(result);
+
+                    if (result.success) {
+                        _this.searchRegisterAccount();
+                        _this.reset();
+                    }
+                });
+            }
+            /* SettingFormSaveAccount(){
 
                 let _this = this;
                 let dataMap = getTradeTypeDataMap(accounttype);
@@ -1808,7 +1910,7 @@
                 });
 
 
-            }
+            }*/
 
         }
 

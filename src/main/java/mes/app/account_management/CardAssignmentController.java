@@ -22,11 +22,11 @@ public class CardAssignmentController {	//카드지급
 	@GetMapping("/read")
 	public AjaxResult getCardAssignmentList(@RequestParam(value = "start") String start,
 																					@RequestParam(value = "end") String end,
-																					@RequestParam(value = "comp", required = false) String comp,
-																					@RequestParam(value = "accountName", required = false) String accountName) {
+																					@RequestParam(value = "accountName", required = false) String accountName,
+																					@RequestParam(value = "accflag") String accflag) {
 
 		List<Map<String, Object>> items
-			= this.cardAssignmentService.getCardAssignmentList(start, end,comp ,accountName);
+			= this.cardAssignmentService.getCardAssignmentList(start, end,accountName, accflag);
 
 		AjaxResult result = new AjaxResult();
 		result.data = items;

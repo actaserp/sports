@@ -3,16 +3,15 @@ package mes.app.account_management;
 import lombok.extern.slf4j.Slf4j;
 import mes.app.account_management.service.TransactionInputService;
 import mes.app.util.UtilClass;
+import mes.domain.dto.BankAccsaveRequestDto;
 import mes.domain.model.AjaxResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController("accountMgmtTransactionInputController")
@@ -80,5 +79,61 @@ public class TransactionInputController {
 		System.out.println("[/history] 처리 시간: " + (end - start) + " ms");
 		return result;
 	}
+
+	//팝업 계좌정보 저장
+	@PostMapping("/AccountEdit")
+	public AjaxResult AccountEdit(@RequestBody Object list){
+
+		AjaxResult result = new AjaxResult();
+
+		try {
+			transactionInputService.editAccountList((List<Map<String, Object>>)list);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+
+		result.message = "수정되었습니다.";
+		return  result;
+
+	}
+
+	//입출금 팝업 저장
+	@PostMapping("/transactionForm")
+	public AjaxResult transactionForm(@RequestBody BankAccsaveRequestDto data) {
+
+		AjaxResult result = new AjaxResult();
+
+		String msg = validateTransactionForm(data);
+		if (msg != null) {
+			result.success = false;
+			result.message = msg;
+			return result;
+		}
+
+		try {
+			transactionInputService.saveBankAccsave(data);
+			result.success = true;
+			result.message = "저장하였습니다.";
+		} catch (Exception e) {
+			result.success = false;
+			result.message = e.getMessage();
+		}
+
+		return result;
+	}
+
+	private String validateTransactionForm(BankAccsaveRequestDto data) {
+		if (data == null) return "요청 데이터가 없습니다.";
+		if (isBlank(data.getTransactionDate())) return "거래일자는 필수입니다.";
+		if (isBlank(data.getInoutFlag())) return "입출금구분은 필수입니다.";
+		if (isBlank(data.getMoney())) return "금액은 필수입니다.";
+		if (isBlank(data.getAccountNumber())) return "계좌번호는 필수입니다.";
+		return null;
+	}
+
+	private boolean isBlank(String value) {
+		return value == null || value.trim().isEmpty();
+	}
+
 
 }

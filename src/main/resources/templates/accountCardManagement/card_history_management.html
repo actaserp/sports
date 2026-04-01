@@ -105,7 +105,7 @@
               </dd>
             </dl>-->
 
-            <dl>
+            <!--<dl>
               <dt>
                 <label>
                   거래처<span class="eq"></span>
@@ -118,7 +118,7 @@
                   <input id="cltflag" name="cltflag" type="hidden"/>
                 </div>
               </dd>
-            </dl>
+            </dl>-->
 
             <dl>
               <dt>
@@ -132,6 +132,20 @@
               </dd>
             </dl>
 
+            <dl>
+              <dt>
+                <label>
+                  발행구분
+                </label>
+              </dt>
+              <dd>
+                <select class="form-control2" id="accflag" name="accflag" >
+                  <option value="">전체</option>
+                  <option value="0">미발행</option>
+                  <option value="1">발행</option>
+                </select>
+              </dd>
+            </dl>
 
             <dl>
               <dt>&nbsp;</dt>
@@ -1099,7 +1113,7 @@
       'start': start,
       'end': end,
       CardNo: $('#CardNo').val(),
-      tradetype: $('#tradetype').val(),
+      accflag: $('#accflag').val(),
 
      };
 

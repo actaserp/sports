@@ -46,13 +46,15 @@ public class CardHistoryService {
 	@Autowired
 	private ObjectMapper objectMapper;
 
-	public List<Map<String, Object>> getCardHistoryList(String start, String end, String tradetype,String CardNo) {
+	public List<Map<String, Object>> getCardHistoryList(String start, String end, String cardNo,String accflag) {
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("start", start);
 		param.addValue("end", end);
-		param.addValue("tradetype", tradetype);
 		String tenantId = TenantContext.get();
 		param.addValue("spjangcd", tenantId);
+		param.addValue("card_no", cardNo);
+		param.addValue("accflag", accflag);
+
 		String sql = """
 			select
 					biz_no,
@@ -105,21 +107,33 @@ public class CardHistoryService {
 			and apv_dt between :start and :end
 			""";
 
-		if (CardNo != null && !CardNo.trim().isEmpty()) {
+		if (cardNo != null && !cardNo.trim().isEmpty()) {
 			sql += """
-        and replace(card_no, '-', '') like :CardNo
+        and replace(card_no, '-', '') like :card_no
     """;
 
-			param.addValue("CardNo", "%" + CardNo.trim().replace("-", "") + "%");
+			param.addValue("card_no", "%" + cardNo.trim().replace("-", "") + "%");
 		}
+
+		if (accflag != null && !accflag.trim().isEmpty()) {
+			sql += """
+        and CASE
+              WHEN ISNULL(NULLIF(mijdate, ''), '') <> ''
+               AND ISNULL(NULLIF(mijnum, ''), '') <> ''
+              THEN '1'
+              ELSE '0'
+            END = :accflag
+    """;
+			param.addValue("accflag", accflag.trim());
+		}
+
 		sql += """
 			order by apv_dt desc, apv_tm desc;
 			""";
 
 		return sqlRunner.getRows(sql, param);
+
 	}
-
-
 
 	public List<Map<String, Object>> getbaroCardList() {
 		MapSqlParameterSource param = new MapSqlParameterSource();
