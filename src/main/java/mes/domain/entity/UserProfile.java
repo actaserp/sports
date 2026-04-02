@@ -42,7 +42,7 @@ public class UserProfile extends AbstractAuditModel implements Serializable{
 	Integer CompanyId;
 	
 	@Column(name = "\"Depart_id\"")
-	Integer DepartId;
+	String DepartId;
 	
 	@Column(name = "\"Factory_id\"")
 	Integer FactoryId;
