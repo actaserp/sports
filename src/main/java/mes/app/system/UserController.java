@@ -363,7 +363,7 @@ public class UserController {
 	) {
 
 		AjaxResult result = new AjaxResult();
-		String spjangcd = TenantContext.getDbKey();
+		String spjangcd = TenantContext.get();
 		List<Map<String, Object>> items = this.userService.getPSearchitem(code,name,spjangcd);
 		result.data = items;
 		return result;

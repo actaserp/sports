@@ -14,8 +14,8 @@ public class BarobillConfig {
 	public BarobillApiService barobillApiService() {
 
 		try {
-//			return new BarobillApiService(BarobillApiProfile.RELEASE_SSL);
-			return new BarobillApiService(BarobillApiProfile.TESTBED_SSL);
+			return new BarobillApiService(BarobillApiProfile.RELEASE_SSL);
+//			return new BarobillApiService(BarobillApiProfile.TESTBED_SSL);
 		} catch (MalformedURLException e) {
 			throw new RuntimeException(e);
 		}

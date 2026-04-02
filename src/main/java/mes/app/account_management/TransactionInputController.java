@@ -122,6 +122,28 @@ public class TransactionInputController {
 		return result;
 	}
 
+	//입출금 삭제[단건]
+	@PostMapping("/delete")
+	public AjaxResult deleteBankAccsave(@RequestParam String custcd,
+																			@RequestParam String spjangcd,
+																			@RequestParam String bnkcode,
+																			@RequestParam String fintechUseNum) {
+
+		AjaxResult result = new AjaxResult();
+
+		try {
+			transactionInputService.deleteBankAccsave(custcd, spjangcd, bnkcode, fintechUseNum);
+			result.success = true;
+			result.message = "삭제하였습니다.";
+		} catch (Exception e) {
+			result.success = false;
+			result.message = e.getMessage();
+		}
+
+		return result;
+	}
+
+
 	private String validateTransactionForm(BankAccsaveRequestDto data) {
 		if (data == null) return "요청 데이터가 없습니다.";
 		if (isBlank(data.getTransactionDate())) return "거래일자는 필수입니다.";

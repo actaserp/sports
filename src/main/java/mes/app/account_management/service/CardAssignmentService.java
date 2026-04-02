@@ -97,8 +97,8 @@ public class CardAssignmentService {
 		if (accflag != null && !accflag.trim().isEmpty()) {
 			sql += """
         and CASE
-              WHEN ISNULL(NULLIF(b.acc_spdate, ''), '') <> ''
-               AND ISNULL(NULLIF(b.acc_spnum, ''), '') <> ''
+              WHEN ISNULL(NULLIF(b.paydate, ''), '') <> ''
+               AND ISNULL(NULLIF(b.paynum, ''), '') <> ''
               THEN '1'
               ELSE '0'
             END = :accflag

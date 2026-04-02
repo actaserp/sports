@@ -36,8 +36,8 @@ public class CardHistoryService {
 	@Autowired
 	SqlRunner sqlRunner;
 
-//	@Value("${barobill.certKey}")
-	@Value("${barobill.testkey}")
+	@Value("${barobill.certKey}")
+//	@Value("${barobill.testkey}")
 	private String certKey;
 
 	@Autowired

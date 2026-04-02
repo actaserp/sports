@@ -24,30 +24,34 @@ public class TransactionInputService {
 
 	@Autowired
 	SqlRunner sqlRunner;
+
 	public Object getAccountList(String spjangcd) {
 		MapSqlParameterSource parameterSource = new MapSqlParameterSource();
 		String tenantId = TenantContext.get();
 		parameterSource.addValue("spjangcd", tenantId);
 
 		String sql = """
-			SELECT
-				 NULL AS accountid,
+			SELECT DISTINCT 
+				 a.bankcd AS accountid,
 				 b.banknm AS bankname,
-				 b.bnkcode AS managementnum,
-				 b.bankcd AS bankid,
-				 a.accnum AS accountNumber,
-				 a.banknm AS accountName,
-				 null AS onlineBankId,
+				 b.bankcd AS managementnum,
+				 b.bankcd AS bank,
+				 a.accnum AS accountnumber,
+				 a.banknm AS accountname,
+				 null AS onlinebankid,
 				 a.bnkid AS viewid,
 				 a.bnkpw AS viewpw,
-				 NULL AS paymentPw,
-				 NULL AS birth,
-				 CAST(0 AS bit) AS popyn,
+				 a.bnkpaypw AS paymentpw,
+				 a.accbirthday AS birth,
+				 CASE
+							WHEN a.bnkflag = '1' THEN CAST(1 AS bit)
+							ELSE CAST(0 AS bit)
+					END AS popyn,
 				 CASE
 						 WHEN a.spacc = '1' THEN '개인'
 						 WHEN a.spacc = '0' THEN '법인'
 						 ELSE NULL
-				 END AS accountType
+				 END AS accounttype
 		 from tb_aa040 a
 				 left join tb_xbank b on a.bank = b.bankcd
 		 WHERE a.spjangcd = :spjangcd
@@ -369,6 +373,26 @@ public class TransactionInputService {
 		if (row <= 0) {
 			throw new RuntimeException("저장에 실패했습니다.");
 		}
+	}
+
+	@Transactional
+	public void deleteBankAccsave(String custcd, String spjangcd, String bnkcode, String fintechUseNum) {
+
+		MapSqlParameterSource param = new MapSqlParameterSource();
+		param.addValue("custcd", custcd);
+		param.addValue("spjangcd", spjangcd);
+		param.addValue("bnkcode", bnkcode);
+		param.addValue("fintechUseNum", fintechUseNum);
+
+		String sql = """
+        DELETE FROM TB_bank_accsave
+        WHERE custcd = :custcd
+          AND spjangcd = :spjangcd
+          AND bnkcode = :bnkcode
+          AND fintech_use_num = :fintechUseNum
+    """;
+
+		sqlRunner.execute(sql, param);
 	}
 
 	/*유틸*/

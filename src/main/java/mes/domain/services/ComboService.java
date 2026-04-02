@@ -257,7 +257,7 @@ public class ComboService {
 	
 	ComboDataFunction depart=(String cond1, String cond2, String cond3) -> { //성공? 데이터 없음
 		String tenantId = TenantContext.get();
-		String sql = "select id as Value, \"Name\" as text from depart where spjangcd = :spjangcd order by \"Name\" ";
+		String sql = "select divicd as value , divinm as text from tb_jc002 where spjangcd =:spjangcd ";
 		MapSqlParameterSource dicParam = new MapSqlParameterSource();
 		dicParam.addValue("spjangcd", tenantId);
         dicParam.addValue("cond1", cond1);

@@ -151,22 +151,18 @@ public class UserService {
 		dicParam.addValue("spjangcd", spjangcd);
 
 		String sql = """
-                 select
-                 p.id as id
-                 , p."Code" as code
-                 , p."Name" as name
-                 , d."Name" as dept_name
-                 , d.id as dept_id
-                 from person p
-                 left join depart d on d.id = p."Depart_id"
-                where
-                  p.id::text like concat('%', :code, '%')
-                AND p."Name" like concat('%',:name,'%')
-                AND p.spjangcd = :spjangcd
-                order by p.id
-                """;
+			select
+				a.perid as code,
+				a.pernm as name,
+				b.divicd as dept_id,
+				b.divinm as dept_name
+				from tb_ja001 a
+				INNER JOIN tb_jc002 b ON a.divicd = b.divicd and a.spjangcd = b.spjangcd and a.custcd = b.custcd
+				where a.spjangcd = :spjangcd
+				and a.perid like concat('%', :code, '%') AND a.pernm like concat('%',:name,'%')
+      """;
 
-		List<Map<String, Object>> items = this.mainSqlRunner.getRows(sql, dicParam);
+		List<Map<String, Object>> items = this.tenantSqlRunner.getRows(sql, dicParam);
 		return items;
 	}
 
