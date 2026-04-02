@@ -30,5 +30,8 @@ public class SystemOption extends AbstractAuditModel {
 	String value;	
 
 	@Column(name = "\"Description\"")
-	String decription;	
+	String decription;
+
+	@Column(name = "\"spjangcd\"")
+	String spjangcd;
 }

@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1, minimum-scale=1, maximum-scale=1">
-    <link rel="icon" th:href="@{/images/logo/actas_log_a.png}">
+    <link rel="icon" type="image/png" th:href="@{/api/logo(type='LOGO_A',v='2')}">
     <title th:text="${ system_title }"></title>
     <!-- CSS -->
     <link rel="stylesheet" th:href="@{/resource/windowContainer/css/jquery.scrollbar.min.css}">
@@ -296,8 +296,7 @@
         <header>
             <div class="left">
                 <div class="logo">
-                    <img th:src="@{/images/logo/actas_log.png}" alt="로고">
-                    <h1>MES</h1>
+                    <img th:src="@{/api/logo(type='LOGO')}" alt="로고">
                 </div>
             </div>
             <div class="right">

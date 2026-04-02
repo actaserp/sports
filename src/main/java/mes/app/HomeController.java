@@ -71,8 +71,8 @@ public class HomeController {
 		String spjangcd = user.getSpjangcd();
 		String db_key = user.getDbKey();
                 
-        SystemOption sysOpt= this.systemOptionRepository.getByCode("LOGO_TITLE");
-        String logoTitle = sysOpt.getValue();
+        SystemOption optTitle = this.systemOptionRepository.getByCodeAndSpjangcd("LOGO_TITLE", db_key);
+        String logoTitle = (optTitle != null) ? optTitle.getValue() : "";
 
 		ModelAndView mv = new ModelAndView();
 		mv.addObject("username", username);

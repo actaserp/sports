@@ -8,5 +8,7 @@ import mes.domain.entity.SystemOption;
 @Repository 
 public interface SystemOptionRepository extends JpaRepository<SystemOption, Integer> {
 
-	public SystemOption getByCode(String code);	
+	public SystemOption getByCode(String code);
+
+	public SystemOption getByCodeAndSpjangcd(String code, String spjangcd);
 }

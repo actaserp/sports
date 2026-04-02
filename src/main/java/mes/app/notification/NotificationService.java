@@ -98,7 +98,6 @@ public class NotificationService {
               , ug."Name" as group_name
               , up."Factory_id"
               , f."Name" as factory_name
-              , d."Name" as dept_name
               , up."Depart_id"
               , up.lang_code
               , au.is_active
@@ -108,7 +107,6 @@ public class NotificationService {
             left join user_profile up on up."User_id" = au.id and up.spjangcd = au.db_key
             left join user_group ug on ug.id = up."UserGroup_id" and ug.spjangcd = up.spjangcd
             left join factory f on f.id = up."Factory_id" and f.spjangcd = up.spjangcd
-            left join depart d on d.id = up."Depart_id" and d.spjangcd = up.spjangcd
             where au.db_key = :spjangcd
 		    """;
 

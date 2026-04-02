@@ -1,0 +1,546 @@
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml">
+
+<meta name="_csrf" content="${_csrf.token}">
+<meta name="_csrf_header" content="${_csrf.headerName}">
+
+<head>
+  <style>
+    .wj-header {
+      text-align: center;
+    }
+
+    /* 셀 왼쪽 정렬 */
+    .wj-cell {
+      text-align: left;
+    }
+  </style>
+</head>
+
+<th:block layout:fragment="content">
+
+  <!--- (레이아웃) Contents 영역 -->
+  <div class="layout-contents">
+    <!-- Page Title -->
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>공지사항</h2>
+        <!--                <a title="북마크" class="bookmark toggle">-->
+        <!--                    내메뉴-->
+        <!--                </a>-->
+      </div>
+      <ul class="page-navi">
+        <li><img th:src="@{/images/icon/ico-nav-home.svg}" alt="홈아이콘"></li>
+        <li>결재현황</li>
+        <li>공지사항</li>
+      </ul>
+    </div>
+
+
+    <!-- Select -->
+    <div class="search-wrap">
+      <!--            <ul>-->
+      <!--                <li>-->
+      <!--                    <select title="지역" id="spworkcd" name="spworkcd" onchange="updateSelect('spworkcd', 'spworknm')">-->
+      <!--                        <option value="001">대구</option>-->
+      <!--                        <input type="hidden" id="spworknm" name="spworknm">-->
+      <!--                    </select>-->
+      <!--                </li>-->
+      <!--                <li>-->
+      <!--                    <select title="구" id="spcompcd" name="spcompcd" onchange="updateSelect('spcompcd', 'spcompnm')">-->
+      <!--                        <option value="001">성서산단</option>-->
+      <!--                        <input type="hidden" id="spcompnm" name="spcompnm">-->
+      <!--                    </select>-->
+      <!--                </li>-->
+      <!--                <li>-->
+      <!--                    <select title="시설" id="spplancd" name="spplancd" onchange="updateSelect('spplancd', 'spplannm')">-->
+      <!--                        <option value="001">대구물류센터</option>-->
+      <!--                        <input type="hidden" id="spplannm" name="spplannm">-->
+      <!--                    </select>-->
+      <!--                </li>-->
+      <!--            </ul>-->
+    </div>
+
+    <div class="tab-wrap">
+      <!--            <ul class="tab-links">-->
+      <!--                <li>-->
+      <!--                    <a href="#tab1" title="목록">목록</a>-->
+      <!--                </li>-->
+      <!--                 <li>-->
+      <!--                  <a href="#tab2" title="등록">등록</a>-->
+      <!--                </li>-->
+      <!--            </ul>-->
+      <div class="tab-contents">
+        <!-- Section -->
+        <section class="tab-item" id="tab1">
+          <div class="section-top">
+            <div class="search-wrap">
+              <dl>
+                <dt>
+                  <label for="txtCode">
+                    제목
+                  </label>
+                </dt>
+                <dd>
+                  <div class="srch-box">
+                    <input type="text" id="txtCode" name="txtCode" class="input-srch">
+                    <a class="btn-srch" id="btnSearch" title="검색" onclick="fetchListData()"></a>
+                  </div>
+                </dd>
+              </dl>
+            </div>
+            <div class="button-wrap" style="border-top:none;">
+              <ul>
+                <li>
+                  <a class="btn btn-file2" title="파일 첨부" data-popup="popup1"
+                     onclick="showPopup(this)">
+                    파일 첨부<span>(0)</span>
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-excell" title="신규등록" onclick="resetFormFields()">
+                    <img th:src="@{/images/icon/ico-plus.svg}" alt="등록 아이콘">
+                    신규등록
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-delete" title="삭제" id="btnDelete" onclick="deleteAnswer($('#bbsseq').val())">
+                    <img th:src="@{/images/icon/ico-delete.svg}" alt="엑셀 아이콘">
+                    삭제
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-edit" id="btnSave" title="저장" onclick="saveBBS()">
+                    <img th:src="@{/images/icon/ico-save.svg}" alt="저장 아이콘">
+                    저장
+                  </a>
+                </li>
+                <!--                                <li>-->
+                <!--                                    <a class="btn btn-edit" title="수정" id="btnEdit">-->
+                <!--                                        <img src="/images/icon/ico-edit.svg" alt="엑셀 아이콘">-->
+                <!--                                        수정-->
+                <!--                                    </a>-->
+                <!--                                </li>-->
+              </ul>
+            </div>
+          </div> <!--//section-top end -->
+          <div class="row">
+            <div class="wp50 mg-r20">
+              <div class="container-fluid col">
+                <p id="selectedItem"></p>
+                <div id="theGrid" style="max-height: 580px;"></div>
+              </div>
+            </div>
+            <div class="col wp50">
+              <div class="section">
+                <form id="codeForm">
+                  <input type="hidden" id="bbsseq" name="bbsseq" value=""/>
+                  <input class="form-control2" type="text" id="id" name="id" hidden />
+                  <div class="table-wrap">
+                    <table class="view-table" id="selectedData">
+                      <caption>공지사항 등록 테이블</caption>
+                      <colgroup>
+                        <col class="wp15">
+                        <col class="wauto">
+                      </colgroup>
+                      <tbody>
+                      <!--                      <tr>-->
+                      <!--                        <th><label for="create_date"></label>등록일자</th>-->
+                      <!--                        <td colspan="3">-->
+                      <!--                          <input type="text" id="create_date" name="create_date" class="wp100" readonly  >-->
+                      <!--                        </td>-->
+                      <!--                      </tr>-->
+                      <tr>
+                        <th><label for="subject">제목<span class="eq">*</span></label></th>
+                        <td colspan="3">
+                          <input type="text" id="subject" name="" class="wp100" required>
+                          <div style="text-align:left; ">
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th><label for="create_date">등록일자<span class="eq">*</span></label></th>
+                        <td>
+                          <input type="date" id="create_date" name="create_date" class="wp100">
+                        </td>
+                        <th style="width: 90px"><label for="show_start_date">게시기간<span class="eq">*</span></label></th>
+                        <td style="width: 400px;">
+                          <input type="date" id="show_start_date" name="show_start_date" class="wp40">&ensp;-&ensp;<input type="date" id="show_end_date" name="show_end_date" class="wp40">
+                        </td>
+                      </tr>
+                      <tr>
+                        <th><label for="tel">연락처</label></th>
+                        <td colspan="3">
+                          <input type="text" id="tel" name="tel" class="wp100">
+                        </td>
+                      </tr>
+                      <tr>
+                        <th><label for="remark">내용</label></th>
+                        <td colspan="3">
+                          <textarea id="remark" name="" class="wp100"></textarea>
+                        </td>
+                      </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </section>
+        <!-- Section -->
+      </div>
+    </div>
+  </div> <!--//layout-contents end -->
+
+  <footer style="margin-top: 12px;">
+    <p>Copyrightⓒ 0000 corp. All rights reserved.</p>
+  </footer>
+
+  <div class="modal">
+    <div class="popup-wrapper w700" id="popup1">
+      <div class="popup-title">
+        <h3>파일 업로드</h3>
+        <a title="팝업닫기" onclick="closePopup('popup1')" class="btn-popup-close">
+          <img th:src="@{/images/icon/btn-popup-close.svg}" alt="닫기">
+        </a>
+      </div>
+      <div class="popup-contents">
+        <div class="table-wrap">
+          <table class="write-table">
+            <caption>공지사항 첨부파일</caption>
+            <colgroup>
+              <col class="wp20">
+              <col class="wp80">
+            </colgroup>
+            <tbody>
+            <tr>
+              <th>
+                첨부파일
+              </th>
+              <td>
+                <div id="uploadComponent2" class="upload-component2">
+                  <div class="upload-filebox2">
+                    <img th:src="@{/images/icon/ico-fileupload.svg}" alt="업로드아이콘">
+                    <a class="btn" title="파일업로드">파일 업로드</a>
+                    <input type="file" id="fileInput2" class="fileInput2" multiple>
+                    <p>Maximun upload file size <span>1GiB</span></p>
+                  </div>
+
+                  <div class="upload-filelist2">
+                    <div class="title">
+                      <h5>Files (0)</h5>
+                      <a title="Delete all" class="btn-file-deleteall2">Delete all</a>
+                    </div>
+                    <ul class="filelist2" id="filelist2">
+                    </ul>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="popup-button">
+          <button type="button" onclick="closePopup('popup1')" class="btn-navy">확인</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <th:block th:replace="/common/columns_setting :: columns_setting"></th:block>
+  <script type="text/javascript">
+    var theGrid;
+    var viewdata;
+    let csrfToken = $("[name=_csrf]").val();
+
+    document.readyState === 'complete' ? init() : window.onload = init;
+    // 오늘 날짜 설정
+    const date = new Date();
+    date.setHours(date.getHours() + 9); // UTC+9로 한국 시간 설정
+    const today = date.toISOString().split('T')[0];
+    document.getElementById('create_date').value = today;
+    document.getElementById('show_start_date').value = today;
+    // 일주일 뒤 날짜 설정
+    const nextWeek = new Date(date); // 오늘 날짜를 복사하여 새 객체 생성
+    nextWeek.setDate(nextWeek.getDate() + 7); // 7일 더하기
+    const nextWeekDate = nextWeek.toISOString().split('T')[0];
+    document.getElementById('show_end_date').value = nextWeekDate;
+
+    function init() {
+      fetchListData();
+    }
+    // 공지사항 그리드
+    function fetchListData() {
+      let data2 = [];
+      $.ajax({
+        url: '/api/announcement/read',
+        type: 'GET',
+        data: {
+          'search_text': $('#txtCode').val(),
+        },
+        async: false,
+        success: function (data) {
+          data2 = data.data;
+          console.log("data2 : ", data2)
+          data2.forEach(item =>{
+            item.period = `${item.BBSFRDATE} ~ ${item.BBSTODATE}`; // 게시기간 형식으로 변환
+          })
+          // data2의 개수가 11개 미만인 경우 빈 객체 추가
+          while (data2.length < 11) {
+            data2.push({});
+          }
+        }
+      })
+
+      viewdata = new wijmo.collections.CollectionView(data2);
+
+      if (!theGrid) {
+
+        // 데이터 그리드에 바인딩
+        theGrid = new wijmo.grid.FlexGrid('#theGrid', {
+          autoGenerateColumns: false,
+          showMarquee: true,
+          isReadOnly: true,
+          selectionMode: wijmo.grid.SelectionMode.Row,
+          columns: [
+            {binding: 'no', header: '순번', width: 60, minWidth: 60, align: 'center'},
+            {binding: 'BBSDATE', header: '등록일자', width: 120, minWidth: 120, align: 'center'},
+            {binding: 'BBSUSER', header: '등록자', width: 100, align: 'center'},
+            {binding: 'BBSSUBJECT', header: '제목', width: 230, align: 'left'},
+            {binding: 'BBSTEL', header: '연락처', width: 140, minWidth: 100, align: 'center'},
+            {binding: 'downloads', header: '첨부파일', width: '*', minWidth: 105, align: 'center'},
+            {binding: 'isdownload', visible: false},
+            {binding: 'period', header: '게시기간', width: 220, minWidth: 100, align: 'center'}
+          ],
+          itemsSource: viewdata,
+          itemFormatter: function (panel, r, c, cell) {
+            if (panel.cellType === wijmo.grid.CellType.Cell) {
+              var item = panel.rows[r].dataItem; // 현재 행의 데이터 항목
+              if (panel.columns[c].binding === 'downloads') {
+                cell.innerHTML = ''; // 셀 내용 초기화
+                if (item.isdownload) {
+                  cell.innerHTML = '<a title="다운로드" class="btn-filedown" onclick="downloadFile_order()">다운로드</a>';
+                }
+              }
+            }
+          }
+        });
+        // 헤더를 중앙 정렬하는 이벤트 핸들러
+        theGrid.formatItem.addHandler(function (s, e) {
+          if (e.panel === s.columnHeaders) {
+            e.cell.style.textAlign = 'center';
+          }
+        });
+        theGrid.rowHeaders.columns.splice(0, 1);  //맨 앞에 헤더부분 없애기
+        new FlexGridContextMenu(theGrid);
+        window.downloadFileName = '공지사항';
+        // 더블클릭 이벤트
+        theGrid.hostElement.addEventListener('dblclick', function (e) {
+          // 그리드의 셀 정보 가져오기
+          let hitTest = theGrid.hitTest(e);
+          if (hitTest.cellType === wijmo.grid.CellType.Cell) {
+            // 행(row), 행의 데이터(item) 정보 가져오기
+            let row = hitTest.row;
+            let item = theGrid.rows[row].dataItem;
+
+            document.getElementById('bbsseq').value = item.BBSSEQ;
+            document.getElementById('subject').value = item.BBSSUBJECT;
+            document.getElementById('create_date').value = item.BBSDATE;
+            document.getElementById('show_start_date').value = item.BBSFRDATE;
+            document.getElementById('show_end_date').value = item.BBSTODATE;
+            document.getElementById('tel').value = item.BBSTEL;
+            document.getElementById('remark').value = item.BBSTEXT;
+
+            // filelist 처리
+            let fileList = Array.isArray(item.filelist) ? item.filelist : [];
+
+            deletedFiles2 = [];
+            uploadedFiles2 = [];
+
+            fileList.forEach(file => {
+              let newFile = {
+                name: file.fileornm,
+                type: file.fileextns,
+                size: file.filesize,
+                fileid: file.fileid,
+                reqseq: item.reqseq,
+                lastModified: new Date().getTime(),
+              };
+              uploadedFiles2.push(newFile); // 파일 리스트에 추가
+            });
+
+
+            $('.filelist2').empty(); // 파일 리스트 초기화
+            updateFileCount2();
+            updateFileListUI2();
+          }
+        })
+      } else {
+        // 이미 FlexGrid이 존재하는 경우, 데이터만 업데이트
+        theGrid.itemsSource = viewdata;
+      }
+    }
+    // 공지사항 등록/수정
+    function saveBBS() {
+      // 알림 메시지를 결정하는 변수
+      let alertMessage;
+      alertMessage = '저장하시겠습니까?';
+      // 필수 입력 필드 검사
+      let requiredFields = [
+        {id: '#subject', label: '제목을 작성해주세요'},
+        {id: '#show_start_date', label: '시작일을 작성해주세요'},
+        {id: '#show_end_date', label: '종료일을 작성해주세요'}
+      ];
+
+      for (let i = 0; i < requiredFields.length; i++) {
+        let field = requiredFields[i];
+        let value;
+
+        // 일반 입력 필드의 값을 가져옴
+        let $element = $(field.id);
+        value = $element.val();
+
+        // 요소가 존재하지 않거나 값이 빈 경우 경고
+        if (!value || value.trim() === '') {
+          Alert.alert('', field.label);
+          return;
+        }
+      }
+
+      Alert.confirm('', alertMessage, function () {
+        let formData = new FormData();
+        formData.append('BBSSEQ', $('#bbsseq').val())
+        formData.append('BBSSUBJECT', $('#subject').val());
+        formData.append('BBSTEXT', $('#remark').val());
+        formData.append('BBSTEL', $('#tel').val());
+        formData.append('BBSDATE', $('#create_date').val().replace(/-/g, ''));
+        formData.append('BBSFRDATE', $('#show_start_date').val().replace(/-/g, ''));
+        formData.append('BBSTODATE', $('#show_end_date').val().replace(/-/g, ''));
+
+        // 새로 추가된 파일만 폼 데이터에 추가
+        uploadedFiles2.forEach((file, index) => {
+          formData.append('filelist', file);
+        });
+
+        // 삭제된 파일 목록 추가
+        deletedFiles2.forEach((file, index) => {
+          formData.append('deletedFiles2', new Blob([JSON.stringify(file)], {type: 'application/json'}));
+        });
+        console.log("formData : ", formData);
+
+        function sendAjaxRequest(url) {
+          $.ajax({
+            url: url,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+              'X-CSRF-Token': $('[name=_csrf]').val() // CSRF 토큰을 헤더에 추가
+            },
+            success: handleAjaxResponse,
+            error: function () {
+              Alert.alert('', '에러가발생하였습니다.');
+            }
+          });
+        }
+
+        function handleAjaxResponse(response) {
+          if (response.success) {
+            Alert.alert('', response.message, function () {
+              fetchListData();
+              resetFormFields();
+            });
+          } else {
+            Alert.alert('', '저장에 실패했습니다.');
+          }
+        }
+        sendAjaxRequest('/api/announcement/save');
+      })
+    }
+    // 공지사항 삭제
+    function deleteAnswer(bbsseq) {
+      let alertMessage;
+      alertMessage = '삭제하시겠습니까?';
+      Alert.confirm('', alertMessage, function () {
+        function sendAjaxRequest(url) {
+          $.ajax({
+            url: url,
+            type: 'POST',
+            data: JSON.stringify({ "BBSSEQ": bbsseq }),
+            processData: false,
+            contentType: 'application/json',
+            headers: {
+              'X-CSRF-Token': $('[name=_csrf]').val() // CSRF 토큰을 헤더에 추가
+            },
+            success: handleAjaxResponse,
+            error: function () {
+              Alert.alert('', '에러가발생하였습니다.');
+            }
+          });
+        }
+
+        function handleAjaxResponse(response) {
+          if (response.success) {
+            Alert.alert('', response.message, function () {
+              fetchListData();
+              resetFormFields();
+            });
+          } else {
+            Alert.alert('', '삭제에 실패했습니다.');
+          }
+        }
+        sendAjaxRequest('/api/announcement/delete');
+      })
+    }
+    // 신규등록 버튼(폼 데이터 초기화)
+    function resetFormFields(){
+      const fieldsToReset = [
+        'bbsseq',
+        'subject', 'create_date', 'show_start_date', 'show_end_date','tel', 'remark'
+      ];
+      fieldsToReset.forEach(fieldId => {
+        document.getElementById(fieldId).value = '';
+      });
+
+      document.getElementById('create_date').value = today;
+      $('.filelist2').empty(); // 파일 리스트 초기화
+      uploadedFiles2 = []; // 업로드된 파일 리스트 초기화
+      deletedFiles2 = [];
+      // 초기화된 파일 개수 업데이트
+      updateFileCount2();
+      resetFileInput($('.fileInput2'));
+    }
+    // 다운로드
+    function downloadFile_order() {
+      let selectedItems = theGrid.selectedItems; // 선택된 항목 가져오기
+      let downloadList = [];
+
+      // 선택된 항목에서 다운로드할 파일 목록 생성
+      selectedItems.forEach(function (item) {
+        // filelist 배열을 순회하여 downloadList에 추가
+        if (item.filelist && Array.isArray(item.filelist)) {
+          item.filelist.forEach(function (file) {
+            downloadList.push({
+              filepath: file.filepath, // 개별 파일 경로
+              filesvnm: file.filesvnm, // 개별 저장된 파일 이름 (uuid)
+              fileornm: file.fileornm  // 개별 원본 파일 이름
+            });
+          });
+        }
+      });
+
+      // 다운로드 URL 지정
+      let downloadUrl = '/api/announcement/downloader';
+
+      // Jung.js에서 정의한 downloadFiles 함수 호출
+      downloadFiles(downloadList, downloadUrl);
+    }
+
+  </script>
+
+</th:block>
+</html>
+
