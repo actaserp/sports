@@ -136,7 +136,8 @@ public class UserController {
 	) {
 
 		AjaxResult result = new AjaxResult();
-		String spjangcd = TenantContext.getDbKey();
+		String dbKey = TenantContext.getDbKey();
+		String spjangcd = TenantContext.get();
 
 		String sql = null;
 		User user = null;
@@ -157,11 +158,11 @@ public class UserController {
             left join user_profile up on up.spjangcd = xa.spjangcd and up."User_id" in (
                 select id from auth_user where spjangcd = :spjangcd and is_active = true
             )
-            where xa.db_key = :spjangcd
+            where xa.db_key = :dbKey
             group by bp.user_limit
         """;
 			MapSqlParameterSource limitParam = new MapSqlParameterSource();
-			limitParam.addValue("spjangcd", spjangcd);
+			limitParam.addValue("dbKey", dbKey);
 			Map<String, Object> limitMap = this.sqlRunner.getRow(limitSql, limitParam);
 
 //			if (limitMap != null) {

@@ -1,0 +1,369 @@
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml">
+<head>
+    <style>
+        .wj-header {
+            text-align: center !important;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .modal-box {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            border-radius: 8px;
+            padding: 28px 32px;
+            width: 480px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+        }
+        .modal-box h3 {
+            margin: 0 0 20px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .modal-form-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 10px;
+        }
+        .modal-form-row label {
+            width: 100px;
+            font-size: 13px;
+            color: #444;
+            flex-shrink: 0;
+        }
+        .modal-form-row input,
+        .modal-form-row select {
+            flex: 1;
+            height: 32px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 0 8px;
+            font-size: 13px;
+        }
+        .modal-btn-wrap {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<th:block layout:fragment="content">
+
+    <div class="layout-contents">
+        <div class="page-title-wrap">
+            <div class="left">
+                <h2>사업장 DB 관리</h2>
+            </div>
+            <ul class="page-navi">
+                <li><img th:src="@{/images/icon/ico-nav-home.svg}" alt="홈아이콘"></li>
+                <li>시스템관리</li>
+                <li>사업장 DB 관리</li>
+            </ul>
+        </div>
+
+        <section class="section">
+            <div class="section-top">
+                <form id="searchForm" autocomplete="off">
+                    <div class="search-wrap">
+                        <dl>
+                            <dt>
+                                <label for="keyword">사업장코드</label>
+                            </dt>
+                            <dd>
+                                <div class="srch-box">
+                                    <input class="form-control2" id="keyword" name="keyword" style="width: 140px;"/>
+                                </div>
+                            </dd>
+                        </dl>
+                        <dl>
+                            <dt><span class="eq"></span></dt>
+                            <dd>
+                                <li>
+                                    <a class="btn btn-delete" title="검색" id="btnSearch">
+                                        <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘">
+                                        검색
+                                    </a>
+                                </li>
+                            </dd>
+                        </dl>
+                        <dl>
+                            <dt><span class="eq"></span></dt>
+                            <dd>
+                                <li>
+                                    <button type="button" class="btn-delete" id="btnRegister"
+                                            style="width: 86px; height: 36px;">
+                                        등록
+                                    </button>
+                                </li>
+                            </dd>
+                        </dl>
+                        <dl>
+                            <dt><span class="eq"></span></dt>
+                            <dd>
+                                <li>
+                                    <button type="button" class="btn-delete" id="btnReconnect"
+                                            style="width: 110px; height: 36px;">
+                                        재연결
+                                    </button>
+                                </li>
+                            </dd>
+                        </dl>
+                        <dl>
+                            <dt><span class="eq"></span></dt>
+                            <dd>
+                                <li>
+                                    <button type="button" class="btn-delete" id="btnReload"
+                                            style="width: 110px; height: 36px; background:#888;">
+                                        전체 재연결
+                                    </button>
+                                </li>
+                            </dd>
+                        </dl>
+                    </div>
+                </form>
+            </div>
+
+            <div class="container-fluid">
+                <div id="theGrid" style="height: 640px; max-height: 640px;"></div>
+            </div>
+
+            <div class="btn-wrap"></div>
+        </section>
+    </div>
+
+    <!-- 등록/수정 모달 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box">
+            <h3 id="modalTitle">사업장 DB 등록</h3>
+            <input type="hidden" id="editId"/>
+
+            <div class="modal-form-row">
+                <label>사업장코드 *</label>
+                <input type="text" id="fSpjangcd" maxlength="20" placeholder="예: SAMJUNG"/>
+            </div>
+            <div class="modal-form-row">
+                <label>DB 별칭 *</label>
+                <input type="text" id="fDbAlias" maxlength="50" placeholder="main (기본값)"/>
+            </div>
+            <div class="modal-form-row">
+                <label>DB 유형 *</label>
+                <select id="fDbType">
+                    <option value="postgresql">PostgreSQL</option>
+                    <option value="mssql">MSSQL</option>
+                    <option value="oracle">Oracle</option>
+                </select>
+            </div>
+            <div class="modal-form-row">
+                <label>DB URL *</label>
+                <input type="text" id="fDbUrl" placeholder="host:port/dbname"/>
+            </div>
+            <div class="modal-form-row">
+                <label>사용자명 *</label>
+                <input type="text" id="fDbUsername"/>
+            </div>
+            <div class="modal-form-row">
+                <label>비밀번호 *</label>
+                <input type="password" id="fDbPassword"/>
+            </div>
+            <div class="modal-form-row">
+                <label>Pool Size</label>
+                <input type="number" id="fPoolSize" value="5" min="1" max="50"/>
+            </div>
+
+            <div class="modal-btn-wrap">
+                <button type="button" class="btn-delete" id="btnModalSave" style="width: 80px; height: 34px;">저장</button>
+                <button type="button" class="btn-delete" id="btnModalCancel" style="width: 80px; height: 34px; background:#888;">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <footer style="margin-top: 24px;">
+        <p>Copyrightⓒ 0000 corp. All rights reserved.</p>
+    </footer>
+
+</th:block>
+<th:block layout:fragment="scripts">
+
+    <script type="text/javascript">
+
+        var theGrid;
+        var selectedRow = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+            searchDataBind();
+        });
+
+        function init() {
+            theGrid = new wijmo.grid.FlexGrid('#theGrid', {
+                selectionMode: wijmo.grid.SelectionMode.Row,
+                headersVisibility: wijmo.grid.HeadersVisibility.Column,
+                autoGenerateColumns: false,
+                isReadOnly: true,
+                showMarquee: true,
+                formatItem: (sender, e) => {
+                    if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+                        e.cell.style.textAlign = 'center';
+                    }
+                    // 연결상태 셀 색상
+                    if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+                        let col = sender.columns[e.col];
+                        if (col.binding === 'connected') {
+                            let val = e.cell.textContent.trim();
+                            e.cell.style.color = val === '연결됨' ? '#1a7c1a' : '#c0392b';
+                            e.cell.style.fontWeight = '600';
+                        }
+                    }
+                },
+                columns: [
+                    {binding: 'id',          header: 'ID',        width: 60,  align: 'center'},
+                    {binding: 'spjangcd',    header: '사업장코드',  width: 120, align: 'left'},
+                    {binding: 'db_alias',    header: 'DB 별칭',    width: 100, align: 'left'},
+                    {binding: 'db_type',     header: 'DB 유형',    width: 100, align: 'center'},
+                    {binding: 'custcd',      header: 'DB명',       width: 120, align: 'left'},
+                    {binding: 'db_url',      header: 'DB URL',     width: '*',  align: 'left'},
+                    {binding: 'db_username', header: '사용자명',    width: 120, align: 'left'},
+                    {binding: 'pool_size',   header: 'Pool Size',  width: 80,  align: 'center'},
+                    {binding: 'connected',   header: '연결상태',    width: 90,  align: 'center'},
+                ],
+                itemsSource: new wijmo.collections.CollectionView([])
+            });
+
+            new FlexGridContextMenu(theGrid);
+
+            // 행 더블클릭 → 수정 모달
+            theGrid.hostElement.addEventListener('dblclick', () => {
+                let sel = theGrid.selection;
+                if (sel.row >= 0) {
+                    let item = theGrid.rows[sel.row].dataItem;
+                    openEditModal(item);
+                }
+            });
+
+            $('#btnSearch').on('click', () => searchDataBind());
+            $('#btnRegister').on('click', () => openNewModal());
+            $('#btnReconnect').on('click', () => reconnectSelected());
+            $('#btnReload').on('click', () => reloadAll());
+            $('#btnModalSave').on('click', () => saveRecord());
+            $('#btnModalCancel').on('click', () => closeModal());
+            $('#modalOverlay').on('click', function(e) {
+                if (e.target === this) closeModal();
+            });
+        }
+
+        function searchDataBind() {
+            let keyword = $('#keyword').val();
+            $.ajax({
+                url: '/api/system/tenant_db/read',
+                type: 'GET',
+                data: {keyword: keyword},
+                success: function(result) {
+                    if (result.success) {
+                        theGrid.itemsSource.sourceCollection = result.data;
+                        theGrid.refresh();
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.error('조회 실패:', textStatus, errorThrown);
+                }
+            });
+        }
+
+        function openNewModal() {
+            $('#modalTitle').text('사업장 DB 등록');
+            $('#editId').val('');
+            $('#fSpjangcd').val('').prop('disabled', false);
+            $('#fDbAlias').val('main');
+            $('#fDbType').val('postgresql');
+            $('#fDbUrl').val('');
+            $('#fDbUsername').val('');
+            $('#fDbPassword').val('');
+            $('#fPoolSize').val(5);
+            $('#modalOverlay').show();
+        }
+
+        function openEditModal(item) {
+            $('#modalTitle').text('사업장 DB 수정');
+            $('#editId').val(item.id);
+            $('#fSpjangcd').val(item.spjangcd).prop('disabled', true);
+            $('#fDbAlias').val(item.db_alias);
+            $('#fDbType').val(item.db_type);
+            $('#fDbUrl').val(item.db_url);
+            $('#fDbUsername').val(item.db_username);
+            $('#fDbPassword').val(item.db_password || '');
+            $('#fPoolSize').val(item.pool_size || 5);
+            $('#modalOverlay').show();
+        }
+
+        function closeModal() {
+            $('#modalOverlay').hide();
+        }
+
+        function saveRecord() {
+            let spjangcd   = $('#fSpjangcd').val().trim();
+            let db_alias   = $('#fDbAlias').val().trim() || 'main';
+            let db_type    = $('#fDbType').val();
+            let db_url     = $('#fDbUrl').val().trim();
+            let db_username = $('#fDbUsername').val().trim();
+            let db_password = $('#fDbPassword').val();
+            let pool_size  = parseInt($('#fPoolSize').val()) || 5;
+            let id         = $('#editId').val();
+
+            if (!spjangcd || !db_url || !db_username) {
+                Alert.alert('', '사업장코드, DB URL, 사용자명은 필수 항목입니다.');
+                return;
+            }
+
+            let payload = {
+                id: id || null,
+                spjangcd, db_alias, db_type, db_url, db_username, pool_size
+            };
+            if (db_password) payload.db_password = db_password;
+
+            AjaxUtil.postJsonData('/api/system/tenant_db/save', payload, res => {
+                Alert.alert('', res.message || (res.success ? '저장되었습니다.' : '저장 실패'));
+                if (res.success) {
+                    closeModal();
+                    searchDataBind();
+                }
+            });
+        }
+
+        function reconnectSelected() {
+            let sel = theGrid.selection;
+            if (sel.row < 0) {
+                Alert.alert('', '재연결할 항목을 선택하세요.');
+                return;
+            }
+            let item = theGrid.rows[sel.row].dataItem;
+            Alert.confirm('', `[${item.spjangcd}] 항목을 재연결하시겠습니까?`, () => {
+                AjaxUtil.postJsonData('/api/system/tenant_db/reconnect', {id: item.id}, res => {
+                    Alert.alert('', res.message || (res.success ? '재연결 완료' : '재연결 실패'));
+                    searchDataBind();
+                });
+            });
+        }
+
+        function reloadAll() {
+            Alert.confirm('', '모든 테넌트 DB 연결을 전체 재연결하시겠습니까?)', () => {
+                AjaxUtil.postJsonData('/api/system/tenant_db/reload', {}, res => {
+                    Alert.alert('', res.message || (res.success ? '재연결 완료' : '재연결 실패'));
+                    searchDataBind();
+                });
+            });
+        }
+
+    </script>
+</th:block>
+
+</html>

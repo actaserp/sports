@@ -99,6 +99,7 @@ public class UserService {
              , up."Name"
              , au.username      AS login_id
              , au.email
+             , au.tel
              , ug."Name"        AS group_name
              , up."UserGroup_id"
              , up."Factory_id"
