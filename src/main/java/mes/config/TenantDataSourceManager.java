@@ -93,6 +93,16 @@ public class TenantDataSourceManager {
         config.setMaxLifetime(1800000);
         config.setIdleTimeout(600000);
         config.setConnectionTimeout(10000);
+
+        // 드라이버 명시
+        if ("mssql".equalsIgnoreCase(dbType)) {
+            config.setDriverClassName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+        } else if ("oracle".equalsIgnoreCase(dbType)) {
+            config.setDriverClassName("oracle.jdbc.OracleDriver");
+        } else {
+            config.setDriverClassName("org.postgresql.Driver");
+        }
+
         return new HikariDataSource(config);
     }
 
