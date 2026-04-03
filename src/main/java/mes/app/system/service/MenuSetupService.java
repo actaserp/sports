@@ -20,31 +20,16 @@ public class MenuSetupService {
 	public List<Map<String, Object>> getFolderTreeList() {
 
 		String sql = """
-				with recursive m1 as(
-                select id
-                ,"Parent_id"
-                ,"FolderName"
-                ,"IconCSS"
-                ,"_order"
-                , 1 as lvl
-            from menu_folder mf where "Parent_id" is null
-            union all
-            select m_sub.id
-                ,m_sub."Parent_id"
-                ,m_sub."FolderName"
-                ,m_sub."IconCSS"
-                ,m_sub."_order"
-                ,m1.lvl + 1 as lvl
-                from menu_folder m_sub
-                inner join m1 on m1.id = m_sub."Parent_id"
-            ) select id
-              , coalesce("Parent_id", 0) as "Parent_id"
-              ,"FolderName"
-              ,"IconCSS"
-              ,"_order"
-             from m1
-             order by _order
-			""";
+				SELECT mf.id
+				     , mf."FolderName"
+				     , mf."IconCSS"
+				     , mf."_order"
+				     , mf."FrontFolder_id"
+				     , ff.folder_name AS "FrontFolderName"
+				FROM menu_folder mf
+				LEFT JOIN menu_front_folder ff ON ff.id = mf."FrontFolder_id"
+				ORDER BY ff._order, mf."_order"
+				""";
 
         List<Map<String, Object>> items = this.sqlRunner.getRows(sql, null);
 
@@ -63,6 +48,9 @@ public class MenuSetupService {
 		        , mi."Url"
 		        , mi."MenuFolder_id"
 		        , mi._order
+		        , mi.template
+		        , mi."IconCSS"
+		        , mf."FolderName"
 		        from menu_item mi
 		        inner join menu_folder mf on mf.id = mi."MenuFolder_id"
 		        where mi."MenuFolder_id" = :folder_id
@@ -84,6 +72,10 @@ public class MenuSetupService {
 				       COALESCE(mi."MenuName", mi."MenuCode") AS "MenuName",
 				       mi."MenuFolder_id",
 				       COALESCE(mf."FolderName", '') AS "FolderName",
+				       mi.template,
+				       mi."Url",
+				       mi."_order",
+				       mi."IconCSS",
 				       CASE WHEN mi."MenuFolder_id" IS NOT NULL THEN true ELSE false END AS exists
 				FROM menu_item mi
 				LEFT JOIN menu_folder mf ON mf.id = mi."MenuFolder_id"
@@ -99,7 +91,7 @@ public class MenuSetupService {
 			sql.append(" AND mi.\"MenuFolder_id\" IS NULL");
 		}
 
-		sql.append(" ORDER BY mi.\"MenuName\"");
+		sql.append(" ORDER BY mi.\"MenuFolder_id\" , mi._order");
 
 		return this.sqlRunner.getRows(sql.toString(), paramMap);
 	}

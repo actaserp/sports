@@ -25,12 +25,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import mes.app.system.service.MenuSetupService;
 import mes.domain.entity.MenuFolder;
+import mes.domain.entity.MenuFrontFolder;
 import mes.domain.entity.MenuItem;
 import mes.domain.entity.User;
 import mes.domain.model.AjaxResult;
 import mes.domain.repository.MenuFolderRepository;
+import mes.domain.repository.MenuFrontFolderRepository;
 import mes.domain.repository.MenuItemRepository;
 import mes.domain.services.CommonUtil;
+import mes.domain.services.SqlRunner;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 @RestController
 @RequestMapping("/api/system/menu_setup")
@@ -44,6 +49,13 @@ public class MenuSetupController {
 
     @Autowired
     MenuItemRepository menuItemRepository;
+
+    @Autowired
+    MenuFrontFolderRepository menuFrontFolderRepository;
+
+    @Autowired
+    @Qualifier("mainSqlRunner")
+    SqlRunner mainSqlRunner;
 
     // 메뉴폴더) 리스트 조회
     @GetMapping("/read")
@@ -196,16 +208,16 @@ public class MenuSetupController {
     // 메뉴폴더) 삭제
     @PostMapping("/folder_delete")
     @Transactional
-    public AjaxResult deletefolder(
-            @RequestParam(value = "Folder_id", required = false) Integer Folder_id,
-            HttpServletRequest request) {
+    public AjaxResult deletefolder(@RequestBody Map<String, Object> body) {
 
         AjaxResult result = new AjaxResult();
+
+        Integer Folder_id = body.get("Folder_id") != null
+                ? Integer.valueOf(body.get("Folder_id").toString()) : null;
 
         List<MenuItem> menu_folder = this.menuItemRepository.findByMenuFolderId(Folder_id);
 
         if (menu_folder != null && menu_folder.size() > 0) {
-
             result.success = false;
             result.message = "하위 메뉴가 존재합니다.";
         } else {
@@ -325,6 +337,125 @@ public class MenuSetupController {
             }
         }
 
+        return result;
+    }
+
+    // ── Front Folder ──────────────────────────────────────────────
+
+    @GetMapping("/front_folder_read")
+    public AjaxResult getFrontFolderList() {
+        AjaxResult result = new AjaxResult();
+        result.data = menuFrontFolderRepository.findAllByOrderByOrderAsc();
+        return result;
+    }
+
+    @PostMapping("/front_folder_save")
+    @Transactional
+    public AjaxResult saveFrontFolder(@RequestBody Map<String, Object> body, Authentication auth) {
+        AjaxResult result = new AjaxResult();
+        User user = (User) auth.getPrincipal();
+
+        Integer id = body.get("id") != null ? Integer.valueOf(body.get("id").toString()) : null;
+
+        MenuFrontFolder folder = (id != null)
+                ? menuFrontFolderRepository.findById(id).orElse(new MenuFrontFolder())
+                : new MenuFrontFolder();
+
+        folder.setFolder_name((String) body.get("folder_name"));
+        folder.setIcon_css((String) body.get("icon_css"));
+        folder.setDom_id((String) body.get("dom_id"));
+        folder.set_order(body.get("_order") != null ? Integer.valueOf(body.get("_order").toString()) : null);
+        folder.setUse_yn(body.getOrDefault("use_yn", "Y").toString());
+        folder.set_audit(user);
+        menuFrontFolderRepository.save(folder);
+        return result;
+    }
+
+    @PostMapping("/front_folder_delete")
+    @Transactional
+    public AjaxResult deleteFrontFolder(@RequestBody Map<String, Object> body) {
+        AjaxResult result = new AjaxResult();
+        Integer id = Integer.valueOf(body.get("id").toString());
+        MapSqlParameterSource p = new MapSqlParameterSource();
+        p.addValue("id", id);
+        Map<String, Object> row = mainSqlRunner.getRow(
+            "SELECT COUNT(*) AS cnt FROM menu_folder WHERE \"FrontFolder_id\"=:id", p);
+        long cnt = row != null ? ((Number) row.get("cnt")).longValue() : 0;
+        if (cnt > 0) {
+            result.success = false;
+            result.message = "하위 폴더가 존재합니다.";
+            return result;
+        }
+        menuFrontFolderRepository.deleteById(id);
+        return result;
+    }
+
+    // ── Folder (FrontFolder_id 포함) ──────────────────────────────
+
+    @PostMapping("/folder_save")
+    @Transactional
+    public AjaxResult saveFolder(@RequestBody Map<String, Object> body, Authentication auth) {
+        AjaxResult result = new AjaxResult();
+        User user = (User) auth.getPrincipal();
+
+        Integer id = body.get("id") != null ? Integer.valueOf(body.get("id").toString()) : null;
+        String folderName    = (String) body.get("FolderName");
+        String iconCSS       = body.get("IconCSS") != null ? body.get("IconCSS").toString() : "fa-folder";
+        Integer frontFolderId = body.get("frontFolderId") != null && !body.get("frontFolderId").toString().isBlank()
+                ? Integer.valueOf(body.get("frontFolderId").toString()) : null;
+        Integer order        = body.get("_order") != null ? Integer.valueOf(body.get("_order").toString()) : null;
+
+        if (StringUtils.isEmpty(iconCSS)) iconCSS = "fa-folder";
+
+        MenuFolder folder = (id != null) ? menuFolderRepository.getMenuFolderById(id) : new MenuFolder();
+        if (folder == null) { result.success = false; return result; }
+
+        folder.setFolderName(folderName);
+        folder.setIconCss(iconCSS);
+        folder.setFrontFolderId(frontFolderId);
+        folder.setOrder(order);
+        folder.set_audit(user);
+        menuFolderRepository.save(folder);
+        return result;
+    }
+
+    // ── Menu Item 신규 생성 ────────────────────────────────────────
+
+    @PostMapping("/menu_item_save")
+    @Transactional
+    public AjaxResult saveMenuItem(@RequestBody Map<String, Object> body, Authentication auth) {
+        AjaxResult result = new AjaxResult();
+        User user = (User) auth.getPrincipal();
+
+        String menuCode  = (String) body.get("MenuCode");
+        String menuName  = (String) body.get("MenuName");
+        String template  = (String) body.get("template");
+        Integer folderId = body.get("Folder_id") != null && !body.get("Folder_id").toString().isBlank()
+                ? Integer.valueOf(body.get("Folder_id").toString()) : null;
+        Integer order    = body.get("_order") != null ? Integer.valueOf(body.get("_order").toString()) : 10;
+        String iconCSS   = (String) body.get("IconCSS");
+
+        MenuItem item = menuItemRepository.findByMenuCode(menuCode);
+        if (item == null) item = new MenuItem();
+
+        item.setMenuCode(menuCode);
+        item.setMenuName(menuName);
+        item.setTemplate(template);
+        item.setMenuFolderId(folderId);
+        item.setOrder(order);
+        item.setIconCSS(iconCSS);
+        item.setUrl("/gui/" + menuCode);
+        item.set_audit(user);
+        menuItemRepository.save(item);
+        return result;
+    }
+
+    @PostMapping("/menu_item_delete")
+    @Transactional
+    public AjaxResult deleteMenuItem(@RequestBody Map<String, Object> body) {
+        AjaxResult result = new AjaxResult();
+        MenuItem item = menuItemRepository.findByMenuCode((String) body.get("MenuCode"));
+        if (item != null) menuItemRepository.delete(item);
         return result;
     }
 
