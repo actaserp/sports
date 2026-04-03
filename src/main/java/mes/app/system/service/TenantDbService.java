@@ -27,8 +27,9 @@ public class TenantDbService {
         MapSqlParameterSource param = new MapSqlParameterSource();
 
         String sql = """
-                SELECT id, spjangcd, db_alias, db_type, db_url, db_username, db_password, pool_size, custcd
-                FROM tb_tenant_db
+                SELECT t.id, t.spjangcd, x.spjangnm, t.db_alias, t.db_type, t.db_url, t.db_username, t.db_password, t.pool_size, t.custcd
+                FROM tb_tenant_db t
+                LEFT JOIN tb_xa012 x ON x.spjangcd = t.spjangcd
                 WHERE 1=1
                 """;
 
