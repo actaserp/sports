@@ -34,11 +34,10 @@ public class ManageCreditCardsController {
 
   @GetMapping("/read")
   public AjaxResult getCreditCardsList(@RequestParam(value = "txtcardnm", required = false) String txtcardnm,
-                                   @RequestParam(value = "txtcardnum", required = false) String txtcardnum,
-                                   HttpServletRequest request) {
+                                   @RequestParam(value = "txtcardnum", required = false) String txtcardnum) {
 //    log.info("신용카드 등록 read - spjangcd:{}, txtcardnm: {}, txtcardnum:{}",spjangcd,  txtcardnm, txtcardnum);
 
-    String spjangcd = request.getParameter("spjangcd");
+    String spjangcd = TenantContext.get();
     List<Map<String, Object>> items = this.cardsSecvice.getCreditCardsList(spjangcd,txtcardnm, txtcardnum);
 
     AjaxResult result = new AjaxResult();

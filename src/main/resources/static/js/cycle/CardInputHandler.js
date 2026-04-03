@@ -31,6 +31,7 @@ const CardInputHandler = {
 
   $cardnum.on('keydown', function (e) {
    if (e.key === 'Enter') {
+    e.preventDefault();
     const cardNumber = $cardnum.val().replace(/[\s-]/g, '');
 
     // ✅ 입력이 없으면 무조건 팝업 열기

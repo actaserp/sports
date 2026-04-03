@@ -83,7 +83,6 @@
                 let data = {
                     'txtcardnm': _this.$srchName.val(),
                     'txtcardnum': _this.$srchCode.val(),
-                    'spjangcd': sessionStorage.getItem('spjangcd')
                 };
 
                 let result = AjaxUtil.getSyncData(url, data);

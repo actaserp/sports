@@ -97,8 +97,8 @@ public class CardAssignmentService {
 		if (accflag != null && !accflag.trim().isEmpty()) {
 			sql += """
         and CASE
-              WHEN ISNULL(NULLIF(b.paydate, ''), '') <> ''
-               AND ISNULL(NULLIF(b.paynum, ''), '') <> ''
+              WHEN ISNULL(NULLIF(paydate, ''), '') <> ''
+               AND ISNULL(NULLIF(paynum, ''), '') <> ''
               THEN '1'
               ELSE '0'
             END = :accflag
@@ -148,6 +148,25 @@ public class CardAssignmentService {
 				}
 			}
 
+			Map<String, Object> cardAccount = getAccountInfo("미지급금(카드)");
+			String cardAcccd = (String) cardAccount.get("acccd");
+			String cardAccnm = (String) cardAccount.get("accnm");
+
+			Map<String, Object> bankAccount = getAccountInfo("보통예금");
+			String bankAcccd = (String) bankAccount.get("acccd");
+			String bankAccnm = (String) bankAccount.get("accnm");
+
+			if (isBlank(cardAcccd)) {
+				result.success = false;
+				result.message = "미지급금(카드) 계정을 찾을 수 없습니다.";
+				return result;
+			}
+			if (isBlank(bankAcccd)) {
+				result.success = false;
+				result.message = "보통예금 계정을 찾을 수 없습니다.";
+				return result;
+			}
+
 			String spjangcd = TenantContext.get();
 			Map<String, String> bizInfo = getBizInfoBySpjangcd(spjangcd);
 			String custcd = bizInfo.get("custcd");
@@ -173,7 +192,7 @@ public class CardAssignmentService {
 				BigDecimal buySum = getBigDecimal(item, "buy_sum");
 				totalAmount = totalAmount.add(buySum);
 
-				saveDebit(custcd, spjangcd, spjangnm, paydate, paynum, rowseq, item, buySum);
+				saveDebit(custcd, spjangcd, spjangnm, paydate, paynum, rowseq, item, buySum, cardAcccd, cardAccnm);
 
 				String bizNo = getString(item, "biz_no");
 				String bankCd = getString(item, "bnkcode");
@@ -191,7 +210,7 @@ public class CardAssignmentService {
 			}
 
 			// 3. 대변 저장
-			saveCredit(custcd, spjangcd, spjangnm, paydate, paynum, rowseq, totalAmount);
+			saveCredit(custcd, spjangcd, spjangnm, paydate, paynum, rowseq, totalAmount, bankAcccd, bankAccnm);
 
 			log.info("========== 지급전표 생성 완료 - 총액: {} ==========", totalAmount);
 			result.success = true;
@@ -297,7 +316,7 @@ public class CardAssignmentService {
 // ──────────────────────────────────────────
 	private void saveDebit(String custcd, String spjangcd, String spjangnm,
 						   String paydate, String paynum, int rowseq,
-						   Map<String, Object> item, BigDecimal buySum) {
+						   Map<String, Object> item, BigDecimal buySum, String acccd, String accnm) {
 		String paddedIt1cd = StringUtils.leftPad(getString(item, "it1cd"), 5, "0");
 
 		MapSqlParameterSource dicParam = new MapSqlParameterSource();
@@ -308,8 +327,9 @@ public class CardAssignmentService {
 		dicParam.addValue("spseq", String.format("%04d", rowseq));
 		dicParam.addValue("spjangnm", spjangnm);
 		dicParam.addValue("bumuncd", "AA");
-		dicParam.addValue("acccd", "2152");
-		dicParam.addValue("accnm", "미지급금(카드)");
+		dicParam.addValue("acccd", acccd);   // "2152" 하드코딩 제거
+		dicParam.addValue("accnm", accnm);
+
 		dicParam.addValue("cardnum", getString(item, "card_no"));
 		dicParam.addValue("it1cd", paddedIt1cd);
 		dicParam.addValue("it2cd", getString(item, "it2cd"));
@@ -330,8 +350,8 @@ public class CardAssignmentService {
 // 대변 저장
 // ──────────────────────────────────────────
 	private void saveCredit(String custcd, String spjangcd, String spjangnm,
-							String paydate, String paynum, int rowseq,
-							BigDecimal totalAmount) {
+		String paydate, String paynum, int rowseq,
+		BigDecimal totalAmount, String acccd, String accnm) {
 		MapSqlParameterSource dicParam = new MapSqlParameterSource();
 		dicParam.addValue("custcd", custcd);
 		dicParam.addValue("spjangcd", spjangcd);
@@ -340,8 +360,9 @@ public class CardAssignmentService {
 		dicParam.addValue("spseq", String.format("%04d", rowseq));
 		dicParam.addValue("spjangnm", spjangnm);
 		dicParam.addValue("bumuncd", "AA");
-		dicParam.addValue("acccd", "1014");
-		dicParam.addValue("accnm", "보통예금");
+		dicParam.addValue("acccd", acccd);   // "1014" 하드코딩 제거
+		dicParam.addValue("accnm", accnm);
+		dicParam.addValue("cardnum", "");
 		dicParam.addValue("it1cd", "000");
 		dicParam.addValue("it2cd", "000");
 		dicParam.addValue("drcr", "2");
@@ -723,6 +744,26 @@ public class CardAssignmentService {
     """;
 
 		return sqlRunner.execute(sql, sqlParam);
+	}
+
+	private Map<String, Object> getAccountInfo(String accnm) {
+		MapSqlParameterSource param = new MapSqlParameterSource();
+		param.addValue("accnm", accnm);
+
+		String sql = """
+        SELECT acccd, accnm
+        FROM tb_ac001
+        WHERE useyn = '1'
+          AND replace(isnull(accnm, ''), ' ', '') LIKE '%' + replace(:accnm, ' ', '') + '%'
+        """;
+
+		List<Map<String, Object>> rows = sqlRunner.getRows(sql, param);
+
+		if (rows != null && !rows.isEmpty()) {
+			return rows.get(0);
+		} else {
+			return Collections.emptyMap();
+		}
 	}
 
 }

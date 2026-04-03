@@ -320,8 +320,8 @@
 </th:block>
 
 <th:block layout:fragment="scripts">
-  <script th:src="@{/js/cycle/CardInputHandler.js}"></script>
   <th:block th:replace="/common/popup_card :: popup_card" />
+  <script th:src="@{/js/cycle/CardInputHandler.js}"></script>
   <script type="text/javascript">
    class CardAssignmentPage {
     constructor() {
@@ -562,9 +562,23 @@
      page.searchMainData();
     });
 
-    $('#accountName').on('keydown', function (e) {
-     if (e.key === 'Enter' || e.keyCode === 13) {
-      page.searchMainData();
+    //카드번호
+    // $('#accountName').on('keydown', function (e) {
+    //  if (e.key === 'Enter' || e.keyCode === 13) {
+    //   page.searchMainData();
+    //  }
+    // });
+
+    CardInputHandler.bind({
+     cardnumSelector: '#accountName',
+     cardnmSelector: '#CardNm',
+     cardidSelector: '#accountNameHidden',
+     minLength: 2,
+     onComplete: function(item) {
+      // 카드 선택 완료 후 실행할 코드
+      if (item) {
+       page.searchMainData();
+      }
      }
     });
 
