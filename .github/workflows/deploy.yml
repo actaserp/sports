@@ -23,6 +23,9 @@ jobs:
       - name: Build JAR
         run: ./mvnw clean package -DskipTests
 
+      - name: Check JAR size
+        run: ls -la target/mes-0.0.1-SNAPSHOT.jar
+
       - name: Copy JAR to server
         uses: appleboy/scp-action@v0.1.7
         with:
