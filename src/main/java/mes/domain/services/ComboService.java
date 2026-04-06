@@ -34,6 +34,7 @@ public class ComboService {
 		this._dicFunc_.put("bom_version", this.bom_version);
 		this._dicFunc_.put("bank", this.bank);
 		this._dicFunc_.put("bankid", this.bankid);
+		this._dicFunc_.put("cardco", this.cardco);
 
 		this._dicFunc_.put("ccp_proc", this.ccp_proc);
 		this._dicFunc_.put("check_master", this.check_master);
@@ -1062,5 +1063,15 @@ public class ComboService {
 		return this.sqlRunner.getRows(sql, dicParam);
 	};
 
+	ComboDataFunction cardco =(String cond1, String cond2, String cond3)-> {
+		String sql = """
+			select cd as value, nm as text from tb_xcard
+			""";
+		MapSqlParameterSource dicParam = new MapSqlParameterSource();
+		dicParam.addValue("cond1", cond1);
+		dicParam.addValue("cond2", cond2);
+		dicParam.addValue("cond3", cond3);
+		return this.sqlRunner.getRows(sql, dicParam);
+	};
 	
 }

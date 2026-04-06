@@ -87,8 +87,8 @@
         <div class="section">
           <div class="title-wrap">
           </div>
-          <div class="button-wrap"
-               style="border-top:none; display:flex; flex-wrap:wrap; margin-left:auto; justify-content:end;">
+          <div class="button-wrap" style="border-top:none; display:flex; flex-direction:column;
+          align-items:flex-end; min-height:70px; justify-content:space-between;">
             <ul style="margin-bottom: inherit;">
               <li>
                 <a class="btn btn-excell" id="btn_baro_NewSave" title="카드연동등록" >
@@ -117,26 +117,26 @@
               </li>
 
             </ul>
-           <!-- <ul>
+            <ul style="display:flex; gap:4px; list-style:none; padding:0; margin:0; min-height:32px;">
               <li>
                 <a class="btn btn-excell" title="신규등록" id="Newbtn">
-                  <img src="/images/icon/ico-plus.svg" alt="등록 아이콘">
+                  <img th:src="@{/images/icon/ico-plus.svg}" alt="등록 아이콘">
                   신규등록
                 </a>
               </li>
               <li>
                 <a class="btn btn-edit" id="btnSave" title="저장">
-                  <img src="/images/icon/ico-save.svg" alt="저장 아이콘">
+                  <img th:src="@{/images/icon/ico-save.svg}" alt="저장 아이콘">
                   저장
                 </a>
               </li>
-              <li>
+              <!--<li>
                 <a class="btn btn-delete" title="삭제" id="btnDelete">
                   <img src="/images/icon/ico-delete.svg" alt="엑셀 아이콘">
                   삭제
                 </a>
-              </li>
-            </ul>-->
+              </li>-->
+            </ul>
           </div>
           <form id="CategoryForm">
             <!-- Hidden Fields -->
@@ -324,49 +324,67 @@
       const ht = this.grid.hitTest(e);
       if (ht.cellType === wijmo.grid.CellType.Cell) {
        const selectedItem = this.grid.selectedItems[0];
+       if (!selectedItem || !selectedItem.cardnum) return;
 
-       function formatDate(str) {
-        if (!str || str.length !== 8) return '';
-        return `${str.substring(0, 4)}-${str.substring(4, 6)}-${str.substring(6, 8)}`;
-       }
-       // 결제 계좌
-       $('#accid').val(selectedItem.accid);                  // 히든
-       $('#ACCID').val(selectedItem.accid);                  // 히든
-       $('#accnum').val(selectedItem.accnum);                // 비마스킹
-       $('#ACCNUM').val(selectedItem.accnum);                // 마스킹된 값 넣어도 무방
-       $('#ACCNUM_REAL').val(selectedItem.accnum);           // 히든 - 원본 값
-       // 결제 은행
-       $('#bankid').val(selectedItem.bankid);                // 히든
-       $('#BANKNM').val(selectedItem.banknm);                // 읽기전용 텍스트
-       // 카드 정보
-       $('#cardnum').val(selectedItem.cardnum);              // 카드번호
-       $('#cardnum').prop('readonly', true);
-       $('#cardnm').val(selectedItem.cardnm);                // 카드명
-       $('#cardco').val(selectedItem.cardco);                // 카드사
-       // 카드 구분 (법인/개인)
-       $("input[name='cardType'][value='" + selectedItem.cardclafi + "']").prop('checked', true);
-       // 성명
-       $('#cdpernm').val(selectedItem.cdperid);
-       // 발급일자 / 만기일자
-       $('#regAsName').val(formatDate(selectedItem.isudate));
-       $('#expdate').val(formatDate(selectedItem.expedate));
-       // 결제일자
-       const input = document.getElementById('stldate');
-       input.value = selectedItem.stldate;
-       formatDayInput(input);
-       // 사용여부 라디오 버튼
-       $('input[name="useYn"]').prop('checked', false);
-       $('input[name="useYn"][value="' + selectedItem.useyn + '"]').prop('checked', true);
-       // 카드 거래 연동 (체크박스)
-       $('#baroflag').prop('checked', selectedItem.baroflag === '1');
-       // 바로빌 정보
-       $('#barocd').val(selectedItem.barocd); //바로빌 카드 코드
-       $('#baroid').val(selectedItem.baroid);
-       // 홈페이지 정보
-       $('#cardwebid').val(selectedItem.cardwebid);
-       $('#cardwebpw').val(selectedItem.cardwebpw || '');
+       const url = '/api/account_management/manageCreditCard/detail';
+       const data = { cardnum: selectedItem.cardnum };
 
-       $('#remark').val(selectedItem.remark || '');
+       AjaxUtil.getAsyncData(url, data, function(result) {
+        if (!result || !result.data) {
+         Alert.alert('', '상세 조회에 실패했습니다.');
+         return;
+        }
+
+        const d = result.data;
+
+        function formatDate(str) {
+         if (!str || str.length !== 8) return '';
+         return `${str.substring(0, 4)}-${str.substring(4, 6)}-${str.substring(6, 8)}`;
+        }
+
+        // 결제 계좌
+        $('#ACCID').val(d.accid);
+        $('#ACCNUM').val(d.accnum);
+        $('#ACCNUM_REAL').val(d.accnum);
+
+        // 결제 은행
+        $('#bankid').val(d.bankid);
+        $('#BANKNM').val(d.banknm);
+
+        // 카드 정보
+        $('#cardnum').val(d.cardnum).prop('readonly', true);
+        $('#cardco').val(d.cardco);
+
+        // 카드 구분 (법인/개인)
+        $("input[name='cardType'][value='" + d.cardclafi + "']").prop('checked', true);
+
+        // 발급일자 / 만기일자
+        $('#regAsName').val(formatDate(d.isudate));
+        $('#expdate').val(formatDate(d.expedate));
+
+        // 결제일자
+        const input = document.getElementById('stldate');
+        input.value = d.stldate;
+        formatDayInput(input);
+
+        // 사용여부
+        $('input[name="useYn"]').prop('checked', false);
+        $('input[name="useYn"][value="' + d.useyn + '"]').prop('checked', true);
+
+        // 카드거래연동 체크박스
+        $('#baroflag').prop('checked', d.baroflag === '1');
+
+        // 바로빌 정보
+        $('#barocd').val(d.barocd);
+        $('#baroid').val(d.baroid);
+
+        // 홈페이지 정보
+        $('#cardwebid').val(d.cardwebid);
+        $('#cardwebpw').val(d.cardwebpw || '');
+
+        // 비고
+        $('#remark').val(d.remark || '');
+       });
       }
      });
 

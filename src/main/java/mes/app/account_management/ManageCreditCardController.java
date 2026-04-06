@@ -34,6 +34,17 @@ public class ManageCreditCardController {
 		return result;
 	}
 
+	@GetMapping("/detail")
+	public AjaxResult getDetail(@RequestParam(name = "cardnum") String cardnum){
+
+		Map<String, Object> items = this.cardService.getDetail(cardnum);
+
+		AjaxResult result = new AjaxResult();
+		result.data = items;
+
+		return result;
+	}
+
 	@PostMapping("/RegistCardEx")
 	public AjaxResult baroNewCardSave(@RequestParam Map<String,Object> param,
 																		Authentication auth){

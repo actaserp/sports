@@ -655,63 +655,49 @@ public class PopupController {
 	}
 
 	@GetMapping("/search_Account")
-	public AjaxResult getSearchAccount(@RequestParam(value = "BankName", required = false) String bankName,
-																		 @RequestParam(value = "accountNumber", required = false) String accountNumber) {
-		AjaxResult result = new AjaxResult();
+	public List<Map<String, Object>> getSearchUserCode(
+		@RequestParam(value = "BankName", required = false) String bankName,
+		@RequestParam(value = "accountNumber", required = false) String accountNumber) {
+
 		MapSqlParameterSource paramMap = new MapSqlParameterSource();
 
-		paramMap.addValue("bankName", bankName);
-		paramMap.addValue("accountNumber", accountNumber);
+		String tenantId = TenantContext.get();
+		paramMap.addValue("spjangcd", tenantId);
 
 		String sql = """
-        SELECT
-            ta.accid,
-            tx.banknm AS "BankName",
-            ta.bankid AS "bankId",
-            ta.accnum AS "accountNumber", -- 암호화된 계좌번호
-            ta.accname AS "accountName",
-            CASE
-                WHEN ta.popsort = '1' THEN '개인'
-                WHEN ta.popsort = '0' THEN '법인'
-            END AS "accountType"
-        FROM tb_account ta
-        LEFT JOIN tb_xbank tx ON ta.bankid = tx.bankid
-        WHERE 1=1
+        select
+            a.bank ,
+            b.banknm as BankName,
+            a.bankcd as bankId,
+            a.accnum as accountNumber,
+            a.banknm as accountName,
+            a.bnkpaypw as accountPw,
+            case
+                when a.spacc = '1' then '개인'
+                when a.spacc = '0' then '법인'
+            end as accountType
+        from tb_aa040 a
+        left join tb_xbank b on a.bank = b.bankcd
+        where 1=1
+          and a.spjangcd = :spjangcd
+          and a.useyn = '1'
     """;
 
-		if (bankName != null && !bankName.isEmpty()) {
-			sql += " AND tx.banknm ILIKE :bankName ";
-			paramMap.addValue("bankName", "%" + bankName + "%");
+		if (bankName != null && !bankName.trim().isEmpty()) {
+			sql += " and b.banknm like :bankName ";
+			paramMap.addValue("bankName", "%" + bankName.trim() + "%");
 		}
 
-		// 쿼리는 전체 계좌 가져오고, 자바단에서 복호화 후 필터링
-		List<Map<String, Object>> rawResults = this.sqlRunner.getRows(sql, paramMap);
+		if (accountNumber != null && !accountNumber.trim().isEmpty()) {
+			accountNumber = accountNumber.replace("-", "").replace(" ", "").trim();
 
-		// 자바단에서 복호화 + accountNumber 포함 여부 확인
-		List<Map<String, Object>> filtered = rawResults.stream()
-				.filter(item -> {
-					String encrypted = String.valueOf(item.get("accountNumber"));
-          String decrypted = null; // 복호화 함수
-          try {
-            decrypted = decrypt(encrypted);
-          } catch (Exception e) {
-            throw new RuntimeException(e);
-          }
-          return decrypted.contains(accountNumber); // 부분 검색
-				})
-				.map(item -> {
-					// 복호화된 값을 덮어쓰기 또는 별도 필드에 저장
-          try {
-            item.put("accountNumber", decrypt(item.get("accountNumber").toString()));
-          } catch (Exception e) {
-            throw new RuntimeException(e);
-          }
-          return item;
-				})
-				.collect(Collectors.toList());
+			sql += "  and replace(replace(a.accnum, '-', ''), ' ', '') like :accountNumber ";
+			paramMap.addValue("accountNumber", "%" + accountNumber + "%");
+		}
 
-		result.data = filtered;
-		return result;
+		sql += " order by b.banknm, a.accnum ";
+
+		return this.sqlRunner.getRows(sql, paramMap);
 	}
 
 	@GetMapping("/search_AccountCode")

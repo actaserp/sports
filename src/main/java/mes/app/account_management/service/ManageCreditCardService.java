@@ -27,35 +27,36 @@ public class ManageCreditCardService {
 		param.addValue("spjangcd", tenantId);
 
 		String sql = """
-			select
-				a.cardnum,
-				a.cardnm,
-				a.cardperson as cdpernm,
-				a.cardnm,
-				a.cardco,
-				a.cardclafi ,
-				a.isudate,
-				a.expedate,
-				a.cdflag as baroflag,
-				a.stldate,
-				a.useyn,
-				a.baroid,
-				a.remark,
-				a.stlbank,
-				b.accnum ,
-				c.banknm,
-				a.cardid as cardwebid,
-			 	a.cardpw as cardwebpw,
-				a.baroid,
-				d.cdcode as barocd
-				from tb_iz010 a
-				left join tb_aa040 b on  a.stlbanknm =b.accnum
-				join tb_xbank c on b.bank = c.bankcd
-				join tb_xcard d on a.cardco = d.cd 
-				where 1=1 and a.spjangcd =:spjangcd
+			SELECT
+			    a.cardnum,
+			    a.cardnm,
+			    a.cardperson   AS cdpernm,
+			    a.cardco,
+			    a.cardclafi,
+			    a.isudate,
+			    a.expedate,
+			    a.cdflag       AS baroflag,
+			    a.stldate,
+			    a.useyn,
+			    a.baroid,
+			    a.remark,
+			    a.stlbank,
+			    b.accnum,
+			    b.bank         AS bankid,
+			    c.banknm,
+			    a.cardid       AS cardwebid,
+			    a.cardpw       AS cardwebpw,
+			    d.cdcode       AS barocd
+			FROM tb_iz010 a
+			LEFT JOIN tb_aa040 b ON a.stlbanknm = b.accnum
+			                    AND a.custcd    = b.custcd
+			                    AND a.spjangcd  = b.spjangcd
+			LEFT JOIN tb_xbank c ON b.bank = c.bankcd
+			LEFT JOIN tb_xcard d ON a.cardco = d.cd
+			WHERE a.spjangcd = :spjangcd
 			""";
 
-		if(txtcardnm != null || !txtcardnm.isEmpty()){
+		if(txtcardnm != null && !txtcardnm.isEmpty()){
 			sql += """
        and cardnm like :txtcardnm
       """;
@@ -190,5 +191,43 @@ public class ManageCreditCardService {
 	}
 
 
+	public Map<String, Object> getDetail(String cardnum) {
+		MapSqlParameterSource param = new MapSqlParameterSource();
+		String tenantId = TenantContext.get();
+		param.addValue("spjangcd", tenantId);
+		param.addValue("cardnum", cardnum);
 
+		String sql = """
+        SELECT
+            a.cardnum,
+            a.cardnm,
+            a.cardperson   AS cdpernm,
+            a.cardco,
+            a.cardclafi,
+            a.isudate,
+            a.expedate,
+            a.cdflag       AS baroflag,
+            a.stldate,
+            a.useyn,
+            a.baroid,
+            a.remark,
+            a.stlbank,
+            b.accnum,
+            b.bank         AS bankid,
+            c.banknm,
+            a.cardid       AS cardwebid,
+            a.cardpw       AS cardwebpw,
+            d.cdcode       AS barocd
+        FROM tb_iz010 a
+        LEFT JOIN tb_aa040 b ON a.stlbanknm = b.accnum
+                            AND a.custcd    = b.custcd
+                            AND a.spjangcd  = b.spjangcd
+        LEFT JOIN tb_xbank c ON b.bank = c.bankcd
+        LEFT JOIN tb_xcard d ON a.cardco = d.cd
+        WHERE a.spjangcd = :spjangcd
+          AND a.cardnum  = :cardnum
+        """;
+
+		return sqlRunner.getRow(sql, param);
+	}
 }
