@@ -133,7 +133,7 @@ public class ComboService {
 	};
 
 	ComboDataFunction bank = (String banknm, String bankcd, String bankid) -> { //확인
-		String sql = "select bankpopcd as value, bankpopnm as text from tb_xbank where 1=1";
+		String sql = "select bankcd as value, banknm as text from tb_xbank where 1=1";
 		/*if (StringUtils.hasText(cond1)) {
 			sql += "and \"Material_id\" = :cond1 ";
 		}*/
@@ -146,11 +146,11 @@ public class ComboService {
 	};
 
 	ComboDataFunction bankid = (String banknm, String bankcd, String bankid) -> { //확인
-		String sql = "select bankid as value, banknm as text from tb_xbank where 1=1";
+		String sql = "select bankcd as value, banknm as text from tb_xbank where 1=1";
 		/*if (StringUtils.hasText(cond1)) {
 			sql += "and \"Material_id\" = :cond1 ";
 		}*/
-		sql += " order by \"bankid\" ";
+		sql += " order by \"bankcd\" ";
 		MapSqlParameterSource dicParam = new MapSqlParameterSource();
 		/*dicParam.addValue("cond1", cond1);
 		dicParam.addValue("cond2", cond2);
