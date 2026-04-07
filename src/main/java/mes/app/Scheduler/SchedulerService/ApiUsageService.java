@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@Deprecated
 public class ApiUsageService {
 
     private final RedisTemplate<String, Object> redisTemplate;

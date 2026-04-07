@@ -1,4 +1,4 @@
-package mes.app.account_management;
+package mes.app.Scheduler.SchedulerService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +13,7 @@ public class CardHistoryScheduler {
 
 	private final CardHistoryService cardHistoryService;
 
-	@Scheduled(cron = "0 0 * * * *")
+	//@Scheduled(cron = "0 0 * * * *")
 //@Scheduled(cron = "0 */1 * * * *")
 	public void runCardHistoryScheduler() {
 		log.info("========== 카드내역 자동수집 스케줄러 시작 ==========");

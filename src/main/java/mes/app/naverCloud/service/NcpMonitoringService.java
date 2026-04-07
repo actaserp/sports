@@ -9,12 +9,10 @@ import mes.app.naverCloud.dto.DataQueryRequest;
 import mes.app.naverCloud.dto.NcpMetricResponse;
 import mes.app.naverCloud.dto.NetworkChartDto;
 import mes.app.naverCloud.strategy.MetricTimeRangeStrategy;
-import mes.app.util.RedisService;
+import mes.app.util.redis.RedisService;
 import mes.app.util.UtilClass;
-import mes.domain.model.AjaxResult;
 import mes.domain.services.SqlRunner;
 
-import org.springframework.beans.factory.annotation.Required;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisCallback;
@@ -29,7 +27,6 @@ import org.springframework.web.client.RestTemplate;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -396,43 +393,6 @@ public class NcpMonitoringService {
 
 
 
-    /**
-     * 로컬 캐시에 임시 저장된 데이터를 Redis로 일괄 합산(Sync)
-     */
-    public void syncCacheToDb(){
-
-        Map<String, Object> localCache = redisService.getLocalCache();
-
-        if(localCache.isEmpty()){
-            log.info("Redis로 이관할 데이터가 없습니다.");
-            return;
-        }
-
-        int successCnt = 0;
-        List<String> syncedKeys = new ArrayList<>();
-
-        for(Map.Entry<String, Object> entry : localCache.entrySet()){
-            String key = entry.getKey();
-            Long value = Long.valueOf(entry.getValue().toString());
-
-            try{
-                redisService.incrementValue(key, value);
-
-                syncedKeys.add(key);
-
-            }catch(Exception e){
-                log.error("Redis 이관 실패",key, e.getMessage());
-                break;
-            }
-        }
-
-        syncedKeys.forEach(localCache::remove);
-
-        if (!syncedKeys.isEmpty()) {
-            log.info("[Sync] 총 {} 건의 데이터가 Redis로 합산 완료되었습니다.", syncedKeys.size());
-        }
-    }
-
     public void redisDataSync() {
 
         // 0. 기존 MES 데이터 삭제
@@ -481,4 +441,6 @@ public class NcpMonitoringService {
 
         System.out.println("Redis 목데이터 삽입 완료");
     }
+
+
 }
