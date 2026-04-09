@@ -31,19 +31,6 @@
       </ul>
     </div>
     <!-- Select -->
-    <div class="search-wrap" id="searchWrap" style="display: none; padding-top:10px">
-      <ul>
-        <li>
-          <select title="사업장코드" id="search_spjangcd" name="search_sjangcd"
-                  onchange="init()">
-            <option value="" hidden selected disabled>선택</option>
-            <option value="ZZ">대한럭비협회</option>
-            <option value="PP"></option>
-            <!-- 지역 옵션을 JavaScript에서 동적으로 채움 -->
-          </select>
-        </li>
-      </ul>
-    </div>
     <div class="tab-contents">
       <section class="tab-item" id="tab2" style="height: 830px; overflow: hidden;">
         <div class="section-top">
@@ -110,9 +97,9 @@
 
         <div class="container-fluid">
           <p id="selectedItem"></p>
-          <div id="theGrid1" style="max-height: 200px"></div>
-          <div id="theGrid"  style="max-height: 450px"></div>
-          <div id="theGrid2" style="max-height: 250px"></div>
+          <div id="theGrid1" style="max-height: 76px"></div>
+          <div id="theGrid"  style="max-height: 350px"></div>
+          <div id="theGrid2" style="max-height: 150px"></div>
         </div>
       </section>
     </div> <!--//tab-wrap end-->
@@ -156,11 +143,7 @@
     })
 
     function init() {
-      if (!isBindSpjangcdCalled) {
-        bindSpjangcd();
-        isBindSpjangcdCalled = true; // 플래그 업데이트
-      }
-      fetchListData();
+     fetchListData();
       fetchListData1();
     }
 
@@ -273,8 +256,8 @@
           columns: [
             {binding: 'rownum', header: '순번', width: 70, align: 'center'},
             {binding: 'appnum', header: '문서번호', width: '*', minWidth: 200, align: 'center', visible: false},
-            {binding: 'repodate', header: '상신일자', width: '*', minWidth: 120, align: 'center'},
-            {binding: 'repopernm', header: '작성자명', width: '*', minWidth: 110, align: 'center'},
+            {binding: 'repodate', header: '상신일자', width: '*', minWidth: 100, align: 'center'},
+            {binding: 'repopernm', header: '작성자명', width: '*', minWidth: 90, align: 'center'},
             {binding: 'papercd', header: '문서명', width: '*', minWidth: 250, align: 'center', visible: false},
             {binding: 'papercd_name', header: '문서명', width: '*', minWidth: 250, align: 'center'},
             {binding: 'appgubun', header: '결재구분', width: '*', minWidth: 100, align: 'center',  visible: false },
@@ -566,7 +549,7 @@
       }
     }
 
-    //공통코드
+    /*//공통코드
     const selectConfigs = [
       {parentCode: 'Payment', elementId: 'SearchPayment'},
     ];
@@ -577,11 +560,13 @@
         params: {parentCode: config.parentCode},
         elementId: config.elementId,
         valueField: "code",
-        textField: "value",
+        teㄴxtField: "value",
         includeAllOption: true, // "전체" 옵션 사용
         // defaultValue: "001" // 기본 선택값 [대기]
         });
-    });
+    });*/
+
+    AjaxUtil.fillSelectOptions($('#SearchPayment'), 'system_code', 'all', false, 'Payment');
 
     //사업장 코드
     function bindSpjangcd() {

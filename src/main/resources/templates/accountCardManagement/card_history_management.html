@@ -78,7 +78,7 @@
             <dl>
               <dt>
                 <label>
-                  조회 기간<span class="eq"></span>
+                  승인 기간<span class="eq"></span>
                 </label>
               </dt>
               <dd>
@@ -371,6 +371,7 @@
         if (
          binding === 'busim' ||
          binding === 'accnm' ||
+         binding === 'accnm2' ||
          binding === 'it1nm' ||
          binding === 'it2nm' ||
          binding === 'mssecnm' ||
@@ -422,6 +423,8 @@
        {binding: 'it1nm', header: '항', width: 150, align: 'left', isReadOnly: false},
        {binding: 'it2cd', header: '목코드', visible: false},
        {binding: 'it2nm', header: '목', width: 150, align: 'left', isReadOnly: false},
+       {binding: 'acccd2', header: '상대계정코드', visible: false },
+       {binding: 'accnm2', header: '상대계정명', width: 150, align: 'left', isReadOnly: false },
 
        {binding: 'summy', header: '산출내역', width: 200, align: 'left', isReadOnly: false},
        {binding: 'mssec', header: '재원', width: 100, align: 'left', dataMap: mssecMap},
@@ -515,7 +518,7 @@
       g.finishEditing();
 
       // 조회 컬럼 처리
-      if (['busim', 'accnm', 'it1nm', 'it2nm'].includes(col.binding)) {
+      if (['busim', 'accnm', 'it1nm', 'it2nm', 'accnm2'].includes(col.binding)) {
        item[col.binding] = inputValue;
 
        if (col.binding === 'busim') {
@@ -525,6 +528,11 @@
 
        if (col.binding === 'accnm') {
         _this.searchAccnm(item, sel.row);
+        return;
+       }
+
+       if (col.binding === 'accnm2') {
+        _this.searchAccnm2(item, sel.row);
         return;
        }
 
@@ -698,7 +706,8 @@
      let _this = this;
      let url = '/api/account_management/card_history/findAccnm';
      let data = {
-      accnm: item.accnm
+      accnm: item.accnm,
+      type:'card'
      };
 
      let fnsuccess = function (res) {
@@ -999,6 +1008,107 @@
 
      g.collectionView.refresh();
 
+     this.moveToCellAndEdit(rowIndex, 'accnm2');
+    }
+
+    // 상대계정 조회
+    searchAccnm2(item, rowIndex) {
+     let _this = this;
+     let url = '/api/account_management/card_history/findAccnm';
+     let data = {
+      accnm: item.accnm2,
+      type: 'account'
+     };
+
+     let fnsuccess = function (res) {
+      let list = res.data || [];
+
+      if (!list || list.length === 0) {
+       Alert.alert('', '상대계정 조회 결과가 없습니다.');
+       return;
+      }
+
+      _this.showAccnm2Popup(list, rowIndex);
+     };
+
+     AjaxUtil.getAsyncData(url, data, fnsuccess);
+    }
+
+    showAccnm2Popup(dataList, rowIndex) {
+     let _this = this;
+
+     _this.selectedRowIndexForPopup = rowIndex;
+
+     if (_this.accnm2Popup) {
+      _this.accnm2Popup.close();
+      _this.accnm2Popup = null;
+     }
+
+     let content = tmpl('accnmTemplate', {});
+
+     _this.accnm2Popup = new PopupDraggable('상대계정 조회');
+     _this.accnm2Popup.open({ width: 700, height: 420, $content: $(content) });
+
+     _this.accGrid2 = new wijmo.grid.FlexGrid('#AccGrid', {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: [
+       { binding: 'acccd', header: '관코드', width: 100, align: 'center' },
+       { binding: 'accnm', header: '관명', width: '*', align: 'left' }
+      ],
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+
+     _this.accGrid2.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const selectCurrentAccnm2 = function () {
+      let sel = _this.accGrid2.selection;
+      if (!sel || sel.row < 0) return;
+
+      let selectedItem = _this.accGrid2.rows[sel.row].dataItem;
+      _this.applyAccnm2Data(selectedItem, _this.selectedRowIndexForPopup);
+
+      if (_this.accnm2Popup) {
+       _this.accnm2Popup.close();
+       _this.accnm2Popup = null;
+      }
+
+      _this.accGrid2 = null;
+     };
+
+     setTimeout(function () {
+      if (_this.accGrid2 && _this.accGrid2.rows.length > 0) {
+       _this.accGrid2.select(0, 0);
+       _this.accGrid2.focus();
+      }
+     }, 50);
+
+     _this.accGrid2.hostElement.addEventListener('dblclick', function () {
+      selectCurrentAccnm2();
+     });
+
+     _this.accGrid2.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectCurrentAccnm2();
+      }
+     });
+    }
+
+    applyAccnm2Data(selectedItem, rowIndex) {
+     let g = this.grid;
+     let rowItem = g.rows[rowIndex].dataItem;
+
+     rowItem.acccd2 = selectedItem.acccd || '';
+     rowItem.accnm2 = selectedItem.accnm || '';
+
+     this.updateRowSelected(rowItem);
+
+     g.collectionView.refresh();
+     // 다음 컬럼으로 이동
      this.moveToCellAndEdit(rowIndex, 'summy');
     }
 
@@ -1311,7 +1421,7 @@
     }
 
     //카드 내역 저장
-    cardSave() {
+    cardSave(onSuccess) {
 
      let _this = this;
 
@@ -1345,7 +1455,12 @@
      AjaxUtil.postAsyncData(this.url + '/saveSelected', data, function(res) {
       if (res.success) {
        Alert.alert('', '저장되었습니다.');
-       _this.searchMainData();
+       if (typeof onSuccess === 'function') {
+        onSuccess();
+       } else {
+        Alert.alert('', '저장되었습니다.');
+        _this.searchMainData();
+       }
       } else {
        Alert.alert('', res.message || '저장 실패');
       }
@@ -1373,20 +1488,20 @@
       return;
      }
 
-     let data = {
-      items: JSON.stringify(selectedItems)
-     };
+     _this.cardSave(function() {
+      let data = {
+       items: JSON.stringify(_this.viewData.items.filter(item => item.selected === true))
+      };
 
-     let fnsuccess = function (res) {
-      if (res.success) {
-       Notify.success('전표가 생성되었습니다.');
-       _this.searchMainData();
-      } else {
-       Alert.alert('', res.message || '전표 생성 중 오류가 발생했습니다.');
-      }
-     };
-
-     AjaxUtil.postAsyncData(this.url + '/createSlip', data, fnsuccess);
+      AjaxUtil.postAsyncData(_this.url + '/createSlip', data, function(res) {
+       if (res.success) {
+        Notify.success('저장 및 전표가 생성되었습니다.');
+        _this.searchMainData();
+       } else {
+        Alert.alert('', res.message || '전표 생성 중 오류가 발생했습니다.');
+       }
+      });
+     });
     }
 
     //전표 생성 취소

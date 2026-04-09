@@ -94,6 +94,8 @@ public class CardHistoryService {
 					subject,
 					paydate,
 					paynum,
+						acccd2,
+					accnm2,
 					pay_cancel_yn,
 					-- 화면 표시용
 					case
@@ -503,18 +505,22 @@ public class CardHistoryService {
 		return sqlRunner.getRows(sql, param);
 	}
 
-	public List<Map<String, Object>> getAccnm(String accnm) {
+	public List<Map<String, Object>> getAccnm(String accnm, String type) {
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("accnm", accnm);
 
+		String typeCondition = "card".equals(type) ? "and acccd like '7%'" : "";
+
 		String sql = """
-			select
-				acccd ,
-				accnm
-			from tb_ac001 
-			where useyn='1'
-			and replace(isnull(accnm, ''), ' ', '') like '%' + replace(:accnm, ' ', '') + '%'
-			""";
+    select
+      acccd,
+      accnm
+    from tb_ac001
+    where useyn = '1' and spyn='1'
+    and replace(isnull(accnm, ''), ' ', '') like '%' + replace(:accnm, ' ', '') + '%'
+    """
+		+ typeCondition;
+
 		return sqlRunner.getRows(sql, param);
 	}
 
@@ -617,6 +623,8 @@ public class CardHistoryService {
 				dicParam.addValue("remark", getString(item.get("remark")));
 				dicParam.addValue("subject", getString(item.get("subject")));
 				dicParam.addValue("lstModDt", now);
+				dicParam.addValue("acccd2", getString(item.get("acccd2")));
+				dicParam.addValue("accnm2", getString(item.get("accnm2")));
 
 				String updateSql = """
     UPDATE TB_bank_cdsave
@@ -636,7 +644,9 @@ public class CardHistoryService {
         summy    = :summy,
         remark   = :remark,
         subject  = :subject,
-        lst_mod_dt = :lstModDt
+        lst_mod_dt = :lstModDt,
+        acccd2 = :acccd2,
+        accnm2 = :accnm2
     WHERE custcd   = :custcd
       AND spjangcd = :spjangcd
       AND bnkcode  = :bnkcode
@@ -917,13 +927,18 @@ public class CardHistoryService {
 			String custcd = bizInfo.get("custcd");
 			String spjangnm = bizInfo.get("spjangnm");
 
-			String spdate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+			Map<String, Object> firstItem = itemList.get(0);
+
+			String apvDt = getString(firstItem, "apv_dt");
+			String spdate = (apvDt != null && !apvDt.isBlank())
+												? apvDt.replace("-", "")
+												: LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 			String spnum = String.format("%04d", getNextSpnumInt());
 
 			// =========================
 			// 헤더 1건 생성
 			// =========================
-			Map<String, Object> firstItem = itemList.get(0);
+
 
 			MapSqlParameterSource dicParam = new MapSqlParameterSource();
 			dicParam.addValue("custcd", custcd);

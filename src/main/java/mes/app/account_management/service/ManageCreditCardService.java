@@ -19,12 +19,14 @@ public class ManageCreditCardService {
 	@Autowired
 	SqlRunner sqlRunner;
 
-	public List<Map<String, Object>> getList(String txtcardnm, String txtcardnum) {
+	public List<Map<String, Object>> getList(String txtcardnm, String txtcardnum, String Combuseyn, String cdflag) {
 
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("txtcardnm", "%" + txtcardnm + "%");	//카드명
 		String tenantId = TenantContext.get();
 		param.addValue("spjangcd", tenantId);
+		param.addValue("Combuseyn", Combuseyn);
+		param.addValue("cdflag", cdflag);
 
 		String sql = """
 			SELECT
@@ -53,7 +55,11 @@ public class ManageCreditCardService {
 			                    AND a.spjangcd  = b.spjangcd
 			LEFT JOIN tb_xbank c ON b.bank = c.bankcd
 			LEFT JOIN tb_xcard d ON a.cardco = d.cd
-			WHERE a.spjangcd = :spjangcd
+			WHERE a.spjangcd = :spjangcd and a.useyn = :Combuseyn
+			AND (
+			  a.cdflag = :cdflag
+			  OR (:cdflag = '0' AND a.cdflag IS NULL)
+			)
 			""";
 
 		if(txtcardnm != null && !txtcardnm.isEmpty()){

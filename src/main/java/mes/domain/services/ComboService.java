@@ -138,7 +138,7 @@ public class ComboService {
 		/*if (StringUtils.hasText(cond1)) {
 			sql += "and \"Material_id\" = :cond1 ";
 		}*/
-		sql += " order by \"bankid\" ";
+		sql += " order by \"bankcd\" ";
 		MapSqlParameterSource dicParam = new MapSqlParameterSource();
 		/*dicParam.addValue("cond1", cond1);
 		dicParam.addValue("cond2", cond2);

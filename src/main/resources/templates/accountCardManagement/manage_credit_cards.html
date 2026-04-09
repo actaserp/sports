@@ -37,9 +37,9 @@
       </ul>
     </div>
     <div style="display: flex; gap: 5px">
-      <section class="section" style="width: 40%;">
+      <section class="section" style="width: 50%;">
         <div class="section-top">
-          <div class="search-wrap">
+          <div class="search-wrap" >
             <dl>
               <dt>
                 <label for="txtcardnm">
@@ -48,7 +48,7 @@
               </dt>
               <dd>
                 <div class="srch-box">
-                  <input class="form-control2" type="text" id="txtcardnm" name="txtcardnm" placeholder="카드명" style="width:200px"/>
+                  <input class="form-control2" type="text" id="txtcardnm" name="txtcardnm" placeholder="카드명" style="width:120px"/>
                 </div>
               </dd>
             </dl>
@@ -62,6 +62,32 @@
                 <div class="srch-box">
                   <input class="form-control2" type="text" id="txtcardnum" name="txtcardnum" placeholder="카드번호" style="width:200px"/>
                 </div>
+              </dd>
+            </dl>
+            <dl>
+              <dt>
+                <label for="Combuseyn">
+                  사용여부
+                </label>
+              </dt>
+              <dd>
+                <select class="form-control2" id="Combuseyn" name="Combuseyn"  style="width:120px">
+                  <option value="1">사용</option>
+                  <option value="0">미사용</option>
+                </select>
+              </dd>
+            </dl>
+            <dl>
+              <dt>
+                <label for="cdflag">
+                  바로빌 연동 여부
+                </label>
+              </dt>
+              <dd>
+                <select class="form-control2" id="cdflag" name="cdflag"  style="width:120px">
+                  <option value="1">등록</option>
+                  <option value="0">미등록</option>
+                </select>
               </dd>
             </dl>
             <dl>
@@ -83,7 +109,7 @@
           <div id="theGrid"></div>
         </div>
       </section>
-      <section style="width: 60%;">
+      <section style="width: 50%;">
         <div class="section">
           <div class="title-wrap">
           </div>
@@ -262,10 +288,14 @@
                   <th><label for="barocd">바로빌카드 코드</label></th>
                   <td>
                     <input type="text" id="barocd" name="barocd" class="wp100" placeholder="바로빌카드 코드" readonly/>
+                    <small style="color: #e67e22; font-size: 11px; display: block; margin-top: 4px;">
+                      ※ 등록 가능 카드사: 비씨·하나SK·현대·KB·씨티·롯데·농협·삼성·신한·우리·수협·광주·전북
+                    </small>
                   </td>
                   <th><label for="baroid">바로빌 아이디</label></th>
                   <td>
                     <input type="text" id="baroid" name="baroid" class="wp100" placeholder="바로빌 아이디" />
+
                   </td>
                 </tr>
                 </tbody>
@@ -309,7 +339,7 @@
        }
       },
       columns: [
-       {binding: 'cardnum', header: '카드번호', width: 250, align: 'center'},
+       {binding: 'cardnum', header: '카드번호', width: 200, align: 'center'},
        {binding: 'cardnm', header: '카드명', width: 150, align: 'center' },
        {binding: 'cdpernm', header: '성명', width: 150, align: 'center'},
        {binding: 'cardco', header: '코드번호', width: 100, align: 'center'}
@@ -403,7 +433,8 @@
      let data = {
       'txtcardnm' : $("#txtcardnm").val(),
       'txtcardnum' : $("#txtcardnum").val(),
-       // spjangcd: sessionStorage.getItem('spjangcd') //사업장 코드
+      'Combuseyn' : $("#Combuseyn").val(),
+      'cdflag' : $("#cdflag").val(),
      }
      let fnsuccess = function(result) {
       if (result != null) {

@@ -670,7 +670,8 @@
      let _this = this;
      let url = '/api/account_management/card_history/findAccnm';
      let data = {
-      accnm: item.accnm
+      accnm: item.accnm,
+      type:'account'
      };
 
      let fnsuccess = function (res) {
@@ -773,7 +774,8 @@
      let _this = this;
      let url = '/api/account_management/card_history/findAccnm';
      let data = {
-      accnm: item.accnm2
+      accnm: item.accnm2,
+      type:'account'
      };
 
      let fnsuccess = function (res) {

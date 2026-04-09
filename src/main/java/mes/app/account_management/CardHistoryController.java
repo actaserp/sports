@@ -63,9 +63,10 @@ public class CardHistoryController {
 	}
 
 	@GetMapping("/findAccnm")
-	public AjaxResult getAccnm(@RequestParam(value = "accnm") String accnm){
+	public AjaxResult getAccnm(@RequestParam(value = "accnm") String accnm,
+														 @RequestParam(value = "type") String type){
 
-		List<Map<String, Object>> items = this.cardHistoryService.getAccnm(accnm);
+		List<Map<String, Object>> items = this.cardHistoryService.getAccnm(accnm, type);
 
 		AjaxResult result = new AjaxResult();
 		result.data = items;

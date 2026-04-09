@@ -24,9 +24,11 @@ public class ManageCreditCardController {
 
 	@GetMapping("/read")
 	public AjaxResult getList (@RequestParam(value = "txtcardnm", required = false) String txtcardnm,
-														 @RequestParam(value = "txtcardnum", required = false) String txtcardnum) {
+														 @RequestParam(value = "txtcardnum", required = false) String txtcardnum,
+														 @RequestParam(value = "Combuseyn") String Combuseyn,
+														 @RequestParam(value = "cdflag") String cdflag) {
 
-		List<Map<String, Object>> items = this.cardService.getList(txtcardnm, txtcardnum);
+		List<Map<String, Object>> items = this.cardService.getList(txtcardnm, txtcardnum, Combuseyn, cdflag);
 
 		AjaxResult result = new AjaxResult();
 		result.data = items;
