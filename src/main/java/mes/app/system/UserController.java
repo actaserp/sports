@@ -163,6 +163,7 @@ public class UserController {
         """;
 			MapSqlParameterSource limitParam = new MapSqlParameterSource();
 			limitParam.addValue("dbKey", dbKey);
+			limitParam.addValue("spjangcd", spjangcd);
 			Map<String, Object> limitMap = this.sqlRunner.getRow(limitSql, limitParam);
 
 //			if (limitMap != null) {
@@ -187,6 +188,7 @@ public class UserController {
 			user.setSuperUser(false);
 			user.setLast_name("");
 			user.setIs_staff(false);
+			user.setDbKey(dbKey);
 
 			dicParam.addValue("loginUser", loginUser.getId());
 			sql = """
