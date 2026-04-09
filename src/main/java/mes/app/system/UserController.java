@@ -158,7 +158,7 @@ public class UserController {
             left join user_profile up on up.spjangcd = xa.spjangcd and up."User_id" in (
                 select id from auth_user where spjangcd = :spjangcd and is_active = true
             )
-            where xa.db_key = :dbKey
+            where xa.spjangcd = :dbKey
             group by bp.user_limit
         """;
 			MapSqlParameterSource limitParam = new MapSqlParameterSource();
@@ -255,7 +255,8 @@ public class UserController {
 		dicParam.addValue("Depart_id", Depart_id);
 		dicParam.addValue("lang_code", lang_code);
 		dicParam.addValue("User_id", user.getId());
-		dicParam.addValue("spjangcd", TenantContext.get());
+		dicParam.addValue("spjangcd", dbKey);
+//		dicParam.addValue("spjangcd", TenantContext.get());
 
 		this.sqlRunner.execute(sql, dicParam);
 

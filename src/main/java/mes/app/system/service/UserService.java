@@ -96,7 +96,7 @@ public class UserService {
 		String mainSql = """
         SELECT au.id
              , au.personid
-             , up."Name"
+             , au.first_name as "Name"
              , au.username      AS login_id
              , au.email
              , au.tel
