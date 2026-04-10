@@ -2,6 +2,7 @@ package mes.app.PaymentList;
 
 import lombok.extern.slf4j.Slf4j;
 import mes.app.PaymentList.service.ApprovalListService;
+import mes.app.common.TenantContext;
 import mes.domain.entity.User;
 import mes.domain.model.AjaxResult;
 import mes.domain.repository.UserCodeRepository;
@@ -35,101 +36,91 @@ import java.util.zip.ZipOutputStream;
 public class ApprovalListController { //결재목록
 
   @Autowired
-  private UserCodeRepository userCodeRepository;
-
-  @Autowired
   private ApprovalListService approvalListService;
-
-//  @Autowired
-//  tb_aa010Repository tbAa010PdfRepository;
-//
-//  @Autowired
-//  TB_AA010ATCHRepository tbAa010AtchRepository;
 
   @GetMapping("/read")
   public AjaxResult getPaymentList(@RequestParam(value = "startDate") String startDate,
                                    @RequestParam(value = "endDate") String endDate,
-                                   @RequestParam(value = "search_spjangcd", required = false) String spjangcd,
                                    @RequestParam(value = "SearchPayment", required = false) String SearchPayment,
                                    @RequestParam(value = "searchUserNm", required = false) String searchUserNm,
                                    Authentication auth) {
     AjaxResult result = new AjaxResult();
-    log.info("주문 확인 read 들어온 데이터:startDate{}, endDate{}, spjangcd {}, SearchPayment {} ,searchUserNm {} ", startDate, endDate, spjangcd, SearchPayment,searchUserNm);
-
+    log.info("주문 확인 read 들어온 데이터:startDate{}, endDate{},SearchPayment {} ,searchUserNm {} ", startDate, endDate, SearchPayment, searchUserNm);
+    String spjangcd = TenantContext.get();
     try {
 
       User user = (User) auth.getPrincipal();
-//      String agencycd = user.getAgencycd().replaceFirst("^p", "");
-      Integer personid = user.getPersonid();
-      LocalDate dateStart = LocalDate.parse(startDate); // 기본 ISO-8601 형식 사용
-      String formattedStartDate = dateStart.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-      LocalDate dateEnd = LocalDate.parse(endDate); // 기본 ISO-8601 형식 사용
-      String formattedEndDate = dateEnd.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-      // 데이터 조회
-      List<Map<String, Object>> getPaymentList = approvalListService.getPaymentList(spjangcd, formattedStartDate, formattedEndDate, SearchPayment,searchUserNm, personid);
-      log.info("📦 [조회결과] 결재 목록 건수: {}", getPaymentList.size());
-      for (Map<String, Object> item : getPaymentList) {
-        //날짜 포맷 변환 (repodate)
-        formatDateField(item, "repodate");
-        //날짜 포맷 변환 (appdate)
-        formatDateField(item, "indate");
+      Integer personid = user.getPersonid(); // main DB의 personid → tenant DB person.id 와 매핑
 
+      LocalDate dateStart = LocalDate.parse(startDate);
+      String formattedStartDate = dateStart.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+      LocalDate dateEnd = LocalDate.parse(endDate);
+      String formattedEndDate = dateEnd.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+      // 서비스단에서 tenant DB person 조회 + 결재 목록 조회 모두 처리
+      List<Map<String, Object>> getPaymentList = approvalListService.getPaymentList(
+        spjangcd, formattedStartDate, formattedEndDate, SearchPayment, searchUserNm, personid);
+
+      //log.info("📦 [조회결과] 결재 목록 건수: {}", getPaymentList.size());
+
+      for (Map<String, Object> item : getPaymentList) {
         String appnum = (String) item.get("appnum");
         List<Map<String, Object>> fileList = new ArrayList<>();
 
-//        if (appnum != null) {
-//          if (appnum.startsWith("AS")) {
-//            if (fileExistsInAtchTable(appnum)) {
-//              Map<String, Object> atch = new HashMap<>(createFileMapFromAtch(appnum, "첨부파일"));
-//              atch.put("fileType", "첨부");
-//              fileList.add(atch);
-//              log.debug("📎 AS 첨부파일 추가: {}", atch);
-//            }
-//            if (fileExistsInPdfTable(appnum)) {
-//              Map<String, Object> pdf = new HashMap<>(createFileMapFromPdf(appnum, "지출결의서"));
-//              pdf.put("fileType", "전표");
-//              fileList.add(pdf);
-//              log.debug("📄 AS 전표파일 추가: {}", pdf);
-//            }
-//
-//          } else if (appnum.startsWith("A")) {
-//            if (fileExistsInAtchTable(appnum)) {
-//              Map<String, Object> atch = new HashMap<>(createFileMapFromAtch(appnum, "첨부파일"));
-//              atch.put("fileType", "첨부");
-//              fileList.add(atch);
-//              log.debug("📎 A 첨부파일 추가: {}", atch);
-//            }
-//
-//          } else if (appnum.startsWith("S")) {
-//            if (fileExistsInPdfTable(appnum)) {
-//              Map<String, Object> pdf = new HashMap<>(createFileMapFromPdf(appnum, "지출결의서"));
-//              pdf.put("fileType", "전표");
-//              fileList.add(pdf);
-//              log.debug("📄 S 전표파일 추가: {}", pdf);
-//            }
-//
-//          } else {
-//            if (fileExistsInPdfTable(appnum)) {
-//              Map<String, Object> pdf = new HashMap<>(createFileMapFromPdf(appnum, "전표파일"));
-//              pdf.put("fileType", "전표");
-//              fileList.add(pdf);
-//              log.debug("📄 기타 전표파일 추가: {}", pdf);
-//            }
+        if (appnum != null) {
+          if (appnum.startsWith("AS")) {
+            // AS: 첨부파일 + 전표(지출결의서) 둘 다 조회
+//          if (fileExistsInAtchTable(appnum)) {
+//            Map<String, Object> atch = new HashMap<>(createFileMapFromAtch(appnum, "첨부파일"));
+//            atch.put("fileType", "첨부");
+//            fileList.add(atch);
+//            log.debug("📎 AS 첨부파일 추가: {}", atch);
 //          }
-//        }
+//          if (fileExistsInPdfTable(appnum)) {
+//            Map<String, Object> pdf = new HashMap<>(createFileMapFromPdf(appnum, "지출결의서"));
+//            pdf.put("fileType", "전표");
+//            fileList.add(pdf);
+//            log.debug("📄 AS 전표파일 추가: {}", pdf);
+//          }
 
-        item.put("fileList", fileList);                  // ✅ 항상 넣고
-        item.put("isdownload", !fileList.isEmpty());     // ✅ 상태 표시
+          } else if (appnum.startsWith("A")) {
+            // A: 첨부파일만 조회
+//          if (fileExistsInAtchTable(appnum)) {
+//            Map<String, Object> atch = new HashMap<>(createFileMapFromAtch(appnum, "첨부파일"));
+//            atch.put("fileType", "첨부");
+//            fileList.add(atch);
+//            log.debug("📎 A 첨부파일 추가: {}", atch);
+//          }
 
+          } else if (appnum.startsWith("S")) {
+            // S: 전표(지출결의서)만 조회
+//          if (fileExistsInPdfTable(appnum)) {
+//            Map<String, Object> pdf = new HashMap<>(createFileMapFromPdf(appnum, "지출결의서"));
+//            pdf.put("fileType", "전표");
+//            fileList.add(pdf);
+//            log.debug("📄 S 전표파일 추가: {}", pdf);
+//          }
+
+          } else {
+            // 기타: 전표파일만 조회
+//          if (fileExistsInPdfTable(appnum)) {
+//            Map<String, Object> pdf = new HashMap<>(createFileMapFromPdf(appnum, "전표파일"));
+//            pdf.put("fileType", "전표");
+//            fileList.add(pdf);
+//            log.debug("📄 기타 전표파일 추가: {}", pdf);
+//          }
+          }
+        }
+
+        item.put("fileList", fileList);              // ✅ 항상 넣고
+        item.put("isdownload", !fileList.isEmpty()); // ✅ 상태 표시
       }
 
-      // 데이터가 있을 경우 성공 메시지
       result.success = true;
       result.message = "데이터 조회 성공";
       result.data = getPaymentList;
 
     } catch (Exception e) {
-      // 예외 처리
       log.error("❌ [에러] 결재 목록 조회 중 예외 발생", e);
       result.success = false;
       result.message = "데이터 조회 중 오류 발생: " + e.getMessage();
@@ -140,36 +131,37 @@ public class ApprovalListController { //결재목록
 
   @GetMapping("/read1")
   public AjaxResult getPaymentList1(@RequestParam(value = "startDate") String startDate,
-                                   @RequestParam(value = "endDate") String endDate,
-                                   @RequestParam(value = "search_spjangcd", required = false) String spjangcd,
-                                   Authentication auth) {
+                                    @RequestParam(value = "endDate") String endDate,
+                                    Authentication auth) {
     AjaxResult result = new AjaxResult();
-    log.info("결재목록_문서현황 read 들어온 데이터:startDate{}, endDate{}, spjangcd {} ", startDate, endDate, spjangcd);
+    String spjangcd = TenantContext.get();
 
     try {
 
       User user = (User) auth.getPrincipal();
-//      String agencycd = user.getAgencycd().replaceFirst("^p", "");
-      LocalDate dateStart = LocalDate.parse(startDate); // 기본 ISO-8601 형식 사용
-      String formattedStartDate = dateStart.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-      LocalDate dateEnd = LocalDate.parse(endDate); // 기본 ISO-8601 형식 사용
-      String formattedEndDate = dateEnd.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-      Integer personid = user.getPersonid();
+      Integer personid = user.getPersonid(); // main DB의 personid → tenant DB person.id 와 매핑
       String userName = user.getFirst_name();
-      // 데이터 조회
-      List<Map<String, Object>> getPaymentList = approvalListService.getPaymentList1(spjangcd, formattedStartDate, formattedEndDate, personid);
 
+      LocalDate dateStart = LocalDate.parse(startDate);
+      String formattedStartDate = dateStart.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+      LocalDate dateEnd = LocalDate.parse(endDate);
+      String formattedEndDate = dateEnd.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
-      // 데이터가 있을 경우 성공 메시지
+      // 서비스단에서 tenant DB person 조회 + 문서현황 조회 모두 처리
+      List<Map<String, Object>> getPaymentList = approvalListService.getPaymentList1(
+        spjangcd, formattedStartDate, formattedEndDate, personid);
+
+      // getPaymentList null 방지
+      if (getPaymentList == null) getPaymentList = new ArrayList<>();
+
       result.success = true;
       result.message = "데이터 조회 성공";
       result.data = Map.of(
-          "userName", userName,  // 사용자 이름
-          "paymentList", getPaymentList // 결재 목록 리스트
+        "userName", userName,   // 사용자 이름
+        "paymentList", getPaymentList  // 결재 목록 리스트
       );
 
     } catch (Exception e) {
-      // 예외 처리
       result.success = false;
       result.message = "데이터 조회 중 오류 발생: " + e.getMessage();
     }
@@ -177,20 +169,15 @@ public class ApprovalListController { //결재목록
     return result;
   }
 
-  @GetMapping("/read2")
-  public AjaxResult getPaymentList2(@RequestParam(value = "search_spjangcd", required = false) String spjangcd,
-                                    @RequestParam(value = "appnum", required = false) String appnum) {
+  @GetMapping("/detail")
+  public AjaxResult getPaymentList2(@RequestParam(value = "appnum", required = false) String appnum) {
     AjaxResult result = new AjaxResult();
-    log.info("더블클릭(결재목록) 들어온 데이터:spjangcd {}, appnum: {} ", spjangcd, appnum);
+    String spjangcd = TenantContext.get();
+//    log.info("더블클릭(결재목록) 들어온 데이터:spjangcd {}, appnum: {} ", spjangcd, appnum);
 
     try {
 
       List<Map<String, Object>> getPaymentList2 = approvalListService.getPaymentList2(spjangcd,appnum);
-
-      for (Map<String, Object> item : getPaymentList2) {
-        //날짜 포맷
-        formatDateField(item, "repodate");
-      }
 
       result.success = true;
       result.message = "데이터 조회 성공";
@@ -204,24 +191,6 @@ public class ApprovalListController { //결재목록
     return result;
   }
 
-  // 날짜 포맷
-  private void formatDateField(Map<String, Object> item, String fieldName) {
-    Object dateValue = item.get(fieldName);
-    if (dateValue instanceof String) {
-      String dateStr = (String) dateValue;
-      try {
-        if (dateStr.length() == 8) { // "yyyyMMdd" 형식인지 확인
-          String formattedDate = dateStr.substring(0, 4) + "-" + dateStr.substring(4, 6) + "-" + dateStr.substring(6, 8);
-          item.put(fieldName, formattedDate);
-        } else {
-          item.put(fieldName, "잘못된 날짜 형식");
-        }
-      } catch (Exception ex) {
-        log.error("{} 변환 중 오류 발생: {}", fieldName, ex.getMessage());
-        item.put(fieldName, "잘못된 날짜 형식");
-      }
-    }
-  }
 
 //  @GetMapping("/payType")
 //  public AjaxResult ordFlagType(
@@ -247,18 +216,6 @@ public class ApprovalListController { //결재목록
 //
 //    return result;
 //  }
-
-  @GetMapping("/bindSpjangcd")
-  public AjaxResult bindSpjangcd(Authentication auth) {
-    // 관리자 사용가능 페이지 사업장 코드 선택 로직
-    User user = (User) auth.getPrincipal();
-    String username = user.getUsername();
-    String spjangcd = approvalListService.getSpjangcd(username, "");
-    // 사업장 코드 선택 로직 종료 반환 spjangcd 활용
-    AjaxResult result = new AjaxResult();
-    result.data = spjangcd;
-    return result;
-  }
 
 //  private boolean fileExistsInPdfTable(String appnum) {
 //    return tbAa010PdfRepository.existsBySpdateAndFilenameIsNotNull(appnum);

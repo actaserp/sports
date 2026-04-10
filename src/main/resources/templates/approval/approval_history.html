@@ -116,23 +116,15 @@
     let theGrid;
     let theGrid1;
     let theGrid2;
-    let isBindSpjangcdCalled = false;
 
     $(document).ready(function () {
-      // 현재 날짜 설정
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = today.getMonth();
 
-      //시작일: 이번 달 1일
-      const startOfMonth = new Date(year, month, 1);
-      const startFormatted = `${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth() + 1).padStart(2, '0')}-${String(startOfMonth.getDate()).padStart(2, '0')}`;
-      $('#startDate').val(startFormatted);
+     let today = new Date();
+     let monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-      // 종료일
-      const endOfMonth = new Date(year, month + 1, 0);
-      const endMonthFormatted = `${endOfMonth.getFullYear()}-${String(endOfMonth.getMonth() + 1).padStart(2, '0')}-${String(endOfMonth.getDate()).padStart(2, '0')}`;
-      $('#endDate').val(endMonthFormatted);
+     $('#startDate').val(CommonUtil.getYYYYMMDDMonthFirst());
+     $('#endDate').val(CommonUtil.formatYYYYMMDD(monthEnd));
+
       init();
     });
 
@@ -254,17 +246,17 @@
           selectionMode: 'ListBox',
           virtualizationThreshold: 1,
           columns: [
-            {binding: 'rownum', header: '순번', width: 70, align: 'center'},
-            {binding: 'appnum', header: '문서번호', width: '*', minWidth: 200, align: 'center', visible: false},
-            {binding: 'repodate', header: '상신일자', width: '*', minWidth: 100, align: 'center'},
-            {binding: 'repopernm', header: '작성자명', width: '*', minWidth: 90, align: 'center'},
-            {binding: 'papercd', header: '문서명', width: '*', minWidth: 250, align: 'center', visible: false},
-            {binding: 'papercd_name', header: '문서명', width: '*', minWidth: 250, align: 'center'},
-            {binding: 'appgubun', header: '결재구분', width: '*', minWidth: 100, align: 'center',  visible: false },
-            {binding: 'appgubun_display', header: '결재구분', width: '*', minWidth: 100, align: 'center'},
-            {binding: 'appdate', header: '결재일자', width: '*', minWidth: 120, align: 'center'},
-            {binding: 'title', header: '제목', width: '*', align: 'center', minWidth: 150},
-            {binding: 'remark', header: '사유',width: '*' ,align: 'left', minWidth: 150},
+            {binding: 'rownum', header: '순번', width: 60, align: 'center'},
+            {binding: 'appnum', header: '문서번호', width: 200, align: 'center', visible: false},
+            {binding: 'repodate', header: '상신일자', width: 120, align: 'center'},
+            {binding: 'repopernm', header: '작성자명', width: 100, align: 'center'},
+            {binding: 'papercd', header: '문서코드',  visible: false},
+            {binding: 'papercd_name', header: '문서명', width: 150, align: 'center'},
+            {binding: 'appgubun', header: '결재구분', width: 100, align: 'center',  visible: false },
+            {binding: 'appgubun_display', header: '결재구분', width: 100, align: 'center'},
+            {binding: 'appdate', header: '결재일자', width: 120, align: 'center'},
+            {binding: 'title', header: '제목', width: '*', align: 'center'},
+            {binding: 'remark', header: '사유',width: '*' ,align: 'left'},
             {binding: 'fileList', header: '다운로드', width: '*', minWidth: 120, align: 'center', visible: false },
             {binding: 'jeonpyoFiles', header: '전표파일', width: '*', minWidth: 120, align: 'center', visible: false },
             {binding: 'atchFiles', header: '첨부파일', width: '*', minWidth: 120, align: 'center',  visible: false },
@@ -461,7 +453,7 @@
 
       // 서버에서 데이터 가져오기
       $.ajax({
-        url: '/api/PaymentList/read2',
+        url: '/api/PaymentList/detail',
         type: 'GET',
         data: params,
         async: false,
@@ -549,40 +541,7 @@
       }
     }
 
-    /*//공통코드
-    const selectConfigs = [
-      {parentCode: 'Payment', elementId: 'SearchPayment'},
-    ];
-
-    selectConfigs.forEach(config => {
-      initializeSelect3({
-        url: '/api/PaymentList/payType',
-        params: {parentCode: config.parentCode},
-        elementId: config.elementId,
-        valueField: "code",
-        teㄴxtField: "value",
-        includeAllOption: true, // "전체" 옵션 사용
-        // defaultValue: "001" // 기본 선택값 [대기]
-        });
-    });*/
-
     AjaxUtil.fillSelectOptions($('#SearchPayment'), 'system_code', 'all', false, 'Payment');
-
-    //사업장 코드
-    function bindSpjangcd() {
-      $.ajax({
-        url: '/api/PaymentList/bindSpjangcd',
-        type: 'GET',
-        async: false,
-        success: function (data) {
-          data2 = data.data;
-          const selectElement = document.getElementById('search_spjangcd');
-          if (selectElement) {
-            selectElement.value = data2; // value 속성으로 선택
-          }
-        }
-      })
-    }
 
     function downloadFile(fileList) {
       if (!fileList || fileList.length === 0) {

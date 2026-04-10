@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import mes.app.PaymentList.service.PaymentDetailService;
+import mes.app.common.TenantContext;
 import mes.domain.entity.User;
 import mes.domain.model.AjaxResult;
 //import mes.domain.repository.approval.TB_AA010ATCHRepository;
@@ -56,11 +57,11 @@ public class PaymentDetailController {
   @GetMapping("/read")
   public AjaxResult getPaymentList(@RequestParam(value = "startDate") String startDate,
                                    @RequestParam(value = "endDate") String endDate,
-                                   @RequestParam(value = "search_spjangcd", required = false) String spjangcd,
                                    @RequestParam(value = "SearchPayment", required = false) String SearchPayment,
                                    @RequestParam(value = "searchText", required = false) String searchText,
                                    Authentication auth) {
     AjaxResult result = new AjaxResult();
+    String spjangcd = TenantContext.get();
     log.info("결재 내역 read 들어온 데이터:startDate{}, endDate{}, spjangcd {}, SearchPayment {} ,searchUserNm {} ", startDate, endDate, spjangcd, SearchPayment, searchText);
 
     try {
