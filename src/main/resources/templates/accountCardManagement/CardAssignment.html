@@ -201,12 +201,12 @@
                 전표생성 취소
               </a>
             </li>
-            <li class="right_align rpt" style="margin-right: 5px">
-              <a class="btn btn-delete" id="btnBulkEdit" title="저장">
+           <!-- <li class="right_align rpt" style="margin-right: 5px">
+              <a class="btn btn-delete" id="btnCardAssSave" title="저장">
                 <img alt="저장 아이콘" th:src="@{/images/icon/ico-edit.svg}">
                 저장
               </a>
-            </li>
+            </li>-->
             <!--<li class="right_align rpt" style="margin-right: 5px">
               <a class="btn btn-delete" id="btnEdit" title="수정">
                 <img alt="수정 아이콘" src="/images/icon/ico-edit.svg">
@@ -352,9 +352,34 @@
       selectionMode: wijmo.grid.SelectionMode.Cell,
       isReadOnly: false,
       imeEnabled: true,
+      frozenColumns: 2,
       formatItem: (s, e) => {
        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
         e.cell.style.textAlign = 'center';
+       }
+       if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+        const row = s.rows[e.row];
+        if (row instanceof wijmo.grid.GroupRow) {
+         e.cell.style.overflow = 'visible';
+         e.cell.style.whiteSpace = 'nowrap';
+         e.cell.style.textOverflow = 'clip';
+        }
+       }
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+        const binding = s.columns[e.col].binding;
+
+        // 기본값 먼저 초기화
+        e.cell.style.textAlign = 'center';
+        e.cell.style.color = '';
+        e.cell.style.fontWeight = '';
+
+        // 강조할 헤더만 다시 적용
+        if (
+         binding === 'accnm2'
+        ) {
+         e.cell.style.color = '#5567ff';
+         e.cell.style.fontWeight = 'bold';
+        }
        }
       },
       columns: [
@@ -379,7 +404,7 @@
        {binding: 'mijdate', header: '전표일자', width: 100, align: 'center', isReadOnly: true},
 
        {binding: 'biz_no', header: 'biz_no', visible: false},
-       {binding: 'card_no', header: 'card_no', visible: false},
+       {binding: 'card_no', header: '카드번호', width: 160, align: 'left', isReadOnly: true},
        {binding: 'biz_no', header: 'biz_no', visible: false},
        {binding: 'bnkcode', header: 'bnkcode', visible: false},
        {binding: 'buy_sum', header: '승인금액', width: 160, align: 'left', isReadOnly: true},
@@ -393,6 +418,8 @@
        {binding: 'it1nm', header: '항', width: 100, align: 'left', isReadOnly: true},
        {binding: 'it2cd', header: '목코드', visible: false},
        {binding: 'it2nm', header: '목', width: 100, align: 'left', isReadOnly: true},
+       {binding: 'acccd2', header: '상대계정코드', visible: false },
+       {binding: 'accnm2', header: '상대계정명', width: 150, align: 'left', isReadOnly: false },
        {binding: 'summy', header: '산출내역', width: 200, align: 'left', isReadOnly: true},
        {binding: 'mssec', header: '재원코드', visible: false},
        {binding: 'mssecnm', header: '재원', width: 100, align: 'left',},
@@ -433,8 +460,226 @@
       }, 0);
      });
 
+     // beginningEdit 제거하고 keydown으로 통일
+     _this.grid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+
+      const g = _this.grid;
+      const sel = g.selection;
+      if (!sel || sel.row < 0 || sel.col < 0) return;
+
+      const col = g.columns[sel.col];
+      if (!col) return;
+
+      e.preventDefault();
+
+      let item = g.rows[sel.row].dataItem;
+
+      let inputValue = '';
+      if (g.activeEditor) {
+       inputValue = g.activeEditor.value ? g.activeEditor.value.trim() : '';
+      } else {
+       inputValue = g.getCellData(sel.row, sel.col, true);
+       inputValue = inputValue ? inputValue.toString().trim() : '';
+      }
+
+      g.finishEditing();
+
+      // accnm2 엔터 → 상대계정 팝업
+      if (col.binding === 'accnm2') {
+       item.accnm2 = inputValue;
+       _this.searchAccnm2(item, sel.row);
+       return;
+      }
+
+      // 적요에서 엔터 → 비고로 이동
+      if (col.binding === 'subject') {
+       _this.moveToCellAndEdit(sel.row, 'remark');
+       return;
+      }
+
+      // 비고에서 엔터 → 다음 행 상대계정으로 이동
+      if (col.binding === 'remark') {
+       const nextRow = sel.row + 1;
+       if (nextRow < g.rows.length) {
+        _this.moveToCellAndEdit(nextRow, 'accnm2');
+       }
+       return;
+      }
+
+      // 그 외 일반 이동
+      const nextPos = _this.findNextEditableCell(sel.row, sel.col);
+      if (!nextPos) return;
+
+      g.select(nextPos.row, nextPos.col);
+      g.scrollIntoView(nextPos.row, nextPos.col, true);
+      g.startEditing(true);
+     });
+
     }//init
 
+    // 상대계정 조회
+    searchAccnm2(item, rowIndex) {
+     let _this = this;
+     let url = '/api/account_management/card_history/findAccnm';
+     let data = {
+      accnm: item.accnm2,
+      type: 'account'
+     };
+
+     let fnsuccess = function (res) {
+      let list = res.data || [];
+
+      if (!list || list.length === 0) {
+       Alert.alert('', '상대계정 조회 결과가 없습니다.');
+       return;
+      }
+
+      _this.showAccnm2Popup(list, rowIndex);
+     };
+
+     AjaxUtil.getAsyncData(url, data, fnsuccess);
+    }
+
+    showAccnm2Popup(dataList, rowIndex) {
+     let _this = this;
+
+     _this.selectedRowIndexForPopup = rowIndex;
+
+     if (_this.accnm2Popup) {
+      _this.accnm2Popup.close();
+      _this.accnm2Popup = null;
+     }
+
+     let content = tmpl('accnmTemplate', {});
+
+     _this.accnm2Popup = new PopupDraggable('상대계정 조회');
+     _this.accnm2Popup.open({ width: 700, height: 420, $content: $(content) });
+
+     _this.accGrid2 = new wijmo.grid.FlexGrid('#AccGrid', {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: [
+       { binding: 'acccd', header: '관코드', width: 100, align: 'center' },
+       { binding: 'accnm', header: '관명', width: '*', align: 'left' }
+      ],
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+
+     _this.accGrid2.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const selectCurrentAccnm2 = function () {
+      let sel = _this.accGrid2.selection;
+      if (!sel || sel.row < 0) return;
+
+      let selectedItem = _this.accGrid2.rows[sel.row].dataItem;
+      _this.applyAccnm2Data(selectedItem, _this.selectedRowIndexForPopup);
+
+      if (_this.accnm2Popup) {
+       _this.accnm2Popup.close();
+       _this.accnm2Popup = null;
+      }
+
+      _this.accGrid2 = null;
+     };
+
+     setTimeout(function () {
+      if (_this.accGrid2 && _this.accGrid2.rows.length > 0) {
+       _this.accGrid2.select(0, 0);
+
+       setTimeout(function() {
+        if (_this.accGrid2) {
+         _this.accGrid2.hostElement.focus();
+         _this.accGrid2.select(0, 0);
+        }
+       }, 100);
+      }
+     }, 50);
+
+     _this.accGrid2.hostElement.addEventListener('dblclick', function () {
+      selectCurrentAccnm2();
+     });
+
+     _this.accGrid2.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectCurrentAccnm2();
+      }
+     });
+    }
+
+    applyAccnm2Data(selectedItem, rowIndex) {
+     let g = this.grid;
+     let rowItem = g.rows[rowIndex].dataItem;
+
+     rowItem.acccd2 = selectedItem.acccd || '';
+     rowItem.accnm2 = selectedItem.accnm || '';
+
+     // ✅ 다음 행에도 자동으로 상대계정 적용
+     const nextRowIndex = rowIndex + 1;
+     if (nextRowIndex < g.rows.length) {
+      let nextRowItem = g.rows[nextRowIndex].dataItem;
+      if (nextRowItem) {
+       nextRowItem.acccd2 = selectedItem.acccd || '';
+       nextRowItem.accnm2 = selectedItem.accnm || '';
+      }
+     }
+
+     g.collectionView.refresh();
+
+     // 다음 행의 상대계정(accnm2)으로 이동
+     if (nextRowIndex < g.rows.length) {
+      this.moveToCellAndEdit(nextRowIndex, 'accnm2');
+     }
+    }
+
+    //다음칸 이동 공통함수
+    moveToCellAndEdit(rowIndex, binding) {
+     let g = this.grid;
+     const nextCol = g.columns.getColumn(binding);
+     if (!nextCol) return;
+
+     setTimeout(() => {
+      g.select(rowIndex, nextCol.index);
+      g.scrollIntoView(rowIndex, nextCol.index, true);
+      g.focus();
+      g.startEditing(true);
+     }, 50);
+    }
+
+    findNextEditableCell(row, col) {
+     const g = this.grid;
+     const rowCount = g.rows.length;
+     const colCount = g.columns.length;
+
+     for (let r = row; r < rowCount; r++) {
+      let startCol = (r === row) ? col + 1 : 0;
+      for (let c = startCol; c < colCount; c++) {
+       if (this.isEditableCell(r, c)) {
+        return { row: r, col: c };
+       }
+      }
+     }
+     return null;
+    }
+
+    isEditableCell(row, col) {
+     const g = this.grid;
+     const column = g.columns[col];
+     const gridRow = g.rows[row];
+
+     if (!column || !gridRow) return false;
+     if (column.isReadOnly) return false;
+     if (!(gridRow instanceof wijmo.grid.Row)) return false;
+     if (!column.visible) return false;
+
+     return true;
+    }
+
+    //검색
     searchMainData() {
      let _this = this;
      let url = this.url + '/read';
@@ -452,13 +697,61 @@
 
      let fnsuccess = function (result) {
       if (result != null) {
-       _this.viewData.sourceCollection = result.data;
+
+       let applyData = function(data) {
+        _this.viewData = new wijmo.collections.CollectionView(data);
+
+        // paydate/paynum 있는 데이터가 하나라도 있을 때만 그룹핑
+        let hasGroupData = data.some(item => item.paydate && item.paynum);
+
+        if (hasGroupData) {
+         let gd = new wijmo.collections.PropertyGroupDescription(
+          null,
+          function (item) {
+           let date = item.paydate;
+           let num  = item.paynum;
+
+           if (!date && !num) return '미발행';
+
+           return '생성된 전표' + (date || '') + '/' + (num || '');
+          }
+         );
+         _this.viewData.groupDescriptions.push(gd);
+        }
+
+        _this.grid.itemsSource = _this.viewData;
+       };
+
+       // acccd2 없는 행만 보통예금으로 한 번에 조회 후 세팅
+       let needsDefault = (result.data || []).filter(item =>
+        !item.acccd2 || item.acccd2.trim() === ''
+       );
+
+       if (needsDefault.length > 0) {
+        AjaxUtil.getAsyncData(
+         '/api/account_management/card_history/findAccnm',
+         { accnm: '보통예금', type: 'account' },
+         function (res) {
+          let matched = (res.data || []).find(a => a.accnm === '보통예금') || res.data?.[0];
+          if (matched) {
+           needsDefault.forEach(item => {
+            item.acccd2 = matched.acccd;
+            item.accnm2 = matched.accnm;
+           });
+          }
+          // ✅ 보통예금 세팅 완료 후 적용
+          applyData(result.data);
+         }
+        );
+       } else {
+        applyData(result.data);
+       }
       }
      };
      AjaxUtil.getAsyncData(url, data, fnsuccess);
-
     }
-    newCardAssignmentSave(){
+    //지급전표 생성
+    newCardAssignmentSave() {
      let _this = this;
 
      let items = _this.viewData ? _this.viewData.items : [];
@@ -478,20 +771,39 @@
       return;
      }
 
-     let data = {
+     // ✅ 1. 먼저 저장 (pay_acccd2/pay_accnm2 UPDATE)
+     let saveData = {
       items: JSON.stringify(selectedItems)
      };
 
-     let fnsuccess = function (res) {
-      if (res.success) {
-       Notify.success('전표가 생성되었습니다.');
-       _this.searchMainData();
-      } else {
-       Alert.alert('', res.message || '전표 생성 중 오류가 발생했습니다.');
-      }
-     };
+     AjaxUtil.postAsyncData(
+      _this.url + '/save',
+      saveData,
+      function (saveRes) {
+       if (!saveRes.success) {
+        Alert.alert('', saveRes.message || '저장 중 오류가 발생했습니다.');
+        return;
+       }
 
-     AjaxUtil.postAsyncData(this.url + '/createPaymentSlip', data, fnsuccess);
+       // ✅ 2. 저장 성공 후 전표생성
+       let slipData = {
+        items: JSON.stringify(selectedItems)
+       };
+
+       AjaxUtil.postAsyncData(
+        _this.url + '/createPaymentSlip',
+        slipData,
+        function (res) {
+         if (res.success) {
+          Notify.success('전표가 생성되었습니다.');
+          _this.searchMainData();
+         } else {
+          Alert.alert('', res.message || '전표 생성 중 오류가 발생했습니다.');
+         }
+        }
+       );
+      }
+     );
     }
 
     //지급 전표 생성 취소
@@ -563,12 +875,6 @@
     });
 
     //카드번호
-    // $('#accountName').on('keydown', function (e) {
-    //  if (e.key === 'Enter' || e.keyCode === 13) {
-    //   page.searchMainData();
-    //  }
-    // });
-
     CardInputHandler.bind({
      cardnumSelector: '#accountName',
      cardnmSelector: '#CardNm',
@@ -593,6 +899,7 @@
      e.preventDefault();
      page.newPaySlipCancel();
     });
+
 
    })
   </script>

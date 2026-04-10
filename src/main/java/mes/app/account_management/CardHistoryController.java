@@ -120,4 +120,12 @@ public class CardHistoryController {
 		return cardHistoryService.cancelSlip(items, userId);
 	}
 
+	@GetMapping("/mestHistory")
+	public AjaxResult mestHistory(){
+		List<Map<String, Object>> items = this.cardHistoryService.mestHistory();
+		AjaxResult result = new AjaxResult();
+		result.data = items;
+
+		return result;
+	}
 }

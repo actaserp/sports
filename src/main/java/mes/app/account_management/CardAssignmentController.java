@@ -48,4 +48,8 @@ public class CardAssignmentController {	//카드지급
 		return cardAssignmentService.PaymentCancelSlip(items, userId);
 	}
 
+	@PostMapping("/save")
+	public AjaxResult save(@RequestParam String items){
+		return cardAssignmentService.updateSelected(items);
+	}
 }

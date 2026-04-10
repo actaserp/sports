@@ -319,6 +319,14 @@
     </div>
   </script>
 
+  <!-- 재원 팝업 -->
+  <script type="text/x-tmpl" id="mssecTemplate">
+    <div class="content_wrap popup">
+      <section class="section">
+        <div id="MssecGrid" style="height:300px; display:block;"></div>
+      </section>
+    </div>
+  </script>
 </th:block>
 
 <th:block layout:fragment="scripts">
@@ -427,7 +435,8 @@
        {binding: 'accnm2', header: '상대계정명', width: 150, align: 'left', isReadOnly: false },
 
        {binding: 'summy', header: '산출내역', width: 200, align: 'left', isReadOnly: false},
-       {binding: 'mssec', header: '재원', width: 100, align: 'left', dataMap: mssecMap},
+       {binding: 'mssec', header: '재원코드', width: 100, visible: false},
+       {binding: 'mssecnm', header: '재원', width: 100, align: 'left', isReadOnly: false},
        {binding: 'subject', header: '적요', width: 200, align: 'left', isReadOnly: false},
        {binding: 'remark', header: '비고', width: 200, align: 'left', isReadOnly: false},
        {binding: 'slip_info', header: '전표일자/번호', width: 150, align: 'center', isReadOnly: true},
@@ -547,10 +556,9 @@
        }
       }
 
-      // 산출내역에서 엔터 -> 재원으로 이동 + 콤보 열기
-      if (col.binding === 'summy') {
-       item[col.binding] = inputValue;
-       _this.moveToMssecAndOpen(sel.row);
+      // 재원(mssecnm)에서 엔터 -> 재원 팝업 오픈
+      if (col.binding === 'mssecnm') {
+       _this.searchMssec(item, sel.row);
        return;
       }
 
@@ -582,6 +590,31 @@
       g.select(nextPos.row, nextPos.col);
       g.scrollIntoView(nextPos.row, nextPos.col, true);
       g.startEditing(true);
+     });
+
+     // 사업명 셀 진입 시 가맹점 히스토리 자동 적용
+     // init() 안의 beginningEdit 핸들러를 아래로 교체
+     _this.grid.beginningEdit.addHandler((s, e) => {
+      const col = s.columns[e.col];
+      const item = s.rows[e.row]?.dataItem;
+
+      if (!item || !col) return;
+
+      if (col.binding === 'busim' && !item.acccd && !item.it1cd && !item.it2cd) {
+
+       // ✅ 히스토리 적용 직후 재진입 방지
+       if (_this._applyingHistory) return;
+
+       const hist = _this.mestHistory?.[item.mest_nm];
+       if (hist) {
+        e.cancel = true;
+        _this._applyingHistory = true;  // 🔒 플래그 ON
+        _this.applyHistoryToRow(item, hist, e.row);
+        setTimeout(() => {
+         _this._applyingHistory = false; // 🔓 플래그 OFF
+        }, 200);
+       }
+      }
      });
 
     }//init
@@ -1105,11 +1138,113 @@
      rowItem.acccd2 = selectedItem.acccd || '';
      rowItem.accnm2 = selectedItem.accnm || '';
 
-     this.updateRowSelected(rowItem);
+     // ✅ 다음 행에도 자동으로 상대계정 적용
+     const nextRowIndex = rowIndex + 1;
+     if (nextRowIndex < g.rows.length) {
+      let nextRowItem = g.rows[nextRowIndex].dataItem;
+      if (nextRowItem) {
+       nextRowItem.acccd2 = selectedItem.acccd || '';
+       nextRowItem.accnm2 = selectedItem.accnm || '';
+       this.updateRowSelected(nextRowItem);
+      }
+     }
 
+     this.updateRowSelected(rowItem);
      g.collectionView.refresh();
+
      // 다음 컬럼으로 이동
      this.moveToCellAndEdit(rowIndex, 'summy');
+    }
+
+    //재원 조회
+    searchMssec(item, rowIndex) {
+     let _this = this;
+     // 빈값(choose) 제외하고 실제 옵션만
+     let list = _this.mssecOptions.filter(opt => opt.value !== '');
+
+     if (!list || list.length === 0) {
+      Alert.alert('', '재원 목록이 없습니다.');
+      return;
+     }
+
+     _this.showMssecPopup(list, rowIndex);
+    }
+
+    showMssecPopup(dataList, rowIndex) {
+     let _this = this;
+
+     _this.selectedRowIndexForPopup = rowIndex;
+
+     if (_this.mssecPopup) {
+      _this.mssecPopup.close();
+      _this.mssecPopup = null;
+     }
+
+     let content = tmpl('mssecTemplate', {});
+
+     _this.mssecPopup = new PopupDraggable('재원 조회');
+     _this.mssecPopup.open({ width: 400, height: 350, $content: $(content) });
+
+     _this.mssecGrid = new wijmo.grid.FlexGrid('#MssecGrid', {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: [
+       { binding: 'value', header: '코드', width: 100, align: 'center' },
+       { binding: 'text', header: '재원명', width: '*', align: 'left' }
+      ],
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+
+     _this.mssecGrid.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const selectCurrent = function () {
+      let sel = _this.mssecGrid.selection;
+      if (!sel || sel.row < 0) return;
+
+      let selectedItem = _this.mssecGrid.rows[sel.row].dataItem;
+      _this.applyMssecData(selectedItem, _this.selectedRowIndexForPopup);
+
+      if (_this.mssecPopup) {
+       _this.mssecPopup.close();
+       _this.mssecPopup = null;
+      }
+      _this.mssecGrid = null;
+     };
+
+     // 첫 행 선택 + 포커스
+     setTimeout(function () {
+      if (_this.mssecGrid && _this.mssecGrid.rows.length > 0) {
+       _this.mssecGrid.select(0, 0);
+       _this.mssecGrid.focus();
+      }
+     }, 50);
+
+     // 더블클릭 선택
+     _this.mssecGrid.hostElement.addEventListener('dblclick', selectCurrent);
+
+     // Enter 선택
+     _this.mssecGrid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectCurrent();
+      }
+     });
+    }
+
+    applyMssecData(selectedItem, rowIndex) {
+     let g = this.grid;
+     let rowItem = g.rows[rowIndex].dataItem;
+
+     rowItem.mssec = selectedItem.value || '';    // 코드 저장 (숨김 컬럼)
+     rowItem.mssecnm = selectedItem.text || '';  // 이름 저장 (표시 컬럼)
+
+     this.updateRowSelected(rowItem);
+     g.collectionView.refresh();
+
+     this.moveToCellAndEdit(rowIndex, 'subject');
     }
 
     //다음칸 이동 공통함수
@@ -1124,35 +1259,6 @@
       g.scrollIntoView(rowIndex, nextCol.index, true);
       g.focus(); // 또는 g.hostElement.focus();
       g.startEditing(true);
-     }, 50);
-    }
-
-    moveToMssecAndOpen(rowIndex) {
-     let g = this.grid;
-     const col = g.columns.getColumn('mssec');
-
-     if (!col) return;
-
-     setTimeout(() => {
-      g.select(rowIndex, col.index);
-      g.scrollIntoView(rowIndex, col.index, true);
-      g.focus();
-      g.startEditing(true);
-
-      setTimeout(() => {
-       const editor = g.activeEditor;
-       if (editor) {
-        editor.focus();
-        editor.dispatchEvent(new Event('click')); // 클릭 이벤트 발생
-        editor.dispatchEvent(new KeyboardEvent('keydown', {
-         key: 'ArrowDown',
-         code: 'ArrowDown',
-         keyCode: 40,
-         which: 40,
-         bubbles: true
-        })); // 아래 화살표 키 이벤트 발생
-       }
-      }, 30);
      }, 50);
     }
 
@@ -1211,7 +1317,47 @@
 
      return true;
     }
+    //관/항/목/상대계정만 캐싱
+    buildMestHistory(dataList) {
+     this.mestHistory = {};
+     if (!dataList) return;
 
+     dataList.forEach(item => {
+      const key = item.mest_nm;
+      if (!key) return;
+
+      // 관/항/목이 모두 입력된 행만 히스토리로 저장
+      if (item.acccd && item.it1cd && item.it2cd) {
+       this.mestHistory[key] = {
+        acccd:  item.acccd,
+        accnm:  item.accnm,
+        it1cd:  item.it1cd,
+        it1nm:  item.it1nm,
+        it2cd:  item.it2cd,
+        it2nm:  item.it2nm,
+        acccd2: item.acccd2,
+        accnm2: item.accnm2,
+       };
+      }
+     });
+    }
+    applyHistoryToRow(rowItem, hist, rowIndex) {
+     rowItem.acccd  = hist.acccd  || '';
+     rowItem.accnm  = hist.accnm  || '';
+     rowItem.it1cd  = hist.it1cd  || '';
+     rowItem.it1nm  = hist.it1nm  || '';
+     rowItem.it2cd  = hist.it2cd  || '';
+     rowItem.it2nm  = hist.it2nm  || '';
+     rowItem.acccd2 = hist.acccd2 || '';
+     rowItem.accnm2 = hist.accnm2 || '';
+
+     this.grid.collectionView.refresh();
+
+     // 적용 후 사업명으로 커서 이동 (사업명은 직접 입력)
+     this.moveToCellAndEdit(rowIndex, 'busim');
+    }
+
+    //검색
     searchMainData() {
      let _this = this;
      let url = this.url + '/read';
@@ -1230,6 +1376,28 @@
      let fnsuccess = function (result) {
       if (result != null) {
        _this.viewData.sourceCollection = result.data;
+       // searchMainData() fnsuccess 안에 추가
+       _this.buildMestHistory(result.data);
+
+      // 현재 기간에 히스토리 없는 경우 서버에서 보완 조회
+       AjaxUtil.getAsyncData(_this.url + '/mestHistory', {}, function(res) {
+        if (res.data) {
+         res.data.forEach(item => {
+          if (!_this.mestHistory[item.mest_nm]) {
+           _this.mestHistory[item.mest_nm] = {
+            acccd:  item.acccd,
+            accnm:  item.accnm,
+            it1cd:  item.it1cd,
+            it1nm:  item.it1nm,
+            it2cd:  item.it2cd,
+            it2nm:  item.it2nm,
+            acccd2: item.acccd2,
+            accnm2: item.accnm2,
+           };
+          }
+         });
+        }
+       });
       }
      };
      AjaxUtil.getAsyncData(url, data, fnsuccess);

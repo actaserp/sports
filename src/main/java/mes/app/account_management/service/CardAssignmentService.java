@@ -72,6 +72,8 @@ public class CardAssignmentService {
 				mijnum,
 				remark,
 				subject,
+				pay_acccd2 as acccd2,
+			  pay_accnm2 as accnm2,
 				STUFF(STUFF(paydate,5,0,'-'),8,0,'-') as paydate, 
 				paynum,
 				pay_cancel_yn,
@@ -236,7 +238,7 @@ public class CardAssignmentService {
 		dicParam.addValue("spjangcd", spjangcd);
 		dicParam.addValue("spdate", paydate);
 		dicParam.addValue("spnum", paynum);
-		dicParam.addValue("tiosec", "2");
+		dicParam.addValue("tiosec", "3");
 		dicParam.addValue("busipur", "3");
 		dicParam.addValue("spoccu", "AA");
 		dicParam.addValue("cashyn", "0");
@@ -337,7 +339,7 @@ public class CardAssignmentService {
 		dicParam.addValue("dramt", buySum);
 		dicParam.addValue("cramt", BigDecimal.ZERO);
 		dicParam.addValue("mssec", getString(item, "mssec"));
-		dicParam.addValue("tiosec", "2");
+		dicParam.addValue("tiosec", "3");
 		dicParam.addValue("summy", getString(item, "summy"));
 		dicParam.addValue("spoccu", "AA");
 		dicParam.addValue("inputdate", LocalDateTime.now());
@@ -369,7 +371,7 @@ public class CardAssignmentService {
 		dicParam.addValue("dramt", BigDecimal.ZERO);
 		dicParam.addValue("cramt", totalAmount);
 		dicParam.addValue("mssec", "");
-		dicParam.addValue("tiosec", "2");
+		dicParam.addValue("tiosec", "3");
 		dicParam.addValue("summy", "카드대금 지급");
 		dicParam.addValue("spoccu", "AA");
 		dicParam.addValue("inputdate", LocalDateTime.now());
@@ -764,6 +766,66 @@ public class CardAssignmentService {
 		} else {
 			return Collections.emptyMap();
 		}
+	}
+
+
+	public AjaxResult updateSelected(String itemsJson) {
+		AjaxResult result = new AjaxResult();
+		try {
+			ObjectMapper mapper = new ObjectMapper();
+			List<Map<String, Object>> items = mapper.readValue(itemsJson, new TypeReference<>() {});
+
+			String spjangcd = TenantContext.get();
+			Map<String, String> bizInfo = getBizInfoBySpjangcd(spjangcd);
+			String custcd = bizInfo.get("custcd");
+
+			String sql = """
+            UPDATE TB_bank_cdsave
+            SET 
+                pay_acccd2 = :pay_acccd2,
+                pay_accnm2 = :pay_accnm2
+            WHERE custcd   = :custcd
+              AND spjangcd = :spjangcd
+              AND bnkcode  = :bnkcode
+              AND biz_no   = :biz_no
+              AND apv_dt   = :apv_dt
+              AND apv_no   = :apv_no
+        """;
+
+			for (Map<String, Object> item : items) {
+				MapSqlParameterSource param = new MapSqlParameterSource();
+				param.addValue("pay_acccd2", item.get("acccd2"));
+				param.addValue("pay_accnm2", item.get("accnm2"));
+				param.addValue("custcd",     custcd);
+				param.addValue("spjangcd",   spjangcd);
+				param.addValue("bnkcode",    item.get("bnkcode"));
+				param.addValue("biz_no",     item.get("biz_no"));
+				param.addValue("apv_dt", String.valueOf(item.get("apv_dt")).replace("-", ""));
+				param.addValue("apv_no",     item.get("apv_no"));
+
+//				log.info("[카드지급 저장] pay_acccd2={}, pay_accnm2={}, custcd={}, spjangcd={}, bnkcode={}, biz_no={}, apv_dt={}, apv_no={}",
+//					item.get("acccd2"),
+//					item.get("accnm2"),
+//					custcd,
+//					spjangcd,
+//					item.get("bnkcode"),
+//					item.get("biz_no"),
+//					String.valueOf(item.get("apv_dt")).replace("-", ""),
+//					item.get("apv_no")
+//				);
+
+				int updated = sqlRunner.execute(sql, param);
+				log.info("[카드지급 저장] UPDATE 결과 = {} 건", updated);
+			}
+
+			result.success = true;
+			result.message = "저장되었습니다.";
+
+		} catch (Exception e) {
+			result.success = false;
+			result.message = e.getMessage();
+		}
+		return result;
 	}
 
 }

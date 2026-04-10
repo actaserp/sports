@@ -111,4 +111,12 @@ public class BankAssignmentController {	//전표 분개
 		return result;
 	}
 
+	@GetMapping("/bankAccHistory")
+	public AjaxResult bankAccHistory(){
+		List<Map<String, Object>> items = this.bankAssignmentService.bankAccHistory();
+		AjaxResult result = new AjaxResult();
+		result.data = items;
+		return result;
+	}
+
 }

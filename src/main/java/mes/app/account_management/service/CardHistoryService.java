@@ -884,7 +884,7 @@ public class CardHistoryService {
 
 		return result;
 	}
-
+	//전표생성
 	@Transactional
 	public AjaxResult createSlip(String items, String userId) {
 
@@ -909,11 +909,11 @@ public class CardHistoryService {
 
 			// 필수값 검증
 			for (Map<String, Object> item : itemList) {
-				String busim = getString(item, "busim");   // 사업명
-				String accnm = getString(item, "accnm");   // 관
-				String it1nm = getString(item, "it1nm");   // 항
-				String it2nm = getString(item, "it2nm");   // 목
-				String mssec = getString(item, "mssec");   // 재원
+				String busim = getString(item, "busim");
+				String accnm = getString(item, "accnm");
+				String it1nm = getString(item, "it1nm");
+				String it2nm = getString(item, "it2nm");
+				String mssec = getString(item, "mssec");
 
 				if (isBlank(busim) || isBlank(accnm) || isBlank(it1nm) || isBlank(it2nm) || isBlank(mssec)) {
 					result.success = false;
@@ -927,109 +927,105 @@ public class CardHistoryService {
 			String custcd = bizInfo.get("custcd");
 			String spjangnm = bizInfo.get("spjangnm");
 
-			Map<String, Object> firstItem = itemList.get(0);
-
-			String apvDt = getString(firstItem, "apv_dt");
-			String spdate = (apvDt != null && !apvDt.isBlank())
-												? apvDt.replace("-", "")
-												: LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-			String spnum = String.format("%04d", getNextSpnumInt());
-
 			// =========================
-			// 헤더 1건 생성
+			// 건별로 루프 처리
 			// =========================
-
-
-			MapSqlParameterSource dicParam = new MapSqlParameterSource();
-			dicParam.addValue("custcd", custcd);
-			dicParam.addValue("spjangcd", spjangcd);
-			dicParam.addValue("spdate", spdate);
-			dicParam.addValue("spnum", spnum);
-			dicParam.addValue("tiosec", "2");
-			dicParam.addValue("busipur", "3");
-			dicParam.addValue("spoccu", "AA");
-			dicParam.addValue("cashyn", "0");
-			dicParam.addValue("bsdate", getString(firstItem, "bsdate"));
-			dicParam.addValue("bseccd", getString(firstItem, "bseccd"));
-			dicParam.addValue("busicd", getString(firstItem, "buiscd"));
-			dicParam.addValue("remark", getString(firstItem, "remark"));
-			dicParam.addValue("subject", getString(firstItem, "subject"));
-			dicParam.addValue("spjangnm", spjangnm);
-			dicParam.addValue("inputdate", LocalDateTime.now());
-			dicParam.addValue("inputid", userId);
-
-			String checkSql = """
-    SELECT COUNT(*) AS cnt
-    FROM tb_aa009
-    WHERE custcd   = :custcd
-      AND spjangcd = :spjangcd
-      AND spdate   = :spdate
-      AND spnum    = :spnum
-    """;
-
-			List<Map<String, Object>> checkResult = this.sqlRunner.getRows(checkSql, dicParam);
-			int count = ((Number) checkResult.get(0).get("cnt")).intValue();
-
-			if (count > 0) {
-				String updateSql = """
-        UPDATE tb_aa009
-        SET
-            tiosec    = :tiosec,
-            busipur   = :busipur,
-            spoccu    = :spoccu,
-            cashyn    = :cashyn,
-            bsdate    = :bsdate,
-            bseccd    = :bseccd,
-            busicd    = :busicd,
-            remark    = :remark,
-            subject   = :subject,
-            spjangnm  = :spjangnm,
-            inputdate = :inputdate,
-            inputid   = :inputid
-        WHERE custcd   = :custcd
-          AND spjangcd = :spjangcd
-          AND spdate   = :spdate
-          AND spnum    = :spnum
-        """;
-				this.sqlRunner.execute(updateSql, dicParam);
-			} else {
-				String insertSql = """
-        INSERT INTO tb_aa009 (
-            custcd, spjangcd, spdate, spnum,
-            tiosec, busipur, spoccu, cashyn,
-            bsdate, bseccd, busicd, remark,
-            subject, spjangnm, inputdate, inputid
-        ) VALUES (
-            :custcd, :spjangcd, :spdate, :spnum,
-            :tiosec, :busipur, :spoccu, :cashyn,
-            :bsdate, :bseccd, :busicd, :remark,
-            :subject, :spjangnm, :inputdate, :inputid
-        )
-        """;
-				this.sqlRunner.execute(insertSql, dicParam);
-			}
-
-			// =========================
-			// 상세 여러 건 생성
-			// =========================
-			int seq = 1;
-
 			for (Map<String, Object> item : itemList) {
+
+				// ✅ spnum, spdate, seq 건별로 생성
+				String apvDt = getString(item, "apv_dt");
+				String spdate = (apvDt != null && !apvDt.isBlank())
+													? apvDt.replace("-", "")
+													: LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+				String spnum = String.format("%04d", getNextSpnumInt());
+				int seq = 1;
 
 				BigDecimal buySum = getBigDecimal(item, "buy_sum");
 				String cardNum = getString(item, "card_no");
 				String summy = getString(item, "summy");
 				String bizNo = getString(item, "biz_no");
 
+				// =========================
+				// 헤더 건별 생성 (tb_aa009)
+				// =========================
+				MapSqlParameterSource dicParam = new MapSqlParameterSource();
+				dicParam.addValue("custcd", custcd);
+				dicParam.addValue("spjangcd", spjangcd);
+				dicParam.addValue("spdate", spdate);
+				dicParam.addValue("spnum", spnum);
+				dicParam.addValue("tiosec", "2");
+				dicParam.addValue("busipur", "3");
+				dicParam.addValue("spoccu", "AA");
+				dicParam.addValue("cashyn", "0");
+				dicParam.addValue("bsdate", getString(item, "bsdate"));      // ✅ firstItem → item
+				dicParam.addValue("bseccd", getString(item, "bseccd"));      // ✅ firstItem → item
+				dicParam.addValue("busicd", getString(item, "buiscd"));      // ✅ firstItem → item
+				dicParam.addValue("remark", getString(item, "remark"));      // ✅ firstItem → item
+				dicParam.addValue("subject", getString(item, "subject"));    // ✅ firstItem → item
+				dicParam.addValue("spjangnm", spjangnm);
+				dicParam.addValue("inputdate", LocalDateTime.now());
+				dicParam.addValue("inputid", userId);
+
+				String checkSql = """
+                SELECT COUNT(*) AS cnt
+                FROM tb_aa009
+                WHERE custcd   = :custcd
+                  AND spjangcd = :spjangcd
+                  AND spdate   = :spdate
+                  AND spnum    = :spnum
+                """;
+
+				List<Map<String, Object>> checkResult = this.sqlRunner.getRows(checkSql, dicParam);
+				int count = ((Number) checkResult.get(0).get("cnt")).intValue();
+
+				if (count > 0) {
+					String updateSql = """
+                    UPDATE tb_aa009
+                    SET
+                        tiosec    = :tiosec,
+                        busipur   = :busipur,
+                        spoccu    = :spoccu,
+                        cashyn    = :cashyn,
+                        bsdate    = :bsdate,
+                        bseccd    = :bseccd,
+                        busicd    = :busicd,
+                        remark    = :remark,
+                        subject   = :subject,
+                        spjangnm  = :spjangnm,
+                        inputdate = :inputdate,
+                        inputid   = :inputid
+                    WHERE custcd   = :custcd
+                      AND spjangcd = :spjangcd
+                      AND spdate   = :spdate
+                      AND spnum    = :spnum
+                    """;
+					this.sqlRunner.execute(updateSql, dicParam);
+				} else {
+					String insertSql = """
+                    INSERT INTO tb_aa009 (
+                        custcd, spjangcd, spdate, spnum,
+                        tiosec, busipur, spoccu, cashyn,
+                        bsdate, bseccd, busicd, remark,
+                        subject, spjangnm, inputdate, inputid
+                    ) VALUES (
+                        :custcd, :spjangcd, :spdate, :spnum,
+                        :tiosec, :busipur, :spoccu, :cashyn,
+                        :bsdate, :bseccd, :busicd, :remark,
+                        :subject, :spjangnm, :inputdate, :inputid
+                    )
+                    """;
+					this.sqlRunner.execute(insertSql, dicParam);
+				}
+
 				// =============================
-				// 1. 차변
+				// 차변 (tb_aa010)
 				// =============================
 				MapSqlParameterSource debitParam = new MapSqlParameterSource();
 				debitParam.addValue("custcd", custcd);
 				debitParam.addValue("spjangcd", spjangcd);
 				debitParam.addValue("spdate", spdate);
 				debitParam.addValue("spnum", spnum);
-				debitParam.addValue("spseq", String.format("%04d", seq++));
+				debitParam.addValue("spseq", String.format("%04d", seq++));  // 0001
 				debitParam.addValue("spjangnm", spjangnm);
 				debitParam.addValue("bumuncd", "AA");
 				debitParam.addValue("acccd", getString(item, "acccd"));
@@ -1045,75 +1041,75 @@ public class CardHistoryService {
 				debitParam.addValue("spoccu", "AA");
 				debitParam.addValue("inputdate", LocalDateTime.now());
 				debitParam.addValue("rowseq", new BigDecimal(1));
-				debitParam.addValue("cardnum", null);  // 차변은 카드번호 없음
+				debitParam.addValue("cardnum", null);
 
 				String debitCheckSql = """
-    SELECT COUNT(*) AS cnt
-    FROM tb_aa010
-    WHERE custcd   = :custcd
-      AND spjangcd = :spjangcd
-      AND spdate   = :spdate
-      AND spnum    = :spnum
-      AND spseq    = :spseq
-    """;
+                SELECT COUNT(*) AS cnt
+                FROM tb_aa010
+                WHERE custcd   = :custcd
+                  AND spjangcd = :spjangcd
+                  AND spdate   = :spdate
+                  AND spnum    = :spnum
+                  AND spseq    = :spseq
+                """;
 
 				List<Map<String, Object>> debitCheck = this.sqlRunner.getRows(debitCheckSql, debitParam);
 				int debitCount = ((Number) debitCheck.get(0).get("cnt")).intValue();
 
 				if (debitCount > 0) {
 					String updateSql = """
-        UPDATE tb_aa010
-        SET
-            spjangnm  = :spjangnm,
-            bumuncd   = :bumuncd,
-            acccd     = :acccd,
-            accnm     = :accnm,
-            it1cd     = :it1cd,
-            it2cd     = :it2cd,
-            drcr      = :drcr,
-            dramt     = :dramt,
-            cramt     = :cramt,
-            mssec     = :mssec,
-            tiosec    = :tiosec,
-            summy     = :summy,
-            spoccu    = :spoccu,
-            inputdate = :inputdate,
-            rowseq    = :rowseq
-        WHERE custcd   = :custcd
-          AND spjangcd = :spjangcd
-          AND spdate   = :spdate
-          AND spnum    = :spnum
-          AND spseq    = :spseq
-        """;
+                    UPDATE tb_aa010
+                    SET
+                        spjangnm  = :spjangnm,
+                        bumuncd   = :bumuncd,
+                        acccd     = :acccd,
+                        accnm     = :accnm,
+                        it1cd     = :it1cd,
+                        it2cd     = :it2cd,
+                        drcr      = :drcr,
+                        dramt     = :dramt,
+                        cramt     = :cramt,
+                        mssec     = :mssec,
+                        tiosec    = :tiosec,
+                        summy     = :summy,
+                        spoccu    = :spoccu,
+                        inputdate = :inputdate,
+                        rowseq    = :rowseq
+                    WHERE custcd   = :custcd
+                      AND spjangcd = :spjangcd
+                      AND spdate   = :spdate
+                      AND spnum    = :spnum
+                      AND spseq    = :spseq
+                    """;
 					this.sqlRunner.execute(updateSql, debitParam);
 				} else {
 					String insertSql = """
-        INSERT INTO tb_aa010 (
-            custcd, spjangcd, spdate, spnum, spseq,
-            spjangnm, bumuncd, acccd, accnm,
-            it1cd, it2cd, drcr, dramt, cramt,
-            mssec, tiosec, summy, spoccu,
-            inputdate, rowseq
-        ) VALUES (
-            :custcd, :spjangcd, :spdate, :spnum, :spseq,
-            :spjangnm, :bumuncd, :acccd, :accnm,
-            :it1cd, :it2cd, :drcr, :dramt, :cramt,
-            :mssec, :tiosec, :summy, :spoccu,
-            :inputdate, :rowseq
-        )
-        """;
+                    INSERT INTO tb_aa010 (
+                        custcd, spjangcd, spdate, spnum, spseq,
+                        spjangnm, bumuncd, acccd, accnm,
+                        it1cd, it2cd, drcr, dramt, cramt,
+                        mssec, tiosec, summy, spoccu,
+                        inputdate, rowseq
+                    ) VALUES (
+                        :custcd, :spjangcd, :spdate, :spnum, :spseq,
+                        :spjangnm, :bumuncd, :acccd, :accnm,
+                        :it1cd, :it2cd, :drcr, :dramt, :cramt,
+                        :mssec, :tiosec, :summy, :spoccu,
+                        :inputdate, :rowseq
+                    )
+                    """;
 					this.sqlRunner.execute(insertSql, debitParam);
 				}
 
 				// =============================
-				// 2. 대변
+				// 대변 (tb_aa010)
 				// =============================
 				MapSqlParameterSource creditParam = new MapSqlParameterSource();
 				creditParam.addValue("custcd", custcd);
 				creditParam.addValue("spjangcd", spjangcd);
 				creditParam.addValue("spdate", spdate);
 				creditParam.addValue("spnum", spnum);
-				creditParam.addValue("spseq", String.format("%04d", seq++));
+				creditParam.addValue("spseq", String.format("%04d", seq++));  // 0002
 				creditParam.addValue("spjangnm", spjangnm);
 				creditParam.addValue("bumuncd", "AA");
 				creditParam.addValue("acccd", "2152");
@@ -1132,67 +1128,67 @@ public class CardHistoryService {
 				creditParam.addValue("rowseq", new BigDecimal(2));
 
 				String creditCheckSql = """
-    SELECT COUNT(*) AS cnt
-    FROM tb_aa010
-    WHERE custcd   = :custcd
-      AND spjangcd = :spjangcd
-      AND spdate   = :spdate
-      AND spnum    = :spnum
-      AND spseq    = :spseq
-    """;
+                SELECT COUNT(*) AS cnt
+                FROM tb_aa010
+                WHERE custcd   = :custcd
+                  AND spjangcd = :spjangcd
+                  AND spdate   = :spdate
+                  AND spnum    = :spnum
+                  AND spseq    = :spseq
+                """;
 
 				List<Map<String, Object>> creditCheck = this.sqlRunner.getRows(creditCheckSql, creditParam);
 				int creditCount = ((Number) creditCheck.get(0).get("cnt")).intValue();
 
 				if (creditCount > 0) {
 					String updateSql = """
-        UPDATE tb_aa010
-        SET
-            spjangnm  = :spjangnm,
-            bumuncd   = :bumuncd,
-            acccd     = :acccd,
-            accnm     = :accnm,
-            cardnum   = :cardnum,
-            it1cd     = :it1cd,
-            it2cd     = :it2cd,
-            drcr      = :drcr,
-            dramt     = :dramt,
-            cramt     = :cramt,
-            mssec     = :mssec,
-            tiosec    = :tiosec,
-            summy     = :summy,
-            spoccu    = :spoccu,
-            inputdate = :inputdate,
-            rowseq    = :rowseq
-        WHERE custcd   = :custcd
-          AND spjangcd = :spjangcd
-          AND spdate   = :spdate
-          AND spnum    = :spnum
-          AND spseq    = :spseq
-        """;
+                    UPDATE tb_aa010
+                    SET
+                        spjangnm  = :spjangnm,
+                        bumuncd   = :bumuncd,
+                        acccd     = :acccd,
+                        accnm     = :accnm,
+                        cardnum   = :cardnum,
+                        it1cd     = :it1cd,
+                        it2cd     = :it2cd,
+                        drcr      = :drcr,
+                        dramt     = :dramt,
+                        cramt     = :cramt,
+                        mssec     = :mssec,
+                        tiosec    = :tiosec,
+                        summy     = :summy,
+                        spoccu    = :spoccu,
+                        inputdate = :inputdate,
+                        rowseq    = :rowseq
+                    WHERE custcd   = :custcd
+                      AND spjangcd = :spjangcd
+                      AND spdate   = :spdate
+                      AND spnum    = :spnum
+                      AND spseq    = :spseq
+                    """;
 					this.sqlRunner.execute(updateSql, creditParam);
 				} else {
 					String insertSql = """
-        INSERT INTO tb_aa010 (
-            custcd, spjangcd, spdate, spnum, spseq,
-            spjangnm, bumuncd, acccd, accnm, cardnum,
-            it1cd, it2cd, drcr, dramt, cramt,
-            mssec, tiosec, summy, spoccu,
-            inputdate, rowseq
-        ) VALUES (
-            :custcd, :spjangcd, :spdate, :spnum, :spseq,
-            :spjangnm, :bumuncd, :acccd, :accnm, :cardnum,
-            :it1cd, :it2cd, :drcr, :dramt, :cramt,
-            :mssec, :tiosec, :summy, :spoccu,
-            :inputdate, :rowseq
-        )
-        """;
+                    INSERT INTO tb_aa010 (
+                        custcd, spjangcd, spdate, spnum, spseq,
+                        spjangnm, bumuncd, acccd, accnm, cardnum,
+                        it1cd, it2cd, drcr, dramt, cramt,
+                        mssec, tiosec, summy, spoccu,
+                        inputdate, rowseq
+                    ) VALUES (
+                        :custcd, :spjangcd, :spdate, :spnum, :spseq,
+                        :spjangnm, :bumuncd, :acccd, :accnm, :cardnum,
+                        :it1cd, :it2cd, :drcr, :dramt, :cramt,
+                        :mssec, :tiosec, :summy, :spoccu,
+                        :inputdate, :rowseq
+                    )
+                    """;
+					this.sqlRunner.execute(insertSql, debitParam);  // ✅ creditParam 으로 확인 필요
 					this.sqlRunner.execute(insertSql, creditParam);
 				}
 
 				// 카드내역 업데이트
 				updateCardSlipInfo(bizNo, spdate, spnum);
-
 			}
 
 			result.success = true;
@@ -1447,4 +1443,51 @@ public class CardHistoryService {
 		}
 	}
 
+	public List<Map<String, Object>> mestHistory() {
+		MapSqlParameterSource sqlParam = new MapSqlParameterSource();
+		String spjangcd = TenantContext.get();
+		Map<String, String> bizInfo = getBizInfoBySpjangcd(spjangcd);
+		String custcd = bizInfo.get("custcd");
+
+		sqlParam.addValue("custcd",custcd);
+		sqlParam.addValue("spjangcd",spjangcd );
+
+		String sql = """
+        SELECT
+            mest_nm,
+            acccd,
+            accnm,
+            it1cd,
+            it1nm,
+            it2cd,
+            it2nm,
+            acccd2,
+            accnm2
+        FROM (
+            SELECT
+                mest_nm,
+                acccd,
+                accnm,
+                it1cd,
+                it1nm,
+                it2cd,
+                it2nm,
+                acccd2,
+                accnm2,
+                ROW_NUMBER() OVER (
+                    PARTITION BY mest_nm
+                    ORDER BY apv_dt DESC, apv_tm DESC
+                ) AS rn
+            FROM TB_bank_cdsave
+            WHERE custcd   = :custcd
+              AND spjangcd = :spjangcd
+              AND acccd    IS NOT NULL AND acccd   != ''
+              AND it1cd    IS NOT NULL AND it1cd   != ''
+              AND it2cd    IS NOT NULL AND it2cd   != ''
+              AND mest_nm  IS NOT NULL AND mest_nm != ''
+        ) t
+        WHERE rn = 1
+        """;
+		return sqlRunner.getRows(sql, sqlParam);
+	}
 }

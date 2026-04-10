@@ -956,4 +956,51 @@ public class BankAssignmentService {
 		return value == null || value.trim().isEmpty();
 	}
 
+	public List<Map<String, Object>> bankAccHistory() {
+		MapSqlParameterSource sqlParam = new MapSqlParameterSource();
+		String spjangcd = TenantContext.get();
+		Map<String, String> bizInfo = getBizInfoBySpjangcd(spjangcd);
+		String custcd = bizInfo.get("custcd");
+
+		sqlParam.addValue("custcd", custcd);
+		sqlParam.addValue("spjangcd", spjangcd);
+
+		String sql = """
+        SELECT
+            remark1,
+            acccd,
+            accnm,
+            it1cd,
+            it1nm,
+            it2cd,
+            it2nm,
+            contra_acccd AS acccd2,
+            accnm2
+        FROM (
+            SELECT
+                a.remark1,
+                a.acccd,
+                b.accnm,
+                a.it1cd,
+                c.it1nm,
+                a.it2cd,
+                d.it2nm,
+                a.contra_acccd,
+                e.accnm AS accnm2,
+                ROW_NUMBER() OVER (
+                    PARTITION BY a.remark1
+                    ORDER BY a.tran_date DESC, a.tran_time DESC
+                ) AS rn
+            FROM TB_bank_accsave a
+            WHERE a.custcd   = :custcd
+              AND a.spjangcd = :spjangcd
+              AND a.acccd    IS NOT NULL AND a.acccd   != ''
+              AND a.it1cd    IS NOT NULL AND a.it1cd   != ''
+              AND a.it2cd    IS NOT NULL AND a.it2cd   != ''
+              AND a.remark1  IS NOT NULL AND a.remark1 != ''
+        ) t
+        WHERE rn = 1
+        """;
+		return sqlRunner.getRows(sql, sqlParam);
+	}
 }

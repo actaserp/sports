@@ -332,6 +332,16 @@
       imeEnabled: true,
       frozenColumns: 2,
       formatItem: (s, e) => {
+
+       if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+        const row = s.rows[e.row];
+        if (row instanceof wijmo.grid.GroupRow) {
+         e.cell.style.overflow = 'visible';
+         e.cell.style.whiteSpace = 'nowrap';
+         e.cell.style.textOverflow = 'clip';
+        }
+       }
+
        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
         const binding = s.columns[e.col].binding;
 
@@ -546,6 +556,30 @@
       g.select(nextPos.row, nextPos.col);
       g.scrollIntoView(nextPos.row, nextPos.col, true);
       g.startEditing(true);
+     });
+
+     // 사업명 셀 진입 시 remark1 히스토리 자동 적용
+     _this.grid.beginningEdit.addHandler((s, e) => {
+      const col = s.columns[e.col];
+      const item = s.rows[e.row]?.dataItem;
+
+      if (!item || !col) return;
+
+      // 사업명 칸 진입 & 관/항/목이 아직 비어있을 때만
+      if (col.binding === 'busim' && !item.acccd && !item.it1cd && !item.it2cd) {
+
+       if (_this._applyingHistory) return; // 재진입 방지
+
+       const hist = _this.remarkHistory?.[item.remark1];
+       if (hist) {
+        e.cancel = true;
+        _this._applyingHistory = true;
+        _this.applyRemarkHistoryToRow(item, hist, e.row);
+        setTimeout(() => {
+         _this._applyingHistory = false;
+        }, 200);
+       }
+      }
      });
 
     }//init
@@ -1179,6 +1213,44 @@
      return true;
     }
 
+    buildRemarkHistory(dataList) {
+     this.remarkHistory = {};
+     if (!dataList) return;
+
+     dataList.forEach(item => {
+      const key = item.remark1;
+      if (!key) return;
+
+      if (item.acccd && item.it1cd && item.it2cd) {
+       this.remarkHistory[key] = {
+        acccd:  item.acccd,
+        accnm:  item.accnm,
+        it1cd:  item.it1cd,
+        it1nm:  item.it1nm,
+        it2cd:  item.it2cd,
+        it2nm:  item.it2nm,
+        acccd2: item.acccd2,
+        accnm2: item.accnm2,
+       };
+      }
+     });
+    }
+    applyRemarkHistoryToRow(rowItem, hist, rowIndex) {
+     rowItem.acccd  = hist.acccd  || '';
+     rowItem.accnm  = hist.accnm  || '';
+     rowItem.it1cd  = hist.it1cd  || '';
+     rowItem.it1nm  = hist.it1nm  || '';
+     rowItem.it2cd  = hist.it2cd  || '';
+     rowItem.it2nm  = hist.it2nm  || '';
+     rowItem.acccd2 = hist.acccd2 || '';
+     rowItem.accnm2 = hist.accnm2 || '';
+
+     this.grid.collectionView.refresh();
+
+     // 적용 후 사업명으로 커서 이동
+     this.moveToCellAndEdit(rowIndex, 'busim');
+    }
+
     //검색/조회
     searchMainData() {
      let _this = this;
@@ -1200,33 +1272,51 @@
      let fnsuccess = function (result) {
       if (result != null) {
 
-       // CollectionView 생성
        _this.viewData = new wijmo.collections.CollectionView(result.data);
 
-       // acc_spdate + acc_spnum 조합으로 그룹핑
-       let gd = new wijmo.collections.PropertyGroupDescription(
-        null,
-        function (item) {
-         let date = item.acc_spdate || '';
-         let num  = item.acc_spnum  || '';
+       // ✅ acc_spdate/acc_spnum 있는 데이터가 하나라도 있을 때만 그룹핑
+       let hasGroupData = result.data.some(item => item.acc_spdate && item.acc_spnum);
 
-         // 둘 다 없으면 미연결로 별도 그룹
-         if (!date.trim() && !num.trim()) {
-          return '미발행';
+       if (hasGroupData) {
+        let gd = new wijmo.collections.PropertyGroupDescription(
+         null,
+         function (item) {
+          let date = item.acc_spdate || '';
+          let num  = item.acc_spnum  || '';
+
+          if (!date.trim() && !num.trim()) return '미발행';
+
+          return '생성된 전표 ' + date + '/' + num;
          }
+        );
+        _this.viewData.groupDescriptions.push(gd);
+       }
 
-         return date + '/' + num;
-        }
-       );
-
-       _this.viewData.groupDescriptions.push(gd);
-
-       // 그리드에 바인딩
        _this.grid.itemsSource = _this.viewData;
+
+       _this.buildRemarkHistory(result.data);
+
+       AjaxUtil.getAsyncData(_this.url + '/bankAccHistory', {}, function(res) {
+        if (res.data) {
+         res.data.forEach(item => {
+          if (!_this.remarkHistory[item.remark1]) {
+           _this.remarkHistory[item.remark1] = {
+            acccd:  item.acccd,
+            accnm:  item.accnm,
+            it1cd:  item.it1cd,
+            it1nm:  item.it1nm,
+            it2cd:  item.it2cd,
+            it2nm:  item.it2nm,
+            acccd2: item.acccd2,
+            accnm2: item.accnm2,
+           };
+          }
+         });
+        }
+       });
       }
      };
      AjaxUtil.getAsyncData(url, data, fnsuccess);
-
     }
 
     //전표생성

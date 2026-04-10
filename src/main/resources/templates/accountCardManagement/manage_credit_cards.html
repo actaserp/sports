@@ -341,8 +341,9 @@
       columns: [
        {binding: 'cardnum', header: '카드번호', width: 200, align: 'center'},
        {binding: 'cardnm', header: '카드명', width: 150, align: 'center' },
-       {binding: 'cdpernm', header: '성명', width: 150, align: 'center'},
-       {binding: 'cardco', header: '코드번호', width: 100, align: 'center'}
+       {binding: 'cdpernm', header: '성명', width: 170, align: 'center'},
+       {binding: 'remark', header: '비고', width: '*', align: 'center'},
+       {binding: 'cardco', header: '코드번호', width: 100, align: 'center',  visible: false }
       ],
       itemsSource: this.viewData, // 데이터를 설정할 배열
      });
