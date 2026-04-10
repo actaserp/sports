@@ -1016,50 +1016,65 @@
 
         /* 스타일 주입 */
         var css = [
-            '#nf-popup{position:fixed;z-index:9500;width:460px;',
-            'background:#fff;border-radius:12px;',
-            'box-shadow:0 12px 40px rgba(0,0,0,.20),0 2px 8px rgba(0,0,0,.08);',
-            'display:flex;flex-direction:column;top:10px; left:260px;}',
+            /* 팝업 컨테이너 */
+            '#nf-popup{position:fixed;z-index:9500;width:400px;',
+            'background:#fff;border-radius:16px;',
+            'box-shadow:0 20px 24px -4px rgba(0,0,0,.10),0 8px 8px -4px rgba(0,0,0,.04);',
+            'display:flex;flex-direction:column;padding:24px;top:10%;left:50%;',
+            'transform:translateX(-50%);}',
 
-            '#nf-popup .nf-head{display:flex;align-items:center;gap:8px;',
-            'padding:4px 16px;cursor:move;user-select:none;',
-            'background:linear-gradient(179deg,#031B4B,#6274B4);border-radius:12px 12px 0 0;}',
-            '#nf-popup .nf-head .nf-badge{flex-shrink:0;font-size:10px;font-weight:700;',
-            'color:#fff;background:rgba(255,255,255,.22);border-radius:4px;',
-            'padding:2px 7px;letter-spacing:.6px;}',
-            '#nf-popup .nf-head .nf-title{flex:1;color:#fff;font-size:16px;font-weight:700;',
-            'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
-            '#nf-popup .nf-head .nf-x{background:none;border:none;color:rgba(255,255,255,.75);',
-            'font-size:17px;cursor:pointer;line-height:1;padding:0;margin-left:4px;}',
-            '#nf-popup .nf-head .nf-x:hover{color:#fff;}',
+            /* X 닫기 버튼 (헤더 우상단) */
+            '#nf-popup .nf-head{display:flex;align-items:flex-start;justify-content:space-between;',
+            'margin-bottom:16px;cursor:move;user-select:none;}',
+            '#nf-popup .nf-head .nf-badge{display:none;}',
+            '#nf-popup .nf-head .nf-title{display:none;}',
+            '#nf-popup .nf-head .nf-x{background:none;border:none;color:#9ca3af;',
+            'font-size:18px;cursor:pointer;line-height:1;padding:0;',
+            'position:absolute;top:16px;right:16px;}',
+            '#nf-popup .nf-head .nf-x:hover{color:#555;}',
 
-            '#nf-popup .nf-meta{padding:7px 16px;font-size:11px;color:#7b8ec8;',
-            'background:#f4f6ff;border-bottom:1px solid #e4e8fb;}',
+            /* 녹색 아이콘 뱃지 (::before 대신 nf-icon 요소 추가 예정) */
+            '#nf-popup .nf-icon{width:48px;height:48px;border-radius:50%;',
+            'background:#D1FADF;border:8px solid #ECFDF3;',
+            'display:flex;align-items:center;justify-content:center;margin-bottom:16px;}',
 
-            '#nf-popup .nf-body{padding:18px 18px 14px;overflow-y:auto;',
-            'max-height:300px;font-size:15px;line-height:1.8;color:#333;}',
+            /* 메타(종료일) */
+            '#nf-popup .nf-meta{font-size:12px;color:#9ca3af;margin-bottom:16px;',
+            'padding:0;background:none;border:none;}',
 
-            '#nf-popup .nf-files{padding:8px 14px;border-top:1px solid #e4e8fb;background:#f4f6ff;}',
-            '#nf-popup .nf-files-title{font-size:16px;font-weight:700;color:#6b7bbf;',
-            'margin-bottom:5px;letter-spacing:.3px;}',
+            /* 본문 */
+            '#nf-popup .nf-body{padding:0;overflow-y:auto;max-height:200px;',
+            'font-size:14px;line-height:1.7;color:#111;margin-bottom:6px;}',
+
+            /* 첨부파일 */
+            '#nf-popup .nf-files{padding:16px 0 0;border-top:1px solid #e5e7eb;',
+            'background:none;margin-bottom:20px;}',
+            '#nf-popup .nf-files-title{font-size:13px;font-weight:600;color:#444;margin-bottom:8px;}',
             '#nf-popup .nf-file-item{display:flex;align-items:center;gap:6px;',
-            'padding:4px 6px;border-radius:5px;cursor:pointer;text-decoration:none;',
-            'color:#3a5ff8;font-size:16px;transition:background .12s;}',
-            '#nf-popup .nf-file-item:hover{background:#e8ecff;text-decoration:none;}',
+            'padding:6px 8px;border-radius:6px;border:1px solid #e5e7eb;',
+            'text-decoration:none;color:#7F56D9;font-size:13px;transition:background .12s;}',
+            '#nf-popup .nf-file-item:hover{background:#f5f3ff;}',
             '#nf-popup .nf-file-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
-            '#nf-popup .nf-file-size{color:#a0aac4;font-size:11px;flex-shrink:0;}',
+            '#nf-popup .nf-file-size{color:#9ca3af;font-size:11px;flex-shrink:0;}',
 
-            '#nf-popup .nf-foot{display:flex;align-items:center;justify-content:space-between;',
-            'padding:11px 16px;background:#f8f9ff;border-top:1px solid #e8ecf8;',
-            'border-radius:0 0 12px 12px;}',
-            '#nf-popup .nf-skip{background:none;border:none;color:#a0aac4;font-size:12px;',
-            'cursor:pointer;text-decoration:underline;padding:0;}',
-            '#nf-popup .nf-skip:hover{color:#555;}',
-            '#nf-popup .nf-counter{font-size:12px;color:#b0b8d0;}',
-            '#nf-popup .nf-close-btn{padding:6px 20px;border-radius:6px;border:none;',
-            'font-size:13px;font-weight:600;cursor:pointer;',
-            'background:#0056b3;color:#fff;transition:background .15s;}',
-            '#nf-popup .nf-close-btn:hover{background:#2748d4;}'
+            /* 카운터 - 버튼 위에 별도 표시 */
+            '#nf-popup .nf-counter{display:block;text-align:center;font-size:12px;color:#9ca3af;margin-bottom:8px;}',
+
+            /* 푸터 (버튼 2개 나란히) */
+            '#nf-popup .nf-foot{display:flex;align-items:center;gap:12px;',
+            'padding:0;background:none;border:none;border-radius:0;}',
+            '#nf-popup .nf-skip{flex:1;padding:10px;border-radius:8px;',
+            'border:1px solid #d1d5db;background:#fff;font-size:14px;font-weight:600;',
+            'color:#111;cursor:pointer;text-decoration:none;}',
+            '#nf-popup .nf-skip:hover{background:#f9fafb;}',
+            '#nf-popup .nf-close-btn{flex:1;padding:10px;border-radius:8px;border:none;',
+            'font-size:14px;font-weight:600;cursor:pointer;',
+            'background:#7F56D9;color:#fff;transition:background .15s;}',
+            '#nf-popup .nf-close-btn:hover{background:#6941C6;}',
+            '#nf-popup .nf-title-text{font-size:17px;font-weight:700;color:#111;margin-bottom:6px;}',
+            '#nf-popup .nf-x{position:absolute;top:16px;right:16px;background:none;border:none;',
+            'color:#9ca3af;font-size:18px;cursor:pointer;line-height:1;padding:0;}',
+            '#nf-popup .nf-x:hover{color:#555;}',
         ].join('');
 
         if (!document.getElementById('nf-style')) {
@@ -1074,11 +1089,18 @@
             var startX, startY, startL, startT, dragging = false;
             handle.addEventListener('mousedown', function (e) {
                 if (e.button !== 0) return;
-                dragging = true;
-                startX = e.clientX; startY = e.clientY;
+
+                // 드래그 시작 전 현재 실제 위치를 left/top으로 고정
                 var r = popup.getBoundingClientRect();
-                startL = r.left; startT = r.top;
-                popup.style.right = 'auto';
+                popup.style.left      = r.left + 'px';
+                popup.style.top       = r.top  + 'px';
+                popup.style.transform = 'none';
+
+                dragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startL = r.left;
+                startT = r.top;
                 e.preventDefault();
             });
             document.addEventListener('mousemove', function (e) {
@@ -1089,40 +1111,53 @@
             document.addEventListener('mouseup', function () { dragging = false; });
         }
 
+
         function showNoticePopup(notices, index) {
             if (index >= notices.length) return;
             var n = notices[index];
             var total = notices.length;
 
-            /* DOM 구성 (innerHTML 미사용 → content 오염 방지) */
-            var popup  = document.createElement('div'); popup.id = 'nf-popup';
+            var popup = document.createElement('div'); popup.id = 'nf-popup';
 
-            /* 헤더 */
-            var head   = document.createElement('div'); head.className = 'nf-head';
-            var badge  = document.createElement('span'); badge.className = 'nf-badge'; badge.textContent = 'NOTICE';
-            var title  = document.createElement('span'); title.className = 'nf-title'; title.textContent = n.title;
-            var xBtn   = document.createElement('button'); xBtn.className = 'nf-x'; xBtn.textContent = '✕';
-            head.appendChild(badge); head.appendChild(title); head.appendChild(xBtn);
+            /* 1. 녹색 체크 아이콘 */
+            var icon = document.createElement('div');
+            icon.className = 'nf-icon';
+            icon.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#039855" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 
-            /* 메타 */
-            var meta   = document.createElement('div'); meta.className = 'nf-meta';
-            meta.textContent = '공지 종료일 : ' + formatDate(n.notice_end_date);
+            /* 2. X 닫기 버튼 */
+            var xBtn = document.createElement('button'); xBtn.className = 'nf-x'; xBtn.textContent = '✕';
 
-            /* 본문 - innerHTML 사용(SmartEditor HTML 렌더링 필요) */
-            var body   = document.createElement('div'); body.className = 'nf-body';
+            /* 3. 제목 */
+            var titleEl = document.createElement('div'); titleEl.className = 'nf-title-text';
+            titleEl.textContent = n.title;
+
+            /* 4. 본문 */
+            var body = document.createElement('div'); body.className = 'nf-body';
             body.innerHTML = n.content || '';
 
-            /* 푸터 */
-            var foot     = document.createElement('div'); foot.className = 'nf-foot';
-            var skipBtn  = document.createElement('button'); skipBtn.className = 'nf-skip'; skipBtn.textContent = '더이상 안보기';
-            var counter  = document.createElement('span'); counter.className = 'nf-counter';
+            /* 5. 메타(종료일) */
+            var meta = document.createElement('div'); meta.className = 'nf-meta';
+            meta.textContent = '공지 종료일 : ' + formatDate(n.notice_end_date);
+
+            /* 6. 푸터 */
+            var foot    = document.createElement('div'); foot.className = 'nf-foot';
+            var skipBtn = document.createElement('button'); skipBtn.className = 'nf-skip'; skipBtn.textContent = '더이상 안보기';
+            var counter = document.createElement('span'); counter.className = 'nf-counter';
             if (total > 1) counter.textContent = '(' + (index + 1) + ' / ' + total + ')';
             var closeBtn = document.createElement('button'); closeBtn.className = 'nf-close-btn'; closeBtn.textContent = '닫기';
-            foot.appendChild(skipBtn); foot.appendChild(counter); foot.appendChild(closeBtn);
+            foot.appendChild(skipBtn); foot.appendChild(closeBtn); // counter 제거
 
-            popup.appendChild(head); popup.appendChild(meta); popup.appendChild(body); popup.appendChild(foot);
+            /* 순서대로 조립 */
+            popup.appendChild(xBtn);
+            popup.appendChild(icon);
+            popup.appendChild(titleEl);
+            popup.appendChild(body);
+            popup.appendChild(meta);
+            popup.appendChild(counter); // ← foot 위에
+            popup.appendChild(foot);
+
             document.body.appendChild(popup);
-            makeDraggable(popup, head);
+            makeDraggable(popup, popup); // 팝업 전체를 드래그 핸들로 사용
 
             function closeAndNext() {
                 popup.remove();
@@ -1133,48 +1168,31 @@
             skipBtn.addEventListener('click', function () { markSkipped(n.id); closeAndNext(); });
 
             /* 첨부파일 조회 후 foot 앞에 삽입 */
-
             function fmtSize(bytes) {
                 if (!bytes) return '';
                 if (bytes < 1024) return bytes + 'B';
-                if (bytes < 1048576) return (bytes/1024).toFixed(1) + 'KB';
-                return (bytes/1048576).toFixed(1) + 'MB';
+                if (bytes < 1048576) return (bytes / 1024).toFixed(1) + 'KB';
+                return (bytes / 1048576).toFixed(1) + 'MB';
             }
 
             $.getJSON(withCtx('/api/common/attach_file/detailFiles'),
-                {TableName: 'NOTICE', DataPk: n.id, attachName: 'basic'},
+                { TableName: 'NOTICE', DataPk: n.id, attachName: 'basic' },
                 function (res) {
                     if (!res || !res.data || !res.data.length) return;
                     var files = res.data;
-
-                    var section = document.createElement('div');
-                    section.className = 'nf-files';
-
-                    var title = document.createElement('div');
-                    title.className = 'nf-files-title';
-                    title.textContent = '첨부파일 (' + files.length + ')';
-                    section.appendChild(title);
-
+                    var section = document.createElement('div'); section.className = 'nf-files';
+                    var fileTitle = document.createElement('div'); fileTitle.className = 'nf-files-title';
+                    fileTitle.textContent = '첨부파일 (' + files.length + ')';
+                    section.appendChild(fileTitle);
                     files.forEach(function (f) {
-                        var a = document.createElement('a');
-                        a.className = 'nf-file-item';
+                        var a = document.createElement('a'); a.className = 'nf-file-item';
                         a.href = withCtx('/api/files/download?file_id=' + f.fileId);
-
-                        var icon = document.createElement('span');
-
-                        var name = document.createElement('span');
-                        name.className = 'nf-file-name';
-                        name.textContent = f.fileNm;
-
-                        var size = document.createElement('span');
-                        size.className = 'nf-file-size';
-                        size.textContent = fmtSize(f.fileSize);
-
-                        a.appendChild(icon); a.appendChild(name); a.appendChild(size);
+                        var name = document.createElement('span'); name.className = 'nf-file-name'; name.textContent = f.fileNm;
+                        var size = document.createElement('span'); size.className = 'nf-file-size'; size.textContent = fmtSize(f.fileSize);
+                        a.appendChild(name); a.appendChild(size);
                         section.appendChild(a);
                     });
-
-                    popup.insertBefore(section, foot);
+                    popup.insertBefore(section, foot); // ← counter 아닌 foot 앞에
                 }
             );
         }
