@@ -357,6 +357,19 @@
             modalContainer.open({width: 1010, height: 670, $content});
             edit();
 
+            // 공지여부 change 이벤트 - 팝업 내부 요소라 여기서 바인딩
+            $content.find('#notice_yn').on('change', function () {
+                if ($(this).val() == "Y") {
+                    $content.find('#notice_end_date').prop("disabled", false);
+                    if (!$content.find('#notice_end_date').val()) {
+                        $content.find('#notice_end_date').val(CommonUtil.getYYYYMMDD());
+                    }
+                } else {
+                    $content.find('#notice_end_date').prop("disabled", true);
+                    $content.find('#notice_end_date').val("");
+                }
+            });
+
             $content.find('#btn_modal_save').off('click').on('click', function () {
                 let $form = $content.find('#editorForm');
                 saveData($form, modalContainer);
@@ -382,13 +395,12 @@
                 return false;
             }
 
-            if (data.notice_yn) {
+            if (data.notice_yn === 'y') {
                 if (!data.notice_end_date) {
                     Alert.alert('', "공지종료일을 설정하세요.");
                     return false;
                 }
             }
-
 
             Alert.confirm('', '저장하시겠습니까?', function () {
                 let fnSuccess = function (result) {
@@ -415,7 +427,13 @@
             let url = '/api/support/notice';
             let data = {'id': id};
             let fnSuccess = function () {
-                deleteDocFile(id);
+                let fileId = $('#srchFileId').val();
+                if (fileId) {
+                    deleteDocFile(id);
+                } else {
+                    Alert.alert('', '삭제되었습니다');
+                    searchMain();
+                }
             }
             AjaxUtil.postAsyncData(url + '/delete', data, fnSuccess);
         }
@@ -493,17 +511,6 @@
             // 기본값 설정
             $('.date_from').val(oneMonthAgoFormatted);
             $('.date_to').val(today);
-
-
-            //공지여부
-            $("#notice_yn").change(function (e) {
-                if ($("#notice_yn").val() == "Y") {
-                    $("#notice_end_date").prop("disabled", false);
-                } else {
-                    $("#notice_end_date").prop("disabled", true);
-                    $("#notice_end_date").val("");
-                }
-            });
 
             //검색버튼클릭
             $("#btnSearch").click(function (e) {
