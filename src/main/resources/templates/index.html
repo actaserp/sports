@@ -1001,6 +1001,135 @@
             `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=no`
         );
     });
+
+    /* ===== 공지사항 팝업 ===== */
+    (function () {
+        var userId = sessionStorage.getItem('userid') || 'guest';
+
+        function getSkippedKey(id) { return 'notice_skip_' + userId + '_' + id; }
+        function isSkipped(id)     { return localStorage.getItem(getSkippedKey(id)) === '1'; }
+        function markSkipped(id)   { localStorage.setItem(getSkippedKey(id), '1'); }
+        function formatDate(d) {
+            if (!d || d.length < 8) return d || '';
+            return d.substring(0,4) + '-' + d.substring(4,6) + '-' + d.substring(6,8);
+        }
+
+        /* 스타일 주입 */
+        var css = [
+            '#nf-popup{position:fixed;z-index:9500;width:460px;',
+            'background:#fff;border-radius:12px;',
+            'box-shadow:0 12px 40px rgba(0,0,0,.20),0 2px 8px rgba(0,0,0,.08);',
+            'display:flex;flex-direction:column;top:10px;left:260px;}',
+
+            '#nf-popup .nf-head{display:flex;align-items:center;gap:8px;',
+            'padding:4px 16px;cursor:move;user-select:none;',
+            'background:#03428E;border-radius:12px 12px 0 0;}',
+            '#nf-popup .nf-head .nf-badge{flex-shrink:0;font-size:10px;font-weight:700;',
+            'color:#fff;background:rgba(255,255,255,.22);border-radius:4px;',
+            'padding:2px 7px;letter-spacing:.6px;}',
+            '#nf-popup .nf-head .nf-title{flex:1;color:#fff;font-size:14px;font-weight:700;',
+            'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+            '#nf-popup .nf-head .nf-x{background:none;border:none;color:rgba(255,255,255,.75);',
+            'font-size:17px;cursor:pointer;line-height:1;padding:0;margin-left:4px;}',
+            '#nf-popup .nf-head .nf-x:hover{color:#fff;}',
+
+            '#nf-popup .nf-meta{padding:7px 16px;font-size:11px;color:#7b8ec8;',
+            'background:#f4f6ff;border-bottom:1px solid #e4e8fb;}',
+
+            '#nf-popup .nf-body{padding:18px 18px 14px;overflow-y:auto;',
+            'max-height:300px;font-size:13px;line-height:1.8;color:#333;}',
+
+            '#nf-popup .nf-foot{display:flex;align-items:center;justify-content:space-between;',
+            'padding:11px 16px;background:#f8f9ff;border-top:1px solid #e8ecf8;',
+            'border-radius:0 0 12px 12px;}',
+            '#nf-popup .nf-skip{background:none;border:none;color:#a0aac4;font-size:12px;',
+            'cursor:pointer;text-decoration:underline;padding:0;}',
+            '#nf-popup .nf-skip:hover{color:#555;}',
+            '#nf-popup .nf-counter{font-size:12px;color:#b0b8d0;}',
+            '#nf-popup .nf-close-btn{padding:6px 20px;border-radius:6px;border:none;',
+            'font-size:13px;font-weight:600;cursor:pointer;',
+            'background:#03428E;color:#fff;transition:background .15s;}',
+            '#nf-popup .nf-close-btn:hover{background:#2748d4;}'
+        ].join('');
+
+        if (!document.getElementById('nf-style')) {
+            var s = document.createElement('style');
+            s.id = 'nf-style';
+            s.textContent = css;
+            document.head.appendChild(s);
+        }
+
+        /* 드래그 (native) */
+        function makeDraggable(popup, handle) {
+            var startX, startY, startL, startT, dragging = false;
+            handle.addEventListener('mousedown', function (e) {
+                if (e.button !== 0) return;
+                dragging = true;
+                startX = e.clientX; startY = e.clientY;
+                var r = popup.getBoundingClientRect();
+                startL = r.left; startT = r.top;
+                popup.style.right = 'auto';
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', function (e) {
+                if (!dragging) return;
+                popup.style.left = (startL + e.clientX - startX) + 'px';
+                popup.style.top  = (startT + e.clientY - startY) + 'px';
+            });
+            document.addEventListener('mouseup', function () { dragging = false; });
+        }
+
+        function showNoticePopup(notices, index) {
+            if (index >= notices.length) return;
+            var n = notices[index];
+            var total = notices.length;
+
+            /* DOM 구성 (innerHTML 미사용 → content 오염 방지) */
+            var popup  = document.createElement('div'); popup.id = 'nf-popup';
+
+            /* 헤더 */
+            var head   = document.createElement('div'); head.className = 'nf-head';
+            var badge  = document.createElement('span'); badge.className = 'nf-badge'; badge.textContent = 'NOTICE';
+            var title  = document.createElement('span'); title.className = 'nf-title'; title.textContent = n.title;
+            var xBtn   = document.createElement('button'); xBtn.className = 'nf-x'; xBtn.textContent = '✕';
+            head.appendChild(badge); head.appendChild(title); head.appendChild(xBtn);
+
+            /* 메타 */
+            var meta   = document.createElement('div'); meta.className = 'nf-meta';
+            meta.textContent = '공지 종료일 : ' + formatDate(n.notice_end_date);
+
+            /* 본문 - innerHTML 사용(SmartEditor HTML 렌더링 필요) */
+            var body   = document.createElement('div'); body.className = 'nf-body';
+            body.innerHTML = n.content || '';
+
+            /* 푸터 */
+            var foot     = document.createElement('div'); foot.className = 'nf-foot';
+            var skipBtn  = document.createElement('button'); skipBtn.className = 'nf-skip'; skipBtn.textContent = '더이상 안보기';
+            var counter  = document.createElement('span'); counter.className = 'nf-counter';
+            if (total > 1) counter.textContent = '(' + (index + 1) + ' / ' + total + ')';
+            var closeBtn = document.createElement('button'); closeBtn.className = 'nf-close-btn'; closeBtn.textContent = '닫기';
+            foot.appendChild(skipBtn); foot.appendChild(counter); foot.appendChild(closeBtn);
+
+            popup.appendChild(head); popup.appendChild(meta); popup.appendChild(body); popup.appendChild(foot);
+            document.body.appendChild(popup);
+            makeDraggable(popup, head);
+
+            function closeAndNext() {
+                popup.remove();
+                showNoticePopup(notices, index + 1);
+            }
+            xBtn.addEventListener('click', closeAndNext);
+            closeBtn.addEventListener('click', closeAndNext);
+            skipBtn.addEventListener('click', function () { markSkipped(n.id); closeAndNext(); });
+        }
+
+        $.getJSON(withCtx('/api/support/notice/active'), function (res) {
+            if (!res || !res.data || !res.data.length) return;
+            var pending = res.data.filter(function (n) { return !isSkipped(n.id); });
+            if (pending.length > 0) showNoticePopup(pending, 0);
+        });
+    })();
+
 </script>
 
 <!-- 메시지 보내기 모달 -->

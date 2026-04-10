@@ -20,4 +20,7 @@ public interface SqlRunner {
 	public <T> T queryForObject(String sql,  MapSqlParameterSource mapParam, RowMapper<T> mapper);
 
 	public int[]  batchUpdate(String sql,  SqlParameterSource[] batchArgs);
+
+	/** INSERT 후 자동생성된 키(IDENTITY) 반환. 실패 시 null. */
+	public Number executeAndReturnKey(String sql, MapSqlParameterSource paramMap, String keyColumnName);
 }

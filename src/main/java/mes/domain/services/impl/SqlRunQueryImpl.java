@@ -18,6 +18,7 @@ import org.springframework.stereotype.Repository;
 
 import mes.domain.services.LogWriter;
 import mes.domain.services.SqlRunner;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
 
 /**
  * 사업장(테넌트) DB 전용 SqlRunner.
@@ -52,8 +53,10 @@ public class SqlRunQueryImpl implements SqlRunner {
     	try {
     		return this.jdbcTemplate.queryForMap(sql, dicParam);
 		} catch(DataAccessException de) {
+			log.error("[SqlRunner] getRow 오류: {}", de.getMessage(), de);
 			return null;
     	} catch (Exception e) {
+			log.error("[SqlRunner] getRow 예외: {}", e.getMessage(), e);
 			logWriter.addDbLog("error", "SqlRunQueryImpl.getRow", e);
 			return null;
 		}
@@ -63,6 +66,7 @@ public class SqlRunQueryImpl implements SqlRunner {
     	try {
     		return this.jdbcTemplate.update(sql, dicParam);
 		} catch (Exception e) {
+			log.error("[SqlRunner] execute 오류: {}", e.getMessage(), e);
 			logWriter.addDbLog("error", "SqlRunQueryImpl.execute", e);
 			return 0;
 		}
@@ -75,6 +79,18 @@ public class SqlRunQueryImpl implements SqlRunner {
     public <T> T queryForObject(String sql, MapSqlParameterSource dicParam, RowMapper<T> mapper) throws DataException {
     	return this.jdbcTemplate.queryForObject(sql, dicParam, mapper);
     }
+
+	public Number executeAndReturnKey(String sql, MapSqlParameterSource paramMap, String keyColumnName) {
+		try {
+			GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
+			this.jdbcTemplate.update(sql, paramMap, keyHolder, new String[]{keyColumnName});
+			return keyHolder.getKey();
+		} catch (Exception e) {
+			log.error("[SqlRunner] executeAndReturnKey 오류: {}", e.getMessage(), e);
+			logWriter.addDbLog("error", "SqlRunQueryImpl.executeAndReturnKey", e);
+			return null;
+		}
+	}
 
 	public int[] batchUpdate(String sql, SqlParameterSource[] batchArgs) {
 		try {

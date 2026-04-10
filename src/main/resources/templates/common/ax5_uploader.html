@@ -10,7 +10,7 @@
     </div>
 </script>
 
-<script type="text/javascript">
+<script th:inline="javascript" type="text/javascript">
     class ax5FileUploadClass {
         constructor(div_name, data_pk, option) {
             // , table_name, attach_name, accept_files, multiple, max_count, file_size
@@ -26,6 +26,7 @@
             this.upload_callback = option.upload_callback;
             this.delete_callback = option.delete_callback;
             this.file_click_callback = option.file_click_callback;
+            this._uploadCompleting = false;
             this.can_write = option.can_write;
 			
             if (!this.multiple)
@@ -44,7 +45,7 @@
                 this.max_count = 10;
 
             if (!this.file_size)
-                this.file_size = 100;
+                this.file_size = 20;
 
             if (!this.thumb_nail)
                 this.thumb_nail = 'N';
@@ -54,7 +55,7 @@
 
             this.base_url = '/api/common/attach_file';
 
-            this.upload_url = '/api/files/upload';
+            this.upload_url = withCtx('/api/files/upload');
             this.download_url = '/api/files/download';
             this.downzip_url = '/api/files/downzip';
 
@@ -86,6 +87,14 @@
         }
         init() {
             let _this = this;
+            // 기존 업로더 인스턴스 제거
+            if (_this.UPLOAD) {
+                _this.UPLOAD = null;
+            }
+            // 기존 이벤트 제거
+            $('#' + _this.btnRemoveAllFile).off('click');
+            $('#' + _this.btnDownloadAllFile).off('click');
+
             let disabled = !_this.can_write;
             $('#' + _this.btnAddFile).prop('disabled', disabled);
             $('#' + _this.btnRemoveAllFile).prop('disabled', disabled);
@@ -125,7 +134,8 @@
             };
 
             _this.myconfig = myconfig;
-            let emptyListMsg = '<div class="upload-filebox" style="padding: 10px;"><img src="/images/icon/ico-fileupload.svg" alt="업로드아이콘"><a class="btn" title="파일업로드">파일 업로드</a>' + myconfig.emptymsg + '</div>';
+            let iconPath = /*[[@{/images/icon/ico-fileupload.svg}]]*/ '';
+            let emptyListMsg = '<div class="upload-filebox" style="padding: 10px;"><img src="' + iconPath + '" alt="업로드아이콘"><a class="btn" title="파일업로드">파일 업로드</a>' + myconfig.emptymsg + '</div>';
             let DIALOG = new ax5.ui.dialog({
                 title: '파일업로드'
             });
@@ -155,7 +165,7 @@
                 }
 
                 _this.UPLOAD = new ax5.ui.uploader({
-                    debug: true,
+                    debug: false,
                     target: $target,
                     form: {
                         action: encodeURI(upload_uri),
@@ -252,13 +262,24 @@
                         }
                     },
                     validateSelectedFiles: function () {
+                        console.log('validateSelectedFiles');
                         if (_this.can_write == false) {
                             Alert.alert('파일 업로드 오류', '권한이 없습니다.');
                             return false;
                         }
 
-                        // 10개 이상 업로드 되지 않도록 제한.
-                        if (_this.UPLOAD.uploadedFiles.length + _this.UPLOAD.selectedFiles.length > _this.max_count) {
+                        // 파일 크기 체크 (선택된 파일 각각)
+                        let maxBytes = _this.file_size * 1024 * 1024;
+                        for (let i = 0; i < this.selectedFiles.length; i++) {
+                            let file = this.selectedFiles[i][0];  // FileList[0]으로 접근
+                            if (file && file.size > maxBytes) {
+                                Alert.alert('', '파일 크기가 ' + _this.file_size + 'MB를 초과합니다.');
+                                return false;
+                            }
+                        }
+
+                        // 최대 파일 수 제한
+                        if (this.uploadedFiles.length + this.selectedFiles.length > _this.max_count) {
                             Alert.alert('', _this.max_count + " 개 이상의 파일을 업로드할 수 없습니다.");
                             return false;
                         }
@@ -275,6 +296,9 @@
                         //myconfig.uploadCallback(this);
                     },
                     onuploadComplete: function () {
+                        if (_this._uploadCompleting) return;  // 중복 방지
+                        _this._uploadCompleting = true;
+
                         _this.getFileIds();
                         // 파일 목록 가져오기
                         $.ajax({
@@ -283,6 +307,7 @@
                                 _this.UPLOAD.setUploadedFiles(res);
                                 let file_id = _this.file_id_list[_this.file_id_list.length - 1];
                                 _this.upload_callback(file_id);
+                                _this._uploadCompleting = false;  // 초기화
                             }
                         });
                     }

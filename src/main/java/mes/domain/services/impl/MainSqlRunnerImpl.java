@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import mes.domain.services.SqlRunner;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -66,6 +67,18 @@ public class MainSqlRunnerImpl implements SqlRunner {
     @Override
     public <T> T queryForObject(String sql, MapSqlParameterSource dicParam, RowMapper<T> mapper) {
         return jdbcTemplate.queryForObject(sql, toParam(dicParam), mapper);
+    }
+
+    @Override
+    public Number executeAndReturnKey(String sql, MapSqlParameterSource paramMap, String keyColumnName) {
+        try {
+            GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
+            jdbcTemplate.update(sql, paramMap, keyHolder, new String[]{keyColumnName});
+            return keyHolder.getKey();
+        } catch (DataAccessException e) {
+            log.error("[MainSqlRunner] executeAndReturnKey 오류: {}", e.getMessage(), e);
+            return null;
+        }
     }
 
     @Override

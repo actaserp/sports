@@ -12,16 +12,15 @@
         <!-- Page Title -->
         <div class="page-title-wrap">
             <div class="left">
-                <h2>공지사항</h2>
+                <h2>공지사항 등록</h2>
                 <a title="북마크" class="bookmark toggle">
                     내메뉴
                 </a>
             </div>
             <ul class="page-navi">
                 <li><img th:src="@{/images/icon/ico-nav-home.svg}" alt="홈아이콘"></li>
-                <li>조치 및 통계</li>
-                <li>업무지원</li>
-                <li>공지사항</li>
+                <li>시스템관리</li>
+                <li>공지사항 등록</li>
             </ul>
         </div>
         <section class="section">
@@ -161,76 +160,19 @@
                            <textarea id="content" name="content" style="width:100%" >{%=o.content%}</textarea>
                         </div>
                 </form>
-                <div class="grid_box" id='image_upload1'></div>
+                <div class="grid_box" id='image_upload'></div>
             </div>
 
             <div class="popup-button">
               <button type="button" class="btn-popup y_write_auth" id="btn_modal_save" ><span data-labelCd="저장">저장</span></button>
               <button type="button" class="btn-popup" id="modal-close-button"><span data-labelCd="닫기">닫기</span></button>
             </div>
-
-            <!--<section class="pt-2">
-                <form id="editorForm">
-                    <input type="hidden" id="id" name="id" value="{%=o.id%}">
-                    <div class="table_box search" id="detail_box">
-                        <div class="row">
-
-                                <div class="col-12" >
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text fit_box_md">공지제목</span>
-                                        </div>
-                                            <input class="form-control2" id="title" name="title" value="{%=o.title%}" disabled />
-                                    </div>
-                                </div>
-
-                                <div class="col-3" >
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text fit_box_md">공지여부</span>
-                                        </div>
-                                                <select class="form-control2" id="notice_yn" name="notice_yn" disabled >
-                                                    <option value="Y">예</option>
-                                                    <option value="N" selected>아니오</option>
-                                                </select>
-                                    </div>
-                                </div>
-
-                                <div class="col-6">
-                                    <div class="input-group" data-ax5picker="basic" id="srchDt">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text fit_box_md">공지종료일</span>
-                                        </div>
-                                        <input class="form-control2 tac" type="text" id="notice_end_date" name="notice_end_date"  value="{%=o.notice_end_date%}" disabled />
-                                        <span class="input-group-text fs-xl"><i class="fas fa-calendar-alt calendar_color" ></i></span>
-                                    </div>
-                                </div>
-
-                                    <div class="col-12" >
-                                            <div class="textarea_group" id="divContent">
-                                                <textarea style="height:310px;width:100%" id="content" name="content" >{%=o.content%}</textarea>
-                                            </div>
-                                </div>
-
-                        </div>
-                    </div>
-                </form>
-                <div class="grid_box" id='image_upload1'></div>
-
-            </section>
-            <section class="section">
-                <div class="popup_button_group bottom">
-                    <div class="left_align">
-                        <button type="button" class="btn-popup y_write_auth" id="btn_modal_save"><span>저장</span></button>
-                        <button type="button" class="btn-popup" id="modal-close-button"><span>닫기</span></button>
-                    </div>
-                </div>
-            </section>-->
         </div>
     </script>
 
 </th:block>
 <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:src="@{/js/fileupload.js}"></script>
     <th:block th:replace="common/approve_box :: approve_box"></th:block>
     <th:block th:replace="common/ax5_uploader :: ax5_uploader"></th:block>
     <th:block th:replace="common/upload_one_image_box :: upload_one_image_box"></th:block>
@@ -241,18 +183,24 @@
         var theGrid;
         var viewdata;
 
+        function formatDate(d) {
+            if (!d || d.length < 8) return d || '';
+            return d.substring(0, 4) + '-' + d.substring(4, 6) + '-' + d.substring(6, 8);
+        }
+
         let columns = [
-            {binding: 'id', header: '번호', width: 200, align: 'center'},
-            {binding: 'title', header: '제목', width: 200, align: 'center'},
-            {binding: 'write_date_time', header: '작성일', width: 250, align: 'center'},
-            {binding: '', header: '', width: "*", align: 'center'}
+            {binding: 'id', header: '번호', width: 80, align: 'center'},
+            {binding: 'title', header: '제목', width: "*", align: 'left'},
+            {binding: 'write_date_time', header: '작성일', width: 120, align: 'center'},
+            {binding: 'notice_end_date', header: '공지종료일', width: 120, align: 'center'},
+            {binding: 'notice_yn', header: '공지여부', width: 90, align: 'center'},
         ];
 
         function edit() {
             nhn.husky.EZCreator.createInIFrame({
                 oAppRef: oEditors,
                 elPlaceHolder: 'content', //textarea id
-                sSkinURI: '/resource/se2/SmartEditor2Skin.html',
+                sSkinURI: withCtx('/resource/se2/SmartEditor2Skin.html'),
                 htParams: {
                     bUseToolbar: true,				// 툴바 사용 여부 (true:사용/ false:사용하지 않음)
                     bUseVerticalResizer: true,		// 입력창 크기 조절바 사용 여부 (true:사용/ false:사용하지 않음)
@@ -298,7 +246,13 @@
                 },
                 async: false,
                 success: function (data) {
-                    data2 = data.data;
+                    data2 = (data.data || []).map(item => ({
+                        id: item.id,
+                        title: item.title,
+                        write_date_time: formatDate(item.write_date_time),
+                        notice_end_date: formatDate(item.notice_end_date),
+                        notice_yn: item.notice_yn || 'N'
+                    }));
                 },
                 error: function (jqXHR, textStatus, errorThrown) {
                     console.error('Error fetching log_count data:', textStatus, errorThrown);
@@ -359,8 +313,9 @@
             let menulogData = data.map(item => ({
                 id: item.id,
                 title: item.title,
-                write_date_time: item.write_date_time
-
+                write_date_time: formatDate(item.write_date_time),
+                notice_end_date: formatDate(item.notice_end_date),
+                notice_yn: item.notice_yn || 'N'
             }));
 
             if (typeof theGrid === 'undefined' || typeof viewdata === 'undefined') {
@@ -400,10 +355,9 @@
                 modalContainer = new PopupDraggable('공지 사항 수정');
             }
             modalContainer.open({width: 1010, height: 670, $content});
-            $content.find('#srchDt').ax5DatePicker({direction: 'top'});
             edit();
 
-            $content.find('#btn_modal_save').on('click', function () {
+            $content.find('#btn_modal_save').off('click').on('click', function () {
                 let $form = $content.find('#editorForm');
                 saveData($form, modalContainer);
             });
@@ -497,14 +451,14 @@
             let accept_files = 'hwp,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,gif,mbp,png,txt,zip,pdf';
             let accept = '.' + accept_files.split(',').join(',.');
 
-            let uploader = new ax5FileUploadClass('image_upload1', id,
+            let uploader = new ax5FileUploadClass('image_upload', id,
                 {
                     table_name: 'NOTICE',
                     attach_name: 'basic',
                     accept_files: accept_files,
                     multiple: true,
                     max_count: 5,
-                    file_size: 500,
+                    file_size: 20,
                     upload_callback: function (param) {
                         // uploader.showLastImage('imgPhoto');
                         return;
@@ -563,14 +517,6 @@
                 }
             });
 
-
-            //저장버튼
-            $('#btn_modal_save').click(function (e) {
-                saveData();
-            });
-
-
-
             //신규버튼
             $("#btnNew").click(function (e) {
                 let today_string = CommonUtil.getYYYYMMDD();
@@ -586,19 +532,17 @@
                 $("#title").prop('disabled', false);
                 $("#notice_yn").prop('disabled', false);
                 $("#notice_end_date").prop('disabled', false);
-                $('editorForm').find('#srchDt').ax5DatePicker({direction: 'top'});
                 $('#notice_end_date').val(CommonUtil.getYYYYMMDD());
                 $('#srchFileId').val('');
             });
 
-            //수정버튼
-            $("#btnUpdate").click(function (e) {
-                /*let items = page.grid.getList("selected");*/
+            //수정 공통 함수
+            function doUpdate() {
                 let selectedRow  = theGrid.selection.row;
-                let selectedItem = theGrid.rows[selectedRow]?.dataItem; // 선택된 행이 없는 경우 undefined 방지
+                let selectedItem = theGrid.rows[selectedRow]?.dataItem;
 
-                if (selectedItem) {  // 객체 존재 여부 확인
-                    let id = selectedItem.id;  // 배열이 아니라 객체이므로 selectedItem[0]이 아니라 selectedItem.id 사용
+                if (selectedItem) {
+                    let id = selectedItem.id;
                     data = AjaxUtil.getSyncData('/api/support/notice/detail', {'id': id});
                     showNoticeEdit(data.data);
                     setUploader(id);
@@ -606,8 +550,14 @@
                     $("#title").prop('disabled', false);
                     $("#notice_yn").prop('disabled', false);
                     $("#notice_end_date").prop('disabled', false);
-                    $('editorForm').find('#srchDt').ax5DatePicker({direction: 'top'});
                     $('#notice_yn').val(data.data.notice_yn).prop('selected', true);
+
+                    // notice_end_date: DB는 yyyyMMdd, input[type=date]는 yyyy-MM-dd 필요
+                    let endDate = data.data.notice_end_date;
+                    if (endDate && endDate.length === 8) {
+                        endDate = endDate.substring(0,4) + '-' + endDate.substring(4,6) + '-' + endDate.substring(6,8);
+                    }
+                    $('#notice_end_date').val(endDate || '');
 
                     // 파일 조회
                     let attparam = {"action": 'detailFiles', "TableName": "NOTICE", 'DataPk': id, attachName: 'basic'};
@@ -615,7 +565,16 @@
                 } else {
                     Alert.alert('', '수정할 공지를 선택해 주세요');
                 }
+            }
 
+            //수정버튼
+            $("#btnUpdate").click(function (e) {
+                doUpdate();
+            });
+
+            //그리드 더블클릭 = 수정
+            $('#theGrid').on('dblclick', function () {
+                doUpdate();
             });
 
             //삭제버튼
