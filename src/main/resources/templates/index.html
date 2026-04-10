@@ -1019,15 +1019,15 @@
             '#nf-popup{position:fixed;z-index:9500;width:460px;',
             'background:#fff;border-radius:12px;',
             'box-shadow:0 12px 40px rgba(0,0,0,.20),0 2px 8px rgba(0,0,0,.08);',
-            'display:flex;flex-direction:column;top:10px;left:260px;}',
+            'display:flex;flex-direction:column;top:10px; left:260px;}',
 
             '#nf-popup .nf-head{display:flex;align-items:center;gap:8px;',
             'padding:4px 16px;cursor:move;user-select:none;',
-            'background:#03428E;border-radius:12px 12px 0 0;}',
+            'background:linear-gradient(179deg,#031B4B,#6274B4);border-radius:12px 12px 0 0;}',
             '#nf-popup .nf-head .nf-badge{flex-shrink:0;font-size:10px;font-weight:700;',
             'color:#fff;background:rgba(255,255,255,.22);border-radius:4px;',
             'padding:2px 7px;letter-spacing:.6px;}',
-            '#nf-popup .nf-head .nf-title{flex:1;color:#fff;font-size:14px;font-weight:700;',
+            '#nf-popup .nf-head .nf-title{flex:1;color:#fff;font-size:16px;font-weight:700;',
             'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
             '#nf-popup .nf-head .nf-x{background:none;border:none;color:rgba(255,255,255,.75);',
             'font-size:17px;cursor:pointer;line-height:1;padding:0;margin-left:4px;}',
@@ -1037,7 +1037,17 @@
             'background:#f4f6ff;border-bottom:1px solid #e4e8fb;}',
 
             '#nf-popup .nf-body{padding:18px 18px 14px;overflow-y:auto;',
-            'max-height:300px;font-size:13px;line-height:1.8;color:#333;}',
+            'max-height:300px;font-size:15px;line-height:1.8;color:#333;}',
+
+            '#nf-popup .nf-files{padding:8px 14px;border-top:1px solid #e4e8fb;background:#f4f6ff;}',
+            '#nf-popup .nf-files-title{font-size:16px;font-weight:700;color:#6b7bbf;',
+            'margin-bottom:5px;letter-spacing:.3px;}',
+            '#nf-popup .nf-file-item{display:flex;align-items:center;gap:6px;',
+            'padding:4px 6px;border-radius:5px;cursor:pointer;text-decoration:none;',
+            'color:#3a5ff8;font-size:16px;transition:background .12s;}',
+            '#nf-popup .nf-file-item:hover{background:#e8ecff;text-decoration:none;}',
+            '#nf-popup .nf-file-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '#nf-popup .nf-file-size{color:#a0aac4;font-size:11px;flex-shrink:0;}',
 
             '#nf-popup .nf-foot{display:flex;align-items:center;justify-content:space-between;',
             'padding:11px 16px;background:#f8f9ff;border-top:1px solid #e8ecf8;',
@@ -1048,7 +1058,7 @@
             '#nf-popup .nf-counter{font-size:12px;color:#b0b8d0;}',
             '#nf-popup .nf-close-btn{padding:6px 20px;border-radius:6px;border:none;',
             'font-size:13px;font-weight:600;cursor:pointer;',
-            'background:#03428E;color:#fff;transition:background .15s;}',
+            'background:#0056b3;color:#fff;transition:background .15s;}',
             '#nf-popup .nf-close-btn:hover{background:#2748d4;}'
         ].join('');
 
@@ -1121,6 +1131,52 @@
             xBtn.addEventListener('click', closeAndNext);
             closeBtn.addEventListener('click', closeAndNext);
             skipBtn.addEventListener('click', function () { markSkipped(n.id); closeAndNext(); });
+
+            /* 첨부파일 조회 후 foot 앞에 삽입 */
+
+            function fmtSize(bytes) {
+                if (!bytes) return '';
+                if (bytes < 1024) return bytes + 'B';
+                if (bytes < 1048576) return (bytes/1024).toFixed(1) + 'KB';
+                return (bytes/1048576).toFixed(1) + 'MB';
+            }
+
+            $.getJSON(withCtx('/api/common/attach_file/detailFiles'),
+                {TableName: 'NOTICE', DataPk: n.id, attachName: 'basic'},
+                function (res) {
+                    if (!res || !res.data || !res.data.length) return;
+                    var files = res.data;
+
+                    var section = document.createElement('div');
+                    section.className = 'nf-files';
+
+                    var title = document.createElement('div');
+                    title.className = 'nf-files-title';
+                    title.textContent = '첨부파일 (' + files.length + ')';
+                    section.appendChild(title);
+
+                    files.forEach(function (f) {
+                        var a = document.createElement('a');
+                        a.className = 'nf-file-item';
+                        a.href = withCtx('/api/files/download?file_id=' + f.fileId);
+
+                        var icon = document.createElement('span');
+
+                        var name = document.createElement('span');
+                        name.className = 'nf-file-name';
+                        name.textContent = f.fileNm;
+
+                        var size = document.createElement('span');
+                        size.className = 'nf-file-size';
+                        size.textContent = fmtSize(f.fileSize);
+
+                        a.appendChild(icon); a.appendChild(name); a.appendChild(size);
+                        section.appendChild(a);
+                    });
+
+                    popup.insertBefore(section, foot);
+                }
+            );
         }
 
         $.getJSON(withCtx('/api/support/notice/active'), function (res) {
