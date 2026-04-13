@@ -171,7 +171,7 @@
                             </li>
                             <li>
                               <a class="btn btn-delete" title="검색" id="btn-srch" onclick="fetchListData();initDatas();">
-                                <img src="/images/icon/btn-srch.svg" alt="검색 아이콘">
+                                <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘">
                                 검색
                               </a>
                             </li>
@@ -328,7 +328,7 @@
         isBindSpjangcdCalled = true; // 플래그 업데이트
       }
       fetchListData();
-     initCalendar();initCalendar();
+      initCalendar();
       // applySavedSettings(); // 페이지 로드 시 설정 적용
       initDatas();
     }

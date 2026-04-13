@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -20,64 +21,78 @@ public class PaymentDetailService {
   SqlRunner sqlRunner;
 
   public List<Map<String, Object>> getPaymentList(String spjangcd, String startDate, String endDate, String searchPayment, String searchText, Integer personid) {
+
+    // 1. tenant DB에서 personid(PK)로 Code(사번) 조회
+    String personSql = """
+        SELECT Code AS personCode 
+        FROM person 
+        WHERE id = :pid 
+        AND spjangcd = :spjangcd
+    """;
+    MapSqlParameterSource personParam = new MapSqlParameterSource();
+    personParam.addValue("pid", personid);
+    personParam.addValue("spjangcd", spjangcd);
+
+    Map<String, Object> personRow = sqlRunner.getRow(personSql, personParam);
+    String personCode = null;
+    if (personRow != null) {
+      String code = (String) personRow.get("personCode");
+      personCode = code != null ? code.replaceFirst("^p", "") : null; // p 제거 (앞에 p가 있을 경우만)
+    }
+
+//    log.info("📌 personid={} → personCode={}", personid, personCode);
+
+    // personCode 못 찾으면 빈 리스트 반환
+    if (personCode == null) {
+      log.warn("⚠️ personCode 조회 실패 - personid={}, spjangcd={}", personid, spjangcd);
+      return new ArrayList<>();
+    }
+
+    // 2. personCode로 결재 내역 조회
     MapSqlParameterSource params = new MapSqlParameterSource();
     params.addValue("as_spjangcd", spjangcd);
-    params.addValue("personid", personid);
+    params.addValue("personid", personCode); // ← Code 값으로 교체
+    params.addValue("as_stdate", startDate);
+    params.addValue("as_enddate", endDate);
+
     StringBuilder sql = new StringBuilder("""
-                SELECT
-                     e080.repodate,
-                     e080.repoperid,
-                     (SELECT "Name" FROM person WHERE id = e080.repoperid) AS repopernm,
-                     e080.appgubun,
-                     e080.papercd,
-                     scd."Value" as papercd_name,
-                     -- ca510.com_code AS papercd,
-                     -- ca510.com_cnam AS papercd_name,
-                     sc."Value" AS appgubun_display,
-                     -- e080.appdate,
-                     e080.appnum,
-                     e080.personid,
-                     e080.title,
-                     e080.indate,
-                     pb204.remark
-                     -- files.fileListJson
-                 FROM tb_e080 e080
-                 LEFT JOIN sys_code sc ON sc."Code" = e080.appgubun AND sc."CodeType" = 'approval_status'
-                 LEFT JOIN sys_code scd ON scd."Code" = e080.papercd AND scd."CodeType" = 'appr_doc'
-                 -- 휴가신청서 join
-                 LEFT JOIN tb_pb204 pb204 ON e080.appnum = pb204.appnum
-                 -- LEFT JOIN tb_ca510 ca510 ON ca510.com_cls = '620' AND ca510.com_code = e080.papercd
-                 -- LEFT JOIN LATERAL (
-                 -- SELECT json_agg(row_to_json(f)) AS fileListJson
-                 -- FROM (
-                 --   SELECT spdate, filename AS fileornm, filename AS filesvnm, filepath, '첨부' AS fileType
-                 -- FROM TB_AA010ATCH
-                 -- WHERE spdate IN ('A' || e080.appnum, 'AS' || e080.appnum, 'AJ' || e080.appnum)
-
-                 -- UNION ALL
-
-                 -- SELECT spdate, filename, filename, filepath, '전표'
-                 --   FROM TB_AA010PDF
-                 --   WHERE spdate = e080.appnum
-                 -- ) f
-                 -- ) files ON TRUE
-
-                 WHERE e080.spjangcd = 'ZZ'
-                  AND e080.personid = :personid
-                  AND e080.flag = '1'
-        """);
-    // startDate 필터링
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-    String startDateFormatted = LocalDate.parse(startDate).format(formatter);
-    sql.append(" AND e080.indate >= :as_stdate ");
-    params.addValue("as_stdate", startDateFormatted);
-
-    // endDate 필터링
-    if (endDate != null && !endDate.isEmpty()) {
-      String endDateFormatted = LocalDate.parse(endDate).format(formatter);
-      sql.append(" AND e080.indate <= :as_enddate ");
-      params.addValue("as_enddate", endDateFormatted);
-    }
+        SELECT
+            STUFF(STUFF(e080.repodate,5,0,'-'),8,0,'-') as repodate,
+            e080.repoperid,
+            (SELECT pernm FROM tb_ja001 WHERE perid = 'p' + e080.repoperid) AS repopernm,
+            e080.appgubun,
+            e080.papercd,
+            ca510.com_code AS papercd,
+            ca510.com_cnam AS papercd_name,
+            sc.Value AS appgubun_display,
+            STUFF(STUFF(e080.appdate,5,0,'-'),8,0,'-') as appdate,
+            e080.appnum,
+            e080.indate,
+            e080.title,
+            e080.remark
+            -- files.fileListJson
+        FROM tb_e080 e080
+        LEFT JOIN sys_code sc ON sc."Code" = e080.appgubun AND sc."CodeType" = 'Payment'
+        -- 휴가신청서 join
+        LEFT JOIN tb_pb204 pb204 ON e080.appnum = pb204.appnum
+        LEFT JOIN tb_ca510 ca510 ON ca510.com_cls = '620' AND ca510.com_code = e080.papercd
+        -- LEFT JOIN LATERAL (
+        -- SELECT json_agg(row_to_json(f)) AS fileListJson
+        -- FROM (
+        --   SELECT spdate, filename AS fileornm, filename AS filesvnm, filepath, '첨부' AS fileType
+        --   FROM TB_AA010ATCH
+        --   WHERE spdate IN ('A' || e080.appnum, 'AS' || e080.appnum, 'AJ' || e080.appnum)
+        --   UNION ALL
+        --   SELECT spdate, filename, filename, filepath, '전표'
+        --   FROM TB_AA010PDF
+        --   WHERE spdate = e080.appnum
+        -- ) f
+        -- ) files ON TRUE
+        WHERE e080.spjangcd = :as_spjangcd
+           AND e080.appperid = :personid
+          AND e080.flag = '1'
+          AND e080.indate BETWEEN :as_stdate AND :as_enddate
+    """);
 
     // 검색 조건 추가
     if (searchText != null && !searchText.isEmpty()) {
@@ -92,12 +107,12 @@ public class PaymentDetailService {
       sql.append(" AND e080.appgubun = :as_appgubun ");
       params.addValue("as_appgubun", searchPayment);
     }
+
     sql.append(" ORDER BY e080.indate DESC ");
 
-//    log.info("결재내역 List SQL: {}", sql);
+//    log.info("결재 할 내역 List SQL: {}", sql);
 //    log.info("SQL Parameters: {}", params.getValues());
     return sqlRunner.getRows(sql.toString(), params);
-
   }
 
   public Map<String, Object> getVacFileList(String appnum) {
@@ -139,6 +154,31 @@ public class PaymentDetailService {
   public List<Map<String, Object>> getPaymentList1(String spjangcd, String startDate, String endDate, Integer personid) {
     MapSqlParameterSource params = new MapSqlParameterSource();
 
+    String personSql = """
+        SELECT Code AS personCode 
+        FROM person 
+        WHERE id = :pid 
+        AND spjangcd = :spjangcd
+    """;
+    MapSqlParameterSource personParam = new MapSqlParameterSource();
+    personParam.addValue("pid", personid);
+    personParam.addValue("spjangcd", spjangcd);
+
+    Map<String, Object> personRow = sqlRunner.getRow(personSql, personParam);
+    String personCode = null;
+    if (personRow != null) {
+      String code = (String) personRow.get("personCode");
+      personCode = code != null ? code.replaceFirst("^p", "") : null; // p 제거 (앞에 p가 있을 경우만)
+    }
+
+//    log.info("📌 personid={} → personCode={}", personid, personCode);
+
+    // personCode 못 찾으면 빈 리스트 반환
+    if (personCode == null) {
+      log.warn("⚠️ personCode 조회 실패 - personid={}, spjangcd={}", personid, spjangcd);
+      return new ArrayList<>();
+    }
+
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
     String startDateFormatted = LocalDate.parse(startDate).format(formatter);
     String endDateFormatted = LocalDate.parse(endDate).format(formatter);
@@ -146,13 +186,14 @@ public class PaymentDetailService {
     params.addValue("as_stdate", startDateFormatted);
     params.addValue("as_enddate", endDateFormatted);
     params.addValue("as_spjangcd", spjangcd);
-    params.addValue("as_personid", personid);
+    params.addValue("as_perid", personCode);
+
     StringBuilder sql = new StringBuilder("""
-          SELECT
-            (SELECT count(appgubun) FROM tb_e080 WHERE appgubun = '001' AND personid = :as_personid AND flag = '1' AND indate BETWEEN :as_stdate AND :as_enddate AND spjangcd = :as_spjangcd) AS appgubun1,
-            (SELECT count(appgubun) FROM tb_e080 WHERE appgubun = '101' AND personid = :as_personid AND flag = '1' AND indate BETWEEN :as_stdate AND :as_enddate AND spjangcd = :as_spjangcd) AS appgubun2,
-            (SELECT count(appgubun) FROM tb_e080 WHERE appgubun = '131' AND personid = :as_personid AND flag = '1' AND indate BETWEEN :as_stdate AND :as_enddate AND spjangcd = :as_spjangcd) AS appgubun3,
-            (SELECT count(appgubun) FROM tb_e080 WHERE appgubun = '201' AND personid = :as_personid AND flag = '1' AND indate BETWEEN :as_stdate AND :as_enddate AND spjangcd = :as_spjangcd) AS appgubun4
+          SELECT (select count(appgubun) from tb_e080 WITH(NOLOCK) where appgubun = '001' AND appperid = :as_perid AND flag = '1' AND repodate Between :as_stdate AND :as_enddate and spjangcd = :as_spjangcd ) as appgubun1,
+        	    (select count(appgubun) from tb_e080 WITH(NOLOCK) where appgubun = '101' AND appperid = :as_perid AND flag = '1'  AND repodate Between :as_stdate AND :as_enddate) as appgubun2,
+        	    (select count(appgubun) from tb_e080 WITH(NOLOCK) where appgubun = '131' AND appperid = :as_perid AND flag = '1'  AND repodate Between :as_stdate AND :as_enddate) as appgubun3,
+        	    (select count(appgubun) from tb_e080 WITH(NOLOCK) where appgubun = '201' AND appperid = :as_perid AND flag = '1'  AND repodate Between :as_stdate AND :as_enddate) as appgubun4
+        FROM dual
         """);
 //    log.info("결재목록_문서현황 List SQL: {}", sql);
 //    log.info("SQL Parameters: {}", params.getValues());

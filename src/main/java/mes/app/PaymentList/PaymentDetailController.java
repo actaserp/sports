@@ -43,16 +43,10 @@ import java.util.zip.ZipOutputStream;
 @Slf4j
 @RestController
 @RequestMapping("/api/PaymentDetail")
-public class PaymentDetailController {
+public class PaymentDetailController {  //결재 할 내역
 
   @Autowired
   PaymentDetailService paymentDetailService;
-
-//  @Autowired
-//  tb_aa010Repository tbAa010PdfRepository;
-//
-//  @Autowired
-//  TB_AA010ATCHRepository tbAa010AtchRepository;
 
   @GetMapping("/read")
   public AjaxResult getPaymentList(@RequestParam(value = "startDate") String startDate,
@@ -65,19 +59,24 @@ public class PaymentDetailController {
     log.info("결재 내역 read 들어온 데이터:startDate{}, endDate{}, spjangcd {}, SearchPayment {} ,searchUserNm {} ", startDate, endDate, spjangcd, SearchPayment, searchText);
 
     try {
-      // 데이터 조회
       User user = (User) auth.getPrincipal();
-      Integer personid = user.getPersonid();
-      List<Map<String, Object>> getPaymentList = paymentDetailService.getPaymentList(spjangcd, startDate, endDate, SearchPayment,searchText, personid);
+      Integer personid = user.getPersonid(); // main DB의 personid → tenant DB person.id 와 매핑
+
+      LocalDate dateStart = LocalDate.parse(startDate);
+      String formattedStartDate = dateStart.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+      LocalDate dateEnd = LocalDate.parse(endDate);
+      String formattedEndDate = dateEnd.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+      // 서비스단에서 tenant DB person 조회 + 결재 내역 조회 모두 처리
+      List<Map<String, Object>> getPaymentList = paymentDetailService.getPaymentList(
+        spjangcd, formattedStartDate, formattedEndDate, SearchPayment, searchText, personid);
+
+      // null 방지
+      if (getPaymentList == null) getPaymentList = new ArrayList<>();
 
       ObjectMapper mapper = new ObjectMapper();
 
       for (Map<String, Object> item : getPaymentList) {
-        //날짜 포맷 변환 (repodate)
-        formatDateField(item, "repodate");
-        //날짜 포맷 변환 (appdate)
-        formatDateField(item, "indate");
-
         // fileListJson → fileList
         List<Map<String, Object>> fileList = new ArrayList<>();
         String fileListJson = (String) item.get("fileListJson");
@@ -90,18 +89,15 @@ public class PaymentDetailController {
           log.warn("📄 파일 리스트 JSON 파싱 실패: {}", fileListJson);
         }
 
-        item.put("fileList", fileList);                  // ✅ 항상 넣고
-        item.put("isdownload", !fileList.isEmpty());     // ✅ 상태 표시
-
+        item.put("fileList", fileList);              // ✅ 항상 넣고
+        item.put("isdownload", !fileList.isEmpty()); // ✅ 상태 표시
       }
 
-      // 데이터가 있을 경우 성공 메시지
       result.success = true;
       result.message = "데이터 조회 성공";
       result.data = getPaymentList;
 
     } catch (Exception e) {
-      // 예외 처리
       result.success = false;
       result.message = "데이터 조회 중 오류 발생: " + e.getMessage();
     }
@@ -112,19 +108,19 @@ public class PaymentDetailController {
   @GetMapping("/read1")
   public AjaxResult getPaymentList1(@RequestParam(value = "startDate") String startDate,
                                     @RequestParam(value = "endDate") String endDate,
-                                    @RequestParam(value = "search_spjangcd", required = false) String spjangcd,
                                     Authentication auth) {
     AjaxResult result = new AjaxResult();
-//    log.info("결재목록_문서현황 read 들어온 데이터:startDate{}, endDate{}, spjangcd {} ", startDate, endDate, spjangcd);
-
+//    log.info("결재목록_문서현황 read 들어온 데이터:
+//    startDate{}, endDate{}, spjangcd {} ", startDate, endDate, spjangcd);
+    String spjangcd = TenantContext.get();
     try {
 
       User user = (User) auth.getPrincipal();
-//      String agencycd = user.getAgencycd().replaceFirst("^p", "");
       String userName = user.getFirst_name();
       Integer personid = user.getPersonid();
       // 데이터 조회
-      List<Map<String, Object>> getPaymentList = paymentDetailService.getPaymentList1(spjangcd, startDate, endDate, personid);
+      List<Map<String, Object>> getPaymentList =
+        paymentDetailService.getPaymentList1(spjangcd, startDate, endDate, personid);
 
 
       // 데이터가 있을 경우 성공 메시지
