@@ -173,7 +173,7 @@ public class GuiController {
 
         ModelAndView mv = new ModelAndView();
         mv.addObject("userinfo", user);
-        mv.setViewName(String.format("/page/%s/%s", folder, template));
+        mv.setViewName(String.format("page/%s/%s", folder, template));
 
         return mv;
     }

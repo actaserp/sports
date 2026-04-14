@@ -2141,3 +2141,7 @@ table.tbl-400 {width:400px;}
 .bg-work {
 	background-color : #92D050 !important;
 }
+
+.ax-progressbox-buttons {
+	display: none !important;
+}

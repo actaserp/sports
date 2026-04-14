@@ -65,6 +65,7 @@ public class NoticeBoardController {
 			@RequestParam(value = "title", required = false) String title,
 			@RequestParam(value = "content", required = false) String content,
 			@RequestParam(value = "notice_yn", required = false) String notice_yn,
+			@RequestParam(value = "notice_from_date", required = false) String notice_from_date,
 			@RequestParam(value = "notice_end_date", required = false) String notice_end_date,
 			HttpServletRequest request,
 			Authentication auth) {
@@ -72,7 +73,7 @@ public class NoticeBoardController {
 		User user = (User) auth.getPrincipal();
 
 		Integer savedId = this.noticeService.saveNotice(
-				id, title, content, notice_yn, notice_end_date, user.getUsername());
+				id, title, content, notice_yn, notice_from_date, notice_end_date, user.getUsername());
 
 		AjaxResult result = new AjaxResult();
 		if (savedId == null) {

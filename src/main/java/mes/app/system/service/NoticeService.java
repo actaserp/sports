@@ -1,6 +1,8 @@
 package mes.app.system.service;
 
 import io.micrometer.core.instrument.util.StringUtils;
+import lombok.extern.slf4j.Slf4j;
+import mes.app.files.NcpObjectStorageService;
 import mes.domain.services.SqlRunner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -11,165 +13,156 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class NoticeService {
 
-	@Autowired
-	SqlRunner sqlRunner;
+    @Autowired
+    SqlRunner sqlRunner;
 
-	private static final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
+    @Autowired
+    NcpObjectStorageService storageService;
 
-	// 공지사항 목록 조회
-	public List<Map<String, Object>> getBoardList(String keyword, String srchStartDt, String srchEndDt) {
+    private static final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-		String today = LocalDate.now().format(YYYYMMDD);
+    // 공지사항 목록 조회
+    public List<Map<String, Object>> getBoardList(String keyword, String srchStartDt, String srchEndDt) {
 
-		MapSqlParameterSource paramMap = new MapSqlParameterSource();
-		paramMap.addValue("srchStartDt", srchStartDt);
-		paramMap.addValue("srchEndDt", srchEndDt);
-		paramMap.addValue("keyword", keyword);
-		paramMap.addValue("today", today);
+        MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        paramMap.addValue("srchStartDt", srchStartDt);
+        paramMap.addValue("srchEndDt", srchEndDt);
+        paramMap.addValue("keyword", keyword);
 
-		// A: 공지 (BBSTODATE 설정되고 오늘 이후인 것)
-		// B: 일반 게시글 (날짜 범위 내, 공지 제외)
-		String sql = """
-				with A as (
-				    select BBSSEQ as id
-				    , BBSSUBJECT as title
-				    , BBSDATE as write_date_time
-				    , BBSTODATE as notice_end_date
-				    , 'Y' as notice_yn
-				    from tb_bbsinfo
-				    where BBSTODATE is not null
-				    and BBSTODATE != ''
-				    and BBSTODATE >= :today
-				), B as (
-				    select B.BBSSEQ as id
-				    , B.BBSSUBJECT as title
-				    , B.BBSDATE as write_date_time
-				    , null as notice_end_date
-				    , 'N' as notice_yn
-				    from tb_bbsinfo B
-				    left join A on A.id = B.BBSSEQ
-				    where B.BBSDATE between :srchStartDt and :srchEndDt
-				    and A.id is null
-				""";
+        String sql = """
+			select BBSSEQ as id
+			, BBSSUBJECT as title
+			, BBSDATE as write_date_time
+			, BBSFRDATE as notice_from_date
+			, BBSTODATE as notice_end_date
+			, notice_yn
+			from tb_bbsinfo
+			where BBSDATE between :srchStartDt and :srchEndDt
+			""";
 
-		if (!StringUtils.isEmpty(keyword)) {
-			sql += """
-					    and (B.BBSSUBJECT like CONCAT('%', :keyword, '%')
-					        or B.BBSTEXT like CONCAT('%', :keyword, '%'))
-					""";
-		}
+        if (!StringUtils.isEmpty(keyword)) {
+            sql += """
+                    and (BBSSUBJECT like CONCAT('%', :keyword, '%')
+                        or BBSTEXT like CONCAT('%', :keyword, '%'))
+                    """;
+        }
 
-		sql += """
-				)
-				select 1 as data_group, id, title, write_date_time, notice_end_date, notice_yn
-				from A
-				union all
-				select 2 as data_group, id, title, write_date_time, notice_end_date, notice_yn
-				from B
-				order by data_group, write_date_time desc
-				""";
+        sql += " order by BBSSEQ desc ";
 
-		return this.sqlRunner.getRows(sql, paramMap);
-	}
+        return this.sqlRunner.getRows(sql, paramMap);
+    }
 
-	// 공지사항 상세 조회
-	public Map<String, Object> getBoardDetail(Integer bbsseq) {
+    // 공지사항 상세 조회
+    public Map<String, Object> getBoardDetail(Integer bbsseq) {
 
-		MapSqlParameterSource paramMap = new MapSqlParameterSource();
-		paramMap.addValue("bbsseq", bbsseq);
+        MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        paramMap.addValue("bbsseq", bbsseq);
 
-		String sql = """
-				select BBSSEQ as id
-				, BBSSUBJECT as title
-				, BBSTEXT as content
-				, BBSTODATE as notice_end_date
-				, case when BBSTODATE is not null and BBSTODATE != '' then 'Y' else 'N' end as notice_yn
-				from tb_bbsinfo
-				where BBSSEQ = :bbsseq
-				""";
+        String sql = """
+                select BBSSEQ as id
+                , BBSSUBJECT as title
+                , BBSTEXT as content
+                , BBSFRDATE as notice_from_date
+                , BBSTODATE as notice_end_date
+                , notice_yn
+                from tb_bbsinfo
+                where BBSSEQ = :bbsseq
+                """;
 
-		return this.sqlRunner.getRow(sql, paramMap);
-	}
+        return this.sqlRunner.getRow(sql, paramMap);
+    }
 
-	// 공지사항 저장 (신규/수정), 저장된 BBSSEQ 반환
-	public Integer saveNotice(Integer bbsseq, String subject, String text,
-	                          String noticeYn, String noticeEndDate, String userId) {
+    // 공지사항 저장 (신규/수정), 저장된 BBSSEQ 반환
+    public Integer saveNotice(Integer bbsseq, String subject, String text,
+                              String noticeYn, String noticeFromDate, String noticeEndDate, String userId) {
 
-		String today = LocalDate.now().format(YYYYMMDD);
-		boolean isNotice = "Y".equals(noticeYn);
+        String today = LocalDate.now().format(YYYYMMDD);
 
-		// notice_end_date 는 yyyy-MM-dd 또는 yyyyMMdd 형태로 올 수 있으므로 정규화
-		String bbstodate = null;
-		if (isNotice && noticeEndDate != null && !noticeEndDate.isEmpty()) {
-			bbstodate = noticeEndDate.replace("-", "");
-		}
-		String bbsfrdate = isNotice ? today : null;
+        String bbsfrdate = (noticeFromDate != null && !noticeFromDate.isEmpty()) ? noticeFromDate.replace("-", "") : null;
+        String bbstodate = (noticeEndDate != null && !noticeEndDate.isEmpty()) ? noticeEndDate.replace("-", "") : null;
 
-		MapSqlParameterSource paramMap = new MapSqlParameterSource();
-		paramMap.addValue("bbssubject", subject);
-		paramMap.addValue("bbstext", text);
-		paramMap.addValue("bbsfrdate", bbsfrdate);
-		paramMap.addValue("bbstodate", bbstodate);
-		paramMap.addValue("userid", userId);
+        MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        paramMap.addValue("bbssubject", subject);
+        paramMap.addValue("bbstext", text);
+        paramMap.addValue("bbsfrdate", bbsfrdate);
+        paramMap.addValue("bbstodate", bbstodate);
+        paramMap.addValue("noticeYn", noticeYn != null ? noticeYn : "N");
+        paramMap.addValue("userid", userId);
 
-		if (bbsseq == null) {
-			// 신규 등록 - MSSQL OUTPUT 절로 생성된 PK 수신
-			paramMap.addValue("bbsdate", today);
-			String sql = """
-					insert into tb_bbsinfo
-					    (BBSDATE, BBSSUBJECT, BBSUSER, BBSTEXT, BBSFRDATE, BBSTODATE, INDATEM, INUSERID)
-					output INSERTED.BBSSEQ
-					values
-					    (:bbsdate, :bbssubject, :userid, :bbstext, :bbsfrdate, :bbstodate, GETDATE(), :userid)
-					""";
-			Map<String, Object> row = this.sqlRunner.getRow(sql, paramMap);
-			if (row == null) return null;
-			return ((Number) row.get("BBSSEQ")).intValue();
-		} else {
-			// 수정
-			paramMap.addValue("bbsseq", bbsseq);
-			String sql = """
-					update tb_bbsinfo
-					set BBSSUBJECT = :bbssubject
-					, BBSTEXT     = :bbstext
-					, BBSFRDATE   = :bbsfrdate
-					, BBSTODATE   = :bbstodate
-					where BBSSEQ = :bbsseq
-					""";
-			int affected = this.sqlRunner.execute(sql, paramMap);
-			return affected > 0 ? bbsseq : null;
-		}
-	}
+        if (bbsseq == null) {
+            paramMap.addValue("bbsdate", today);
+            String sql = """
+                insert into tb_bbsinfo
+                    (BBSDATE, BBSSUBJECT, BBSUSER, BBSTEXT, BBSFRDATE, BBSTODATE, notice_yn, INDATEM, INUSERID)
+                output INSERTED.BBSSEQ
+                values
+                    (:bbsdate, :bbssubject, :userid, :bbstext, :bbsfrdate, :bbstodate, :noticeYn, GETDATE(), :userid)
+                """;
+            Map<String, Object> row = this.sqlRunner.getRow(sql, paramMap);
+            if (row == null) return null;
+            return ((Number) row.get("BBSSEQ")).intValue();
+        } else {
+            paramMap.addValue("bbsseq", bbsseq);
+            String sql = """
+                update tb_bbsinfo
+                set BBSSUBJECT = :bbssubject
+                , BBSTEXT     = :bbstext
+                , BBSFRDATE   = :bbsfrdate
+                , BBSTODATE   = :bbstodate
+                , notice_yn   = :noticeYn
+                where BBSSEQ = :bbsseq
+                """;
+            int affected = this.sqlRunner.execute(sql, paramMap);
+            return affected > 0 ? bbsseq : null;
+        }
+    }
 
-	// 현재 활성 공지 조회 (index 팝업용)
-	public List<Map<String, Object>> getActiveNotices() {
-		String today = LocalDate.now().format(YYYYMMDD);
-		MapSqlParameterSource paramMap = new MapSqlParameterSource();
-		paramMap.addValue("today", today);
+    // 현재 활성 공지 조회 (index 팝업용)
+    public List<Map<String, Object>> getActiveNotices() {
+        String today = LocalDate.now().format(YYYYMMDD);
+        MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        paramMap.addValue("today", today);
 
-		String sql = """
-				select BBSSEQ as id
-				, BBSSUBJECT as title
-				, BBSTEXT as content
-				, BBSTODATE as notice_end_date
-				from tb_bbsinfo
-				where BBSTODATE is not null
-				and BBSTODATE != ''
-				and BBSTODATE >= :today
-				order by BBSSEQ desc
-				""";
-		return this.sqlRunner.getRows(sql, paramMap);
-	}
+        String sql = """
+                select BBSSEQ as id
+                , BBSSUBJECT as title
+                , BBSTEXT as content
+                , BBSFRDATE as notice_from_date
+                , BBSTODATE as notice_end_date
+                , notice_yn
+                from tb_bbsinfo
+                where notice_yn = 'Y'
+                and BBSFRDATE <= :today
+                and BBSTODATE >= :today
+                """;
+        return this.sqlRunner.getRows(sql, paramMap);
+    }
 
-	// 공지사항 삭제 (첨부파일 포함)
-	public void deleteNotice(Integer bbsseq) {
-		MapSqlParameterSource paramMap = new MapSqlParameterSource();
-		paramMap.addValue("bbsseq", bbsseq);
+    // 공지사항 삭제 (NCP 물리 파일 + TB_FILEINFO + TB_BBSINFO)
+    public void deleteNotice(Integer bbsseq) {
+        MapSqlParameterSource paramMap = new MapSqlParameterSource();
+        paramMap.addValue("bbsseq", bbsseq);
 
-		this.sqlRunner.execute("delete from tb_fileinfo where bbsseq = :bbsseq", paramMap);
-		this.sqlRunner.execute("delete from tb_bbsinfo where BBSSEQ = :bbsseq", paramMap);
-	}
+        // 1. NCP 물리 파일 삭제 (TB_FILEINFO 삭제 전에 먼저 조회)
+        List<Map<String, Object>> files = this.sqlRunner.getRows(
+                "select FILEPATH, FILESVNM from TB_FILEINFO where bbsseq = :bbsseq", paramMap);
+        for (Map<String, Object> file : files) {
+            try {
+                String objectKey = file.get("FILEPATH") + "/" + file.get("FILESVNM");
+                storageService.delete(objectKey);
+            } catch (Exception e) {
+                log.error("[deleteNotice] NCP 파일 삭제 오류 (bbsseq={}): {}", bbsseq, e.getMessage(), e);
+            }
+        }
+
+        // 2. TB_FILEINFO 레코드 삭제
+        this.sqlRunner.execute("delete from tb_fileinfo where bbsseq = :bbsseq", paramMap);
+
+        // 3. TB_BBSINFO 레코드 삭제
+        this.sqlRunner.execute("delete from tb_bbsinfo where BBSSEQ = :bbsseq", paramMap);
+    }
 }
