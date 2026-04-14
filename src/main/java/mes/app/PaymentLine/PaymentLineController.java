@@ -16,7 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/paymentLine")
-public class PaymentLineController {
+public class PaymentLineController { // 결재라인현황
     @Autowired
     PaymentLineService paymentLineService;
 
@@ -29,8 +29,6 @@ public class PaymentLineController {
             , Authentication auth){
 
         User user = (User) auth.getPrincipal();
-        String username = user.getUsername();
-//        Map<String, Object> userInfo = requestService.getUserInfo(username);
         Integer personid = user.getPersonid();
 
         List<Map<String, Object>> items = this.paymentLineService.getPaymentList(personid, comcd);
@@ -46,15 +44,8 @@ public class PaymentLineController {
                                Authentication auth){
         User user = (User) auth.getPrincipal();
         String username = user.getUsername();
-        Integer NumPersonid = null;
-        if (personid != null && !personid.trim().isEmpty()) {
-            NumPersonid = Integer.valueOf(personid);
-        }
-//        String perid = paymentLineService.getPerid(username);
-//        String splitPerid = perid.replaceFirst("p", ""); // ✅ 첫 번째 "p"만 제거
-//        Map<String, Object> userInfo = requestService.getUserInfo(username);
 
-        List<Map<String, Object>> items = this.paymentLineService.getCheckPaymentList(NumPersonid, comcd);
+        List<Map<String, Object>> items = this.paymentLineService.getCheckPaymentList(personid, comcd);
         AjaxResult result = new AjaxResult();
         result.data = items;
 

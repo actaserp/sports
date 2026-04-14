@@ -30,6 +30,7 @@ public class ComboService {
 		this._dicFunc_ = new HashMap<String, ComboDataFunction>();
 		
 		// 알파벳 순서대로
+		this._dicFunc_.put("appr_doc", this.appr_doc);
 		this._dicFunc_.put("area", this.area);
 		this._dicFunc_.put("bom_version", this.bom_version);
 		this._dicFunc_.put("bank", this.bank);
@@ -563,7 +564,7 @@ public class ComboService {
 	};
 	
 	ComboDataFunction person=(String cond1, String cond2, String cond3)-> { 
-		String sql = "select id as Value, \"Name\" as text from person where 1=1 order by \"Name\" ";
+		String sql = "select id as value, \"Name\" as text from person where 1=1 order by \"Name\" ";
 		MapSqlParameterSource dicParam = new MapSqlParameterSource();
         dicParam.addValue("cond1", cond1);
         dicParam.addValue("cond2", cond2);
@@ -1067,6 +1068,15 @@ public class ComboService {
 		String sql = """
 			select cd as value, nm as text from tb_xcard
 			""";
+		MapSqlParameterSource dicParam = new MapSqlParameterSource();
+		dicParam.addValue("cond1", cond1);
+		dicParam.addValue("cond2", cond2);
+		dicParam.addValue("cond3", cond3);
+		return this.sqlRunner.getRows(sql, dicParam);
+	};
+
+	public ComboDataFunction appr_doc=(String cond1, String cond2, String cond3)-> {
+		String sql = "SELECT com_code AS value, com_cnam as text FROM tb_ca510 WHERE com_cls = '620' AND com_code <> '00'";
 		MapSqlParameterSource dicParam = new MapSqlParameterSource();
 		dicParam.addValue("cond1", cond1);
 		dicParam.addValue("cond2", cond2);
