@@ -255,7 +255,13 @@
 <!--                                            </td>-->
                                         </tr>
                                         <tr>
+                                            <th>
+                                                <label for="spjangcd">사업장</label>
+                                            </th>
 
+                                            <td>
+                                                <select style="width: 100%;" id="spjangcd" name="spjangcd"></select>
+                                            </td>
                                             <th style="display:none;">
                                                 <label for="lang_code">언어</label>
                                             </th>
@@ -467,7 +473,6 @@
             {binding: 'tel', header: '전화번호', width: 180, align: 'center'},
             {binding: 'email', header: '이메일', width: 200, align: 'center'},
             {binding: 'group_name', header: '사용자그룹', width: 120, align: 'center'},
-            {binding: 'factory_name', header: '소속공장', width: 150, align: 'center'},
             {binding: 'dept_name', header: '부서', width: 150, align: 'center'},
             {binding: 'lang_code', header: '언어', width: 100, align: 'center'},
             {
@@ -604,7 +609,17 @@
 
             theGrid.rowHeaders.columns.splice(0, 1);
             user_group_grid();
-            // getspjangcd();
+            loadSpjangcdList();
+        }
+
+        function loadSpjangcdList() {
+            let result = AjaxUtil.getSyncData('/api/system/user/spjangcd_list', {});
+            let $sel = $('#spjangcd');
+            if (result && result.data) {
+                result.data.forEach(function (item) {
+                    $sel.append('<option value="' + item.spjangcd + '">' +item.spjangnm + '</option>');
+                });
+            }
         }
 
 
@@ -781,12 +796,7 @@
             let data = FormUtil.extractForm($('#userForm'));
 
             data.is_active = $('#is_active').is(':checked');
-            // let spjangcd = $('#spjangcd').val();
-            // if (!spjangcd) {
-            //     Alert.alert('', '사업장을 선택해주세요.');
-            //     return;
-            // }
-            // data.spjangcd = spjangcd;
+            data.spjangcd = $('#spjangcd').val();
 
 
             if (!data.login_id) {

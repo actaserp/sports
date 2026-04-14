@@ -32,7 +32,7 @@ public class UserService {
         dicParam.addValue("keyword", keyword);
         dicParam.addValue("username", username);
         dicParam.addValue("departId", departId);
-				dicParam.addValue("spjangcd", spjangcd);
+		dicParam.addValue("spjangcd", spjangcd);
         
         String sql = """
 			select au.id
@@ -58,12 +58,12 @@ public class UserService {
             left join factory f on f.id = up."Factory_id" and f.spjangcd = up.spjangcd
             left join person p on p.id = au.personid
             where is_superuser = false
-            AND au.db_key = :spjangcd
 		    """;
-        
-        if (superUser != true) {
-        	sql += "  and ug.\"Code\" <> 'dev' ";
-        }
+
+		if (!superUser) {
+			sql += "  AND au.db_key = :spjangcd ";
+			sql += "  AND ug.\"Code\" <> 'dev' ";
+		}
         
         if (group!=null){            	
             sql+= " and ug.\"id\" = :group ";
@@ -100,6 +100,7 @@ public class UserService {
              , au.username      AS login_id
              , au.email
              , au.tel
+             , au.spjangcd
              , ug."Name"        AS group_name
              , up."UserGroup_id"
              , up."Factory_id"
@@ -216,6 +217,12 @@ public class UserService {
 
 		List<Map<String, Object>> items = this.tenantSqlRunner.getRows(sql, dicParam);
 		return items;
+	}
+
+	// 테넌트 DB의 tb_xa012에서 사업장 목록 조회
+	public List<Map<String, Object>> getSpjangcdList() {
+		String sql = "SELECT spjangcd, spjangnm FROM tb_xa012 ORDER BY spjangcd";
+		return this.tenantSqlRunner.getRows(sql, new MapSqlParameterSource());
 	}
 
 	// 테넌트 DB의 TB_XUSERS에서 직원 목록 조회 (사번 선택 팝업용)
