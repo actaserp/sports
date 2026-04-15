@@ -589,11 +589,6 @@ public class AccountController {
 			user.setLast_name("");
 			user.setIs_staff(false);
 
-			sql = """
-		        	INSERT INTO user_profile 
-		        	("_created", "_creater_id", "User_id", "lang_code", "Name", "Factory_id" , "Depart_id", "UserGroup_id" ) 
-		        	VALUES (now(), :loginUser, :User_id, :lang_code, :name, :Factory_id, :Depart_id, :UserGroup_id )
-		        """;
 		}
 
 		user.setUsername(login_id);
@@ -602,18 +597,11 @@ public class AccountController {
 		user.setTel(tel);
 		user.setDate_joined(today);
 		user.setActive(is_active);
-		user.setSpjangcd(spjangcd);
+		user.setSpjangcd("ZZ");
+		user.setDbKey(spjangcd);
 
 
 		user = this.userRepository.save(user);
-
-		dicParam.addValue("name", Name);
-		dicParam.addValue("UserGroup_id", UserGroup_id);
-		dicParam.addValue("Factory_id", Factory_id);
-		dicParam.addValue("Depart_id", Depart_id);
-		dicParam.addValue("lang_code", lang_code);
-
-		this.sqlRunner.execute(sql, dicParam);
 
 		result.data = user;
 

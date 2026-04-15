@@ -152,7 +152,6 @@ public class NotificationController {
     public AjaxResult getHistoryList(
             @RequestParam(value="startDate", required=false) String startDate,
             @RequestParam(value="endDate", required=false) String endDate,
-            @RequestParam(value ="spjangcd") String spjangcd,
             HttpServletRequest request,
             Authentication auth) {
 
@@ -160,7 +159,7 @@ public class NotificationController {
         User user = (User) auth.getPrincipal();
         String userId = user.getUsername();
 
-        List<Map<String, Object>> items = this.notificationService.getHistoryList(startDate, endDate, userId, spjangcd);
+        List<Map<String, Object>> items = this.notificationService.getHistoryList(startDate, endDate, userId);
 
         result.data = items;
         return result;

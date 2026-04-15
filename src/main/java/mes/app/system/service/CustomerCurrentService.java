@@ -11,6 +11,7 @@ import mes.domain.repository.UserGroupRepository;
 import mes.domain.repository.UserRepository;
 import mes.domain.services.SqlRunner;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +28,7 @@ import java.util.Map;
 public class CustomerCurrentService {
 
     @Autowired
+    @Qualifier("mainSqlRunner")
     SqlRunner sqlRunner;
 
     @Autowired
@@ -111,7 +113,7 @@ public class CustomerCurrentService {
             boolean isNew = userGroupRepository.findBySpjangcd(spjangcd).isEmpty();
             if (isNew) {
                 // 2. auth_user is_active -> true
-                User user = userRepository.findBySpjangcd(spjangcd)
+                User user = userRepository.findByDbkey(spjangcd)
                         .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + spjangcd));
                 user.setActive(true);
                 user.setSpjangcd("ZZ");
@@ -143,7 +145,21 @@ public class CustomerCurrentService {
 
                 this.sqlRunner.execute(userProfileSql, profileParam);
 
-                // 5. user_group_menu insert (jdbc)
+                // 5. tenant_menu insert (사업장 허용 메뉴 등록)
+                String tenantMenuSql = """
+                INSERT INTO tenant_menu (spjangcd, menu_code)
+                VALUES (:spjangcd, :menu_code)
+                ON CONFLICT (spjangcd, menu_code) DO NOTHING
+                """;
+
+                for (String menuCode : menuCodes) {
+                    MapSqlParameterSource tmParam = new MapSqlParameterSource();
+                    tmParam.addValue("spjangcd", spjangcd);
+                    tmParam.addValue("menu_code", menuCode);
+                    this.sqlRunner.execute(tenantMenuSql, tmParam);
+                }
+
+                // 6. user_group_menu insert (jdbc)
                 String sql = """
                 INSERT INTO user_group_menu("UserGroup_id", "MenuCode", "AuthCode", _creater_id, _created, spjangcd)
                 VALUES(:group_id, :menu_code, :auth_code, :user_id, now(), :spjangcd)

@@ -3,6 +3,7 @@ package mes.app.notification;
 
 import io.micrometer.core.instrument.util.StringUtils;
 import lombok.RequiredArgsConstructor;
+import mes.app.common.TenantContext;
 import mes.domain.entity.Notification;
 import mes.domain.entity.User;
 import mes.domain.repository.NotificationRepository;
@@ -125,8 +126,9 @@ public class NotificationService {
         return items;
     }
 
-    public List<Map<String, Object>> getHistoryList(String startDate, String endDate, String userid, String spjangcd){
+    public List<Map<String, Object>> getHistoryList(String startDate, String endDate, String userid){
 
+        String spjangcd = TenantContext.get();
         MapSqlParameterSource dicParam = new MapSqlParameterSource();
         dicParam.addValue("startDate", startDate);
         dicParam.addValue("endDate", endDate);
