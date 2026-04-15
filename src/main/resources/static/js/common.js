@@ -1319,7 +1319,6 @@ let AjaxUtil = {
         if (Array.isArray(data)) {
             data = data.map(item => ({
                 ...item,
-                spjangcd: spjangcd
             }));
         }
         AjaxUtil.showLoading();

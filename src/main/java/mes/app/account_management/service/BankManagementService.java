@@ -1,6 +1,7 @@
 package mes.app.account_management.service;
 
 import lombok.extern.slf4j.Slf4j;
+import mes.app.common.TenantContext;
 import mes.domain.model.AjaxResult;
 import mes.domain.services.SqlRunner;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,25 +20,31 @@ public class BankManagementService {
 	@Autowired
 	SqlRunner sqlRunner;
 
-	public List<Map<String, Object>> getAccountList(String bankid, String accnum, String spjangcd) {
+	public List<Map<String, Object>> getAccountList(String bankid, String accnum) {
 		MapSqlParameterSource param = new MapSqlParameterSource();
-
+		String spjangcd = TenantContext.get();
 		param.addValue("spjangcd", spjangcd);
 
 		String sql = """
-			    select
-			         a.bank,
-			         b.banknm as bankname,
-			         a.bankcd,
-			         a.accnum as accountNumber,
-			         a.banknm as accountName,	
-			         a.bnkpaypw as accountPw,
-			         a.spacc as accountType
-			    from tb_aa040 a
-			    left join tb_xbank b on a.bank = b.bankcd
-			    where 1=1
-			      and a.spjangcd = :spjangcd
-			      and a.useyn = '1'
+			     SELECT
+							 a.bank,
+							 a.bankcd,
+							 b.banknm     AS bankname,
+							 a.accnum     AS accountNumber,
+							 a.accname    AS accountName,
+							 a.bnkid      AS onlineid,
+							 a.cmsid      AS viewid,
+							 a.cmspw      AS viewpw,
+							 a.bnkpaypw   AS accountPw,
+							 a.popsort    AS accountType,
+							 a.intrate    AS mijamt,
+							 a.popflag    AS popyn,
+							 a.accbirthday,
+							 a.spacc as accountType
+					 FROM tb_aa040 a
+					 LEFT JOIN tb_xbank b ON a.bank = b.bankcd
+					 WHERE a.spjangcd = :spjangcd
+						 AND a.useyn = '1'
 			""";
 
 		if (bankid != null && !bankid.trim().isEmpty()) {
@@ -63,60 +70,34 @@ public class BankManagementService {
 		return sqlRunner.getRows(sql, param);
 	}
 
-
 	@Transactional
 	public AjaxResult saveBankAccount(Map<String, Object> param, Authentication auth) {
 
 		AjaxResult result = new AjaxResult();
 
 		try {
-			String bankid = (String) param.get("bankid");
-			String accountNumber = (String) param.get("accountNumber");
-			String accountPw = (String) param.get("accountPw");
-			String accountName = (String) param.get("accountName");//계좌명칭
-			String accountType = (String) param.get("accountType");
-			String onlineid = (String) param.get("onlineid");//인터넷뱅킹id
-			String viewid = (String) param.get("viewid");	//
-			String viewpw = (String) param.get("viewpw");
-			String mijamt = (String) param.get("mijamt");	//수수료
-			String spjangcd = (String) param.get("spjangcd");	//사업장코드
+			String bankid         = (String) param.get("bankid");
+			String bankcd         = (String) param.get("bankcd");       // 추가
+			String accountNumber  = (String) param.get("accountNumber");
+			String accountPw      = (String) param.get("accountPw");
+			String accountName    = (String) param.get("accountName");
+			String accountType    = (String) param.get("accountType");
+			String onlineid       = (String) param.get("onlineid");
+			String viewid         = (String) param.get("viewid");
+			String viewpw         = (String) param.get("viewpw");
+			String mijamt         = (String) param.get("mijamt");
+			String spjangcd       = TenantContext.get();               // 세션에서 가져오기
 
 			String custcd = getCustcdBySpjangcd(spjangcd);
 
-			if (custcd.isEmpty()) {
-				result.success = false;
-				result.message = "거래처코드가 없습니다.";
-				return result;
-			}
+			if (custcd.isEmpty())       { result.success = false; result.message = "회사코드가 없습니다.";  return result; }
+			if (bankid.isEmpty())       { result.success = false; result.message = "은행코드가 없습니다.";  return result; }
+			if (bankcd.isEmpty())       { result.success = false; result.message = "계좌 체번이 없습니다."; return result; }
+			if (accountNumber.isEmpty()){ result.success = false; result.message = "계좌번호가 없습니다.";  return result; }
 
-			if (bankid.isEmpty()) {
-				result.success = false;
-				result.message = "은행코드가 없습니다.";
-				return result;
-			}
-
-			if (accountNumber.isEmpty()) {
-				result.success = false;
-				result.message = "계좌번호가 없습니다.";
-				return result;
-			}
-
-			MapSqlParameterSource dicParam = new MapSqlParameterSource();
-			dicParam.addValue("custcd", custcd);
-			dicParam.addValue("bank", bankid);
-			dicParam.addValue("bankcd", bankid);
-			dicParam.addValue("spjangcd", spjangcd);
-			dicParam.addValue("accnum", accountNumber);
-			dicParam.addValue("accname", accountName);
-			dicParam.addValue("bnkpaypw", accountPw);
-			dicParam.addValue("bnkid", onlineid);
-			dicParam.addValue("cmsid", viewid);
-			dicParam.addValue("cmspw", viewpw);
-			dicParam.addValue("acccd", accountType);
-
-// 수수료
+			// 수수료
 			double intrate = 0.0;
-			if (!mijamt.isEmpty()) {
+			if (mijamt != null && !mijamt.isEmpty()) {
 				try {
 					intrate = Double.parseDouble(mijamt);
 				} catch (NumberFormatException e) {
@@ -125,54 +106,43 @@ public class BankManagementService {
 					return result;
 				}
 			}
-			dicParam.addValue("intrate", intrate);
 
-			String checkSql = """
-    SELECT COUNT(*) AS cnt
-    FROM tb_aa040
-    WHERE custcd = :custcd
-      AND bank   = :bank
-      AND bankcd = :bankcd
-    """;
+			MapSqlParameterSource dicParam = new MapSqlParameterSource();
+			dicParam.addValue("custcd",   custcd);
+			dicParam.addValue("bank",     bankid);   // 은행코드 2자리
+			dicParam.addValue("bankcd",   bankcd);   // ERP 체번
+			dicParam.addValue("spjangcd", spjangcd);
+			dicParam.addValue("accnum",   accountNumber);
+			dicParam.addValue("accname",  accountName);
+			dicParam.addValue("bnkpaypw", accountPw);
+			dicParam.addValue("bnkid",    onlineid);
+			dicParam.addValue("cmsid",    viewid);
+			dicParam.addValue("cmspw",    viewpw);
+			dicParam.addValue("acccd",    accountType);
+			dicParam.addValue("intrate",  intrate);
 
-			List<Map<String, Object>> checkResult = this.sqlRunner.getRows(checkSql, dicParam);
-			int count = ((Number) checkResult.get(0).get("cnt")).intValue();
+			String updateSql = """
+            UPDATE tb_aa040
+            SET
+                accnum   = :accnum,
+                accname  = :accname,
+                bnkpaypw = :bnkpaypw,
+                bnkid    = :bnkid,
+                cmsid    = :cmsid,
+                cmspw    = :cmspw,
+                acccd    = :acccd,
+                intrate  = :intrate
+            WHERE custcd = :custcd
+              AND bank   = :bank
+              AND bankcd = :bankcd
+            """;
 
-			if (count > 0) {
-				String updateSql = """
-        UPDATE tb_aa040
-        SET
-            spjangcd  = :spjangcd,
-            accnum    = :accnum,
-            accname   = :accname,
-            bnkpaypw  = :bnkpaypw,
-            bnkid     = :bnkid,
-            cmsid     = :cmsid,
-            cmspw     = :cmspw,
-            acccd     = :acccd,
-            intrate   = :intrate
-        WHERE custcd = :custcd
-          AND bank   = :bank
-          AND bankcd = :bankcd
-        """;
-				this.sqlRunner.execute(updateSql, dicParam);
-			} else {
-				dicParam.addValue("useyn", "1");
+			int updated = this.sqlRunner.execute(updateSql, dicParam);
 
-				String insertSql = """
-        INSERT INTO tb_aa040 (
-            custcd, bank, bankcd,
-            spjangcd, accnum, accname,
-            bnkpaypw, bnkid, cmsid, cmspw,
-            acccd, intrate, useyn
-        ) VALUES (
-            :custcd, :bank, :bankcd,
-            :spjangcd, :accnum, :accname,
-            :bnkpaypw, :bnkid, :cmsid, :cmspw,
-            :acccd, :intrate, :useyn
-        )
-        """;
-				this.sqlRunner.execute(insertSql, dicParam);
+			if (updated == 0) {
+				result.success = false;
+				result.message = "해당 계좌를 찾을 수 없습니다.";
+				return result;
 			}
 
 			result.success = true;

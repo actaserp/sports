@@ -19,13 +19,12 @@ public class BankManagementController {
 
 	@GetMapping("/read")
 	public AjaxResult getRegiAccountList(@RequestParam(value = "bankid", required = false)  String bankid,
-																			 @RequestParam(value = "accountnum", required = false)  String accountnum,
-																			 @RequestParam(value = "spjangcd") String spjangcd
+																			 @RequestParam(value = "accountnum", required = false)  String accountnum
 	){
 
 		AjaxResult result = new AjaxResult();
 
-		result.data = bankManagementService.getAccountList(bankid, accountnum, spjangcd);
+		result.data = bankManagementService.getAccountList(bankid, accountnum);
 
 		return result;
 	}

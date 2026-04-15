@@ -74,34 +74,21 @@
         <div class="section-top">
           <div class="search-wrap">
             <ul>
-              <li>
-                <!-- <a class="btn btn-excell" title="신규등록" id="btnNew" >
-                     <img src="/images/icon/ico-plus.svg" alt="등록 아이콘">
-                     신규등록
-                 </a>-->
+              <!--<li>
                 <button type="button" class="btn-default" id="btnNew" name="btnNew"
                         style="height: 36px; width:115px;"><i
                     class="fas fa-plus"></i>신규등록
                 </button>
-              </li>
+              </li>-->
 
               <li>
-                <!-- <a class="btn btn-edit" id="btnSave" title="저장">
-                     <img src="/images/icon/ico-save.svg" alt="저장 아이콘">
-                     저장
-                 </a>-->
+
                 <button type="button" class="btn-default y_write_auth" id="btnSave"
                         style="float:none; height: 36px; width:115px;">
                   <i class="fas fa-save"></i>저장
                 </button>
               </li>
-
-
               <li>
-                <!--  <a class="btn btn-delete" title="삭제" id="btnDel">
-                      <img src="/images/icon/ico-delete.svg" alt="삭제 아이콘">
-                      삭제
-                  </a>-->
                 <button type="button" class="btn-danger y_write_auth" id="btnDel"
                         style="float:none; height: 36px; width:115px;"><i
                     class="fas fa-trash"></i>삭제
@@ -257,9 +244,10 @@
       },
       columns: [
        {binding: 'bank', header: '은행코드', visible: false},
+       {binding: 'bankcd', header: 'ERP체번', visible: false},
        {binding: 'bankname', header: '은행명', width: 150, align: 'center'},
        {binding: 'accountNumber', header: '계좌번호', width: 150, align: 'center'},
-       {binding: 'accountName', header: '계좌명칭', width: 150, align: 'center'},
+       {binding: 'accountName', header: '계좌명칭', width: 200, align: 'center'},
        {binding: 'onlineid', header: '인터넷뱅킹아이디', width: 200, align: 'center'},
        {binding: 'viewid', header: '조회전용아이디', width: 200, align: 'center'},
        {binding: 'viewpw', header: '조회전용비밀번호', width: 200, align: 'center'},
@@ -296,7 +284,6 @@
      let data = {
       bankid: bankid,
       accountnum: accountnum,
-      spjangcd: 'ZZ'
      };
 
      let fnsuccess = function (result) {
@@ -328,9 +315,7 @@
      });
 
      // 값 바인딩
-     $('#id').val(data.id || data.accid || '');
-     $('#bankid').val(data.bank || '');
-     $('#accountNumber').val(data.accountNumber || '');
+     $('#id').val(data.bankcd || '');          // bankcd를 hidden id에 저장
      $('#accountName').val(data.accountName || '');
      $('#accountType').val(data.accountType || '');
      $('#onlineid').val(data.onlineid || '');
@@ -338,6 +323,9 @@
      $('#viewpw').val(data.viewpw || '');
      $('#mijamt').val(data.mijamt || '');
      $('#accountPw').val(data.accountPw || '');
+
+     $('#bankid').prop('disabled', true);
+     $('#accountNumber').prop('readonly', true);
 
     }//bindDetailData
 
@@ -348,17 +336,16 @@
 
      // disabled 된 값도 포함해서 가져오기 위해 직접 수집
      let data = {
-
-      bankid: $('#bankid').val() || '', //은행
+      bankid:        $('#bankid').val() || '',
+      bankcd:        $('#id').val() || '',       // hidden에서 bankcd 가져오기
       accountNumber: $('#accountNumber').val() || '',
-      accountPw: $('#accountPw').val() || '',
-      accountName: $('#accountName').val() || '',
-      accountType: $('#accountType').val() || '',
-      onlineid: $('#onlineid').val() || '',
-      viewid: $('#viewid').val() || '',
-      viewpw: $('#viewpw').val() || '',
-      mijamt: ($('#mijamt').val() || '').replaceAll(',', ''),
-      spjangcd: 'ZZ'
+      accountPw:     $('#accountPw').val() || '',
+      accountName:   $('#accountName').val() || '',
+      accountType:   $('#accountType').val() || '',
+      onlineid:      $('#onlineid').val() || '',
+      viewid:        $('#viewid').val() || '',
+      viewpw:        $('#viewpw').val() || '',
+      mijamt:        ($('#mijamt').val() || '').replaceAll(',', ''),
      };
 
      // ===== 유효성 검사 =====

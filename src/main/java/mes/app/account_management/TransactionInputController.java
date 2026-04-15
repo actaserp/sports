@@ -17,7 +17,7 @@ import java.util.Map;
 @RestController("accountMgmtTransactionInputController")
 @RequestMapping("/api/account_management/input")
 @Slf4j
-public class TransactionInputController {
+public class TransactionInputController { //입출금 입력
 
 	@Autowired
 	@Qualifier("accountMgmtTransactionInputService")

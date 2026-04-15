@@ -3,6 +3,7 @@ package mes.app.PopBill;
 import com.popbill.api.PopbillException;
 import com.popbill.api.Response;
 import com.popbill.api.TaxinvoiceService;
+import mes.app.common.TenantContext;
 import mes.app.util.UtilClass;
 import mes.domain.model.AjaxResult;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,7 +51,7 @@ public class BaseServiceServiceController {
     }*/
 
     @RequestMapping(value = "checkIsMember", method = RequestMethod.GET)
-    public AjaxResult checkIsMember(@RequestParam String spjangcd, HttpSession session) throws PopbillException {
+    public AjaxResult checkIsMember( HttpSession session) throws PopbillException {
         /**
          * 사업자번호를 조회하여 연동회원 가입여부를 확인합니다.
          * - LinkID는 연동신청 시 팝빌에서 발급받은 링크아이디 값입니다.
@@ -59,7 +60,7 @@ public class BaseServiceServiceController {
 
         AjaxResult result = new AjaxResult();
         result.success = false;
-
+        String spjangcd = TenantContext.get();
         try {
             String corpNum = UtilClass.getsaupnumInfoFromSession(spjangcd, session);
 

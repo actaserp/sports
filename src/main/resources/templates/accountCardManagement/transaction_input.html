@@ -636,6 +636,11 @@
     <th:block th:replace="common/popup_account :: popup_account" />
     <th:block th:replace="common/popup_company_employee_bank_card.html :: popup_company"></th:block>
     <script th:src="@{/js/cycle/AccountInputHandler.js}"></script>
+    <script th:inline="javascript">
+        // Thymeleaf 경로 변수 (전역 선언)
+        const btnShowSrc   = /*[[@{/images/icon/btn-show.svg}]]*/ '';
+        const btnHiddenSrc = /*[[@{/images/icon/btn-hidden.svg}]]*/ '';
+    </script>
     <script type="text/javascript">
         let tradetypeList;
 
@@ -1509,7 +1514,7 @@
                     const isPassword = $input.attr('type') === 'password';
 
                     $input.attr('type', isPassword ? 'text' : 'password');
-                    $toggle.attr('src', isPassword ? '/images/icon/btn-hidden.svg' : '/images/icon/btn-show.svg');
+                    $toggle.attr('src', isPassword ? btnHiddenSrc : btnShowSrc);
                 });
 
                 $('#btnSettingSave').click(function(){

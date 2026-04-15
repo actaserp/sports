@@ -90,9 +90,11 @@ public class NcpObjectStorageService {
 
     // TB_FILEINFO.CHECKSEQ: varchar(2) — 기능명 → 코드값 매핑
     private static final Map<String, String> CHECKSEQ_MAP = Map.of(
-            "NOTICE",    "01",
-            "QNA",       "02",
-            "MARKETING", "03"
+        "NOTICE",    "01",
+        "QNA",       "02",
+        "MARKETING", "03",
+        "PDF","04",
+        "ATCH","05"
     );
 
     public static String toCheckseq(String tableName) {

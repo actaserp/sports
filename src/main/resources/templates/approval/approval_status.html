@@ -66,20 +66,12 @@
           </a>
       </div>
       <ul class="page-navi">
-        <li><img src="/images/icon/ico-nav-home.svg" alt="홈아이콘"></li>
+        <li><img th:src="@{/images/icon/ico-nav-home.svg}" alt="홈아이콘"></li>
         <li>결재 현황</li>
         <li>결재 현황</li>
       </ul>
     </div>
     <div class="tab-wrap">
-<!--      <ul class="tab-links">-->
-<!--        <li>-->
-<!--          <a href="#tab1" title="주문 캘린더" class="tab-button">주문 현황</a>-->
-<!--        </li>-->
-<!--        <li>-->
-<!--          <a href="#tab2" title="주문 확인" class="tab-button">주문 확인</a>-->
-<!--        </li>-->
-<!--      </ul>-->
       <div class="tab-contents">
         <!-- Section -->
         <section class="tab-item" id="tab1" style="height: 880px; margin-bottom: 10px">
@@ -218,94 +210,10 @@
     </div>
   </div>
 
-  <!--페이지 설명 모달 -->
-  <div class="modal">
-    <div id="PageModal" style="display: none;">
-      <div class="modal-content">
-        <h2 style="text-align: center;">주문 현황 페이지 설명</h2>
-        <a title="팝업닫기" onclick="closePopup('PageModal')" class="btn-popup-close">
-          <img src="/images/icon/btn-popup-close.svg" style="float: right; right: 30px;" alt="닫기">
-        </a>
-        <form id="PageFindForm">
-          <p style="text-align: center;">
-            <a href="https://foms.atlassian.net/l/cp/X9iSn8Tt"
-               target="_blank"
-               style="color: blue; text-decoration: underline;">
-              Atlassian Wiki에서 페이지 보기
-            </a>
-          </p>
-        </form>
-      </div>
-    </div>
-  </div>
-  <!-- 옵션 및 요청사항 모달 -->
-  <div class="modal">
-    <div class="popup-wrapper w700" id="OrdtextModal" style="display: none; min-width: 1050px;">
-      <div class="popup-title">
-        <h3>옵션 및 요청사항</h3>
-        <a title="팝업닫기" onclick="closePopup('OrdtextModal')" class="btn-popup-close">
-          <img src="/images/icon/btn-popup-close.svg" alt="닫기" style="float: right; right: 30px;">
-        </a>
-      </div>
-      <div class="popup-contents">
-        <div class="table-wrap">
-          <table class="write-table" style="border-top: 0px;">
-            <caption>주문의뢰 요청사항</caption>
-            <colgroup>
-              <col class="wp20">
-              <col class="wp80">
-            </colgroup>
-            <tbody>
-            <tr>
-              <td>
-                <div class="table-wrap">
-                  <table class="write-table">
-                    <caption>요청사항</caption>
-                    <tbody>
-                    <tr style="align-items: center">
-                      <th>
-                        <label for="ordtext">내용</label>
-                      </th>
-                      <td colspan="3">
-                        <div class="textarea-box">
-                          <textarea id="ordtext"></textarea>
-                        </div>
-                      </td>
-                    </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </td>
-            </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
 </th:block>
 <th:block layout:fragment="scripts">
   <script type="text/javascript" src="/resource/windowContainer/js/html5sortable.js"></script>
   <script type="text/javascript" src="/js/nth-tabs.js"></script>
-  <th:block th:replace="common/columns_setting :: columns_setting"></th:block>
-  <!-- <script>
-       tinymce.init({
-           language: "ko_KR",
-           selector: "#ordtext",
-           plugins: "paste image imagetools",
-           height: 500,
-           width: 900,
-           toolbar: false,       // 툴바 비활성화
-           menubar: false,       // 상단 메뉴 비활성화
-           readonly: 1,          // 읽기 전용 모드 활성화
-           paste_data_images: true,
-           file_picker_types: 'image',
-           automatic_uploads: false // 자동 업로드 비활성화
-       });
-
-   </script>-->
   <script type="text/javascript">
 
     let theGrid;
