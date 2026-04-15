@@ -94,8 +94,8 @@ public class FilesController {
 			// NCP 오브젝트 키: {dbKey}/{featureCode}/{uuid}.{ext}
 			// tableName = 기능 식별자 (예: NOTICE, QNA) — TB_FILEINFO.CHECKSEQ 와 동일
 			String uuidFileName = UUID.randomUUID().toString() + "." + ext;
-			String objectKey = NcpObjectStorageService.buildObjectKey(dbKey, tableName, uuidFileName);
-			String filePrefix = dbKey + "/" + tableName;
+			String objectKey = storageService.buildObjectKey(dbKey, tableName, uuidFileName);
+			String filePrefix = storageService.getFilePrefix(dbKey, tableName);
 
 			java.io.File tempFile = java.io.File.createTempFile("upload_", "." + ext);
 			try {

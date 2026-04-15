@@ -3,6 +3,7 @@ package mes.app.files;
 import lombok.extern.slf4j.Slf4j;
 import mes.config.Settings;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -26,6 +27,9 @@ public class NcpObjectStorageService {
 
     private S3Client s3Client;
     private String bucketName;
+
+    @Value("${mes.project-name}")
+    private String projectName;
 
     @PostConstruct
     public void init() {
@@ -107,7 +111,11 @@ public class NcpObjectStorageService {
      * @param featureCode 기능 식별자 (예: NOTICE, QNA) — TB_FILEINFO.CHECKSEQ 와 동일 값
      * @param uuidFileName 저장 파일명 (uuid + 확장자)
      */
-    public static String buildObjectKey(String dbKey, String featureCode, String uuidFileName) {
-        return dbKey + "/" + featureCode + "/" + uuidFileName;
+    public String buildObjectKey(String dbKey, String featureCode, String uuidFileName) {
+        return this.projectName + "/" + dbKey + "/" + featureCode + "/" + uuidFileName;
+    }
+
+    public String getFilePrefix(String dbKey, String featureCode) {
+        return this.projectName + "/" + dbKey + "/" + featureCode;
     }
 }
