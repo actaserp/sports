@@ -37,5 +37,5 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
 	Optional<User> findByUsernameAndDbKey(String username, String dbKey);
 
-	Optional<User> findByDbkey(String spjangcd);
+	Optional<User> findByDbKey(String spjangcd);
 }

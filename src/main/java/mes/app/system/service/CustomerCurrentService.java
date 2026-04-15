@@ -113,7 +113,7 @@ public class CustomerCurrentService {
             boolean isNew = userGroupRepository.findBySpjangcd(spjangcd).isEmpty();
             if (isNew) {
                 // 2. auth_user is_active -> true
-                User user = userRepository.findByDbkey(spjangcd)
+                User user = userRepository.findByDbKey(spjangcd)
                         .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + spjangcd));
                 user.setActive(true);
                 user.setSpjangcd("ZZ");
