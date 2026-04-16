@@ -5,8 +5,6 @@ import com.popbill.api.PopbillException;
 import com.popbill.api.Response;
 import com.popbill.api.easyfin.*;
 import lombok.extern.slf4j.Slf4j;
-import mes.Encryption.EncryptionKeyProvider;
-import mes.Encryption.EncryptionUtil;
 import mes.app.PopBill.service.EasyFinBankAccountQueryService;
 import mes.app.common.TenantContext;
 import mes.app.util.UtilClass;
@@ -180,26 +178,23 @@ public class EasyFinBankServiceController {
 		String bank          = (String) params.get("bank");
 		String bankcd        = (String) params.get("bankcd");
 
-		// 계좌번호, 은행코드 없으면 리턴
 		if (!validateRequest(accountnumber, managementnum, result)) return result;
 
 		frdate = frdate.replaceAll("-", "");
 		todate = todate.replaceAll("-", "");
 
 		try {
-			// tb_aa040 조회 후 계좌번호 복호화
 			Map<String, Object> acc = easyFinBankAccountQueryService.getAccountInfo(custcd, bank, bankcd);
 			if (acc == null) return fail(result, "계좌 정보를 찾을 수 없습니다.");
 
-			String encryptedAccnum = (String) acc.get("accnum");
-			String plainAccountNum = EncryptionUtil.decrypt(encryptedAccnum, EncryptionKeyProvider.getKey());
+			String plainAccountNum = (String) acc.get("accnum");
 
 			String corpNum = UtilClass.getsaupnumInfoFromSession(spjangcd, session);
 			String jobID   = easyFinBankService.requestJob(corpNum, managementnum, plainAccountNum, frdate, todate);
 
 			String jobState = waitForJobComplete(corpNum, jobID);
 
-			if (!jobState.equals("3")) { // 3 = COMPLETE
+			if (!jobState.equals("3")) {
 				result.message = jobState;
 				return result;
 			}
@@ -214,12 +209,12 @@ public class EasyFinBankServiceController {
 
 			List<EasyFinBankSearchDetail> list = searchInfo.getList();
 
-			// 비동기로 TB_bank_accsave 저장
+			// 비동기 저장
 			easyFinBankAccountQueryService.saveBankDataAsync(
 				list, jobID, plainAccountNum, custcd, bank, bankcd, bankname, spjangcd);
 
 			result.success = true;
-			result.data = list;
+			result.data    = list;
 
 		} catch (Exception e) {
 			log.error("requestJob error: {}", e.getMessage());
@@ -251,7 +246,7 @@ public class EasyFinBankServiceController {
 			Map<String, Object> acc = easyFinBankAccountQueryService.getAccountInfo(custcd, bank, bankcd);
 			if (acc == null) return fail(result, "계좌 정보를 찾을 수 없습니다.");
 
-			String accountNumber = EncryptionUtil.decrypt((String) acc.get("accnum"));
+			String accountNumber = (String) acc.get("accnum");
 			String corpNum = UtilClass.getsaupnumInfoFromSession(spjangcd, session);
 
 			EasyFinBankAccount bankAccountInfo = easyFinBankService.getBankAccountInfo(
@@ -296,7 +291,7 @@ public class EasyFinBankServiceController {
 			Map<String, Object> acc = easyFinBankAccountQueryService.getAccountInfo(custcd, bank, bankcd);
 			if (acc == null) return fail(result, "계좌 정보를 찾을 수 없습니다.");
 
-			String accountNumber = EncryptionUtil.decrypt((String) acc.get("accnum"));
+			String accountNumber = (String) acc.get("accnum");
 			String corpNum = UtilClass.getsaupnumInfoFromSession(spjangcd, session);
 
 			Response response = easyFinBankService.closeBankAccount(
@@ -357,7 +352,7 @@ public class EasyFinBankServiceController {
 			if (acc == null) return fail(result, "계좌 정보를 찾을 수 없습니다.");
 
 			String resolvedPaymentPw = resolvePassword(paymentPw,
-				EncryptionUtil.decrypt(UtilClass.getStringSafe((String) acc.get("bnkpaypw"))));
+				UtilClass.getStringSafe((String) acc.get("bnkpaypw")));
 
 			UpdateEasyFinBankAccountForm edit = new UpdateEasyFinBankAccountForm();
 			edit.setAccountPWD(resolvedPaymentPw);
@@ -373,7 +368,7 @@ public class EasyFinBankServiceController {
 					}
 					edit.setFastID(viewid);
 					String resolvedViewpw = resolvePassword(viewpw,
-						EncryptionUtil.decrypt(UtilClass.getStringSafe((String) acc.get("cmspw"))));
+						UtilClass.getStringSafe((String) acc.get("cmspw")));
 					edit.setFastPWD(resolvedViewpw);
 					break;
 
@@ -388,7 +383,7 @@ public class EasyFinBankServiceController {
 					break;
 			}
 
-			String accountNumber = EncryptionUtil.decrypt((String) acc.get("accnum"));
+			String accountNumber = (String) acc.get("accnum");
 			String corpNum = UtilClass.getsaupnumInfoFromSession(spjangcd, session);
 
 			Response response = easyFinBankService.updateBankAccount(
@@ -400,13 +395,11 @@ public class EasyFinBankServiceController {
 				updateParams.put("custcd",  custcd);
 				updateParams.put("bank",    bank);
 				updateParams.put("bankcd",  bankcd);
-				updateParams.put("bnkpaypw", EncryptionUtil.encrypt(edit.getAccountPWD()));
+				updateParams.put("bnkpaypw", edit.getAccountPWD());
 				updateParams.put("bnkid",   edit.getBankID());
 				updateParams.put("accname", edit.getAccountName());
 				updateParams.put("cmsid",   edit.getFastID());
-				updateParams.put("cmspw",   StringUtils.isEmpty(edit.getFastPWD())
-																			? null
-																			: EncryptionUtil.encrypt(edit.getFastPWD()));
+				updateParams.put("cmspw", edit.getFastPWD());
 
 				easyFinBankAccountQueryService.updateAccountInfo(updateParams);
 				result.success = true;
@@ -457,13 +450,7 @@ public class EasyFinBankServiceController {
 					fail(result, "아이엠뱅크, 신한은행, 신협중앙회는 조회전용 계정이 필수입니다.");
 					return false;
 				}
-				bankInfo.setFastID(viewid);
-				try {
-					bankInfo.setFastPWD(EncryptionUtil.decrypt(viewpw));
-				} catch (Exception e) {
-					log.error("복호화 실패: {}, 문자열: {}", e.getMessage(), viewpw);
-					bankInfo.setFastPWD(viewpw);
-				}
+				bankInfo.setFastPWD(viewpw);
 				break;
 
 			default:

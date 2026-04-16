@@ -341,7 +341,8 @@ public class TransactionInputService {
             accnum,
             eumnum,
             eumtodt,
-            etcremark
+            etcremark,
+            dipflag  
         ) VALUES (
             :custcd,
             :spjangcd,
@@ -364,7 +365,8 @@ public class TransactionInputService {
             :accnum,
             :eumnum,
             :eumtodt,
-            :etcremark
+            :etcremark,
+            :dipflag 
         )
     """;
 

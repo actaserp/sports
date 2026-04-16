@@ -31,7 +31,7 @@ public class BankManagementService {
 							 a.bankcd,
 							 b.banknm     AS bankname,
 							 a.accnum     AS accountNumber,
-							 a.accname    AS accountName,
+							 a.banknm    AS accountName,
 							 a.bnkid      AS onlineid,
 							 a.cmsid      AS viewid,
 							 a.cmspw      AS viewpw,
