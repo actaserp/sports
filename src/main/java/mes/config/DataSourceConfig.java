@@ -149,7 +149,25 @@ public class DataSourceConfig {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // 6. MyBatis → mainDataSource (로그/공통 mapper 용)
+    // 6. Extra DataSource (외부 MSSQL – 특정 페이지 전용)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    @Bean("extraDataSource")
+    @ConfigurationProperties(prefix = "extra.datasource")
+    DataSource extraDataSource() {
+        return DataSourceBuilder.create().build();
+    }
+
+    @Bean("extraSqlRunner")
+    mes.domain.services.SqlRunner extraSqlRunner(
+            @Qualifier("extraDataSource") DataSource extraDataSource) {
+        return new mes.domain.services.impl.MainSqlRunnerImpl(
+                new NamedParameterJdbcTemplate(extraDataSource)
+        );
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 7. MyBatis → mainDataSource (로그/공통 mapper 용)
     // ──────────────────────────────────────────────────────────────────────────
 
     @Bean
