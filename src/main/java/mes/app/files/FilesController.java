@@ -160,6 +160,39 @@ public class FilesController {
 		}
 	}
 
+	@GetMapping("/master-guide")
+	public void masterGuide(HttpServletResponse response, Authentication auth) throws Exception {
+
+		User user = (User) auth.getPrincipal();
+		String groupCode = user.getUserProfile().getUserGroup().getCode();
+
+		if (!"Master".equals(groupCode)) {
+			response.sendError(HttpServletResponse.SC_FORBIDDEN, "접근 권한이 없습니다.");
+			return;
+		}
+
+		String objectKey = "guide/ACTAS_시스템설정_매뉴얼.pdf";
+
+		try (ResponseInputStream<GetObjectResponse> s3Stream = storageService.download(objectKey);
+		     BufferedOutputStream out = new BufferedOutputStream(response.getOutputStream())) {
+
+			response.setContentType("application/pdf");
+			response.setHeader("Content-Disposition",
+					"inline; filename*=UTF-8''ACTAS_%EC%8B%9C%EC%8A%A4%ED%85%9C%EC%84%A4%EC%A0%95_%EB%A7%A4%EB%89%B4%EC%96%BC.pdf");
+
+			byte[] buffer = new byte[8192];
+			int bytesRead;
+			while ((bytesRead = s3Stream.read(buffer)) != -1) {
+				out.write(buffer, 0, bytesRead);
+			}
+			out.flush();
+
+		} catch (Exception e) {
+			log.error("[MasterGuide] 다운로드 오류: {}", e.getMessage(), e);
+			response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "다운로드 오류");
+		}
+	}
+
 	@GetMapping("/download")
 	public void download(
 			@RequestParam("file_id") Integer fileseq,

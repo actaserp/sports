@@ -30,6 +30,7 @@
         sessionStorage.setItem("username", [[${session.username}]] );
         sessionStorage.setItem("userid", [[${session.userid}]] );
         sessionStorage.setItem("groupid", [[${session.groupid}]] );
+        sessionStorage.setItem("groupCode", [[${groupCode}]] );
         if (!sessionStorage.getItem("spjangcd")) {
             sessionStorage.setItem("spjangcd", [[${session.spjangcd}]] );
         }
@@ -1201,6 +1202,79 @@
             if (!res || !res.data || !res.data.length) return;
             var pending = res.data.filter(function (n) { return !isSkipped(n.id); });
             if (pending.length > 0) showNoticePopup(pending, 0);
+        });
+    })();
+
+    /* ===== Master 가이드 매뉴얼 팝업 ===== */
+    (function () {
+        var GUIDE_SKIP_KEY = 'master_guide_skip_' + (sessionStorage.getItem('userid') || 'guest');
+
+        if (sessionStorage.getItem('groupCode') !== 'Master') return;
+        if (localStorage.getItem(GUIDE_SKIP_KEY) === '1') return;
+
+        /* 스타일 */
+        var css = [
+            '#mg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;',
+            'display:flex;align-items:center;justify-content:center;}',
+
+            '#mg-popup{position:relative;width:88vw;max-width:1100px;height:88vh;',
+            'background:#fff;border-radius:12px;',
+            'box-shadow:0 24px 48px rgba(0,0,0,.2);',
+            'display:flex;flex-direction:column;overflow:hidden;}',
+
+            '#mg-popup .mg-head{display:flex;align-items:center;justify-content:space-between;',
+            'padding:14px 20px;border-bottom:1px solid #e5e7eb;flex-shrink:0;}',
+            '#mg-popup .mg-head .mg-title{font-size:15px;font-weight:700;color:#111;}',
+            '#mg-popup .mg-head .mg-head-actions{display:flex;gap:8px;align-items:center;}',
+
+            '#mg-popup .mg-skip{font-size:13px;color:#6b7280;background:none;border:none;',
+            'cursor:pointer;padding:4px 8px;border-radius:4px;}',
+            '#mg-popup .mg-skip:hover{background:#f3f4f6;}',
+
+            '#mg-popup .mg-close{background:none;border:none;font-size:20px;',
+            'color:#9ca3af;cursor:pointer;line-height:1;padding:4px;}',
+            '#mg-popup .mg-close:hover{color:#374151;}',
+
+            '#mg-popup .mg-body{flex:1;overflow:hidden;}',
+            '#mg-popup .mg-body iframe{width:100%;height:100%;border:none;}',
+        ].join('');
+
+        var s = document.createElement('style');
+        s.textContent = css;
+        document.head.appendChild(s);
+
+        /* 팝업 생성 */
+        var overlay = document.createElement('div'); overlay.id = 'mg-overlay';
+
+        var popup = document.createElement('div'); popup.id = 'mg-popup';
+        popup.innerHTML = [
+            '<div class="mg-head">',
+            '  <span class="mg-title">ACTAS 시스템설정 매뉴얼</span>',
+            '  <div class="mg-head-actions">',
+            '    <button class="mg-skip" id="mgSkipBtn">더이상 안보기</button>',
+            '    <button class="mg-close" id="mgCloseBtn">✕</button>',
+            '  </div>',
+            '</div>',
+            '<div class="mg-body">',
+            '  <iframe src="' + withCtx('/api/files/master-guide') + '" title="ACTAS 시스템설정 매뉴얼"></iframe>',
+            '</div>',
+        ].join('');
+
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+
+        document.getElementById('mgCloseBtn').addEventListener('click', function () {
+            overlay.remove();
+        });
+
+        document.getElementById('mgSkipBtn').addEventListener('click', function () {
+            localStorage.setItem(GUIDE_SKIP_KEY, '1');
+            overlay.remove();
+        });
+
+        /* 오버레이 바깥 클릭 시 닫기 */
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) overlay.remove();
         });
     })();
 
