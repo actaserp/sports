@@ -98,12 +98,19 @@
             background-color: #0066cc;
         }
 
+        /* 유지보수 버튼에 position: relative 추가 */
+        header .right .header-info {
+            position: relative; /* 이미 있으면 생략 */
+        }
+
         /* 유지보수 토글 css */
         header .right .user-box2 {
             display: none;
             position: absolute;
-            top: 60px;
-            right: 240px;
+            top: 44px;      /* 버튼 바로 아래 */
+            right: -33px;       /* wrapper 오른쪽 끝 정렬 */
+            white-space: nowrap;
+            z-index: 999;
         }
 
         header .right .user-box2 ul {
@@ -381,18 +388,20 @@
                     <div id="spjangSelectWrapper" style="display: none;">
                         <!-- 사업장 리스트 -->
                     </div>
-                    <a class="help" title="유지보수" href="#" id="">
-                        유지보수
-                    </a>
-                    <div class="user-box2">
-                        <ul>
-                            <li>
-                                <a id="helpweb" href="https://939.co.kr/onit" title="원격접속" data-popup="" target="_blank" rel="noopener noreferrer">원격접속</a>
-                            </li>
-                            <li id="btnMaintenance">
-                                <a href="#" title="요청등록/확인">요청등록/확인</a>
-                            </li>
-                        </ul>
+                    <div class="help-wrapper" style="position: relative; display: inline-block;">
+                        <a class="help" title="유지보수" href="#" id="">
+                            유지보수
+                        </a>
+                        <div class="user-box2">
+                            <ul>
+                                <li>
+                                    <a id="helpweb" href="https://939.co.kr/onit" title="원격접속" data-popup="" target="_blank" rel="noopener noreferrer">원격접속</a>
+                                </li>
+                                <li id="btnMaintenance">
+                                    <a href="#" title="요청등록/확인">요청등록/확인</a>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                     <a class="user" title="사용자">
                         <span style="padding:0 5px">·</span>
