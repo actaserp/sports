@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpSession;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +35,7 @@ public class EasyFinBankServiceController {
 
 	@Autowired
 	private EasyFinBankAccountQueryService easyFinBankAccountQueryService;
+
 
 	// ──────────────────────────────────────────────
 	// 1. 팝빌 계좌 등록
@@ -70,6 +73,8 @@ public class EasyFinBankServiceController {
 		// 4. tb_aa040 조회
 		Map<String, Object> acc = easyFinBankAccountQueryService.getAccountInfo(custcd, bank, bankcd);
 		if (acc == null) return fail(result, "계좌 정보를 찾을 수 없습니다.");
+
+		String popUserId = (String) acc.get("popuserid");
 
 		// 5. 이미 연동된 계좌 체크
 		if ("Y".equals(acc.get("popflag"))) {
@@ -109,10 +114,14 @@ public class EasyFinBankServiceController {
 
 			// 11. 사업자번호(saupnum)로 팝빌 API 호출
 			String corpNum = bizInfo.get("saupnum").replaceAll("-", "");
+			log.info("사업자번호(saupnum)로 팝빌 API 호출 corpNum: {}", corpNum);
 			if (StringUtils.isEmpty(corpNum)) return fail(result, "사업자번호를 찾을 수 없습니다.");
 
 			// 12. 팝빌 API 호출
-			Response response = easyFinBankService.registBankAccount(corpNum, bankInfo);
+			Response response;
+			response = easyFinBankService.registBankAccount(corpNum, bankInfo, popUserId);
+			// UserID 아예 안 넘기기
+//			response = easyFinBankService.registBankAccount(corpNum, bankInfo);
 
 			if (response.getCode() == 1) {
 				// 13. 성공 시 tb_aa040 UPDATE
@@ -124,8 +133,15 @@ public class EasyFinBankServiceController {
 				updateParams.put("cmsid",   viewid);
 				updateParams.put("cmspw",   resolvedViewpw);
 				updateParams.put("accname", accountAlias);
+				updateParams.put("popflag",  "1");	//1 연동 /0 :미연동
 
 				easyFinBankAccountQueryService.saveRegistAccount(updateParams);
+
+				// OnitErp 과금 등록
+				String saupnum = bizInfo.get("saupnum").replaceAll("-", "");
+				String banknm  = (String) acc.get("banknm");
+				String today   = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+				easyFinBankAccountQueryService.registerOnitErpPcode(saupnum, plainAccountNum, banknm, today);
 
 				result.success = true;
 				result.message = response.getMessage();
@@ -255,157 +271,159 @@ public class EasyFinBankServiceController {
 		return result;
 	}
 
-	// ──────────────────────────────────────────────
-	// 4. 정액제 해지
-	// ──────────────────────────────────────────────
-//	@RequestMapping(value = "closeBankAccount", method = RequestMethod.GET)
-//	public AjaxResult closeBankAccount(
-//		@RequestParam Map<String, Object> params,
-//		HttpSession session) {
-//
-//		AjaxResult result = new AjaxResult();
-//
-//		String custcd     = (String) params.get("custcd");
-//		String bank       = (String) params.get("bank");       // 2자리
-//		String bankcd     = (String) params.get("bankcd");
-//		String spjangcd   = (String) params.get("spjangcd");
-//		String closeType  = (String) params.get("closeType");  // "일반" or "중도"
-//
-//		if (StringUtils.isEmpty(closeType)) return fail(result, "해지구분을 선택해주세요.");
-//
-//		// 2자리 → 4자리 변환
-//		String popBillBankCode = String.format("%04d", Integer.parseInt(bank.trim()));
-//
-//		try {
-//			Map<String, Object> acc = easyFinBankAccountQueryService.getAccountInfo(custcd, bank, bankcd);
-//			if (acc == null) return fail(result, "계좌 정보를 찾을 수 없습니다.");
-//
-//			String accountNumber = EncryptionUtil.decrypt((String) acc.get("accnum"));
-//			String corpNum = UtilClass.getsaupnumInfoFromSession(spjangcd, session);
-//
-//			Response response = easyFinBankService.closeBankAccount(
-//				corpNum, popBillBankCode, accountNumber, closeType);
-//
-//			log.info("해제신청 api 리턴객체 : {}", response);
-//
-//			if (response.getCode() == 1) {
-//				// 성공 시 tb_aa040.popflag = 'N' 업데이트
-//				easyFinBankAccountQueryService.updatePopflag(custcd, bank, bankcd, "N");
-//				result.success = true;
-//			} else {
-//				result.success = false;
-//			}
-//			result.message = response.getMessage();
-//
-//		} catch (PopbillException e) {
-//			result.success = false;
-//			result.message = e.getMessage();
-//		} catch (IllegalArgumentException e) {
-//			result.success = false;
-//			result.message = e.getMessage();
-//		} catch (Exception e) {
-//			throw new RuntimeException("팝빌 계좌 해지 요청 중 오류 발생", e);
-//		}
-//
-//		return result;
-//	}
+//	 ──────────────────────────────────────────────
+//	 4. 정액제 해지
+//	 ──────────────────────────────────────────────
+	@RequestMapping(value = "closeBankAccount", method = RequestMethod.GET)
+	public AjaxResult closeBankAccount(
+		@RequestParam Map<String, Object> params,
+		HttpSession session) {
+
+		AjaxResult result = new AjaxResult();
+
+		String custcd     = (String) params.get("custcd");
+		String bank       = (String) params.get("bank");       // 2자리
+		String bankcd     = (String) params.get("bankcd");
+		String spjangcd   = (String) params.get("spjangcd");
+		String closeType  = (String) params.get("closeType");  // "일반" or "중도"
+
+		if (StringUtils.isEmpty(closeType)) return fail(result, "해지구분을 선택해주세요.");
+
+		// 2자리 → 4자리 변환
+		String popBillBankCode = String.format("%04d", Integer.parseInt(bank.trim()));
+
+		try {
+			Map<String, Object> acc = easyFinBankAccountQueryService.getAccountInfo(custcd, bank, bankcd);
+			if (acc == null) return fail(result, "계좌 정보를 찾을 수 없습니다.");
+
+			String accountNumber = EncryptionUtil.decrypt((String) acc.get("accnum"));
+			String corpNum = UtilClass.getsaupnumInfoFromSession(spjangcd, session);
+
+			Response response = easyFinBankService.closeBankAccount(
+				corpNum, popBillBankCode, accountNumber, closeType);
+
+			log.info("해제신청 api 리턴객체 : {}", response);
+
+			if (response.getCode() == 1) {
+				// 성공 시 tb_aa040.popflag = '0' 업데이트
+				easyFinBankAccountQueryService.updatePopflag(custcd, bank, bankcd, "0");
+				result.success = true;
+			} else {
+				result.success = false;
+			}
+			result.message = response.getMessage();
+
+		} catch (PopbillException e) {
+			result.success = false;
+			result.message = e.getMessage();
+		} catch (IllegalArgumentException e) {
+			result.success = false;
+			result.message = e.getMessage();
+		} catch (Exception e) {
+			throw new RuntimeException("팝빌 계좌 해지 요청 중 오류 발생", e);
+		}
+
+		return result;
+	}
 
 	// ──────────────────────────────────────────────
 	// 5. 팝빌 등록 계좌정보 수정
 	// ──────────────────────────────────────────────
-//	@RequestMapping(value = "updateBankAccount", method = RequestMethod.GET)
-//	public AjaxResult updateBankAccount(
-//		@RequestParam Map<String, Object> params,
-//		HttpSession session) {
-//
-//		AjaxResult result = new AjaxResult();
-//
-//		String custcd       = (String) params.get("custcd");
-//		String bank         = (String) params.get("bank");      // 2자리
-//		String bankcd       = (String) params.get("bankcd");
-//		String spjangcd     = (String) params.get("spjangcd");
-//		String paymentPw    = (String) params.get("paymentPw");
-//		String viewid       = (String) params.get("viewid");
-//		String viewpw       = (String) params.get("viewpw");
-//		String bankId       = (String) params.get("bankId");
-//		String accountAlias = (String) params.get("accountAlias");
-//
-//		if (StringUtils.isEmpty(bank))      return fail(result, "은행코드가 없습니다.");
-//		if (StringUtils.isEmpty(paymentPw)) return fail(result, "계좌 비밀번호가 없습니다.");
-//
-//		// 2자리 → 4자리 변환
-//		String popBillBankCode = String.format("%04d", Integer.parseInt(bank.trim()));
-//
-//		try {
-//			Map<String, Object> acc = easyFinBankAccountQueryService.getAccountInfo(custcd, bank, bankcd);
-//			if (acc == null) return fail(result, "계좌 정보를 찾을 수 없습니다.");
-//
-//			String resolvedPaymentPw = resolvePassword(paymentPw,
-//				EncryptionUtil.decrypt(UtilClass.getStringSafe((String) acc.get("bnkpaypw"))));
-//
-//			UpdateEasyFinBankAccountForm edit = new UpdateEasyFinBankAccountForm();
-//			edit.setAccountPWD(resolvedPaymentPw);
-//			edit.setAccountName(accountAlias);
-//
-//			// 은행별 조회전용 계정 처리
-//			switch (popBillBankCode) {
-//				case "0031": // 아이엠뱅크
-//				case "0088": // 신한은행
-//				case "0048": // 신협중앙회
-//					if (StringUtils.isEmpty(viewid) || StringUtils.isEmpty(viewpw)) {
-//						return fail(result, "해당 은행은 조회전용계정이 필수입니다.");
-//					}
-//					edit.setFastID(viewid);
-//					String resolvedViewpw = resolvePassword(viewpw,
-//						EncryptionUtil.decrypt(UtilClass.getStringSafe((String) acc.get("cmspw"))));
-//					edit.setFastPWD(resolvedViewpw);
-//					break;
-//
-//				case "0004": // 국민은행
-//					if (StringUtils.isEmpty(bankId)) {
-//						return fail(result, "국민은행은 인터넷뱅킹 아이디가 필수입니다.");
-//					}
-//					edit.setBankID(bankId);
-//					break;
-//
-//				default:
-//					break;
-//			}
-//
-//			String accountNumber = EncryptionUtil.decrypt((String) acc.get("accnum"));
-//			String corpNum = UtilClass.getsaupnumInfoFromSession(spjangcd, session);
-//
-//			Response response = easyFinBankService.updateBankAccount(
-//				corpNum, popBillBankCode, accountNumber, edit, null);
-//
-//			if (response.getCode() == 1) {
-//				// 성공 시 tb_aa040 UPDATE
-//				Map<String, Object> updateParams = new HashMap<>();
-//				updateParams.put("custcd",  custcd);
-//				updateParams.put("bank",    bank);
-//				updateParams.put("bankcd",  bankcd);
-//				updateParams.put("bnkpaypw", EncryptionUtil.encrypt(edit.getAccountPWD()));
-//				updateParams.put("bnkid",   edit.getBankID());
-//				updateParams.put("accname", edit.getAccountName());
-//				updateParams.put("cmsid",   edit.getFastID());
-//				updateParams.put("cmspw",   StringUtils.isEmpty(edit.getFastPWD())
-//																			? null
-//																			: EncryptionUtil.encrypt(edit.getFastPWD()));
-//
-//				easyFinBankAccountQueryService.updateAccountInfo(updateParams);
-//				result.success = true;
-//			}
-//			result.message = response.getMessage();
-//
-//		} catch (PopbillException e) {
-//			result.success = false;
-//			result.message = e.getMessage();
-//		} catch (Exception e) {
-//			throw new RuntimeException("팝빌 계좌 수정 중 오류 발생", e);
-//		}
-//
-//		return result;
-//	}
+	@RequestMapping(value = "updateBankAccount", method = RequestMethod.GET)
+	public AjaxResult updateBankAccount(
+		@RequestParam Map<String, Object> params,
+		HttpSession session) {
+
+		AjaxResult result = new AjaxResult();
+
+		String custcd       = (String) params.get("custcd");
+		String bank         = (String) params.get("bank");      // 2자리
+		String bankcd       = (String) params.get("bankcd");
+		String spjangcd     = (String) params.get("spjangcd");
+		String paymentPw    = (String) params.get("paymentPw");
+		String viewid       = (String) params.get("viewid");
+		String viewpw       = (String) params.get("viewpw");
+		String bankId       = (String) params.get("bankId");
+		String accountAlias = (String) params.get("accountAlias");
+
+		if (StringUtils.isEmpty(bank))      return fail(result, "은행코드가 없습니다.");
+		if (StringUtils.isEmpty(paymentPw)) return fail(result, "계좌 비밀번호가 없습니다.");
+
+		// 2자리 → 4자리 변환
+		String popBillBankCode = String.format("%04d", Integer.parseInt(bank.trim()));
+
+		try {
+			Map<String, Object> acc = easyFinBankAccountQueryService.getAccountInfo(custcd, bank, bankcd);
+			if (acc == null) return fail(result, "계좌 정보를 찾을 수 없습니다.");
+
+			String resolvedPaymentPw = resolvePassword(paymentPw,
+				EncryptionUtil.decrypt(UtilClass.getStringSafe((String) acc.get("bnkpaypw"))));
+
+			UpdateEasyFinBankAccountForm edit = new UpdateEasyFinBankAccountForm();
+			edit.setAccountPWD(resolvedPaymentPw);
+			edit.setAccountName(accountAlias);
+
+			// 은행별 조회전용 계정 처리
+			switch (popBillBankCode) {
+				case "0031": // 아이엠뱅크
+				case "0088": // 신한은행
+				case "0048": // 신협중앙회
+					if (StringUtils.isEmpty(viewid) || StringUtils.isEmpty(viewpw)) {
+						return fail(result, "해당 은행은 조회전용계정이 필수입니다.");
+					}
+					edit.setFastID(viewid);
+					String resolvedViewpw = resolvePassword(viewpw,
+						EncryptionUtil.decrypt(UtilClass.getStringSafe((String) acc.get("cmspw"))));
+					edit.setFastPWD(resolvedViewpw);
+					break;
+
+				case "0004": // 국민은행
+					if (StringUtils.isEmpty(bankId)) {
+						return fail(result, "국민은행은 인터넷뱅킹 아이디가 필수입니다.");
+					}
+					edit.setBankID(bankId);
+					break;
+
+				default:
+					break;
+			}
+
+			String accountNumber = EncryptionUtil.decrypt((String) acc.get("accnum"));
+			String corpNum = UtilClass.getsaupnumInfoFromSession(spjangcd, session);
+
+			Response response = easyFinBankService.updateBankAccount(
+				corpNum, popBillBankCode, accountNumber, edit, null);
+
+			if (response.getCode() == 1) {
+				// 성공 시 tb_aa040 UPDATE
+				Map<String, Object> updateParams = new HashMap<>();
+				updateParams.put("custcd",  custcd);
+				updateParams.put("bank",    bank);
+				updateParams.put("bankcd",  bankcd);
+				updateParams.put("bnkpaypw", EncryptionUtil.encrypt(edit.getAccountPWD()));
+				updateParams.put("bnkid",   edit.getBankID());
+				updateParams.put("accname", edit.getAccountName());
+				updateParams.put("cmsid",   edit.getFastID());
+				updateParams.put("cmspw",   StringUtils.isEmpty(edit.getFastPWD())
+																			? null
+																			: EncryptionUtil.encrypt(edit.getFastPWD()));
+
+				easyFinBankAccountQueryService.updateAccountInfo(updateParams);
+				result.success = true;
+			}else {
+				result.success = false;
+			}
+			result.message = response.getMessage();
+
+		} catch (PopbillException e) {
+			result.success = false;
+			result.message = e.getMessage();
+		} catch (Exception e) {
+			throw new RuntimeException("팝빌 계좌 수정 중 오류 발생", e);
+		}
+
+		return result;
+	}
 
 	// ──────────────────────────────────────────────
 	// Private 메서드

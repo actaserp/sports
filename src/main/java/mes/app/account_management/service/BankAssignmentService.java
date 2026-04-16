@@ -966,41 +966,65 @@ public class BankAssignmentService {
 		sqlParam.addValue("spjangcd", spjangcd);
 
 		String sql = """
+    SELECT
+        remark1,
+        acccd,
+        accnm,
+        it1cd,
+        it1nm,
+        it2cd,
+        it2nm,
+        contra_acccd AS acccd2,
+        accnm2
+    FROM (
         SELECT
-            remark1,
-            acccd,
-            accnm,
-            it1cd,
-            it1nm,
-            it2cd,
-            it2nm,
-            contra_acccd AS acccd2,
-            accnm2
-        FROM (
-            SELECT
-                a.remark1,
-                a.acccd,
-                b.accnm,
-                a.it1cd,
-                c.it1nm,
-                a.it2cd,
-                d.it2nm,
-                a.contra_acccd,
-                e.accnm AS accnm2,
-                ROW_NUMBER() OVER (
-                    PARTITION BY a.remark1
-                    ORDER BY a.tran_date DESC, a.tran_time DESC
-                ) AS rn
-            FROM TB_bank_accsave a
-            WHERE a.custcd   = :custcd
-              AND a.spjangcd = :spjangcd
-              AND a.acccd    IS NOT NULL AND a.acccd   != ''
-              AND a.it1cd    IS NOT NULL AND a.it1cd   != ''
-              AND a.it2cd    IS NOT NULL AND a.it2cd   != ''
-              AND a.remark1  IS NOT NULL AND a.remark1 != ''
-        ) t
-        WHERE rn = 1
-        """;
+            a.remark1,
+            a.acccd,
+            ac.accnm,
+            a.it1cd,
+            it1.it1nm,
+            a.it2cd,
+            it2.it2nm,
+            a.contra_acccd,
+            ac2.accnm AS accnm2,
+            ROW_NUMBER() OVER (
+                PARTITION BY a.remark1
+                ORDER BY a.tran_date DESC
+            ) AS rn
+        FROM TB_bank_accsave a
+        OUTER APPLY (
+            SELECT TOP 1 ac.accnm
+            FROM tb_ac001 ac
+            WHERE ac.custcd = a.custcd
+              AND ac.acccd  = a.acccd
+        ) ac
+        OUTER APPLY (
+            SELECT TOP 1 ac2.accnm
+            FROM tb_ac001 ac2
+            WHERE ac2.custcd = a.custcd
+              AND ac2.acccd  = a.contra_acccd
+        ) ac2
+        OUTER APPLY (
+            SELECT TOP 1 it1.it1nm
+            FROM tb_x0003 it1
+            WHERE it1.custcd = a.custcd
+              AND it1.it1cd  = a.it1cd
+        ) it1
+        OUTER APPLY (
+            SELECT TOP 1 it2.it2nm
+            FROM tb_x0004 it2
+            WHERE it2.custcd = a.custcd
+              AND it2.it2cd  = a.it2cd
+        ) it2
+        WHERE a.custcd   = :custcd
+          AND a.spjangcd = :spjangcd
+          AND a.acccd    IS NOT NULL AND a.acccd   != ''
+          AND a.it1cd    IS NOT NULL AND a.it1cd   != ''
+          AND a.it2cd    IS NOT NULL AND a.it2cd   != ''
+          AND a.remark1  IS NOT NULL AND a.remark1 != ''
+    ) t
+    WHERE rn = 1
+    """;
 		return sqlRunner.getRows(sql, sqlParam);
 	}
 }

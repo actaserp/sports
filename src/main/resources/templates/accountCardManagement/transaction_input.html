@@ -1533,11 +1533,7 @@
                     return;
                 }
 
-                let param = {
-                    spjangcd: getSpjangcdFromSession()
-                };
-
-                let result = AjaxUtil.getSyncData('/BaseService/checkIsMember', param);
+                let result = AjaxUtil.getSyncData('/BaseService/checkIsMember');
 
                 if (!result) {
                     Alert.alert('', '서버 응답이 없습니다.');

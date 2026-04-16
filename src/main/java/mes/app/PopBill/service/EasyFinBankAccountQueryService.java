@@ -4,6 +4,7 @@ import com.popbill.api.easyfin.EasyFinBankSearchDetail;
 import lombok.extern.slf4j.Slf4j;
 import mes.domain.services.SqlRunner;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,10 @@ public class EasyFinBankAccountQueryService {
 
 	@Autowired
 	SqlRunner sqlRunner;
+
+	@Qualifier("extraSqlRunner")
+	@Autowired
+	SqlRunner extraSqlRunner;
 
 	public Map<String, Object> getAccountInfo(String custcd, String bank, String bankcd) {
 		MapSqlParameterSource param = new MapSqlParameterSource();
@@ -41,7 +46,8 @@ public class EasyFinBankAccountQueryService {
             popsort,
             accbirthday,
             popflag,
-            spjangcd
+            spjangcd,
+             popuserid
         FROM tb_aa040
         WHERE custcd = :custcd
           AND bank   = :bank
@@ -69,6 +75,7 @@ public class EasyFinBankAccountQueryService {
 
 		return sqlRunner.execute(sql, param);
 	}
+
 	@Async
 	public void saveBankDataAsync(
 		List<EasyFinBankSearchDetail> list,
@@ -211,4 +218,124 @@ public class EasyFinBankAccountQueryService {
 
 		return result;
 	}
+
+	public void registerOnitErpPcode(String saupnum, String accnum, String banknm, String today) {
+		// 1. actcd, cltcd 조회
+		MapSqlParameterSource param = new MapSqlParameterSource();
+		param.addValue("saupnum", saupnum);
+
+		String sql1 = """
+        SELECT TOP 1 A.actcd, B.cltcd
+        FROM tb_e601 A, tb_xclient B
+        WHERE A.cltcd = B.cltcd
+          AND B.saupnum = :saupnum
+        """;
+
+		Map<String, Object> actInfo = extraSqlRunner.getRow(sql1, param);
+		if (actInfo == null) {
+			log.warn("OnitErp actcd 조회 실패: saupnum={}", saupnum);
+			return;
+		}
+		String actcd = (String) actInfo.get("actcd");
+		String cltcd = (String) actInfo.get("cltcd");
+
+		// 2. 계좌번호 중복 체크
+		MapSqlParameterSource param2 = new MapSqlParameterSource();
+		param2.addValue("actcd",  actcd);
+		param2.addValue("accnum", accnum);
+
+		String sql2 = """
+        SELECT seq
+        FROM TB_E101_PCODE WITH (NOLOCK)
+        WHERE spjangcd = 'ZZ'
+          AND actcd = :actcd
+          AND psize = :accnum
+        """;
+
+		Map<String, Object> existing = extraSqlRunner.getRow(sql2, param2);
+		if (existing != null) {
+			log.info("이미 등록된 과금 레코드: actcd={}, accnum={}", actcd, accnum);
+			return;
+		}
+
+		// 3. max seq 조회 → 새 seq 생성
+		MapSqlParameterSource param3 = new MapSqlParameterSource();
+		param3.addValue("actcd", actcd);
+
+		String sql3 = """
+        SELECT MAX(seq) AS seq
+        FROM TB_E101_PCODE WITH (NOLOCK)
+        WHERE spjangcd = 'ZZ'
+          AND actcd = :actcd
+        """;
+
+		Map<String, Object> maxRow = extraSqlRunner.getRow(sql3, param3);
+		String maxSeq = (maxRow != null) ? (String) maxRow.get("seq") : null;
+		String newSeq = (maxSeq == null) ? "01"
+											: String.format("%02d", Long.parseLong(maxSeq) + 1);
+
+		// 4. INSERT
+		MapSqlParameterSource param4 = new MapSqlParameterSource();
+		param4.addValue("actcd",  actcd);
+		param4.addValue("seq",    newSeq);
+		param4.addValue("cltcd",  cltcd);
+		param4.addValue("pname",  banknm + " 연동 서비스");
+		param4.addValue("accnum", accnum);
+		param4.addValue("indate", today);
+
+		String sql4 = """
+        INSERT INTO TB_E101_PCODE (
+            custcd, spjangcd, actcd, seq, cltcd,
+            pname, psize, qty, amt, indate,
+            inperid, flag, samt, addamt, uamt
+        ) VALUES (
+            'onit_erp', 'ZZ', :actcd, :seq, :cltcd,
+            :pname, :accnum, 1, 3300, :indate,
+            'onit', '1', 3000, 300, 3000
+        )
+        """;
+
+		extraSqlRunner.execute(sql4, param4);
+		log.info("OnitErp 과금 등록 완료: actcd={}, seq={}, accnum={}", actcd, newSeq, accnum);
+	}
+
+	// 정액 정지
+	public void updatePopflag(String custcd, String bank, String bankcd, String popflag) {
+		Map<String, Object> params = new HashMap<>();
+		params.put("custcd", custcd);
+		params.put("bank", bank);
+		params.put("bankcd", bankcd);
+		params.put("popflag", popflag);
+
+		String sql = """
+         UPDATE tb_aa040
+         SET
+             popflag = :popflag
+         WHERE custcd = :custcd
+           AND bank   = :bank
+           AND bankcd = :bankcd
+         """;
+
+		sqlRunner.execute(sql, new MapSqlParameterSource(params));
+	}
+
+	public int updateAccountInfo(Map<String, Object> params) {
+		MapSqlParameterSource param = new MapSqlParameterSource(params);
+
+		String sql = """
+         UPDATE tb_aa040
+         SET
+             bnkpaypw = :bnkpaypw,
+             bnkid    = :bnkid,
+             accname  = :accname,
+             cmsid    = :cmsid,
+             cmspw    = :cmspw
+         WHERE custcd = :custcd
+           AND bank   = :bank
+           AND bankcd = :bankcd
+         """;
+
+		return sqlRunner.execute(sql, param);
+	}
+
 }

@@ -198,6 +198,15 @@
               </tr>
               <tr>
                 <th style="text-align: center; width: 5%; padding: 5px; border: 1px solid #ddd;">
+                  <label><span class="eq">*</span>popbill 아이디</label><br>
+                </th>
+                <td style="width: 15%; padding: 5px; border: 1px solid #ddd;">
+                  <input type="text" id="popuserid" name="popuserid"
+                         style="width: 100%;" disabled>
+                </td>
+              </tr>
+              <tr>
+                <th style="text-align: center; width: 5%; padding: 5px; border: 1px solid #ddd;">
                   <label><span class="eq">*</span>지급수수료</label><br>
                 </th>
                 <td style="width: 15%; padding: 5px; border: 1px solid #ddd;">
@@ -309,13 +318,15 @@
     bindDetailData(data) {
      if (!data) return;
 
-     // 먼저 상세영역 활성화
+     // 상세영역 활성화
      $('#detail_box').find('input, select').each(function () {
       $(this).removeAttr('disabled');
      });
 
      // 값 바인딩
-     $('#id').val(data.bankcd || '');          // bankcd를 hidden id에 저장
+     $('#id').val(data.bankcd || '');
+     $('#bankid').val(data.bank || '');
+     $('#accountNumber').val(data.accountNumber || '');
      $('#accountName').val(data.accountName || '');
      $('#accountType').val(data.accountType || '');
      $('#onlineid').val(data.onlineid || '');
@@ -323,7 +334,9 @@
      $('#viewpw').val(data.viewpw || '');
      $('#mijamt').val(data.mijamt || '');
      $('#accountPw').val(data.accountPw || '');
+     $('#popuserid').val(data.popuserid || '');
 
+     // 은행명, 계좌번호 수정 불가 처리
      $('#bankid').prop('disabled', true);
      $('#accountNumber').prop('readonly', true);
 
@@ -345,6 +358,7 @@
       onlineid:      $('#onlineid').val() || '',
       viewid:        $('#viewid').val() || '',
       viewpw:        $('#viewpw').val() || '',
+      popuserid:     $('#popuserid').val() || '',
       mijamt:        ($('#mijamt').val() || '').replaceAll(',', ''),
      };
 

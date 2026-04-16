@@ -40,6 +40,7 @@ public class BankManagementService {
 							 a.intrate    AS mijamt,
 							 a.popflag    AS popyn,
 							 a.accbirthday,
+							 a.popuserid, 
 							 a.spacc as accountType
 					 FROM tb_aa040 a
 					 LEFT JOIN tb_xbank b ON a.bank = b.bankcd
@@ -86,6 +87,7 @@ public class BankManagementService {
 			String viewid         = (String) param.get("viewid");
 			String viewpw         = (String) param.get("viewpw");
 			String mijamt         = (String) param.get("mijamt");
+			String popuserid      = (String) param.get("popuserid");
 			String spjangcd       = TenantContext.get();               // 세션에서 가져오기
 
 			String custcd = getCustcdBySpjangcd(spjangcd);
@@ -120,6 +122,7 @@ public class BankManagementService {
 			dicParam.addValue("cmspw",    viewpw);
 			dicParam.addValue("acccd",    accountType);
 			dicParam.addValue("intrate",  intrate);
+			dicParam.addValue("popuserid",  popuserid);
 
 			String updateSql = """
             UPDATE tb_aa040
@@ -131,7 +134,8 @@ public class BankManagementService {
                 cmsid    = :cmsid,
                 cmspw    = :cmspw,
                 acccd    = :acccd,
-                intrate  = :intrate
+                intrate  = :intrate,
+                popuserid = :popuserid
             WHERE custcd = :custcd
               AND bank   = :bank
               AND bankcd = :bankcd
