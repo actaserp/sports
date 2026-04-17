@@ -2,6 +2,7 @@ package mes.app.PopBill.service;
 
 import com.popbill.api.easyfin.EasyFinBankSearchDetail;
 import lombok.extern.slf4j.Slf4j;
+import mes.app.common.TenantContext;
 import mes.domain.services.SqlRunner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -90,100 +91,109 @@ public class EasyFinBankAccountQueryService {
 		String bankname,
 		String spjangcd) {
 
-		if (list == null || list.isEmpty()) {
-			log.info("저장할 거래내역이 없습니다.");
-			return;
-		}
+		// ✅ 비동기 스레드에 테넌트 컨텍스트 세팅 (없으면 dbKey=null로 라우팅 실패)
+		TenantContext.set(spjangcd);
+		log.info("===== saveBankDataAsync 시작 - spjangcd={}, custcd={} =====", spjangcd, custcd);
 
-		// 1. 중복 체크용 tid Set 구성 (O(1) 조회)
-		List<String> tidList = list.stream()
-														 .map(EasyFinBankSearchDetail::getTid)
-														 .toList();
-
-		List<Map<String, Object>> existingList = getExistingTids(custcd, spjangcd, bankcd, tidList);
-
-		Set<String> existingTids = existingList.stream()
-																 .map(row -> (String) row.get("fintech_use_num"))
-																 .collect(Collectors.toSet());
-
-		int savedCount = 0;
-		int skipCount  = 0;
-
-		for (EasyFinBankSearchDetail detail : list) {
-			String tid = detail.getTid();
-
-			// 2. 중복 스킵
-			if (existingTids.contains(tid)) {
-				skipCount++;
-				continue;
+		try {
+			if (list == null || list.isEmpty()) {
+				log.info("저장할 거래내역이 없습니다.");
+				return;
 			}
 
-			try {
-				// 3. 거래일자 / 거래시간 분리 (trdt = yyyyMMddHHmmss)
-				String trdt     = detail.getTrdt();
-				String tranDate = (trdt != null && trdt.length() >= 8)
-														? trdt.substring(0, 8)
-														: detail.getTrdate();
-				String tranTime = (trdt != null && trdt.length() >= 14)
-														? trdt.substring(8, 14)
-														: null;
+			List<String> tidList = list.stream()
+															 .map(EasyFinBankSearchDetail::getTid)
+															 .toList();
 
-				// 4. 입출금 구분 (0=입금, 1=출금)
-				String accIn    = detail.getAccIn();
-				String inoutType = (accIn != null && !accIn.isBlank() && !accIn.equals("0"))
-														 ? "0" : "1";
+			log.info("중복 체크 tid 총 {}건", tidList.size());
 
-				MapSqlParameterSource param = new MapSqlParameterSource();
-				param.addValue("custcd",            custcd);
-				param.addValue("spjangcd",          spjangcd);
-				param.addValue("bnkcode",           bankcd);
-				param.addValue("fintech_use_num",   tid);
-				param.addValue("tran_date",         tranDate);
-				param.addValue("tran_time",         tranTime);
-				param.addValue("inout_type",        inoutType);
-				param.addValue("tran_amt",          parseBigDecimal(detail.getAccIn()));
-				param.addValue("wdr_amt",           parseBigDecimal(detail.getAccOut()));
-				param.addValue("after_balance_amt", detail.getBalance());
-				param.addValue("print_content",     detail.getRemark1());
-				param.addValue("bank_cd",           bank);
-				param.addValue("bank_nm",           bankname);
-				param.addValue("remark1",           detail.getRemark1());
-				param.addValue("remark2",           detail.getRemark2());
-				param.addValue("remark3",           detail.getRemark3());
-				param.addValue("remark4",           detail.getRemark4());
-				param.addValue("accnum",            accountNumber);
+			List<Map<String, Object>> existingList = getExistingTids(custcd, spjangcd, bankcd, tidList);
+			if (existingList == null) existingList = List.of();
 
-				String sql = """
-          INSERT INTO TB_bank_accsave (
-              custcd, spjangcd, bnkcode, fintech_use_num,
-              tran_date, tran_time,
-              inout_type,
-              tran_amt, wdr_amt, after_balance_amt,
-              print_content,
-              bank_cd, bank_nm,
-              remark1, remark2, remark3, remark4,
-              accnum
-          ) VALUES (
-              :custcd, :spjangcd, :bnkcode, :fintech_use_num,
-              :tran_date, :tran_time,
-              :inout_type,
-              :tran_amt, :wdr_amt, :after_balance_amt,
-              :print_content,
-              :bank_cd, :bank_nm,
-              :remark1, :remark2, :remark3, :remark4,
-              :accnum
-          )
-          """;
+			log.info("기존 저장된 tid 수: {}건", existingList.size());
 
-				sqlRunner.execute(sql, param);
-				savedCount++;
+			Set<String> existingTids = existingList.stream()
+																	 .map(row -> (String) row.get("fintech_use_num"))
+																	 .collect(Collectors.toSet());
 
-			} catch (Exception e) {
-				log.error("거래내역 저장 실패 tid={}, error={}", tid, e.getMessage());
+			int savedCount = 0;
+			int skipCount  = 0;
+
+			for (EasyFinBankSearchDetail detail : list) {
+				String tid = detail.getTid();
+
+				if (existingTids.contains(tid)) {
+					log.debug("중복 스킵 tid={}", tid);
+					skipCount++;
+					continue;
+				}
+
+				try {
+					String trdt     = detail.getTrdt();
+					String tranDate = (trdt != null && trdt.length() >= 8)
+															? trdt.substring(0, 8) : detail.getTrdate();
+					String tranTime = (trdt != null && trdt.length() >= 14)
+															? trdt.substring(8, 14) : null;
+
+					String accIn     = detail.getAccIn();
+					String inoutType = (accIn != null && !accIn.isBlank() && !accIn.equals("0"))
+															 ? "0" : "1";
+
+					log.info("저장 시도 tid={}, tranDate={}, inoutType={}, accIn={}, accOut={}",
+						tid, tranDate, inoutType, detail.getAccIn(), detail.getAccOut());
+
+					MapSqlParameterSource param = new MapSqlParameterSource();
+					param.addValue("custcd",            custcd);
+					param.addValue("spjangcd",          spjangcd);
+					param.addValue("bnkcode",           bankcd);
+					param.addValue("fintech_use_num",   tid);
+					param.addValue("tran_date",         tranDate);
+					param.addValue("tran_time",         tranTime);
+					param.addValue("inout_type",        inoutType);
+					param.addValue("tran_amt",          parseBigDecimal(detail.getAccIn()));
+					param.addValue("wdr_amt",           parseBigDecimal(detail.getAccOut()));
+					param.addValue("after_balance_amt", detail.getBalance());
+					param.addValue("print_content",     detail.getRemark1());
+					param.addValue("bank_cd",           bank);
+					param.addValue("bank_nm",           bankname);
+					param.addValue("remark1",           detail.getRemark1());
+					param.addValue("remark2",           detail.getRemark2());
+					param.addValue("remark3",           detail.getRemark3());
+					param.addValue("remark4",           detail.getRemark4());
+					param.addValue("accnum",            accountNumber);
+
+					// ✅ 테넌트 DB이므로 sqlRunner + 소문자 테이블명
+					String sql = """
+                    INSERT INTO tb_bank_accsave (
+                        custcd, spjangcd, bnkcode, fintech_use_num,
+                        tran_date, tran_time, inout_type,
+                        tran_amt, wdr_amt, after_balance_amt,
+                        print_content, bank_cd, bank_nm,
+                        remark1, remark2, remark3, remark4, accnum
+                    ) VALUES (
+                        :custcd, :spjangcd, :bnkcode, :fintech_use_num,
+                        :tran_date, :tran_time, :inout_type,
+                        :tran_amt, :wdr_amt, :after_balance_amt,
+                        :print_content, :bank_cd, :bank_nm,
+                        :remark1, :remark2, :remark3, :remark4, :accnum
+                    )
+                    """;
+
+					sqlRunner.execute(sql, param);
+					log.info("저장 성공 tid={}", tid);
+					savedCount++;
+
+				} catch (Exception e) {
+					log.error("거래내역 저장 실패 tid={}, error={}", tid, e.getMessage(), e);
+				}
 			}
-		}
 
-		log.info("거래내역 저장 완료 - 저장: {}건, 스킵: {}건", savedCount, skipCount);
+			log.info("===== saveBankDataAsync 완료 - 저장: {}건, 스킵: {}건 =====", savedCount, skipCount);
+
+		} finally {
+			// ✅ 스레드 재사용 시 컨텍스트 오염 방지
+			TenantContext.clear();
+		}
 	}
 
 	// 5. 금액 파싱 유틸
@@ -201,6 +211,8 @@ public class EasyFinBankAccountQueryService {
 	private List<Map<String, Object>> getExistingTids(
 		String custcd, String spjangcd, String bankcd, List<String> tidList) {
 
+		log.info("중복 tid 조회");
+
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("custcd",   custcd);
 		param.addValue("spjangcd", spjangcd);
@@ -209,14 +221,20 @@ public class EasyFinBankAccountQueryService {
 
 		String sql = """
         SELECT fintech_use_num
-        FROM TB_bank_accsave
+        FROM tb_bank_accsave
         WHERE custcd   = :custcd
           AND spjangcd = :spjangcd
           AND bnkcode  = :bnkcode
           AND fintech_use_num IN (:tidList)
         """;
 
-		return sqlRunner.getRows(sql, param);
+		try {
+			List<Map<String, Object>> rows = sqlRunner.getRows(sql, param);
+			return rows != null ? rows : List.of(); // ✅ null 방어
+		} catch (Exception e) {
+			log.error("getExistingTids 조회 실패: {}", e.getMessage());
+			return List.of(); // ✅ 오류 시 빈 리스트 반환
+		}
 	}
 
 	public Map<String, String> getBizInfoBySpjangcd(String spjangcd) {

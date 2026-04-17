@@ -25,8 +25,8 @@ public class BankAccsaveRequestDto {
 
 	private String money;
 
-	private String transactionTypeId;
-	private String depositAndWithdrawalType;
+	private String transactionTypeId;		//거래구분
+	private String depositAndWithdrawalType;	//입출급 형태
 
 	private String bill;
 	private String etc;

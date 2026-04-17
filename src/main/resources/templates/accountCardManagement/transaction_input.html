@@ -190,6 +190,13 @@
                                 추가
                             </a>
                         </li>
+
+<!--                        <li class="right_align rpt" style="margin: 10px 5px">-->
+<!--                            <a class="btn btn-excell" title="과금현황" id="PcodeListCheck">-->
+<!--                                <img th:src="@{/images/icon/ico-plus.svg}" alt="과금현황 아이콘">-->
+<!--                                과금현황 조회 erp연동 확인용-->
+<!--                            </a>-->
+<!--                        </li>-->
                     </ul>
                     <!--<button type="button" class="btn-default" id="btnStatementExcel" title="거래명세서 출력2"><i class="fas fa-print"></i></button>-->
                 </div>
@@ -1571,6 +1578,8 @@
                     accountnumber:  SelecteItem[0].accountnumber,
                     accountid : SelecteItem[0].accountid,
                     bankname : SelecteItem[0].bankname,
+                    bank          : SelecteItem[0].bank,    // ✅ 추가
+                    bankcd        : SelecteItem[0].accountid,
                 }
 
                 let fnSuccess = function(res){
@@ -1973,6 +1982,34 @@
 
             poppage.show(searchcallback, result.data);
         }
+
+        $('#PcodeListCheck').click(function () {
+            let result = AjaxUtil.getSyncData('/EasyFinBankService/getPcodeList');
+            if (!result.success) { Alert.alert('', '조회 실패'); return; }
+
+            // 간단 팝업 테이블로 표시
+            const rows = result.data.map(r => `
+        <tr>
+            <td>${r.actcd}</td><td>${r.seq}</td><td>${r.cltcd}</td>
+            <td>${r.pname}</td><td>${r.psize}</td>
+            <td>${r.qty}</td><td>${r.amt?.toLocaleString()}</td>
+            <td>${r.indate}</td>
+            <td style="color:${r.flag==='1'?'green':'gray'}">${r.flag==='1'?'등록':'미등록'}</td>
+        </tr>`).join('');
+
+            const $content = $(`
+        <div class="content_wrap popup">
+            <table class="write-table" style="width:100%;font-size:12px;">
+                <thead><tr>
+                    <th>actcd</th><th>seq</th><th>cltcd</th><th>pname</th>
+                    <th>계좌번호</th><th>qty</th><th>amt</th><th>indate</th><th>flag</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`);
+
+            new PopupDraggable('과금현황 조회').open({ width: 1200, height: 500, $content });
+        });
 
         $(document).ready(function (e) {
             page = new TransactionInput();

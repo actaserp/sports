@@ -9,8 +9,11 @@ import mes.app.PopBill.service.EasyFinBankAccountQueryService;
 import mes.app.common.TenantContext;
 import mes.app.util.UtilClass;
 import mes.domain.model.AjaxResult;
+import mes.domain.services.SqlRunner;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,8 +35,11 @@ public class EasyFinBankServiceController {
 	private EasyFinBankService easyFinBankService;
 
 	@Autowired
-	private EasyFinBankAccountQueryService easyFinBankAccountQueryService;
+	EasyFinBankAccountQueryService easyFinBankAccountQueryService;
 
+	@Qualifier("extraSqlRunner")
+	@Autowired
+	SqlRunner extraSqlRunner;
 
 	// ──────────────────────────────────────────────
 	// 1. 팝빌 계좌 등록
@@ -148,7 +154,13 @@ public class EasyFinBankServiceController {
 				result.message = response.getMessage();
 			}
 
-		} catch (Exception e) {
+		} catch (PopbillException e) {
+			// 팝빌 전용 예외 - 에러코드 확인 가능
+			log.error("registBankAccount PopbillException - code: {}, message: {}", e.getCode(), e.getMessage());
+			result.success = false;
+			result.message = e.getMessage();
+
+		}catch (Exception e) {
 			log.error("registBankAccount error: {}", e.getMessage());
 			result.success = false;
 			result.message = e.getMessage();
@@ -172,13 +184,28 @@ public class EasyFinBankServiceController {
 		String todate        = (String) params.get("todate");
 		String managementnum = (String) params.get("managementnum");
 		String accountnumber = (String) params.get("accountnumber");
-		String spjangcd      = (String) params.get("spjangcd");
 		String bankname      = (String) params.get("bankname");
-		String custcd        = (String) params.get("custcd");
 		String bank          = (String) params.get("bank");
 		String bankcd        = (String) params.get("bankcd");
 
+		// ✅ 서버에서 spjangcd → custcd 조회
+		String spjangcd = TenantContext.get();
+		if (StringUtils.isEmpty(spjangcd)) return fail(result, "사업장 코드가 없습니다.");
+
+		Map<String, String> bizInfo = easyFinBankAccountQueryService.getBizInfoBySpjangcd(spjangcd);
+		String custcd  = bizInfo.get("custcd");
+		String saupnum = bizInfo.get("saupnum");
+
+		if (StringUtils.isEmpty(custcd))  return fail(result, "회사코드를 찾을 수 없습니다.");
+		if (StringUtils.isEmpty(saupnum)) return fail(result, "사업자번호를 찾을 수 없습니다.");
+
 		if (!validateRequest(accountnumber, managementnum, result)) return result;
+
+		// ✅ bank 2자리 → 팝빌 BankCode 4자리 변환 ("07" → "0007")
+		String popBillBankCode = String.format("%04d", Integer.parseInt(bank.trim()));
+
+		// ✅ 사업자번호 하이픈 제거
+		String corpNum = saupnum.replaceAll("-", "");
 
 		frdate = frdate.replaceAll("-", "");
 		todate = todate.replaceAll("-", "");
@@ -187,10 +214,10 @@ public class EasyFinBankServiceController {
 			Map<String, Object> acc = easyFinBankAccountQueryService.getAccountInfo(custcd, bank, bankcd);
 			if (acc == null) return fail(result, "계좌 정보를 찾을 수 없습니다.");
 
-			String plainAccountNum = (String) acc.get("accnum");
+			String plainAccountNum = ((String) acc.get("accnum")).replaceAll("-", "");
 
-			String corpNum = UtilClass.getsaupnumInfoFromSession(spjangcd, session);
-			String jobID   = easyFinBankService.requestJob(corpNum, managementnum, plainAccountNum, frdate, todate);
+			// ✅ managementnum → popBillBankCode 로 수정
+			String jobID = easyFinBankService.requestJob(corpNum, popBillBankCode, plainAccountNum, frdate, todate);
 
 			String jobState = waitForJobComplete(corpNum, jobID);
 
@@ -501,6 +528,22 @@ public class EasyFinBankServiceController {
 		if (StringUtils.isEmpty(input)) return original;
 		return input.contains("⋆") ? original : input;
 	}
+	@RequestMapping(value = "getPcodeList", method = RequestMethod.GET)
+	public AjaxResult getPcodeList() {
+		AjaxResult result = new AjaxResult();
 
+		String sql = """
+        SELECT actcd, seq, cltcd, pname, psize, qty, amt, indate, flag
+        FROM TB_E101_PCODE WITH (NOLOCK)
+        WHERE spjangcd = 'ZZ'
+          AND custcd   = 'onit_erp'
+        ORDER BY actcd, seq
+        """;
+
+		List<Map<String, Object>> list = extraSqlRunner.getRows(sql, new MapSqlParameterSource());
+		result.data    = list;
+		result.success = true;
+		return result;
+	}
 
 }

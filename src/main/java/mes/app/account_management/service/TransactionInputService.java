@@ -279,41 +279,40 @@ public class TransactionInputService {
 		BigDecimal tranAmt = BigDecimal.ZERO;
 		BigDecimal wdrAmt = BigDecimal.ZERO;
 
-		if ("1".equals(inoutType)) {
-			tranAmt = money;
+		if ("0".equals(inoutType)) {
+			tranAmt = money;   // 입금 → tran_amt ✅
 		} else {
-			wdrAmt = money;
+			wdrAmt = money;    // 출금 → wdr_amt ✅
 		}
 
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("custcd", custcd);
 		param.addValue("spjangcd", spjangcd);
-		param.addValue("bnkcode", (dto.getAccountId()));              // accountId -> bnkcode
-		param.addValue("fintech_use_num", (dto.getAccountNumber()));  // accountNumber -> fintech_use_num
-//		param.addValue("bank_tran_id", "");
+		param.addValue("bnkcode", dto.getAccountId());              // accountId -> bnkcode
+		param.addValue("fintech_use_num", dto.getAccountNumber());  // accountNumber -> fintech_use_num
 
 		param.addValue("tran_date", removeDash(dto.getTransactionDate()));
 		param.addValue("tran_time", removeColon(dto.getTransactionHour()));
-		param.addValue("inout_type", inoutType);   // inoutFlag -> inout_type
-		param.addValue("tran_type", (dto.getDepositAndWithdrawalType()));
-		param.addValue("print_content", (dto.getMemo()));
+		param.addValue("inout_type", inoutType);                      // inoutFlag -> inout_type
+		param.addValue("tran_type", dto.getTransactionTypeId());      // transactionTypeId -> tran_type (varchar(10)) ✅
+		param.addValue("print_content", dto.getMemo());
 
 		param.addValue("tran_amt", tranAmt);
 		param.addValue("wdr_amt", wdrAmt);
 
-		param.addValue("bfeeamt", commission);  // commission -> bfeeamt
+		param.addValue("bfeeamt", commission);                        // commission -> bfeeamt
 		param.addValue("bfee", commission.compareTo(BigDecimal.ZERO) > 0 ? "1" : "0");
 
-		param.addValue("bank_nm", (dto.getBankName()));
-		param.addValue("accnum", (dto.getAccountNumber()));
+		param.addValue("bank_nm", dto.getBankName());
+		param.addValue("accnum", dto.getAccountNumber());
 
-		param.addValue("cltcd", (dto.getClientId()));
-		param.addValue("flag", (dto.getClientFlag()));
-		param.addValue("dipflag", (dto.getTransactionTypeId()));
+		param.addValue("cltcd", dto.getClientId());
+		param.addValue("flag", dto.getClientFlag());
+		param.addValue("dipflag", dto.getDepositAndWithdrawalType());
 
-		param.addValue("subject", (dto.getNote1()));	//적요
-		param.addValue("etcremark", (dto.getEtc()));
-		param.addValue("eumnum", (dto.getBill()));
+		param.addValue("subject", dto.getNote1());                    // 적요
+		param.addValue("etcremark", dto.getEtc());
+		param.addValue("eumnum", dto.getBill());
 		param.addValue("eumtodt", removeDash(dto.getExpiration()));
 
 		param.addValue("trn_dv", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")));
@@ -342,7 +341,7 @@ public class TransactionInputService {
             eumnum,
             eumtodt,
             etcremark,
-            dipflag  
+            dipflag
         ) VALUES (
             :custcd,
             :spjangcd,
@@ -366,7 +365,7 @@ public class TransactionInputService {
             :eumnum,
             :eumtodt,
             :etcremark,
-            :dipflag 
+            :dipflag
         )
     """;
 
