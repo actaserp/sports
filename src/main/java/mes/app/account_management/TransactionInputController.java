@@ -2,6 +2,7 @@ package mes.app.account_management;
 
 import lombok.extern.slf4j.Slf4j;
 import mes.app.account_management.service.TransactionInputService;
+import mes.app.common.TenantContext;
 import mes.app.util.UtilClass;
 import mes.domain.dto.BankAccsaveRequestDto;
 import mes.domain.model.AjaxResult;
@@ -143,6 +144,25 @@ public class TransactionInputController { //입출금 입력
 		return result;
 	}
 
+	@GetMapping("/searchDetail")
+	public AjaxResult searchDetail(@RequestParam Map<String, Object> params) {
+		AjaxResult result = new AjaxResult();
+
+		String spjangcd    = TenantContext.get();
+		String searchfrdate = (String) params.get("searchfrdate");
+		String searchtodate = (String) params.get("searchtodate");
+		String bankcd       = (String) params.get("bankcd");
+
+		Map<String, String> bizInfo = transactionInputService.getBizInfoBySpjangcd(spjangcd);
+		String custcd = bizInfo.get("custcd");
+
+		List<Map<String, Object>> list = transactionInputService
+																			 .searchDetail(custcd, spjangcd, bankcd, searchfrdate, searchtodate);
+
+		result.success = true;
+		result.data    = list;
+		return result;
+	}
 
 	private String validateTransactionForm(BankAccsaveRequestDto data) {
 		if (data == null) return "요청 데이터가 없습니다.";

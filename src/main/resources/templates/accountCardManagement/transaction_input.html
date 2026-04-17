@@ -1018,26 +1018,17 @@
                 });
             }
 
-            searchDetail(companyId, cltflag){
+            searchDetail(bankcd) {
                 let _this = this;
 
-
-
                 let data = {
-                    companyId : companyId,
-                    cltflag : cltflag,
+                    bankcd       : bankcd,
                     searchfrdate : $('#searchfrdate').val(),
-                    searchtodate: $('#searchtodate').val(),
-                    spjangcd : getSpjangcdFromSession()
+                    searchtodate : $('#searchtodate').val(),
                 }
+
                 let result = AjaxUtil.getSyncData(_this.url + '/searchDetail', data);
-                let list = result.data;
-
-                _this.viewData2.sourceCollection = list.map(row => ({
-                    ...row,
-                    computed_amount : row.ioflag === '입금' ? row.input_money : row.output_money
-                }));
-
+                _this.viewData2.sourceCollection = result.data || [];
             }
 
             EditTransactionData(){
@@ -1289,56 +1280,47 @@
                     autoGenerateColumns: false,
                     showMarquee: true,
                     allowSorting: 'MultiColumn',
-                    selectionMode: wijmo.grid.SelectionMode.Row, // 행 단위 선택
-                    allowMerging: wijmo.grid.AllowMerging.All,
+                    selectionMode: wijmo.grid.SelectionMode.Row,
                     isReadOnly: true,
                     columns: [
-                        { binding: 'clientName', header: '거래처명', width: 170, align: 'center', isReadOnly: true, allowMerging: true },
-                        { binding: 'trade_date', header: '일자', width: 120, align: 'center', isReadOnly: true },
-                        { binding: 'depositandwithdrawaltype', header: '입금형태', width: 100, align: 'center', isReadOnly: true},
-                        { binding: 'ioflag', header: '입출금구분', width: 120, align: 'center', isReadOnly: true },
-                        { binding: 'input_money', header: '입금액', width: 120, align: 'right', isReadOnly: true },
-                        { binding: 'output_money', header: '출금액', width: 120, align: 'right', isReadOnly: true },
-                        { binding: 'trade_type', header: '거래구분', width: 120, align: 'center', isReadOnly: true },
-                        { binding: 'memo', header: '메모', width: 180, align: 'center', isReadOnly: true },
-                        { binding: 'bankName', header: '은행', width: 120, align: 'center', isReadOnly: true },
-                        { binding: 'accountNumber', header: '계좌', width: 150, align: 'center', isReadOnly: true },
-
-
+                        { binding: 'trade_date',    header: '일자',     width: 120, align: 'center', isReadOnly: true },
+                        { binding: 'ioflag',        header: '입출금구분', width: 100, align: 'center', isReadOnly: true },
+                        { binding: 'input_money',   header: '입금액',    width: 120, align: 'right',  isReadOnly: true, format: 'n0' },
+                        { binding: 'output_money',  header: '출금액',    width: 120, align: 'right',  isReadOnly: true, format: 'n0' },
+                        { binding: 'balance',       header: '잔액',     width: 120, align: 'right',  isReadOnly: true },
+                        { binding: 'clientName',    header: '거래처명',   width: 150, align: 'center', isReadOnly: true },
+                        { binding: 'print_content', header: '적요',     width: 150, align: 'center', isReadOnly: true },
+                        { binding: 'remark1',       header: '비고1',    width: 150, align: 'center', isReadOnly: true },
+                        { binding: 'bankName',      header: '은행',     width: 100, align: 'center', isReadOnly: true },
+                        { binding: 'accountNumber', header: '계좌',     width: 150, align: 'center', isReadOnly: true },
                     ],
                     itemsSource: this.viewData2,
                     formatItem: function (s, e) {
-
                         const panel = e.panel;
-                        const col = s.columns[e.col];
+                        const col   = s.columns[e.col];
 
                         if (panel === s.columnHeaders) {
                             e.cell.style.color = 'black';
                             return;
                         }
-
                         if (col.binding === 'input_money') {
                             e.cell.style.color = 'dodgerblue';
-                            //e.cell.style.fontWeight = 'bold';
                             return;
                         }
-
                         if (col.binding === 'output_money') {
                             e.cell.style.color = 'red';
-                            //e.cell.style.fontWeight = 'bold';
                             return;
                         }
-
-                    },
-
+                    }
                 });
+
                 //맨 앞에 헤더부분 없애기
                 this.grid2.rowHeaders.columns.splice(0, 1);
                 // 데이터 로드 후 초기 선택 상태 해제
                 new FlexGridContextMenu(this.grid2);
                 this.grid2.downloadFileName = '출하 내역';
 
-                _this.searchDetail(data.cltcd, data.cltflag);
+                _this.searchDetail(data.bnkcode);
 
                 $('#btn-detailsearch-close').click(function(e){
                     modalContainer.close();
@@ -1417,30 +1399,31 @@
                     autoGenerateColumns: false,
                     showMarquee: true,
                     allowSorting: 'MultiColumn',
-                    selectionMode: wijmo.grid.SelectionMode.Row, // 행 단위 선택
-                    isReadOnly: false,
+                    selectionMode: wijmo.grid.SelectionMode.Row,
+                    isReadOnly: true,
                     columns: [
-                        {binding: 'trdate', header: '일자', width: '*', align: 'center', isReadOnly: true},
-                        { binding: 'accin', header: '입금금액', width: '*', align: 'right', format: 'n0', isReadOnly: true },
-                        { binding: 'accout', header: '출금금액', width: '*', align: 'right', format: 'n0', isReadOnly: true },
-                        {binding: 'Jumunnumber', header: '수수료', width: '*', align: 'center', isReadOnly: true},
-                        {binding: 'remark1', header: '적요', width: '*', align: 'center', isReadOnly: true},
+                        { binding: 'trdate',  header: '일자',   width: '*', align: 'center', isReadOnly: true },
+                        { binding: 'accIn',   header: '입금금액', width: '*', align: 'right',  format: 'n0', isReadOnly: true },
+                        { binding: 'accOut',  header: '출금금액', width: '*', align: 'right',  format: 'n0', isReadOnly: true },
+                        { binding: 'balance', header: '잔액',   width: '*', align: 'right',  format: 'n0', isReadOnly: true },
+                        { binding: 'remark1', header: '적요',   width: '*', align: 'center', isReadOnly: true },
+                        { binding: 'remark2', header: '적요2',  width: '*', align: 'center', isReadOnly: true },
                     ],
                     itemsSource: this.viewData4,
                     formatItem: function (s, e) {
                         if (e.panel === s.cells) {
                             const col = s.columns[e.col];
-                            if (col.binding === 'accin') {
+                            if (col.binding === 'accIn') {
                                 e.cell.style.color = 'dodgerblue';
                                 e.cell.style.fontWeight = 'bold';
                             }
-                            if (col.binding === 'accout') {
+                            if (col.binding === 'accOut') {
                                 e.cell.style.color = 'tomato';
                                 e.cell.style.fontWeight = 'bold';
                             }
                         }
                     }
-                })
+                });
                 _this.searchRegisterAccount();
 
                 // 탭 기능 초기화 (이 부분을 추가)
@@ -1561,7 +1544,7 @@
                 const todate = $('#transactionToDate').val();
 
                 if(!calculateDay(frdate, todate)){
-                    Alert.alert('', '최대 3개월치만 가능합니다.')
+                    Alert.alert('', '최대 1개월치만 가능합니다.')
                     return;
                 }
 

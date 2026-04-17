@@ -397,7 +397,7 @@ public class TransactionInputService {
 	}
 
 	/*유틸*/
-	private Map<String, String> getBizInfoBySpjangcd(String spjangcd) {
+	public Map<String, String> getBizInfoBySpjangcd(String spjangcd) {
 		MapSqlParameterSource sqlParam = new MapSqlParameterSource();
 		sqlParam.addValue("spjangcd", spjangcd);
 
@@ -476,4 +476,50 @@ public class TransactionInputService {
 		return null;
 	}
 
+	public List<Map<String, Object>> searchDetail(String custcd, String spjangcd, String bankcd, String searchfrdate, String searchtodate) {
+
+		MapSqlParameterSource param = new MapSqlParameterSource();
+		param.addValue("custcd",       custcd);
+		param.addValue("spjangcd",     spjangcd);
+		param.addValue("bankcd",       bankcd);
+		param.addValue("searchfrdate", searchfrdate.replaceAll("-", ""));
+		param.addValue("searchtodate", searchtodate.replaceAll("-", ""));
+
+		String sql = """
+        SELECT
+            b.fintech_use_num,
+            b.tran_date                                             AS trade_date,
+            b.tran_time,
+            CASE WHEN b.inout_type = '0' THEN '입금' ELSE '출금'   END AS ioflag,
+            b.tran_amt                                              AS input_money,
+            b.wdr_amt                                               AS output_money,
+            b.after_balance_amt                                     AS balance,
+            b.print_content,
+            b.bank_cd,
+            b.bank_nm                                               AS bankName,
+            b.accnum                                                AS accountNumber,
+            b.remark1,
+            b.remark2,
+            b.remark3,
+            b.remark4,
+            CASE
+                WHEN b.cltcd IS NOT NULL THEN x.cltnm
+                ELSE NULL
+            END                                                     AS clientName,
+            a.accname,
+            a.banknm                                                AS accBankName
+        FROM TB_bank_accsave b
+        LEFT JOIN tb_xclient x ON x.custcd = b.custcd
+                               AND x.cltcd  = b.cltcd
+        LEFT JOIN tb_aa040 a   ON a.custcd  = b.custcd
+                               AND a.bankcd  = b.bnkcode
+        WHERE b.custcd   = :custcd
+          AND b.spjangcd = :spjangcd
+          AND b.bnkcode  = :bankcd
+          AND b.tran_date BETWEEN :searchfrdate AND :searchtodate
+        ORDER BY b.tran_date DESC, b.tran_time DESC
+        """;
+
+		return sqlRunner.getRows(sql, param);
+	}
 }

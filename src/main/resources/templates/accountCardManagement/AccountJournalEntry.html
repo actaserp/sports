@@ -198,7 +198,9 @@
             </li>
           </ul>
         </div>
-
+        <div class="grid-guide-box">
+          ※ 사업명 / 관명 / 항 / 목 /재원 입력 후 <b>Enter</b> 키로 조회하여 선택하세요.
+        </div>
         <div id="theGrid_BankHistory" style="height: 540px;"></div>
         <div id="memo-popup" style="display: none; position: absolute; z-index: 9999;">
           <textarea id="memo-textarea" style="width: 300px; height: 100px;"></textarea>
@@ -291,6 +293,15 @@
         <section class="section">
             <div id="It2Grid" style="height:350px; display:block;"></div>
         </section>
+    </div>
+  </script>
+
+  <!-- 재원 팝업 -->
+  <script type="text/x-tmpl" id="mssecTemplate">
+    <div class="content_wrap popup">
+      <section class="section">
+        <div id="MssecGrid" style="height:300px; display:block;"></div>
+      </section>
     </div>
   </script>
 
@@ -392,7 +403,7 @@
        {binding: 'tran_date', header: '일자', width: 100, align: 'center', isReadOnly: true},
        {binding: 'inout_type', header: '입출구분', width: 120, align: 'center', isReadOnly: true},
        {binding: 'tran_amt', header: '입금액', width: 100, align: 'right', isReadOnly: true},
-       {binding: 'wdr_amt', header: '출금액',  visible: false},
+       {binding: 'wdr_amt', header: '출금액', width: 100, align: 'right', isReadOnly: true},
        {binding: 'cltcd', header: '거래처',  visible: false},
        {binding: 'subject', header: '적요', width: 230, align: 'left', isReadOnly: false},
 
@@ -408,7 +419,8 @@
        {binding: 'it1nm', header: '항', width: 150, align: 'left', isReadOnly: false},
        {binding: 'it2cd', header: '목코드', visible: false},
        {binding: 'it2nm', header: '목', width: 150, align: 'left', isReadOnly: false},
-       {binding: 'mssec', header: '재원', width: 100, align: 'left', dataMap: mssecMap},
+       {binding: 'mssec', header: '재원코드', width: 100, visible: false},
+       {binding: 'mssecnm', header: '재원', width: 100, align: 'left', isReadOnly: false},
        {binding: 'summy', header: '산출내역', width: 140, align: 'left', isReadOnly: false},
 
        {binding: '', header: '제목', width: 250, align: 'left', isReadOnly: true, visible: false},
@@ -429,7 +441,7 @@
 
       if (!item || !col) return;
 
-      if (col.binding === 'mssec') {
+      if (col.binding === 'mssec' || col.binding === 'mssecnm') {
        _this.updateRowSelected(item);
        s.collectionView.refresh();
       }
@@ -533,7 +545,11 @@
        return;
       }
 
-      // 재원에서 엔터 -> 산출내역으로 이동
+      // 재원
+      if (col.binding === 'mssecnm') {
+       _this.searchMssec(item, sel.row);
+       return;
+      }
       if (col.binding === 'mssec') {
        _this.moveToCellAndEdit(sel.row, 'summy');
        return;
@@ -1110,6 +1126,93 @@
      g.collectionView.refresh();
 
      this.moveToMssecAndOpen(sel.row);
+    }
+
+// 재원 조회
+    searchMssec(item, rowIndex) {
+     let _this = this;
+     let list = _this.mssecOptions.filter(opt => opt.value !== '');
+
+     if (!list || list.length === 0) {
+      Alert.alert('', '재원 목록이 없습니다.');
+      return;
+     }
+
+     _this.showMssecPopup(list, rowIndex);
+    }
+
+    showMssecPopup(dataList, rowIndex) {
+     let _this = this;
+
+     _this.selectedRowIndexForPopup = rowIndex;
+
+     if (_this.mssecPopup) {
+      _this.mssecPopup.close();
+      _this.mssecPopup = null;
+     }
+
+     let content = tmpl('mssecTemplate', {});
+
+     _this.mssecPopup = new PopupDraggable('재원 조회');
+     _this.mssecPopup.open({ width: 400, height: 350, $content: $(content) });
+
+     _this.mssecGrid = new wijmo.grid.FlexGrid('#MssecGrid', {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: [
+       { binding: 'value', header: '코드', width: 100, align: 'center' },
+       { binding: 'text', header: '재원명', width: '*', align: 'left' }
+      ],
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+
+     _this.mssecGrid.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const selectCurrent = function () {
+      let sel = _this.mssecGrid.selection;
+      if (!sel || sel.row < 0) return;
+
+      let selectedItem = _this.mssecGrid.rows[sel.row].dataItem;
+      _this.applyMssecData(selectedItem, _this.selectedRowIndexForPopup);
+
+      if (_this.mssecPopup) {
+       _this.mssecPopup.close();
+       _this.mssecPopup = null;
+      }
+      _this.mssecGrid = null;
+     };
+
+     setTimeout(function () {
+      if (_this.mssecGrid && _this.mssecGrid.rows.length > 0) {
+       _this.mssecGrid.select(0, 0);
+       _this.mssecGrid.focus();
+      }
+     }, 50);
+
+     _this.mssecGrid.hostElement.addEventListener('dblclick', selectCurrent);
+
+     _this.mssecGrid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectCurrent();
+      }
+     });
+    }
+
+    applyMssecData(selectedItem, rowIndex) {
+     let g = this.grid;
+     let rowItem = g.rows[rowIndex].dataItem;
+
+     rowItem.mssec = selectedItem.value || '';
+     rowItem.mssecnm = selectedItem.text || '';
+
+     this.updateRowSelected(rowItem);
+     g.collectionView.refresh();
+
+     this.moveToCellAndEdit(rowIndex, 'summy');
     }
 
     isRowReadyForSave(item) {
