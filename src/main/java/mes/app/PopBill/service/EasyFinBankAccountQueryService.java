@@ -80,7 +80,6 @@ public class EasyFinBankAccountQueryService {
 		return sqlRunner.execute(sql, param);
 	}
 
-	@Async
 	public void saveBankDataAsync(
 		List<EasyFinBankSearchDetail> list,
 		String jobID,
@@ -139,14 +138,34 @@ public class EasyFinBankAccountQueryService {
 					String inoutType = (accIn != null && !accIn.isBlank() && !accIn.equals("0"))
 															 ? "0" : "1";
 
-					log.info("저장 시도 tid={}, tranDate={}, inoutType={}, accIn={}, accOut={}",
-						tid, tranDate, inoutType, detail.getAccIn(), detail.getAccOut());
+					// ✅ 필드별 값 + 길이 로그
+//					log.info("=== 필드 길이 체크 tid={} ===", tid);
+//					log.info("custcd={}(len:{})",       custcd,              custcd != null ? custcd.length() : 0);
+//					log.info("spjangcd={}(len:{})",     spjangcd,            spjangcd != null ? spjangcd.length() : 0);
+//					log.info("bnkcode={}(len:{})",      bankcd,              bankcd != null ? bankcd.length() : 0);
+//					log.info("fintech_use_num={}(len:{})", tid,              tid != null ? tid.length() : 0);
+//					log.info("tran_date={}(len:{})",    tranDate,            tranDate != null ? tranDate.length() : 0);
+//					log.info("tran_time={}(len:{})",    tranTime,            tranTime != null ? tranTime.length() : 0);
+//					log.info("inout_type={}(len:{})",   inoutType,           inoutType != null ? inoutType.length() : 0);
+//					log.info("tran_amt={}",             detail.getAccIn());
+//					log.info("wdr_amt={}",              detail.getAccOut());
+//					log.info("after_balance_amt={}",    detail.getBalance());
+//					log.info("print_content={}(len:{})", detail.getRemark1(), detail.getRemark1() != null ? detail.getRemark1().length() : 0);
+//					log.info("bank_cd={}(len:{})",      bank,                bank != null ? bank.length() : 0);
+//					log.info("bank_nm={}(len:{})",      bankname,            bankname != null ? bankname.length() : 0);
+//					log.info("remark1={}(len:{})",      detail.getRemark1(), detail.getRemark1() != null ? detail.getRemark1().length() : 0);
+//					log.info("remark2={}(len:{})",      detail.getRemark2(), detail.getRemark2() != null ? detail.getRemark2().length() : 0);
+//					log.info("remark3={}(len:{})",      detail.getRemark3(), detail.getRemark3() != null ? detail.getRemark3().length() : 0);
+//					log.info("remark4={}(len:{})",      detail.getRemark4(), detail.getRemark4() != null ? detail.getRemark4().length() : 0);
+//					log.info("accnum={}(len:{})",       accountNumber,       accountNumber != null ? accountNumber.length() : 0);
+//					log.info("=== 필드 길이 체크 끝 ===");
 
 					MapSqlParameterSource param = new MapSqlParameterSource();
 					param.addValue("custcd",            custcd);
 					param.addValue("spjangcd",          spjangcd);
 					param.addValue("bnkcode",           bankcd);
-					param.addValue("fintech_use_num",   tid);
+					param.addValue("fintech_use_num",   tid);           // ✅ tid → PK
+					param.addValue("bank_tran_id",      accountNumber); // ✅ 계좌번호
 					param.addValue("tran_date",         tranDate);
 					param.addValue("tran_time",         tranTime);
 					param.addValue("inout_type",        inoutType);
@@ -162,22 +181,23 @@ public class EasyFinBankAccountQueryService {
 					param.addValue("remark4",           detail.getRemark4());
 					param.addValue("accnum",            accountNumber);
 
-					// ✅ 테넌트 DB이므로 sqlRunner + 소문자 테이블명
 					String sql = """
-                    INSERT INTO tb_bank_accsave (
-                        custcd, spjangcd, bnkcode, fintech_use_num,
-                        tran_date, tran_time, inout_type,
-                        tran_amt, wdr_amt, after_balance_amt,
-                        print_content, bank_cd, bank_nm,
-                        remark1, remark2, remark3, remark4, accnum
-                    ) VALUES (
-                        :custcd, :spjangcd, :bnkcode, :fintech_use_num,
-                        :tran_date, :tran_time, :inout_type,
-                        :tran_amt, :wdr_amt, :after_balance_amt,
-                        :print_content, :bank_cd, :bank_nm,
-                        :remark1, :remark2, :remark3, :remark4, :accnum
-                    )
-                    """;
+                INSERT INTO TB_bank_accsave (
+                    custcd, spjangcd, bnkcode, fintech_use_num,
+                    bank_tran_id,
+                    tran_date, tran_time, inout_type,
+                    tran_amt, wdr_amt, after_balance_amt,
+                    print_content, bank_cd, bank_nm,
+                    remark1, remark2, remark3, remark4, accnum
+                ) VALUES (
+                    :custcd, :spjangcd, :bnkcode, :fintech_use_num,
+                    :bank_tran_id,
+                    :tran_date, :tran_time, :inout_type,
+                    :tran_amt, :wdr_amt, :after_balance_amt,
+                    :print_content, :bank_cd, :bank_nm,
+                    :remark1, :remark2, :remark3, :remark4, :accnum
+                )
+                """;
 
 					sqlRunner.execute(sql, param);
 					log.info("저장 성공 tid={}", tid);

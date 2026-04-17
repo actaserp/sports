@@ -453,16 +453,21 @@
      // footer 합계행 추가
      _this.grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
 
-     // '일자' 컬럼 위치에 합계 표시
-     const apvDtColIndex = _this.grid.columns.findIndex(c => c.binding === 'apv_dt');
-     if (apvDtColIndex > -1) {
-      _this.grid.columnFooters.setCellData(0, apvDtColIndex, '합계');
+// '일자' 컬럼 위치에 합계 표시 (기존 apv_dt → tran_date로 수정)
+     const tranDateColIndex = _this.grid.columns.findIndex(c => c.binding === 'tran_date');
+     if (tranDateColIndex > -1) {
+      _this.grid.columnFooters.setCellData(0, tranDateColIndex, '합계');
      }
 
-     // 금액 컬럼 aggregate 지정
-     const apv_tmCol = _this.grid.columns.getColumn('apv_tm');
-     if (apv_tmCol) {
-      apv_tmCol.aggregate = wijmo.Aggregate.Sum;
+// 금액 컬럼 aggregate 지정 (기존 apv_tm → tran_amt, wdr_amt로 수정)
+     const tranAmtCol = _this.grid.columns.getColumn('tran_amt');
+     if (tranAmtCol) {
+      tranAmtCol.aggregate = wijmo.Aggregate.Sum;
+     }
+
+     const wdrAmtCol = _this.grid.columns.getColumn('wdr_amt');
+     if (wdrAmtCol) {
+      wdrAmtCol.aggregate = wijmo.Aggregate.Sum;
      }
 
      // 데이터 로드 후 초기 선택 해제

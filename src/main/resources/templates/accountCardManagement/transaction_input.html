@@ -1258,7 +1258,7 @@
                 if(birth) birth.val(data.birth).prop('readonly', true);
 
                 let corp = $('#corpnum');
-                if(corp) corp.val('').prop('readonly', false);
+                if(corp) corp.val(data.birth).prop('readonly', true);
 
                 $('#pop_yn').val(data.popyn).prop('disabled', true);
                 $('#AccountAlias').val(data.accountname);
@@ -1403,11 +1403,11 @@
                     isReadOnly: true,
                     columns: [
                         { binding: 'trdate',  header: '일자',   width: '*', align: 'center', isReadOnly: true },
-                        { binding: 'accIn',   header: '입금금액', width: '*', align: 'right',  format: 'n0', isReadOnly: true },
-                        { binding: 'accOut',  header: '출금금액', width: '*', align: 'right',  format: 'n0', isReadOnly: true },
-                        { binding: 'balance', header: '잔액',   width: '*', align: 'right',  format: 'n0', isReadOnly: true },
+                        { binding: 'accIn',   header: '입금금액', width: '*', align: 'right', dataType: wijmo.DataType.Number, format: 'n0', isReadOnly: true },
+                        { binding: 'accOut',  header: '출금금액', width: '*', align: 'right', dataType: wijmo.DataType.Number, format: 'n0', isReadOnly: true },
+                        {binding: 'JumunNumber', header: '수수료', width: '*', align: 'center', isReadOnly: true},
+                        { binding: 'balance', header: '잔액',   width: '*', align: 'right', dataType: wijmo.DataType.Number, format: 'n0', isReadOnly: true },
                         { binding: 'remark1', header: '적요',   width: '*', align: 'center', isReadOnly: true },
-                        { binding: 'remark2', header: '적요2',  width: '*', align: 'center', isReadOnly: true },
                     ],
                     itemsSource: this.viewData4,
                     formatItem: function (s, e) {

@@ -152,7 +152,7 @@ public class CardHistoryService {
 					a.baroid
 					from tb_iz010 a
 					left join tb_xcard c on a.cardco = c.cd
-					where a.useyn ='1' and a.cdflag ='1'
+					where a.useyn ='1' and a.cdflag ='1'  and a.spjangcd = :spjangcd
 			""";
 		return sqlRunner.getRows(sql, param);
 	}

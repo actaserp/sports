@@ -43,8 +43,9 @@ public class TransactionInputService {
 				 a.bnkpw AS viewpw,
 				 a.bnkpaypw AS paymentpw,
 				 a.accbirthday AS birth,
+				  a.popflag,
 				 CASE
-							WHEN a.bnkflag = '1' THEN CAST(1 AS bit)
+							WHEN a.popflag = '1' THEN CAST(1 AS bit)
 							ELSE CAST(0 AS bit)
 					END AS popyn,
 				 CASE
@@ -55,7 +56,7 @@ public class TransactionInputService {
 		 from tb_aa040 a
 				 left join tb_xbank b on a.bank = b.bankcd
 		 WHERE a.spjangcd = :spjangcd
-		 ORDER BY a.accnum ASC
+		  ORDER BY a.popflag DESC, a.accnum ASC
        """;
 
 		List<Map<String, Object>> items = this.sqlRunner.getRows(sql, parameterSource);
