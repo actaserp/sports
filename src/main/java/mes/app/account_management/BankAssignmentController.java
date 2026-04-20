@@ -22,14 +22,17 @@ public class BankAssignmentController {	//전표 분개
 	@GetMapping("/read")
 	public AjaxResult getBankList(@RequestParam(value = "start") String start,
 																@RequestParam(value = "end") String end,
-																@RequestParam(value = "cboCompanyHidden", required = false) String cboCompanyHidden,
-																@RequestParam(value = "cltflag", required = false) String cltflag,
 																@RequestParam(value = "accountNameHidden", required = false) String accountNameHidden,
 																@RequestParam(value = "accountName", required = false) String accnum,
-																@RequestParam(value = "accflag")String accflag) {
+																@RequestParam(value = "accflag")String accflag,
+																@RequestParam(value = "search_businm",required = false) String search_businm,
+																@RequestParam(value = "bsdate", required = false) String bsdate,
+																@RequestParam(value = "bseccd",required = false) String bseccd,
+																@RequestParam(value = "busicd", required = false) String busicd
+																) {
 
 		List<Map<String, Object>> items =
-			this.bankAssignmentService.getBankHistoryList(start, end,cboCompanyHidden, cltflag, accnum,accountNameHidden, accflag);
+			this.bankAssignmentService.getBankHistoryList(start, end,accnum,accountNameHidden, accflag,search_businm,bsdate,bseccd, busicd);
 
 		AjaxResult result = new AjaxResult();
 		result.data = items;
@@ -118,5 +121,20 @@ public class BankAssignmentController {	//전표 분개
 		result.data = items;
 		return result;
 	}
+
+	//전표 생성[항 코드]
+	@GetMapping("/findIt1nm")
+	public AjaxResult getIt1nm(@RequestParam(value = "it1nm") String it1nm,
+														 @RequestParam(value = "inout_type") String inout_type){
+
+		List<Map<String, Object>> items = this.bankAssignmentService.getIt1nm(it1nm, inout_type);
+
+		AjaxResult result = new AjaxResult();
+		result.data = items;
+
+		return result;
+
+	}
+
 
 }

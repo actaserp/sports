@@ -106,7 +106,7 @@ public class TransactionInputService {
                 ELSE ''
             END AS [inoutFlag],
 
-            b.after_balance_amt AS balance,
+            CAST(b.after_balance_amt AS decimal(18,0)) AS balance,
             b.tran_amt AS input_money,
             b.wdr_amt AS output_money,
             b.bank_tran_id AS tid,

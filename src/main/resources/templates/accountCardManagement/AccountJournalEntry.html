@@ -89,7 +89,7 @@
                 </div>
               </dd>
             </dl>
-            <dl>
+            <!--<dl>
               <dt>
                 <label>
                   거래처<span class="eq"></span>
@@ -101,6 +101,20 @@
                   <input id="cboCompanyHidden" name="cboCompanyHidden" type="hidden"/>
                   <input id="cltflag" name="cltflag" type="hidden"/>
                 </div>
+              </dd>
+            </dl>-->
+
+            <dl>
+              <dt>
+                <label>
+                  사업명
+                </label>
+              </dt>
+              <dd>
+                <input id="search_businm" name="search_businm" placeholder="입력 후 엔터를 눌러 검색하세요." type="text"/>
+                <input id="bsdate" name="bsdate" type="hidden"/>
+                <input id="bseccd" name="bseccd" type="hidden"/>
+                <input id="busicd" name="busicd" type="hidden"/>
               </dd>
             </dl>
 
@@ -341,7 +355,7 @@
       selectionMode: wijmo.grid.SelectionMode.Cell,
       isReadOnly: false,
       imeEnabled: true,
-      frozenColumns: 2,
+      frozenColumns: 7,
       formatItem: (s, e) => {
 
        if (e.panel.cellType === wijmo.grid.CellType.Cell) {
@@ -395,10 +409,6 @@
         dataType: wijmo.DataType.Boolean,
         isReadOnly: false
        },
-       { binding: 'custcd', header: 'custcd', visible: false },
-       { binding: 'spjangcd', header: 'spjangcd', visible: false },
-       { binding: 'bnkcode', header: 'bnkcode', visible: false },
-       { binding: 'fintech_use_num', header: 'fintech_use_num', visible: false },
        { binding: 'bank_tran_id', header: 'bank_tran_id', visible: false },
        {binding: 'tran_date', header: '일자', width: 100, align: 'center', isReadOnly: true},
        {binding: 'inout_type', header: '입출구분', width: 120, align: 'center', isReadOnly: true},
@@ -427,7 +437,10 @@
        {binding: 'acc_spdate', header: '전표일자', visible: false},
        {binding: 'acc_spnum', header: '전표번호', visible: false},
        {binding: 'acc_spdate_num', header: '전표일자/번호', width: 160, align: 'left', isReadOnly: true},
-
+       { binding: 'custcd', header: 'custcd', visible: false },
+       { binding: 'spjangcd', header: 'spjangcd', visible: false },
+       { binding: 'bnkcode', header: 'bnkcode', visible: false },
+       { binding: 'fintech_use_num', header: 'fintech_use_num', visible: false },
       ],
       itemsSource: this.viewData,
      });
@@ -627,7 +640,7 @@
      AjaxUtil.getAsyncData(url, data, fnsuccess);
     }
 
-    showBusimPopup(dataList, rowIndex) {
+    showBusimPopup(dataList, rowIndex,onSelectCallback = null) {
      let _this = this;
 
      _this.selectedRowIndexForPopup = rowIndex;
@@ -665,18 +678,21 @@
      // 공통 선택 함수
      const selectCurrentBusim = function () {
       let sel = _this.businessGrid.selection;
-      if (!sel || sel.row < 0) {
-       return;
-      }
+      if (!sel || sel.row < 0) return;
 
       let selectedItem = _this.businessGrid.rows[sel.row].dataItem;
-      _this.applyBusimData(selectedItem, _this.selectedRowIndexForPopup);
+
+      // ✅ 콜백이 있으면 콜백 실행, 없으면 기존 그리드 행 적용
+      if (onSelectCallback) {
+       onSelectCallback(selectedItem);
+      } else {
+       _this.applyBusimData(selectedItem, _this.selectedRowIndexForPopup);
+      }
 
       if (_this.busimPopup) {
        _this.busimPopup.close();
        _this.busimPopup = null;
       }
-
       _this.businessGrid = null;
      };
 
@@ -688,12 +704,7 @@
       }
      }, 50);
 
-     // 더블클릭 선택
-     _this.businessGrid.hostElement.addEventListener('dblclick', function () {
-      selectCurrentBusim();
-     });
-
-     // Enter 선택
+     _this.businessGrid.hostElement.addEventListener('dblclick', selectCurrentBusim);
      _this.businessGrid.hostElement.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') {
        e.preventDefault();
@@ -920,8 +931,18 @@
      rowItem.acccd2 = selectedItem.acccd || '';
      rowItem.accnm2 = selectedItem.accnm || '';
 
-     this.updateRowSelected(rowItem);
+     // ✅ 다음 행에도 자동으로 상대계정 적용
+     const nextRowIndex = rowIndex + 1;
+     if (nextRowIndex < g.rows.length) {
+      let nextRowItem = g.rows[nextRowIndex].dataItem;
+      if (nextRowItem) {
+       nextRowItem.acccd2 = selectedItem.acccd || '';
+       nextRowItem.accnm2 = selectedItem.accnm || '';
+       this.updateRowSelected(nextRowItem);
+      }
+     }
 
+     this.updateRowSelected(rowItem);
      g.collectionView.refresh();
      // 다음 컬럼으로 이동
      this.moveToCellAndEdit(rowIndex, 'it1nm');
@@ -930,9 +951,10 @@
     //항 조회
     searchIt1nm(item, rowIndex) {
      let _this = this;
-     let url = '/api/account_management/card_history/findIt1nm';
+     let url = '/api/account_management/bank_assignment/findIt1nm';
      let data = {
-      it1nm: item.it1nm
+      it1nm: item.it1nm,
+      inout_type: item.inout_type === '입금' ? '1' : item.inout_type === '출금' ? '2' : ''
      };
 
      let fnsuccess = function (res) {
@@ -1130,7 +1152,7 @@
 
      g.collectionView.refresh();
 
-     this.moveToMssecAndOpen(sel.row);
+     this.moveToCellAndEdit(rowIndex, 'mssecnm');
     }
 
 // 재원 조회
@@ -1250,34 +1272,7 @@
       g.startEditing(true);
      }, 50);
     }
-    moveToMssecAndOpen(rowIndex) {
-     let g = this.grid;
-     const col = g.columns.getColumn('mssec');
 
-     if (!col) return;
-
-     setTimeout(() => {
-      g.select(rowIndex, col.index);
-      g.scrollIntoView(rowIndex, col.index, true);
-      g.focus();
-      g.startEditing(true);
-
-      setTimeout(() => {
-       const editor = g.activeEditor;
-       if (editor) {
-        editor.focus();
-        editor.dispatchEvent(new Event('click')); // 클릭 이벤트 발생
-        editor.dispatchEvent(new KeyboardEvent('keydown', {
-         key: 'ArrowDown',
-         code: 'ArrowDown',
-         keyCode: 40,
-         which: 40,
-         bubbles: true
-        })); // 아래 화살표 키 이벤트 발생
-       }
-      }, 30);
-     }, 50);
-    }
     //일반이동
     findNextEditableCell(row, col) {
      const g = this.grid;
@@ -1343,6 +1338,7 @@
       }
      });
     }
+
     applyRemarkHistoryToRow(rowItem, hist, rowIndex) {
      rowItem.acccd  = hist.acccd  || '';
      rowItem.accnm  = hist.accnm  || '';
@@ -1370,8 +1366,10 @@
      let data = {
       'start': start,
       'end': end,
-      cboCompanyHidden: $('#cboCompanyHidden').val(),
-      cltflag: $('#cltflag').val(),
+      search_businm : $('#search_businm').val(),
+      bsdate : $('#bsdate').val(),
+      bseccd : $('#bseccd').val(),
+      busicd : $('#busicd').val(),
       accountNameHidden: $('#accountNameHidden').val(),
       accountName: $('#accountName').val(),
       accflag: $('#accflag').val(),
@@ -1484,6 +1482,8 @@
         it1nm: item.it1nm,
         it2cd: item.it2cd,
         it2nm: item.it2nm,
+        mssec: item.mssec,
+        mssecnm: item.mssecnm,
         summy: item.summy,
         bsdate: item.bsdate ,
         bseccd: item.bseccd ,
@@ -1580,7 +1580,8 @@
       !item.bsdate ||
       !item.bseccd ||
       !item.buiscd ||
-      !item.busim
+      !item.busim ||
+      !item.inout_type
      );
 
      if (invalid.length > 0) {
@@ -1710,6 +1711,41 @@
      accnumSelector: '#accountName',
      accidSelector: '#accountNameHidden',
      minLength: 2 // 최소 검색 길이 조절 가능
+    });
+
+    $('#search_businm').on('keydown', function(e) {
+     if (e.key === 'Enter' || e.keyCode === 13) {
+      e.preventDefault();
+
+      let busimVal = $(this).val().trim();
+
+      let url = '/api/account_management/card_history/findBusim';
+      let data = { busim: busimVal };
+
+      AjaxUtil.getAsyncData(url, data, function(res) {
+       let list = res.data || [];
+
+       if (!list || list.length === 0) {
+        Alert.alert('', '사업 조회 결과가 없습니다.');
+        return;
+       }
+
+       // ✅ 콜백으로 검색 필드 hidden값 세팅
+       page.showBusimPopup(list, null, function(selectedItem) {
+        $('#search_businm').val(selectedItem.busim || '');
+        $('#bsdate').val(selectedItem.bsdate || '');
+        $('#bseccd').val(selectedItem.bseccd || '');
+        $('#busicd').val(selectedItem.buiscd || '');
+       });
+      });
+     }
+    });
+    $('#search_businm').on('input', function() {
+     if ($(this).val().trim() === '') {
+      $('#bsdate').val('');
+      $('#bseccd').val('');
+      $('#busicd').val('');
+     }
     });
 
     $('#cboCompany').on('keydown', function(e){

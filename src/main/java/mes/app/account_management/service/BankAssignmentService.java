@@ -2,6 +2,7 @@ package mes.app.account_management.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import mes.app.common.TenantContext;
 import mes.domain.model.AjaxResult;
 import mes.domain.services.SqlRunner;
@@ -19,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class BankAssignmentService {
 
@@ -28,9 +30,8 @@ public class BankAssignmentService {
 	@Autowired
 	private ObjectMapper objectMapper;
 
-	public List<Map<String, Object>> getBankHistoryList(String start, String end, String cboCompanyHidden,
-																											String cltflag, String accnum, String accountNameHidden,
-																											String accflag) {
+	public List<Map<String, Object>> getBankHistoryList(String start, String end, String accnum, String accountNameHidden, String accflag,
+																											String search_businm, String bsdate,String bseccd,String busicd) {
 
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		String spjangcd = TenantContext.get();
@@ -45,10 +46,7 @@ public class BankAssignmentService {
 		param.addValue("spjangcd", spjangcd);
 		param.addValue("start", start);
 		param.addValue("end", end);
-		param.addValue("cboCompanyHidden", cboCompanyHidden);
-		param.addValue("cltflag", cltflag);
 		param.addValue("accnum", accnum);
-		param.addValue("accflag", accflag);
 
 		String sql = """
 			select
@@ -77,7 +75,8 @@ public class BankAssignmentService {
 					 b.bseccd,
 					 b.buiscd,
 					 b.busim,
-					 b.mssec, 
+					 b.mssec,
+				   x5.mssecnm, 
 					 b.cltcd,
 					 b.contra_acccd as acccd2,
 					 ac2.accnm as accnm2,
@@ -115,6 +114,12 @@ public class BankAssignmentService {
 					 where it2.custcd = b.custcd
 						 and it2.it2cd = b.it2cd
 			 ) it2
+			 outer apply (
+					select top 1 x5.mssecnm 
+					from tb_x0005 x5
+					where x5.custcd = b.custcd
+					 and x5.mssec = b.mssec
+			 ) x5
 			 where 1=1
 				 and b.spjangcd = :spjangcd
 				 and b.custcd = :custcd
@@ -128,13 +133,11 @@ public class BankAssignmentService {
 
 			param.addValue("accnum", "%" + accnum.trim().replace("-", "") + "%");
 		}
-
-		if (cboCompanyHidden != null && !cboCompanyHidden.trim().isEmpty()) {
+		if (accnum != null && !accnum.trim().isEmpty()) {
 			sql += """
-        and b.cltcd like :cboCompanyHidden
+        and replace(b.accnum, '-', '') like :accnum
     """;
-
-			param.addValue("cboCompanyHidden", "%" + cboCompanyHidden.trim() + "%");
+			param.addValue("accnum", "%" + accnum.trim().replace("-", "") + "%");
 		}
 
 		if (accflag != null && !accflag.trim().isEmpty()) {
@@ -147,6 +150,30 @@ public class BankAssignmentService {
             END = :accflag
     """;
 			param.addValue("accflag", accflag.trim());
+		}
+
+// ✅ 사업 검색 조건 추가
+		if (bsdate != null && !bsdate.trim().isEmpty()
+					&& bseccd != null && !bseccd.trim().isEmpty()
+					&& busicd != null && !busicd.trim().isEmpty()) {
+
+			// 팝업에서 코드 3개 선택한 경우 → 정확히 검색
+			sql += """
+        and b.bsdate = :bsdate
+        and b.bseccd = :bseccd
+        and b.buiscd = :busicd
+    """;
+			param.addValue("bsdate",  bsdate.trim());
+			param.addValue("bseccd",  bseccd.trim());
+			param.addValue("busicd",  busicd.trim());
+
+		} else if (search_businm != null && !search_businm.trim().isEmpty()) {
+
+			// 텍스트만 입력한 경우 → 사업명 LIKE 검색
+			sql += """
+        and b.busim like :search_businm
+    """;
+			param.addValue("search_businm", "%" + search_businm.trim() + "%");
 		}
 
 		return sqlRunner.getRows(sql, param);
@@ -198,6 +225,17 @@ public class BankAssignmentService {
 
 				MapSqlParameterSource param = new MapSqlParameterSource();
 
+				// inout_type 변환: 입금 → 0, 출금 → 1
+				String inoutTypeRaw = getString(item, "inout_type");
+				String inoutType;
+				if ("입금".equals(inoutTypeRaw)) {
+					inoutType = "0";
+				} else if ("출금".equals(inoutTypeRaw)) {
+					inoutType = "1";
+				} else {
+					inoutType = inoutTypeRaw; // 이미 0/1로 넘어오는 경우 대비
+				}
+
 				param.addValue("custcd", custcd);
 				param.addValue("spjangcd", spjangcd);
 				param.addValue("bnkcode", getString(item, "bnkcode"));   // 있으면 반드시 넣는 게 좋음
@@ -229,7 +267,8 @@ public class BankAssignmentService {
                bseccd        = :bseccd,
                buiscd        = :buiscd,
                busim         = :busim,
-               contra_acccd  = :contra_acccd
+               contra_acccd  = :contra_acccd,
+               tiosec    = :inout_type
          WHERE custcd          = :custcd
            AND spjangcd        = :spjangcd
            AND bnkcode         = :bnkcode
@@ -298,46 +337,48 @@ public class BankAssignmentService {
 			Map<String, String> bizInfo = getBizInfoBySpjangcd(spjangcd);
 			String custcd   = bizInfo.get("custcd");
 			String spjangnm = bizInfo.get("spjangnm");
-			String spdate   = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
 			String aa009Sql = """
-        INSERT INTO tb_aa009 (
-            custcd, spjangcd, spdate, spnum,
-            tiosec, busipur, spoccu, cashyn,
-            subject, spjangnm, inputdate, inputid,
-            bsdate, bseccd, buiscd
-        ) VALUES (
-            :custcd, :spjangcd, :spdate, :spnum,
-            :tiosec, :busipur, :spoccu, :cashyn,
-            :subject, :spjangnm, :inputdate, :inputid,
-            :bsdate, :bseccd, :buiscd
-        )
-        """;
+				INSERT INTO tb_aa009 (
+						custcd, spjangcd, spdate, spnum,
+						tiosec, busipur, spoccu, cashyn,
+						subject, spjangnm, inputdate, inputid,
+						bsdate, bseccd, busicd
+				) VALUES (
+						:custcd, :spjangcd, :spdate, :spnum,
+						:tiosec, :busipur, :spoccu, :cashyn,
+						:subject, :spjangnm, :inputdate, :inputid,
+						:bsdate, :bseccd, :busicd
+				)
+				""";
 
 			String aa010Sql = """
-        INSERT INTO tb_aa010 (
-            custcd, spjangcd, spdate, spnum, spseq,
-            spjangnm, bumuncd, acccd, accnm,
-            it1cd, it2cd,
-            drcr, dramt, cramt,
-            tiosec, summy, spoccu,
-            bankcd, inputdate, rowseq,
-            cltcd
-        ) VALUES (
-            :custcd, :spjangcd, :spdate, :spnum, :spseq,
-            :spjangnm, :bumuncd, :acccd, :accnm,
-            :it1cd, :it2cd,
-            :drcr, :dramt, :cramt,
-            :tiosec, :summy, :spoccu,
-            :bankcd, :inputdate, :rowseq,
-            :cltcd
-        )
-        """;
+    INSERT INTO tb_aa010 (
+        custcd, spjangcd, spdate, spnum, spseq,
+        spjangnm, bumuncd, acccd, accnm,
+        it1cd, it2cd,
+        drcr, dramt, cramt,
+        tiosec, summy, spoccu,
+        bankcd, inputdate, rowseq,
+        cltcd, mssec
+    ) VALUES (
+        :custcd, :spjangcd, :spdate, :spnum, :spseq,
+        :spjangnm, :bumuncd, :acccd, :accnm,
+        :it1cd, :it2cd,
+        :drcr, :dramt, :cramt,
+        :tiosec, :summy, :spoccu,
+        :bankcd, :inputdate, :rowseq,
+        :cltcd, :mssec
+    )
+    """;
 
 			for (Map<String, Object> item : itemList) {
 
+				String spdate    = getString(item, "tran_date").replace("-", "");
 				String spnum     = String.format("%04d", getNextSpnumInt());
 				String inoutType = getString(item, "inout_type");
+				String acccd     = getString(item, "acccd");
+				String tiosec    = getTiosecByAcccd(acccd);
 
 				// ========================
 				// 헤더 INSERT (tb_aa009)
@@ -347,7 +388,7 @@ public class BankAssignmentService {
 				headerParams.addValue("spjangcd",  spjangcd);
 				headerParams.addValue("spdate",    spdate);
 				headerParams.addValue("spnum",     spnum);
-				headerParams.addValue("tiosec",    inoutType.equals("입금") ? "0" : "1");
+				headerParams.addValue("tiosec",    tiosec);
 				headerParams.addValue("busipur",   "3");
 				headerParams.addValue("spoccu",    "AA");
 				headerParams.addValue("cashyn",    "0");
@@ -356,9 +397,9 @@ public class BankAssignmentService {
 				headerParams.addValue("inputdate", LocalDateTime.now());
 				headerParams.addValue("inputid",   userId);
 				headerParams.addValue("cltcd",     getString(item, "cltcd"));
-				headerParams.addValue("bsdate",    getString(item, "bsdate"));
-				headerParams.addValue("bseccd",    getString(item, "bseccd"));
-				headerParams.addValue("buiscd",    getString(item, "buiscd"));
+				headerParams.addValue("bsdate",  getString(item, "bsdate"));
+				headerParams.addValue("bseccd",  getString(item, "bseccd"));
+				headerParams.addValue("busicd",  getString(item, "buiscd"));
 
 				sqlRunner.execute(aa009Sql, headerParams);
 
@@ -368,13 +409,13 @@ public class BankAssignmentService {
 				String bankTranId    = getString(item, "bank_tran_id");
 				String fintechUseNum = getString(item, "fintech_use_num");
 				String bnkcode       = getString(item, "bnkcode");
-				String acccd         = getString(item, "acccd");
 				String accnm         = getString(item, "accnm");
 				String acccd2        = getString(item, "acccd2");
 				String accnm2        = getString(item, "accnm2");
 				String it1cd         = StringUtils.leftPad(getString(item, "it1cd"), 5, "0");
 				String it2cd         = getString(item, "it2cd");
-				String cltcd = getString(item, "cltcd");
+				String cltcd 				 = getString(item, "cltcd");
+				String mssec         = getString(item, "mssec");
 
 				if (inoutType.equals("입금")) {
 					// ============================
@@ -390,7 +431,8 @@ public class BankAssignmentService {
 						"1",                 // 세입
 						bnkcode,             // bankcd
 						1,
-						cltcd
+						cltcd,
+						mssec
 					));
 
 					// 입금 - 대변: 수입계정 (acccd)
@@ -404,7 +446,8 @@ public class BankAssignmentService {
 						"1",                 // 세입
 						null,                // bankcd 없음
 						2,
-						cltcd
+						cltcd,
+						mssec
 					));
 
 				} else {
@@ -421,7 +464,8 @@ public class BankAssignmentService {
 						"2",                 // 세출
 						null,                // bankcd 없음
 						1,
-						cltcd
+						cltcd,
+						mssec
 					));
 
 					// 출금 - 대변: 보통예금 (acccd2)
@@ -435,7 +479,8 @@ public class BankAssignmentService {
 						"2",                 // 세출
 						bnkcode,             // bankcd
 						2,
-						cltcd
+						cltcd,
+						mssec
 					));
 				}
 
@@ -469,7 +514,8 @@ public class BankAssignmentService {
 		String tiosec,
 		String bankcd,
 		int rowseq,
-		String cltcd) {
+		String cltcd,
+		String mssec) {
 
 		MapSqlParameterSource params = new MapSqlParameterSource();
 		params.addValue("custcd",    custcd);
@@ -493,6 +539,7 @@ public class BankAssignmentService {
 		params.addValue("inputdate", LocalDateTime.now());
 		params.addValue("rowseq",    rowseq);
 		params.addValue("cltcd",     cltcd);
+		params.addValue("mssec",     mssec);
 		return params;
 	}
 
@@ -541,7 +588,6 @@ public class BankAssignmentService {
 			Map<String, String> bizInfo = getBizInfoBySpjangcd(spjangcd);
 			String custcd   = bizInfo.get("custcd");
 			String spjangnm = bizInfo.get("spjangnm");
-			String spdate   = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
 			// 통합전표는 전체가 하나의 spnum 공유
 			String spnum = String.format("%04d", getNextSpnumInt());
@@ -549,40 +595,42 @@ public class BankAssignmentService {
 			// 첫 번째 item 기준으로 헤더 값 결정
 			Map<String, Object> firstItem = itemList.get(0);
 			String inoutTypeFirst = getString(firstItem, "inout_type");
+			String tiosecFirst    = getTiosecByAcccd(getString(firstItem, "acccd"));
+			String spdate = getString(firstItem, "tran_date").replace("-", "");
 
 			String aa009Sql = """
-						INSERT INTO tb_aa009 (
-								custcd, spjangcd, spdate, spnum,
-								tiosec, busipur, spoccu, cashyn,
-								subject, spjangnm, inputdate, inputid,
-								bsdate, bseccd, buiscd
-						) VALUES (
-								:custcd, :spjangcd, :spdate, :spnum,
-								:tiosec, :busipur, :spoccu, :cashyn,
-								:subject, :spjangnm, :inputdate, :inputid,
-								:bsdate, :bseccd, :buiscd
-						)
-						""";
+			INSERT INTO tb_aa009 (
+					custcd, spjangcd, spdate, spnum,
+					tiosec, busipur, spoccu, cashyn,
+					subject, spjangnm, inputdate, inputid,
+					bsdate, bseccd, busicd
+			) VALUES (
+					:custcd, :spjangcd, :spdate, :spnum,
+					:tiosec, :busipur, :spoccu, :cashyn,
+					:subject, :spjangnm, :inputdate, :inputid,
+					:bsdate, :bseccd, :busicd
+			)
+			""";
 
 			String aa010Sql = """
-						INSERT INTO tb_aa010 (
-								custcd, spjangcd, spdate, spnum, spseq,
-								spjangnm, bumuncd, acccd, accnm,
-								it1cd, it2cd,
-								drcr, dramt, cramt,
-								tiosec, summy, spoccu,
-								bankcd, inputdate, rowseq,
-								cltcd
-						) VALUES (
-								:custcd, :spjangcd, :spdate, :spnum, :spseq,
-								:spjangnm, :bumuncd, :acccd, :accnm,
-								:it1cd, :it2cd,
-								:drcr, :dramt, :cramt,
-								:tiosec, :summy, :spoccu,
-								:bankcd, :inputdate, :rowseq,
-								:cltcd
-						)
-						""";
+    INSERT INTO tb_aa010 (
+        custcd, spjangcd, spdate, spnum, spseq,
+        spjangnm, bumuncd, acccd, accnm,
+        it1cd, it2cd,
+        drcr, dramt, cramt,
+        tiosec, summy, spoccu,
+        bankcd, inputdate, rowseq,
+        cltcd, mssec
+    ) VALUES (
+        :custcd, :spjangcd, :spdate, :spnum, :spseq,
+        :spjangnm, :bumuncd, :acccd, :accnm,
+        :it1cd, :it2cd,
+        :drcr, :dramt, :cramt,
+        :tiosec, :summy, :spoccu,
+        :bankcd, :inputdate, :rowseq,
+        :cltcd, :mssec
+    )
+    """;
 
 			// ========================
 			// 헤더 INSERT (tb_aa009)
@@ -593,6 +641,7 @@ public class BankAssignmentService {
 			headerParams.addValue("spjangcd",  spjangcd);
 			headerParams.addValue("spdate",    spdate);
 			headerParams.addValue("spnum",     spnum);
+			headerParams.addValue("tiosec",    tiosecFirst);	 // ✅ acccd 기준
 			headerParams.addValue("tiosec",    inoutTypeFirst.equals("입금") ? "0" : "1");
 			headerParams.addValue("busipur",   "3");
 			headerParams.addValue("spoccu",    "AA");
@@ -603,7 +652,7 @@ public class BankAssignmentService {
 			headerParams.addValue("inputid",   userId);
 			headerParams.addValue("bsdate",    getString(firstItem, "bsdate"));
 			headerParams.addValue("bseccd",    getString(firstItem, "bseccd"));
-			headerParams.addValue("buiscd",    getString(firstItem, "buiscd"));
+			headerParams.addValue("busicd",    getString(firstItem, "buiscd"));
 
 			sqlRunner.execute(aa009Sql, headerParams);
 
@@ -615,41 +664,48 @@ public class BankAssignmentService {
 			BigDecimal totalAmt = BigDecimal.ZERO;
 
 			// 보통예금 정보는 모든 item 동일하다고 가정 (첫 번째 item 기준)
-			String acccd2First = getString(firstItem, "acccd2");
-			String accnm2First = getString(firstItem, "accnm2");
+			String acccd2First  = getString(firstItem, "acccd2");
+			String accnm2First  = getString(firstItem, "accnm2");
 			String bnkcodeFirst = getString(firstItem, "bnkcode");
-			String tiosecFirst  = inoutTypeFirst.equals("입금") ? "1" : "2";
+			String it1cdFirst   = StringUtils.leftPad(getString(firstItem, "it1cd"), 5, "0");
+			String it2cdFirst   = getString(firstItem, "it2cd");
+			String cltcdFirst   = getString(firstItem, "cltcd");
+			String summyFirst   = getString(firstItem, "summy");
+			String mssecFirst   = getString(firstItem, "mssec");
 
 			for (Map<String, Object> item : itemList) {
 
-				String inoutType = getString(item, "inout_type");
-				BigDecimal tranAmt = getBigDecimal(item, "tran_amt");
-				String summy       = getString(item, "summy");
+				String inoutType   = getString(item, "inout_type");
 				String acccd       = getString(item, "acccd");
 				String accnm       = getString(item, "accnm");
+				String tiosec      = getTiosecByAcccd(acccd);           // ✅ acccd 기준
+				BigDecimal tranAmt = getBigDecimal(item, "tran_amt");
+				String summy       = getString(item, "summy");
 				String it1cd       = StringUtils.leftPad(getString(item, "it1cd"), 5, "0");
 				String it2cd       = getString(item, "it2cd");
 				String cltcd       = getString(item, "cltcd");
-				String tiosec      = inoutType.equals("입금") ? "1" : "2";
+				String mssec       = getString(item, "mssec");          // ✅ 추가
 
 				// item마다 대변 1행
 				// 입금: 대변 = 수입계정(acccd) / 출금: 대변 = 보통예금(acccd2)
-				String creditAcccd = inoutType.equals("입금") ? acccd  : getString(item, "acccd2");
-				String creditAccnm = inoutType.equals("입금") ? accnm  : getString(item, "accnm2");
+				String creditAcccd = inoutType.equals("입금") ? acccd              : getString(item, "acccd2");
+				String creditAccnm = inoutType.equals("입금") ? accnm              : getString(item, "accnm2");
 
 				sqlRunner.execute(aa010Sql, buildDetailParams(
 					custcd, spjangcd, spdate, spnum, spjangnm,
 					it1cd, it2cd, summy,
-					String.format("%04d", seq++),
+					String.format("%04d", seq),
 					creditAcccd, creditAccnm,
-					"2",                     // 대변
+					"2",                        // 대변
 					BigDecimal.ZERO, tranAmt,
 					tiosec,
-					null,                    // 대변 bankcd 없음
-					seq - 1,
-					cltcd
+					null,                       // 대변 bankcd 없음
+					seq,
+					cltcd,
+					mssec              // ✅ 추가
 				));
 
+				seq++;
 				totalAmt = totalAmt.add(tranAmt);
 
 				// 은행거래 내역 업데이트
@@ -660,27 +716,26 @@ public class BankAssignmentService {
 					spdate, spnum);
 			}
 
-			// 마지막에 보통예금 합산 차변 1행
+			// ========================
+			// 마지막에 합산 차변 1행
 			// 입금: 차변 = 보통예금(acccd2) / 출금: 차변 = 지출계정(acccd)
-			String debitAcccd = inoutTypeFirst.equals("입금") ? acccd2First : getString(firstItem, "acccd");
-			String debitAccnm = inoutTypeFirst.equals("입금") ? accnm2First : getString(firstItem, "accnm");
+			// ========================
+			String debitAcccd  = inoutTypeFirst.equals("입금") ? acccd2First : getString(firstItem, "acccd");
+			String debitAccnm  = inoutTypeFirst.equals("입금") ? accnm2First : getString(firstItem, "accnm");
 			String debitBankcd = inoutTypeFirst.equals("입금") ? bnkcodeFirst : null;
-			String it1cdFirst  = StringUtils.leftPad(getString(firstItem, "it1cd"), 5, "0");
-			String it2cdFirst  = getString(firstItem, "it2cd");
-			String cltcdFirst  = getString(firstItem, "cltcd");
-			String summyFirst  = getString(firstItem, "summy");
 
 			sqlRunner.execute(aa010Sql, buildDetailParams(
 				custcd, spjangcd, spdate, spnum, spjangnm,
 				it1cdFirst, it2cdFirst, summyFirst,
 				String.format("%04d", seq),
 				debitAcccd, debitAccnm,
-				"1",                         // 차변
+				"1",                            // 차변
 				totalAmt, BigDecimal.ZERO,
 				tiosecFirst,
 				debitBankcd,
 				seq,
-				cltcdFirst
+				cltcdFirst,
+				mssecFirst        // ✅ 추가
 			));
 
 			result.success = true;
@@ -1026,5 +1081,27 @@ public class BankAssignmentService {
     WHERE rn = 1
     """;
 		return sqlRunner.getRows(sql, sqlParam);
+	}
+
+	public List<Map<String, Object>> getIt1nm(String it1nm, String inoutType) {
+		MapSqlParameterSource param = new MapSqlParameterSource();
+		param.addValue("it1nm", it1nm);
+		param.addValue("tiosec", inoutType);
+
+		String sql = """
+			select it1cd ,it1nm from tb_x0003 
+			where useyn='1'
+			 and replace(isnull(it1nm, ''), ' ', '') like '%' + replace(:it1nm, ' ', '') + '%'
+			  AND (:tiosec IS NULL OR :tiosec = '' OR tiosec = :tiosec)
+			""";
+		log.info("전표분개[항코드]:", sql, param);
+		return sqlRunner.getRows(sql, param);
+	}
+	// 관코드(acccd) 앞자리로 세입세출구분(tiosec) 결정
+	private String getTiosecByAcccd(String acccd) {
+		if (acccd == null || acccd.trim().isEmpty()) return "3";
+		if (acccd.trim().startsWith("5")) return "1"; // 세입
+		if (acccd.trim().startsWith("7")) return "2"; // 세출
+		return "3"; // 대체 (1000, 2000, 3000번대)
 	}
 }

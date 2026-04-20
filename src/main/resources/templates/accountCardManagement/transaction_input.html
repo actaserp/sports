@@ -707,6 +707,8 @@
                         { binding: 'bnkcode', header: 'bnkcode', visible: false },
                         { binding: 'fintech_use_num', header: 'fintech_use_num', visible: false },
                         //{ binding: 'id', header: '아이디', width: 10, visible: false, align: 'center', isReadOnly : true },
+                        { binding: 'bankname', header: '은행', width: 90, align: 'center' , isReadOnly : true},
+                        { binding: 'account', header: '계좌', width: 150, align: 'center' , isReadOnly : true},
                         { binding: 'trade_date', header: '일자', width: 100, align: 'center', isReadOnly : true },
                         { binding: 'inoutFlag', header: '입출구분', width: 80, align: 'center', isReadOnly : true },
                         { binding: 'input_money', header: '입금액', width: 100, format: 'n0', aggregate: 'Sum', align: 'right', isReadOnly : true },
@@ -716,18 +718,6 @@
                         { binding: 'mijamt',header: ' 수수료', width: 80, format: 'n0', visible: false, align: 'center', isReadOnly : true},
                         { binding: 'commission',header: ' 수수료', width: 80, format: 'n0', dataType: 'Boolean', align: 'center', isReadOnly : false},
                         { binding: 'remark',  header: ' 적요', width: 150, align: 'left'},
-                        { binding: 'code', header: '거래처코드', width: 120, align: 'center' },
-                        { binding: 'cltcd', header: '거래처아이디', visible: false, align: 'center' },
-                        { binding: 'cltflag', header: '거래처구분', visible: false, align: 'center' },
-                        { binding: 'clientName',   header: '거래처명', width: 140, align: 'right', isReadOnly : true },
-                        {
-                            binding: 'trade_type',
-                            header: '거래구분',
-                            width: 120,
-                            dataMap: new wijmo.grid.DataMap(tradetypeList, 'value', 'text'), // 전체 목록
-                            align: 'center',
-                            cellTemplate: '${text}'
-                        },
                         {
                             header: '메모',
                             width: 80,
@@ -753,8 +743,18 @@
                                                 <button class="detail-btn" style="padding: 4px 8px; width: 50px; font-size: 12px;">상세보기</button>
                                            </div>`,
                             isReadOnly : true},*/
-                        { binding: 'bankname', header: '은행', width: 120, align: 'center' , isReadOnly : true},
-                        { binding: 'account', header: '계좌', width: 150, align: 'center' , isReadOnly : true},
+                        { binding: 'code', header: '거래처코드', width: 120, align: 'center' },
+                        { binding: 'cltcd', header: '거래처아이디', visible: false, align: 'center' },
+                        { binding: 'cltflag', header: '거래처구분', visible: false, align: 'center' },
+                        { binding: 'clientName',   header: '거래처명', width: 140, align: 'right', isReadOnly : true },
+                        {
+                            binding: 'trade_type',
+                            header: '거래구분',
+                            width: 120,
+                            dataMap: new wijmo.grid.DataMap(tradetypeList, 'value', 'text'), // 전체 목록
+                            align: 'center',
+                            cellTemplate: '${text}'
+                        },
                         // { binding: 'projno', header: '사업명번호', width: 150, align: 'center' , isReadOnly : true, visible: false},
                         // { binding: 'projnm', header: '사업명이름', width: 150, align: 'center' , isReadOnly : true},
                     ],
@@ -1287,7 +1287,7 @@
                         { binding: 'ioflag',        header: '입출금구분', width: 100, align: 'center', isReadOnly: true },
                         { binding: 'input_money',   header: '입금액',    width: 120, align: 'right',  isReadOnly: true, format: 'n0' },
                         { binding: 'output_money',  header: '출금액',    width: 120, align: 'right',  isReadOnly: true, format: 'n0' },
-                        { binding: 'balance',       header: '잔액',     width: 120, align: 'right',  isReadOnly: true },
+                        { binding: 'balance',       header: '잔액',     width: 120, align: 'right',  isReadOnly: true ,format: 'n0'},
                         { binding: 'clientName',    header: '거래처명',   width: 150, align: 'center', isReadOnly: true },
                         { binding: 'print_content', header: '적요',     width: 150, align: 'center', isReadOnly: true },
                         { binding: 'remark1',       header: '비고1',    width: 150, align: 'center', isReadOnly: true },
