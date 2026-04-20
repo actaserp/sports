@@ -404,7 +404,9 @@ public class BankAssignmentService {
 				sqlRunner.execute(aa009Sql, headerParams);
 
 				// 상세 공통 변수
-				BigDecimal tranAmt   = getBigDecimal(item, "tran_amt");
+				BigDecimal tranAmt = inoutType.equals("출금")
+															 ? getBigDecimal(item, "wdr_amt")
+															 : getBigDecimal(item, "tran_amt");
 				String summy         = getString(item, "summy");
 				String bankTranId    = getString(item, "bank_tran_id");
 				String fintechUseNum = getString(item, "fintech_use_num");
@@ -679,7 +681,12 @@ public class BankAssignmentService {
 				String acccd       = getString(item, "acccd");
 				String accnm       = getString(item, "accnm");
 				String tiosec      = getTiosecByAcccd(acccd);           // ✅ acccd 기준
-				BigDecimal tranAmt = getBigDecimal(item, "tran_amt");
+				BigDecimal tranAmt;
+				if (inoutType.equals("출금")) {
+					tranAmt = getBigDecimal(item, "wdr_amt");  // 출금은 wdr_amt
+				} else {
+					tranAmt = getBigDecimal(item, "tran_amt"); // 입금은 tran_amt
+				}
 				String summy       = getString(item, "summy");
 				String it1cd       = StringUtils.leftPad(getString(item, "it1cd"), 5, "0");
 				String it2cd       = getString(item, "it2cd");
