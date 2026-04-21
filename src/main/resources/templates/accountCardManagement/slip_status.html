@@ -1,0 +1,238 @@
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>전표입력 현황</h2>
+        <a class="bookmark toggle" title="북마크">
+          내 메뉴
+        </a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>입금관리</li>
+        <li>전표입력 현황</li>
+      </ul>
+    </div>
+    <form autocomplete="off" id="searchForm">
+      <section class="section" style="padding-top: 10px; padding-bottom: 0px;">
+        <div class="section-top">
+          <div class="search-wrap">
+            <dl>
+              <dt>
+                <label>
+                  승인 기간<span class="eq"></span>
+                </label>
+              </dt>
+              <dd>
+                <div class="srch-box">
+                  <input id="searchfrdate" name="searchfrdate" type="date"/>
+                  <span class="slow_sign">~</span>
+                  <input id="searchtodate" name="searchtodate" type="date"/>
+                </div>
+              </dd>
+            </dl>
+
+            <dl>
+              <dt>
+                <label>
+                  재원구분
+                </label>
+              </dt>
+              <dd>
+                <select class="form-control2" id="mssec" name="mssec" >
+                </select>
+              </dd>
+            </dl>
+
+            <dl>
+              <dt>
+                <label>
+                  제목
+                </label>
+              </dt>
+              <dd>
+                <input id="search_sbuject" name="search_sbuject" placeholder="제목을 입력하세요" type="text"/>
+              </dd>
+            </dl>
+
+            <dl>
+              <dt>&nbsp;</dt>
+              <dd>
+                <li>
+                  <button class="btn btn-delete" id="btnSearch" title="검색" type="button">
+                    <!--                                        class 쓰이는 곳 찾고 없으면 클래스명 수정하기-->
+                    <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
+                    검색
+                  </button>
+                </li>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </section>
+    </form>
+
+    <section class="section">
+      <div class="grid_box" id="divList">
+        <div class="title_box">
+          <!--<ul>
+
+            <li class="right_align rpt" style="margin-right: 5px">
+              <a class="btn btn-edit" id="btnAddNew" title="전표출력">
+                <img alt="추가 아이콘" th:src="@{/images/icon/ico-edit.svg}">
+                전표 출력
+              </a>
+            </li>
+          </ul>-->
+        </div>
+        <div id="theGrid_slip_list" style="height: 540px;"></div>
+      </div>
+    </section>
+  </div>
+
+</th:block>
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   class SlipStatusPage {
+    constructor() {
+     this.url = '/api/account_management/slip_status';
+     this.grid = null;
+     this.viewData = new wijmo.collections.CollectionView();
+     this.init();
+    }
+
+    init(){
+     let _this = this;
+     _this.grid = new wijmo.grid.FlexGrid('#theGrid_slip_list', {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      showMarquee: true,
+      allowSorting: 'MultiColumn',
+      selectionMode: wijmo.grid.SelectionMode.Cell,
+      isReadOnly: false,
+      imeEnabled: true,
+      formatItem: (s, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+        e.cell.style.textAlign = 'center';
+       }
+       if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+        const col = s.columns[e.col];
+        if (col.binding === 'tiosec') {
+         const val = e.cell.textContent.trim();
+         if (val === '세입') {
+          e.cell.style.color = 'red';
+         } else if (val === '세출') {
+          e.cell.style.color = 'black';
+         } else if (val === '대체') {
+          e.cell.style.color = 'green';
+         } else {
+          e.cell.style.color = '';  // 초기화
+         }
+        } else {
+         e.cell.style.color = '';  // 다른 컬럼 초기화
+        }
+       }
+      },
+      columns: [
+       {
+        binding: 'selected',
+        header: '인쇄',
+        width: 50,
+        align: 'center',
+        dataType: wijmo.DataType.Boolean,
+        isReadOnly: false   // 체크박스만 편집 가능
+       },
+       {binding: 'setnum', header: '관리번호', width: 100, align: 'center', visible: false, isReadOnly: true},
+       {binding: 'spdate', header: '전표일자', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'spnum', header: '전표번호', width: 80, align: 'center', isReadOnly: true},
+       {binding: 'tiosec', header: '구분', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'amt', header: '금액', width: 100, align: 'right', format: 'n0', isReadOnly: true},
+       {binding: 'it2nm', header: '목', width: 120, align: 'center', isReadOnly: true},
+       {binding: 'subject', header: '제목', width: 300, align: 'left', isReadOnly: true},
+       {binding: 'businm', header: '사업명', width: 250, align: 'left', isReadOnly: true},
+       {binding: 'buiscd_cnt', header: '회차', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'fixflag', header: '확정', width: 80, align: 'center', isReadOnly: true},
+       {binding: 'mssec', header: '재원', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'appgubun', header: '결재상태', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'apppernm', header: '작성자', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'spoccu', header: '증빙구분', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'banknm', header: '은행', width: 200, align: 'center', isReadOnly: true},
+       {binding: 'cltnm', header: '거래처', width: 150, align: 'center', isReadOnly: true},
+       {binding: 'cardnm', header: '카드', width: 150, align: 'center', isReadOnly: true},
+      ],
+      itemsSource: this.viewData,
+     });
+     new FlexGridContextMenu(this.grid);
+     _this.grid.downloadFileName = '전표내역';
+     // footer 합계행 추가
+     _this.grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+     // '일자' 컬럼 위치에 합계 표시
+     const apvDtColIndex = _this.grid.columns.findIndex(c => c.binding === 'spdate');
+     if (apvDtColIndex > -1) {
+      _this.grid.columnFooters.setCellData(0, apvDtColIndex, '합계');
+     }
+
+     // 금액 컬럼 aggregate 지정
+     const buySumCol = _this.grid.columns.getColumn('buy_sum');
+     if (buySumCol) {
+      buySumCol.aggregate = wijmo.Aggregate.Sum;
+     }
+
+
+    }//init
+
+    searchMainData() {
+     let _this = this;
+     let url = this.url + '/read';
+     let start = $('#searchfrdate').val();
+     let end = $('#searchtodate').val();
+
+     let data = {
+      'start': start,
+      'end': end,
+      mssec: $('#mssec').val(),
+      sbuject : $('#search_sbuject').val(),
+     };
+     let fnsuccess = function (result) {
+      if (result != null && result.success) {
+       _this.viewData.sourceCollection = result.data;
+      } else {
+       console.log('전표입력현황 read 오류');
+      }
+     }
+
+     AjaxUtil.getAsyncData(url, data, fnsuccess);
+    }
+
+   }
+   let page = null;
+
+   $(document).ready(function (e) {
+    page = new SlipStatusPage();
+
+    let fr = new Date();
+    fr.setDate(1);
+    fr.setMonth(fr.getMonth() - 1);
+
+    $('#searchfrdate').val(CommonUtil.formatYYYYMMDD(fr));
+    $('#searchtodate').val(getNowDate());
+
+    AjaxUtil.fillSelectOptions($('#mssec'), 'mssec', 'all', false);
+
+    page.searchMainData();
+    $('#search_sbuject').on('keydown', function(e) {
+     if (e.key === 'Enter') {
+      e.preventDefault();
+      page.searchMainData();
+     }
+    });
+    $('#btnSearch').on('click', function () {
+     e.preventDefault();
+     page.searchMainData();
+    });
+
+   });
+
+  </script>
+</th:block>
