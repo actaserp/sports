@@ -673,6 +673,10 @@ public class PopupController {
             a.banknm as accountName,
             a.bnkpaypw as accountPw,
             case
+								when a.popflag = '1' then '연동'
+								else '미연동'
+						end as popflag,
+            case
                 when a.spacc = '1' then '개인'
                 when a.spacc = '0' then '법인'
             end as accountType
@@ -695,7 +699,7 @@ public class PopupController {
 			paramMap.addValue("accountNumber", "%" + accountNumber + "%");
 		}
 
-		sql += " order by b.banknm, a.accnum ";
+		sql += " order by a.popflag desc, b.banknm, a.accnum ";
 
 		return this.sqlRunner.getRows(sql, paramMap);
 	}

@@ -16,9 +16,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -46,7 +44,7 @@ public class BankAssignmentService {
 		param.addValue("spjangcd", spjangcd);
 		param.addValue("start", start);
 		param.addValue("end", end);
-		param.addValue("accnum", accnum);
+		param.addValue("accnum", "%" + accnum.trim().replace("-", "") + "%");
 
 		String sql = """
 			select
@@ -124,21 +122,8 @@ public class BankAssignmentService {
 				 and b.spjangcd = :spjangcd
 				 and b.custcd = :custcd
 				 and b.tran_date between :start and :end
+				 and replace(b.accnum, '-', '') like :accnum
 			""";
-
-		if (accnum != null && !accnum.trim().isEmpty()) {
-			sql += """
-        and replace(b.accnum, '-', '') like :accnum
-    """;
-
-			param.addValue("accnum", "%" + accnum.trim().replace("-", "") + "%");
-		}
-		if (accnum != null && !accnum.trim().isEmpty()) {
-			sql += """
-        and replace(b.accnum, '-', '') like :accnum
-    """;
-			param.addValue("accnum", "%" + accnum.trim().replace("-", "") + "%");
-		}
 
 		if (accflag != null && !accflag.trim().isEmpty()) {
 			sql += """
@@ -598,53 +583,61 @@ public class BankAssignmentService {
 			Map<String, Object> firstItem = itemList.get(0);
 			String inoutTypeFirst = getString(firstItem, "inout_type");
 			String tiosecFirst    = getTiosecByAcccd(getString(firstItem, "acccd"));
-			String spdate = getString(firstItem, "tran_date").replace("-", "");
+			String spdate         = getString(firstItem, "tran_date").replace("-", "");
+
+			// 입금 차변용 첫 번째 item 변수 (firstItem 기준)
+			String acccd2First  = getString(firstItem, "acccd2");
+			String accnm2First  = getString(firstItem, "accnm2");
+			String bnkcodeFirst = getString(firstItem, "bnkcode");
+			String it1cdFirst   = StringUtils.leftPad(getString(firstItem, "it1cd"), 5, "0");
+			String it2cdFirst   = getString(firstItem, "it2cd");
+			String cltcdFirst   = getString(firstItem, "cltcd");
+			String summyFirst   = getString(firstItem, "summy");
+			String mssecFirst   = getString(firstItem, "mssec");
 
 			String aa009Sql = """
-			INSERT INTO tb_aa009 (
-					custcd, spjangcd, spdate, spnum,
-					tiosec, busipur, spoccu, cashyn,
-					subject, spjangnm, inputdate, inputid,
-					bsdate, bseccd, busicd
-			) VALUES (
-					:custcd, :spjangcd, :spdate, :spnum,
-					:tiosec, :busipur, :spoccu, :cashyn,
-					:subject, :spjangnm, :inputdate, :inputid,
-					:bsdate, :bseccd, :busicd
-			)
-			""";
+            INSERT INTO tb_aa009 (
+                custcd, spjangcd, spdate, spnum,
+                tiosec, busipur, spoccu, cashyn,
+                subject, spjangnm, inputdate, inputid,
+                bsdate, bseccd, busicd
+            ) VALUES (
+                :custcd, :spjangcd, :spdate, :spnum,
+                :tiosec, :busipur, :spoccu, :cashyn,
+                :subject, :spjangnm, :inputdate, :inputid,
+                :bsdate, :bseccd, :busicd
+            )
+            """;
 
 			String aa010Sql = """
-    INSERT INTO tb_aa010 (
-        custcd, spjangcd, spdate, spnum, spseq,
-        spjangnm, bumuncd, acccd, accnm,
-        it1cd, it2cd,
-        drcr, dramt, cramt,
-        tiosec, summy, spoccu,
-        bankcd, inputdate, rowseq,
-        cltcd, mssec
-    ) VALUES (
-        :custcd, :spjangcd, :spdate, :spnum, :spseq,
-        :spjangnm, :bumuncd, :acccd, :accnm,
-        :it1cd, :it2cd,
-        :drcr, :dramt, :cramt,
-        :tiosec, :summy, :spoccu,
-        :bankcd, :inputdate, :rowseq,
-        :cltcd, :mssec
-    )
-    """;
+            INSERT INTO tb_aa010 (
+                custcd, spjangcd, spdate, spnum, spseq,
+                spjangnm, bumuncd, acccd, accnm,
+                it1cd, it2cd,
+                drcr, dramt, cramt,
+                tiosec, summy, spoccu,
+                bankcd, inputdate, rowseq,
+                cltcd, mssec
+            ) VALUES (
+                :custcd, :spjangcd, :spdate, :spnum, :spseq,
+                :spjangnm, :bumuncd, :acccd, :accnm,
+                :it1cd, :it2cd,
+                :drcr, :dramt, :cramt,
+                :tiosec, :summy, :spoccu,
+                :bankcd, :inputdate, :rowseq,
+                :cltcd, :mssec
+            )
+            """;
 
 			// ========================
 			// 헤더 INSERT (tb_aa009)
-			// 첫 번째 item 기준
 			// ========================
 			MapSqlParameterSource headerParams = new MapSqlParameterSource();
 			headerParams.addValue("custcd",    custcd);
 			headerParams.addValue("spjangcd",  spjangcd);
 			headerParams.addValue("spdate",    spdate);
 			headerParams.addValue("spnum",     spnum);
-			headerParams.addValue("tiosec",    tiosecFirst);	 // ✅ acccd 기준
-			headerParams.addValue("tiosec",    inoutTypeFirst.equals("입금") ? "0" : "1");
+			headerParams.addValue("tiosec",    tiosecFirst); // ✅ acccd 기준 단일 세팅
 			headerParams.addValue("busipur",   "3");
 			headerParams.addValue("spoccu",    "AA");
 			headerParams.addValue("cashyn",    "0");
@@ -660,62 +653,60 @@ public class BankAssignmentService {
 
 			// ========================
 			// 상세 INSERT (tb_aa010)
-			// item마다 대변 1행씩 + 마지막에 보통예금 합산 차변 1행
 			// ========================
 			int seq = 1;
-			BigDecimal totalAmt = BigDecimal.ZERO;
-
-			// 보통예금 정보는 모든 item 동일하다고 가정 (첫 번째 item 기준)
-			String acccd2First  = getString(firstItem, "acccd2");
-			String accnm2First  = getString(firstItem, "accnm2");
-			String bnkcodeFirst = getString(firstItem, "bnkcode");
-			String it1cdFirst   = StringUtils.leftPad(getString(firstItem, "it1cd"), 5, "0");
-			String it2cdFirst   = getString(firstItem, "it2cd");
-			String cltcdFirst   = getString(firstItem, "cltcd");
-			String summyFirst   = getString(firstItem, "summy");
-			String mssecFirst   = getString(firstItem, "mssec");
+			BigDecimal totalInAmt  = BigDecimal.ZERO; // 입금 합산
+			BigDecimal totalOutAmt = BigDecimal.ZERO; // 출금 합산
+			Map<String, Object> firstOutItem = null;  // 출금 차변용 첫 번째 출금 item
 
 			for (Map<String, Object> item : itemList) {
 
 				String inoutType   = getString(item, "inout_type");
 				String acccd       = getString(item, "acccd");
 				String accnm       = getString(item, "accnm");
-				String tiosec      = getTiosecByAcccd(acccd);           // ✅ acccd 기준
-				BigDecimal tranAmt;
-				if (inoutType.equals("출금")) {
-					tranAmt = getBigDecimal(item, "wdr_amt");  // 출금은 wdr_amt
-				} else {
-					tranAmt = getBigDecimal(item, "tran_amt"); // 입금은 tran_amt
-				}
-				String summy       = getString(item, "summy");
-				String it1cd       = StringUtils.leftPad(getString(item, "it1cd"), 5, "0");
-				String it2cd       = getString(item, "it2cd");
-				String cltcd       = getString(item, "cltcd");
-				String mssec       = getString(item, "mssec");          // ✅ 추가
+				String tiosec      = getTiosecByAcccd(acccd);
+				BigDecimal tranAmt = inoutType.equals("출금")
+															 ? getBigDecimal(item, "wdr_amt")
+															 : getBigDecimal(item, "tran_amt");
+				String summy = getString(item, "summy");
+				String it1cd = StringUtils.leftPad(getString(item, "it1cd"), 5, "0");
+				String it2cd = getString(item, "it2cd");
+				String cltcd = getString(item, "cltcd");
+				String mssec = getString(item, "mssec");
 
-				// item마다 대변 1행
+				// 출금 첫 번째 item 저장
+				if (inoutType.equals("출금") && firstOutItem == null) {
+					firstOutItem = item;
+				}
+
+				// 대변 1행
 				// 입금: 대변 = 수입계정(acccd) / 출금: 대변 = 보통예금(acccd2)
-				String creditAcccd = inoutType.equals("입금") ? acccd              : getString(item, "acccd2");
-				String creditAccnm = inoutType.equals("입금") ? accnm              : getString(item, "accnm2");
+				String creditAcccd = inoutType.equals("입금") ? acccd : getString(item, "acccd2");
+				String creditAccnm = inoutType.equals("입금") ? accnm : getString(item, "accnm2");
 
 				sqlRunner.execute(aa010Sql, buildDetailParams(
 					custcd, spjangcd, spdate, spnum, spjangnm,
 					it1cd, it2cd, summy,
 					String.format("%04d", seq),
 					creditAcccd, creditAccnm,
-					"2",                        // 대변
+					"2",
 					BigDecimal.ZERO, tranAmt,
 					tiosec,
-					null,                       // 대변 bankcd 없음
+					null,
 					seq,
 					cltcd,
-					mssec              // ✅ 추가
+					mssec
 				));
 
 				seq++;
-				totalAmt = totalAmt.add(tranAmt);
 
-				// 은행거래 내역 업데이트
+				// 입금/출금 합산 분리
+				if (inoutType.equals("입금")) {
+					totalInAmt = totalInAmt.add(tranAmt);
+				} else {
+					totalOutAmt = totalOutAmt.add(tranAmt);
+				}
+
 				updateBankSlipInfo(custcd, spjangcd,
 					getString(item, "fintech_use_num"),
 					getString(item, "bank_tran_id"),
@@ -723,27 +714,48 @@ public class BankAssignmentService {
 					spdate, spnum);
 			}
 
-			// ========================
-			// 마지막에 합산 차변 1행
-			// 입금: 차변 = 보통예금(acccd2) / 출금: 차변 = 지출계정(acccd)
-			// ========================
-			String debitAcccd  = inoutTypeFirst.equals("입금") ? acccd2First : getString(firstItem, "acccd");
-			String debitAccnm  = inoutTypeFirst.equals("입금") ? accnm2First : getString(firstItem, "accnm");
-			String debitBankcd = inoutTypeFirst.equals("입금") ? bnkcodeFirst : null;
+			// 입금 합산 차변 (보통예금)
+			if (totalInAmt.compareTo(BigDecimal.ZERO) > 0) {
+				sqlRunner.execute(aa010Sql, buildDetailParams(
+					custcd, spjangcd, spdate, spnum, spjangnm,
+					it1cdFirst, it2cdFirst, summyFirst,
+					String.format("%04d", seq),
+					acccd2First, accnm2First,
+					"1",
+					totalInAmt, BigDecimal.ZERO,
+					"1",         // 세입
+					bnkcodeFirst,
+					seq,
+					cltcdFirst,
+					mssecFirst
+				));
+				seq++;
+			}
 
-			sqlRunner.execute(aa010Sql, buildDetailParams(
-				custcd, spjangcd, spdate, spnum, spjangnm,
-				it1cdFirst, it2cdFirst, summyFirst,
-				String.format("%04d", seq),
-				debitAcccd, debitAccnm,
-				"1",                            // 차변
-				totalAmt, BigDecimal.ZERO,
-				tiosecFirst,
-				debitBankcd,
-				seq,
-				cltcdFirst,
-				mssecFirst        // ✅ 추가
-			));
+			// 출금 합산 차변 (지출계정)
+			if (totalOutAmt.compareTo(BigDecimal.ZERO) > 0 && firstOutItem != null) {
+				String outIt1cd = StringUtils.leftPad(getString(firstOutItem, "it1cd"), 5, "0");
+				String outIt2cd = getString(firstOutItem, "it2cd");
+				String outCltcd = getString(firstOutItem, "cltcd");
+				String outMssec = getString(firstOutItem, "mssec");
+				String outSummy = getString(firstOutItem, "summy");
+
+				sqlRunner.execute(aa010Sql, buildDetailParams(
+					custcd, spjangcd, spdate, spnum, spjangnm,
+					outIt1cd, outIt2cd, outSummy,
+					String.format("%04d", seq),
+					getString(firstOutItem, "acccd"),
+					getString(firstOutItem, "accnm"),
+					"1",
+					totalOutAmt, BigDecimal.ZERO,
+					"2",         // 세출
+					null,
+					seq,
+					outCltcd,
+					outMssec
+				));
+				seq++;
+			}
 
 			result.success = true;
 			result.message = "통합전표가 생성되었습니다.";
@@ -871,6 +883,8 @@ public class BankAssignmentService {
 			Map<String, String> bizInfo = getBizInfoBySpjangcd(spjangcd);
 			String custcd = bizInfo.get("custcd");
 
+			Set<String> deletedSlips = new HashSet<>();
+
 			for (Map<String, Object> item : itemList) {
 
 				String accSpdateNum = getString(item, "acc_spdate_num");
@@ -881,7 +895,6 @@ public class BankAssignmentService {
 					return result;
 				}
 
-				// "2024-03-15/0001" 형식에서 분리
 				String[] spInfo = accSpdateNum.split("/");
 				if (spInfo.length != 2) {
 					result.success = false;
@@ -889,17 +902,20 @@ public class BankAssignmentService {
 					return result;
 				}
 
-				String spdate = spInfo[0].replace("-", ""); // 2024-03-15 -> 20240315
-				String spnum  = spInfo[1];
+				String spdate  = spInfo[0].replace("-", "");
+				String spnum   = spInfo[1];
+				String slipKey = spdate + "_" + spnum;
 
-				// 전표 헤더 존재 여부 확인
-				MapSqlParameterSource checkParam = new MapSqlParameterSource();
-				checkParam.addValue("custcd",   custcd);
-				checkParam.addValue("spjangcd", spjangcd);
-				checkParam.addValue("spdate",   spdate);
-				checkParam.addValue("spnum",    spnum);
+				// ✅ 같은 전표번호는 한 번만 삭제
+				if (!deletedSlips.contains(slipKey)) {
 
-				String checkSql = """
+					MapSqlParameterSource checkParam = new MapSqlParameterSource();
+					checkParam.addValue("custcd",   custcd);
+					checkParam.addValue("spjangcd", spjangcd);
+					checkParam.addValue("spdate",   spdate);
+					checkParam.addValue("spnum",    spnum);
+
+					String checkSql = """
                     SELECT COUNT(1) AS cnt
                     FROM tb_aa009
                     WHERE custcd   = :custcd
@@ -908,32 +924,34 @@ public class BankAssignmentService {
                     AND spnum      = :spnum
                     """;
 
-				int cnt = sqlRunner.queryForCount(checkSql, checkParam);
+					int cnt = sqlRunner.queryForCount(checkSql, checkParam);
 
-				if (cnt == 0) {
-					result.success = false;
-					result.message = "전표를 찾을 수 없습니다. (전표일자: " + spdate + ", 전표번호: " + spnum + ")";
-					return result;
-				}
+					if (cnt == 0) {
+						result.success = false;
+						result.message = "전표를 찾을 수 없습니다. (전표일자: " + spdate + ", 전표번호: " + spnum + ")";
+						return result;
+					}
 
-				// 전표 상세 삭제 (tb_aa010)
-				deleteSlipDetail(custcd, spjangcd, spdate, spnum);
+					// 전표 상세 삭제 (tb_aa010)
+					deleteSlipDetail(custcd, spjangcd, spdate, spnum);
 
-				// 전표 헤더 삭제 (tb_aa009)
-				String deleteHeaderSql = """
+					// 전표 헤더 삭제 (tb_aa009)
+					String deleteHeaderSql = """
                     DELETE FROM tb_aa009
                     WHERE custcd   = :custcd
                     AND spjangcd   = :spjangcd
                     AND spdate     = :spdate
                     AND spnum      = :spnum
                     """;
+					sqlRunner.execute(deleteHeaderSql, checkParam);
 
-				sqlRunner.execute(deleteHeaderSql, checkParam); // checkParam 재사용
+					deletedSlips.add(slipKey);
+				}
 
-				// 은행거래 내역의 전표정보 초기화
+				// ✅ bank 초기화는 모든 item마다 각각 실행
 				String fintechUseNum = getString(item, "fintech_use_num");
 				String bankTranId    = getString(item, "bank_tran_id");
-				String tranDate      = getString(item, "tran_date").replace("-", ""); // 2024-03-15 -> 20240315
+				String tranDate      = getString(item, "tran_date").replace("-", "");
 
 				clearBankSlipInfo(custcd, spjangcd, fintechUseNum, bankTranId, tranDate);
 			}

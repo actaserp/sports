@@ -4,7 +4,8 @@ const AccountInputHandler = {
                     banknmSelector = '#BANKNM',
                     bankidSelector = '#bankid',
                     accidSelector = '#ACCID',
-                    minLength = 2
+                    minLength = 2,
+                    onSelect = null
                   }) {
     const $accnum = $(accnumSelector);
     const $banknm = $(banknmSelector);
@@ -16,6 +17,7 @@ const AccountInputHandler = {
       $accid.val(item.accid);
       $banknm.val(item.BankName);
       $bankid.val(item.bankId);
+      if (onSelect) onSelect();
     }
 
     $accnum.on('input', function () {

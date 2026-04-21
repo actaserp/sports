@@ -1683,7 +1683,7 @@
     $('#searchfrdate').val(CommonUtil.formatYYYYMMDD(fr));
     $('#searchtodate').val(getNowDate());
 
-    page.searchMainData();
+    //page.searchMainData();
 
     $('#btnSearch').on('click', function () {
      page.searchMainData();
@@ -1710,7 +1710,10 @@
     AccountInputHandler.bind({
      accnumSelector: '#accountName',
      accidSelector: '#accountNameHidden',
-     minLength: 2 // 최소 검색 길이 조절 가능
+     minLength: 2, // 최소 검색 길이 조절 가능
+     onSelect: function() {          // ✅ 선택 완료 후 콜백
+      page.searchMainData();
+     }
     });
 
     $('#search_businm').on('keydown', function(e) {

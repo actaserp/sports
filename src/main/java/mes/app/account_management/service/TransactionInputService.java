@@ -188,7 +188,7 @@ public class TransactionInputService {
 		}
 
 		sql += """
-        ORDER BY b.tran_date ASC, b.tran_time ASC
+        ORDER BY b.tran_date DESC, b.tran_time DESC
     """;
 
 		return this.sqlRunner.getRows(sql, parameterSource);
@@ -200,7 +200,7 @@ public class TransactionInputService {
 		String checkSql = """
         SELECT COUNT(*)
         FROM tb_aa040
-        WHERE bankcd = :accountid
+        WHERE bankcd = :accountidlo
           AND accnum = :accountnumber
         """;
 
