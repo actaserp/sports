@@ -147,7 +147,7 @@
        {binding: 'spdate', header: '전표일자', width: 100, align: 'center', isReadOnly: true},
        {binding: 'spnum', header: '전표번호', width: 80, align: 'center', isReadOnly: true},
        {binding: 'tiosec', header: '구분', width: 100, align: 'center', isReadOnly: true},
-       {binding: 'amt', header: '금액', width: 100, align: 'right', format: 'n0', isReadOnly: true},
+       {binding: 'amt', header: '금액', width: 150, align: 'right', format: 'n0', isReadOnly: true},
        {binding: 'it2nm', header: '목', width: 120, align: 'center', isReadOnly: true},
        {binding: 'subject', header: '제목', width: 300, align: 'left', isReadOnly: true},
        {binding: 'businm', header: '사업명', width: 250, align: 'left', isReadOnly: true},
@@ -165,8 +165,10 @@
      });
      new FlexGridContextMenu(this.grid);
      _this.grid.downloadFileName = '전표내역';
+
      // footer 합계행 추가
      _this.grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+
      // '일자' 컬럼 위치에 합계 표시
      const apvDtColIndex = _this.grid.columns.findIndex(c => c.binding === 'spdate');
      if (apvDtColIndex > -1) {
@@ -174,7 +176,7 @@
      }
 
      // 금액 컬럼 aggregate 지정
-     const buySumCol = _this.grid.columns.getColumn('buy_sum');
+     const buySumCol = _this.grid.columns.getColumn('amt');
      if (buySumCol) {
       buySumCol.aggregate = wijmo.Aggregate.Sum;
      }
