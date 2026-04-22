@@ -77,7 +77,6 @@
       <div class="grid_box" id="divList">
         <div class="title_box">
           <!--<ul>
-
             <li class="right_align rpt" style="margin-right: 5px">
               <a class="btn btn-edit" id="btnAddNew" title="전표출력">
                 <img alt="추가 아이콘" th:src="@{/images/icon/ico-edit.svg}">
@@ -215,7 +214,7 @@
 
     let fr = new Date();
     fr.setDate(1);
-    fr.setMonth(fr.getMonth() - 1);
+    fr.setMonth(fr.getMonth());
 
     $('#searchfrdate').val(CommonUtil.formatYYYYMMDD(fr));
     $('#searchtodate').val(getNowDate());
@@ -223,14 +222,15 @@
     AjaxUtil.fillSelectOptions($('#mssec'), 'mssec', 'all', false);
 
     page.searchMainData();
+
     $('#search_sbuject').on('keydown', function(e) {
      if (e.key === 'Enter') {
       e.preventDefault();
       page.searchMainData();
      }
     });
+
     $('#btnSearch').on('click', function () {
-     e.preventDefault();
      page.searchMainData();
     });
 
