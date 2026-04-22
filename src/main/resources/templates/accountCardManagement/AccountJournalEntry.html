@@ -1249,11 +1249,11 @@
       item.acccd2 &&
       item.it1cd &&
       item.it2cd &&
-      item.mssec &&
-      item.summy
+      item.mssec
      );
     }
-
+    
+//item.summy
     updateRowSelected(item) {
      item.selected = this.isRowReadyForSave(item);
     }
@@ -1426,6 +1426,7 @@
     }
 
     //전표생성
+    // 전표생성 (저장 후 전표생성)
     newAccountSave() {
      let _this = this;
 
@@ -1437,13 +1438,13 @@
       return;
      }
 
-     // 필수값 체크: 관명, 항, 목, 산출내역
+     // 필수값 체크
      let invalidRows = selectedItems.filter(item =>
-      !item.acccd || !item.it1cd || !item.it2cd || !item.summy
+      !item.acccd || !item.it1cd || !item.it2cd || !item.mssec
      );
 
      if (invalidRows.length > 0) {
-      Alert.alert('', '선택된 행 중 필수값(관명, 항, 목, 산출내역)이 없는 데이터가 있습니다.');
+      Alert.alert('', '선택된 행 중 필수값(관명, 항, 목, 재원)이 없는 데이터가 있습니다.');
       return;
      }
 
@@ -1457,53 +1458,93 @@
       return;
      }
 
-     Alert.confirm('', '선택한 항목의 전표를 생성하시겠습니까?', function(){
+     Alert.confirm('', '선택한 항목의 전표를 생성하시겠습니까?', function () {
 
-      // console.log('selectedItems 개수:', selectedItems.length);
-      // console.log('selectedItems:', JSON.stringify(selectedItems));
+      // ✅ 1. 먼저 저장
+      let saveRows = selectedItems.map(item => ({
+       custcd: item.custcd,
+       spjangcd: item.spjangcd,
+       bnkcode: item.bnkcode,
+       fintech_use_num: item.fintech_use_num,
+       bank_tran_id: item.bank_tran_id,
+       tran_date: item.tran_date ? item.tran_date.replace(/-/g, '') : '',
+       inout_type: item.inout_type,
+       tran_amt: item.tran_amt,
+       subject: item.subject || '',
+       acccd: item.acccd || '',
+       accnm: item.accnm || '',
+       acccd2: item.acccd2 || '',
+       accnm2: item.accnm2 || '',
+       it1cd: item.it1cd || '',
+       it1nm: item.it1nm || '',
+       it2cd: item.it2cd || '',
+       it2nm: item.it2nm || '',
+       mssec: item.mssec || '',
+       mssecnm: item.mssecnm || '',
+       summy: item.summy || '',
+       bsdate: item.bsdate || '',
+       bseccd: item.bseccd || '',
+       buiscd: item.buiscd || '',
+       busim: item.busim || '',
+       cltcd: item.cltcd || ''
+      }));
 
-      let data = {
-       items: JSON.stringify(selectedItems.map(item => ({
-        custcd: item.custcd,
-        spjangcd: item.spjangcd,
-        bnkcode: item.bnkcode,
-        fintech_use_num: item.fintech_use_num,
-        bank_tran_id: item.bank_tran_id,
-        tran_date: item.tran_date,
-        inout_type: item.inout_type,
-        tran_amt: item.tran_amt,
-        wdr_amt: item.wdr_amt,
-        subject: item.subject,
-        acccd: item.acccd,
-        accnm: item.accnm,
-        acccd2: item.acccd2,
-        accnm2 : item.accnm2 ,
-        it1cd: item.it1cd,
-        it1nm: item.it1nm,
-        it2cd: item.it2cd,
-        it2nm: item.it2nm,
-        mssec: item.mssec,
-        mssecnm: item.mssecnm,
-        summy: item.summy,
-        bsdate: item.bsdate ,
-        bseccd: item.bseccd ,
-        buiscd: item.buiscd ,
-        busim: item.busim,
-        cltcd : item.cltcd
-       }))),
-       slipType :$('#slipType').val()
-      };
+      AjaxUtil.postAsyncData(
+       _this.url + '/saveSelected',
+       { items: JSON.stringify(saveRows) },
+       function (saveRes) {
+        if (!saveRes.success) {
+         Alert.alert('', saveRes.message || '저장 중 오류가 발생했습니다.');
+         return;
+        }
 
-      let fnsuccess = function (res) {
-       if (res.success) {
-        Notify.success('전표가 생성되었습니다.');
-        _this.searchMainData();
-       } else {
-        Alert.alert('', res.message || '전표 생성 중 오류가 발생했습니다.');
+        // ✅ 2. 저장 성공 후 전표생성
+        let slipData = {
+         items: JSON.stringify(selectedItems.map(item => ({
+          custcd: item.custcd,
+          spjangcd: item.spjangcd,
+          bnkcode: item.bnkcode,
+          fintech_use_num: item.fintech_use_num,
+          bank_tran_id: item.bank_tran_id,
+          tran_date: item.tran_date,
+          inout_type: item.inout_type,
+          tran_amt: item.tran_amt,
+          wdr_amt: item.wdr_amt,
+          subject: item.subject,
+          acccd: item.acccd,
+          accnm: item.accnm,
+          acccd2: item.acccd2,
+          accnm2: item.accnm2,
+          it1cd: item.it1cd,
+          it1nm: item.it1nm,
+          it2cd: item.it2cd,
+          it2nm: item.it2nm,
+          mssec: item.mssec,
+          mssecnm: item.mssecnm,
+          summy: item.summy,
+          bsdate: item.bsdate,
+          bseccd: item.bseccd,
+          buiscd: item.buiscd,
+          busim: item.busim,
+          cltcd: item.cltcd
+         }))),
+         slipType: $('#slipType').val()
+        };
+
+        AjaxUtil.postAsyncData(
+         _this.url + '/createSlip',
+         slipData,
+         function (res) {
+          if (res.success) {
+           Notify.success('전표가 생성되었습니다.');
+           _this.searchMainData();
+          } else {
+           Alert.alert('', res.message || '전표 생성 중 오류가 발생했습니다.');
+          }
+         }
+        );
        }
-      };
-
-      AjaxUtil.postAsyncData(_this.url + '/createSlip', data, fnsuccess);
+      );
      });
     }
 
