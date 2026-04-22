@@ -27,8 +27,8 @@ public class SlipStatusService {
 		MapSqlParameterSource sqlParam = new MapSqlParameterSource();
 		sqlParam.addValue("as_custcd",   custcd);
 		sqlParam.addValue("as_spjangcd", spjangcd);
-		sqlParam.addValue("as_frdate",   start);
-		sqlParam.addValue("as_todate",   end);
+		sqlParam.addValue("as_frdate", start.replace("-", "").trim());
+		sqlParam.addValue("as_todate", end.replace("-", "").trim());
 
 		String sql = """
         SELECT A.custcd,

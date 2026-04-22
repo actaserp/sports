@@ -42,8 +42,8 @@ public class BankAssignmentService {
 		param.addValue("custcd", custcd);
 		param.addValue("saupnum", corpNum);
 		param.addValue("spjangcd", spjangcd);
-		param.addValue("start", start);
-		param.addValue("end", end);
+		param.addValue("start", start.replace("-", "").trim());
+		param.addValue("end", end.replace("-", "").trim());
 		param.addValue("accnum", "%" + accnum.trim().replace("-", "") + "%");
 
 		String sql = """
