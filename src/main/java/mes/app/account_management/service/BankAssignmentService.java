@@ -239,6 +239,7 @@ public class BankAssignmentService {
 				param.addValue("buiscd", getString(item, "buiscd"));
 				param.addValue("busim", getString(item, "busim"));
 				param.addValue("contra_acccd", getString(item, "acccd2"));
+				param.addValue("inout_type", inoutType);
 
 				String sql = """
         UPDATE TB_bank_accsave
