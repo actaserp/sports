@@ -254,7 +254,7 @@ public class SlipStatusController {  //전표입력현황
 				String notoPath = getClass().getClassLoader()
 														.getResource("static/font/NotoSansKR-Regular.ttf").getPath();
 				String notoBoldPath = getClass().getClassLoader()
-																.getResource("static/font/NotoSansKR-Bold.otf").getPath();
+																.getResource("static/font/NotoSansKR-Bold.ttf").getPath();
 				String NanumMyeongjoath = getClass().getClassLoader()
 															.getResource("static/font/NanumMyeongjo-Bold.ttf").getPath();
 				builder.useFont(new File(NanumMyeongjoath), "NanumMyeongjo-Bold");
