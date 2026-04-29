@@ -76,19 +76,61 @@
     <section class="section">
       <div class="grid_box" id="divList">
         <div class="title_box">
-          <!--<ul>
+          <ul>
             <li class="right_align rpt" style="margin-right: 5px">
-              <a class="btn btn-edit" id="btnAddNew" title="전표출력">
+              <a class="btn btn-edit" id="btnSlipPrint" title="전표출력">
                 <img alt="추가 아이콘" th:src="@{/images/icon/ico-edit.svg}">
                 전표 출력
               </a>
             </li>
-          </ul>-->
+          </ul>
         </div>
         <div id="theGrid_slip_list" style="height: 540px;"></div>
       </div>
     </section>
   </div>
+
+  <!-- 전표 출력 미리보기 팝업 템플릿 -->
+  <script type="text/x-tmpl" id="printSelectTemplate">
+    <div class="content_wrap popup" style="display:flex;flex-direction:column;height:100%;">
+      <section class="section" style="display:flex;flex-direction:column;height:100%;padding:0;">
+
+        <!-- 상단 컨트롤 바 -->
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
+                    border-bottom:1px solid #e5e7eb;flex-shrink:0;">
+          <label style="font-size:13px;font-weight:600;white-space:nowrap;">출력 양식</label>
+          <select id="ppPrintType"
+            style="padding:-41px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px;">
+            <option value="1">전표(산출내역)</option>
+            <option value="2">결의양식1</option>
+            <option value="3">결의양식2(하단)</option>
+            <option value="4">결의양식2(상단)</option>
+            <option value="5">결의양식3(세입세출)</option>
+            <option value="6">결의양식3(대체)</option>
+            <option value="7">전표(산출내역):하단결재</option>
+            <option value="8">결의양식(한자)</option>
+          </select>
+          <button type="button" id="ppPrintBtn"
+            style="padding:6px 18px;background:#1a56db;color:#fff;
+                   border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;">
+            🖨️ 인쇄
+          </button>
+          <!-- PopupDraggable이 자동으로 닫기 이벤트 연결해줌 -->
+          <button type="button" id="modal-close-button"
+            style="padding:6px 14px;background:#6c757d;color:#fff;
+                   border:none;border-radius:4px;font-size:13px;cursor:pointer;">
+            닫기
+          </button>
+        </div>
+
+        <!-- iframe 미리보기 영역 -->
+        <div style="flex:1;overflow:hidden;">
+          <iframe id="ppIframe" style="width:100%;height:100%;border:none;"></iframe>
+        </div>
+
+      </section>
+    </div>
+  </script>
 
 </th:block>
 <th:block layout:fragment="scripts">
@@ -111,6 +153,7 @@
       selectionMode: wijmo.grid.SelectionMode.Cell,
       isReadOnly: false,
       imeEnabled: true,
+      frozenColumns:2,
       formatItem: (s, e) => {
        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
         e.cell.style.textAlign = 'center';
@@ -206,6 +249,156 @@
      AjaxUtil.getAsyncData(url, data, fnsuccess);
     }
 
+    // 전표 출력 팝업 열기
+    showPrintSelectPopup() {
+     let _this = this;
+     // html2pdf.js 동적 로드
+     if (!document.getElementById('html2pdf-script')) {
+      const script = document.createElement('script');
+      script.id = 'html2pdf-script';
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+      document.head.appendChild(script);
+     }
+
+     const existing = document.getElementById('slip-print-overlay');
+     if (existing) existing.remove();
+
+     const selectedItems = _this.viewData.sourceCollection.filter(r => r.selected);
+     const keys = selectedItems.map(r => r.spdate.replace(/-/g, '') + r.spnum).join(',');
+     console.log('keys:', keys);
+
+     fetch(withCtx(`/api/account_management/slip_status/print?printType=1&keys=${encodeURIComponent(keys)}`))
+     .then(r => r.json())
+     .then(d => {
+      console.log('전체:', d);
+      console.log('전표 수:', d.data?.length);
+      if(d.data?.length > 0) {
+       console.log('첫번째 전표:', d.data[0]);
+       console.log('차변:', d.data[0].debit);
+       console.log('대변:', d.data[0].credit);
+       console.log('amt:', d.data[0].amt);
+      }
+     });
+
+     // ── 스타일 ──
+     const css = `
+        #slip-print-overlay {
+            position:fixed; inset:0; background:rgba(0,0,0,.5);
+            z-index:10000; display:flex; align-items:center; justify-content:center;
+        }
+        #slip-print-popup {
+            width:88vw; max-width:1100px; height:88vh;
+            background:#fff; border-radius:12px;
+            box-shadow:0 24px 48px rgba(0,0,0,.2);
+            display:flex; flex-direction:column; overflow:hidden;
+        }
+        #slip-print-popup .sp-head {
+            display:flex; align-items:center; justify-content:space-between;
+            padding:14px 20px; border-bottom:1px solid #e5e7eb; flex-shrink:0;
+        }
+        #slip-print-popup .sp-body { flex:1; overflow:hidden; }
+        #slip-print-popup .sp-body iframe { width:100%; height:100%; border:none; }
+    `;
+     let styleEl = document.getElementById('slip-print-style');
+     if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = 'slip-print-style';
+      document.head.appendChild(styleEl);
+     }
+     styleEl.textContent = css;
+
+     // ── 팝업 HTML ──
+     // 인쇄/다운로드 버튼 없음 → 브라우저 PDF toolbar가 자동으로 제공
+     const overlay = document.createElement('div');
+     overlay.id = 'slip-print-overlay';
+
+     const popup = document.createElement('div');
+     popup.id = 'slip-print-popup';
+     popup.innerHTML = `
+        <div class="sp-head">
+            <span style="font-size:18px;font-weight:700;color:#111;">전표 출력 미리보기</span>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <select id="spPrintType"
+                    style="padding:-1px 10px;border:1px solid #ddd;border-radius:4px;">
+                    <option value="1">전표(산출내역)</option>
+                    <option value="2">결의양식1</option>
+                    <option value="3">결의양식2(하단)</option>
+                    <option value="4">결의양식2(상단)</option>
+                    <option value="5">결의양식3(세입세출)</option>
+                    <option value="6">결의양식3(대체)</option>
+                    <option value="7">전표(산출내역):하단결재</option>
+                    <option value="8">결의양식(한자)</option>
+                </select>
+                <button id="spPrintBtn"
+                style="padding:6px 18px;background:#1a56db;color:#fff;
+                       border:none;border-radius:4px;font-size:13px;
+                       font-weight:700;cursor:pointer;">
+                인쇄
+            </button>
+            <button id="spDownloadBtn"
+                style="padding:6px 18px;background:#059669;color:#fff;
+                       border:none;border-radius:4px;font-size:13px;
+                       font-weight:700;cursor:pointer;">
+                PDF 저장
+            </button>
+
+            <button id="spCloseBtn"
+                style="background:none;border:none;font-size:20px;
+                       color:#9ca3af;cursor:pointer;line-height:1;padding:4px;">✕
+            </button>
+            </div>
+        </div>
+        <!-- ↓ PDF iframe → 브라우저가 toolbar(인쇄/다운로드) 자동 제공 -->
+        <div class="sp-body">
+            <iframe id="spIframe" style="width:100%;height:100%;border:none;"></iframe>
+        </div>
+    `;
+
+     overlay.appendChild(popup);
+     document.body.appendChild(overlay);
+
+     // ── iframe에 PDF URL 세팅 ──
+     function renderPreview(printType) {
+      // printType=1, keys=20260420-0761,... 형태로 요청
+      const url = `${_this.url}/print?printType=${printType}&keys=${encodeURIComponent(keys)}`;
+      document.getElementById('spIframe').src = withCtx(url);
+     }
+
+     renderPreview(document.getElementById('spPrintType').value);
+
+     document.getElementById('spPrintType').addEventListener('change', function () {
+      renderPreview(this.value);
+     });
+
+     document.getElementById('spCloseBtn').addEventListener('click', function () {
+      overlay.remove();
+     });
+
+     document.getElementById('spDownloadBtn').addEventListener('click', function () {
+      const printType = document.getElementById('spPrintType').value;
+      const url = withCtx(`${_this.url}/print/pdf?printType=${printType}&keys=${encodeURIComponent(keys)}`);
+
+      // 링크 클릭으로 다운로드
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+     });
+
+     // 기존 이벤트들 아래에 추가
+     document.getElementById('spPrintBtn').addEventListener('click', function () {
+      const iframe = document.getElementById('spIframe');
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+     });
+
+     overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) overlay.remove();
+     });
+    }
+
    }
    let page = null;
 
@@ -232,6 +425,16 @@
 
     $('#btnSearch').on('click', function () {
      page.searchMainData();
+    });
+
+    // 전표 출력 버튼
+    $('#btnSlipPrint').on('click', function () {
+     const selectedItems = page.viewData.sourceCollection?.filter(r => r.selected);
+     if (!selectedItems || selectedItems.length === 0) {
+      Alert.alert('', '출력할 전표를 선택(체크)해주세요.');
+      return;
+     }
+     page.showPrintSelectPopup();
     });
 
    });
