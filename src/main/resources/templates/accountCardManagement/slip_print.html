@@ -124,142 +124,6 @@
       }
 
       /* ════════════════════════════════════════
-         결의양식1 (printType=2) 전용 스타일
-         ════════════════════════════════════════ */
-      .gy1-wrap {
-          display: flex;
-          width: 100%;
-          border: 1.5px solid #333;
-          margin-top: 6px;
-      }
-
-      /* 좌측: 일금(한자) 세로 */
-      .gy1-left {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          border-right: 1.5px solid #333;
-          width: 26mm;
-          flex-shrink: 0;
-          padding: 6px 2px;
-      }
-      .gy1-ilgeum {
-          font-size: 10px;
-          writing-mode: vertical-rl;
-          text-orientation: upright;
-          letter-spacing: 6px;
-          margin-bottom: 6px;
-      }
-      .gy1-hanja {
-          font-size: 14px;
-          writing-mode: vertical-rl;
-          text-orientation: upright;
-          letter-spacing: 3px;
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-      }
-      .gy1-left-bottom {
-          border-top: 1.5px solid #333;
-          width: 100%;
-          padding-top: 4px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          margin-top: 4px;
-      }
-      .gy1-wonjung {
-          font-size: 10px;
-          writing-mode: vertical-rl;
-          text-orientation: upright;
-          letter-spacing: 6px;
-          margin-bottom: 4px;
-      }
-      .gy1-amt { font-size: 11px; font-weight: bold; text-align: center; }
-
-      /* 중앙 */
-      .gy1-center { flex: 1; border-right: 1.5px solid #333; }
-      .gy1-tbl { width: 100%; border-collapse: collapse; }
-      .gy1-tbl td {
-          border-bottom: 1px solid #555;
-          padding: 4px 6px;
-          vertical-align: middle;
-          font-size: 10px;
-      }
-      .gy1-tbl .lbl {
-          width: 13mm; text-align: center;
-          border-right: 1px solid #555;
-          white-space: nowrap;
-          font-size: 10px;
-      }
-      .gy1-tbl .val { text-align: center; }
-      .gy1-inner { width: 100%; border-collapse: collapse; }
-      .gy1-inner td { padding: 3px 6px; font-size: 10px; vertical-align: middle; }
-
-      .gy1-trade-row {
-          display: flex;
-          border-top: 1px solid #555;
-      }
-      .gy1-trade-lbl {
-          width: 13mm; text-align: center;
-          border-right: 1px solid #555;
-          padding: 4px 2px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 10px;
-      }
-      .gy1-trade-val {
-          flex: 1; text-align: center;
-          padding: 4px 6px; font-size: 10px;
-      }
-      .gy1-remark {
-          border-top: 1px solid #555;
-          min-height: 55mm;
-          padding: 7px 7px 7px 15mm;
-          font-size: 10px;
-          line-height: 1.7;
-          white-space: pre-wrap;
-          vertical-align: top;
-      }
-      .gy1-bottom {
-          border-top: 1.5px solid #333;
-          display: flex;
-      }
-      .gy1-jeungbi {
-          flex: 1; padding: 5px 8px;
-          font-size: 10px; display: flex; align-items: center;
-      }
-      .gy1-gamsa-box {
-          border-left: 1px solid #555;
-          width: 32mm;
-          display: flex; flex-direction: column;
-      }
-      .gy1-gamsa-lbl {
-          text-align: center; padding: 3px;
-          font-size: 10px; border-bottom: 1px solid #555;
-      }
-      .gy1-gamsa-sign { flex: 1; min-height: 11mm; }
-
-      /* 우측 결재란 (결의양식1) */
-      .gy1-right {
-          display: flex; flex-direction: column;
-          width: 18mm; flex-shrink: 0;
-      }
-      .gy1-apv {
-          flex: 1; display: flex; flex-direction: column;
-          border-bottom: 1px solid #555;
-      }
-      .gy1-apv:last-child { border-bottom: none; }
-      .gy1-apv-title {
-          text-align: center; font-size: 9px;
-          padding: 3px 2px 2px;
-          border-bottom: 1px solid #555;
-          background: #f0f0f0;
-          font-weight: 700;
-      }
-      .gy1-apv-sign { flex: 1; min-height: 15mm; }
-
-      /* ════════════════════════════════════════
          결의양식2 (printType=3,4) 전용 스타일
          ════════════════════════════════════════ */
       .gy2-apv-table {
@@ -349,7 +213,6 @@
     <th:block th:if="${printType == '1' or printType == '7'}">
       <div class="doc-page">
 
-        <!-- ── 상단: 기관명 + 결재란 ── -->
         <!-- ── 상단: 기관명 + 결재란 ── -->
         <table style="width:100%; border-collapse:collapse; margin-bottom:8px;">
           <tr>
@@ -545,289 +408,377 @@
     </th:block>
 
     <!-- ════════════════════════════════════════════════════════
-       printType 2 : 결의양식1  ─  지출결의서 (세로 한자금액)
-       ════════════════════════════════════════════════════════ -->
+           printType 2 : 결의양식1 ─ 지출결의서 (table 기반)
+           ════════════════════════════════════════════════════════ -->
     <th:block th:if="${printType == '2'}">
       <div class="doc-page">
 
         <!-- 기관명 상단 -->
-        <div style="font-size:12px;font-weight:700;margin-bottom:5px;"
+        <div style="font-size:12px; font-weight:700; margin-bottom:5px;"
              th:text="${slip.spjangnm}"></div>
 
         <!-- 제목 -->
-        <div style="text-align:center;margin-bottom:4px;">
-      <span style="font-size:20px;font-weight:800;letter-spacing:10px;
-                   border:1.5px solid #333;padding:4px 20px;">지 출 결 의 서</span>
+        <div style="text-align:center; margin-bottom:4px;">
+          <span style="font-size:20px; font-weight:800; letter-spacing:10px;
+                       border:1.5px solid #333; padding:4px 20px;">지 출 결 의 서</span>
         </div>
 
         <!-- 서식번호(재원) -->
-        <div style="text-align:right;font-size:10px;margin-bottom:4px;">
-          [&nbsp;&nbsp;<span th:text="${slip.mssec != null ? slip.mssec : '자체'}"></span>&nbsp;&nbsp;]
+        <div style="text-align:right; font-size:10px; margin-bottom:4px;">
+          [&#160;&#160;<span th:text="${slip.mssec != null ? slip.mssec : '자체'}"></span>&#160;&#160;]
         </div>
 
-        <!-- 메인 레이아웃 -->
-        <div class="gy1-wrap">
+        <!-- ════ 메인 테이블 (좌측 | 중앙 | 우측 결재란) ════ -->
+        <table style="width:100%; border-collapse:collapse; border:1.5px solid #333;">
+          <tr>
 
-          <!-- ① 좌측: 일금(한자) + 원정 + 금액 + 거래처 -->
-          <div class="gy1-left">
-            <div class="gy1-ilgeum">일<br>금</div>
-            <div class="gy1-hanja"
-                 th:text="${slip.amtHanja != null ? slip.amtHanja : ''}"></div>
-            <div class="gy1-left-bottom">
-              <div class="gy1-wonjung">원<br>정</div>
-              <div class="gy1-amt"
-                   th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></div>
-            </div>
-            <!-- 거래처 라벨 + cltnm -->
-            <div style="border-top:1px solid #555;width:100%;text-align:center;
-              padding:4px 2px;font-size:10px;margin-top:auto;">
-              거래처
-            </div>
-            <div style="width:100%;text-align:center;padding:4px 2px;
-              font-size:10px;word-break:break-all;"
-                 th:text="${slip.cltnm != null ? slip.cltnm : ''}"></div>
-          </div>
+            <!-- ① 좌측: 일금(한자) + 원정 + 금액 + 거래처 -->
+            <td style="width:26mm; border-right:1.5px solid #333; vertical-align:top; padding:0;">
+              <table style="width:100%; border-collapse:collapse; height:100%;">
+                <tr>
+                  <td style="text-align:center; padding:6px 2px; font-size:10px; letter-spacing:4px; vertical-align:top;">
+                    일<br/>금
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align:center; font-size:13px; letter-spacing:2px; vertical-align:middle;
+           padding:4px 2px; writing-mode:vertical-rl; text-orientation:upright;
+           font-family:'NanumMyeongjo-Bold', sans-serif;"
+                      th:text="${slip.amtHanja != null ? slip.amtHanja : ''}"></td>
+                </tr>
+                <tr>
+                  <td style="border-top:1.5px solid #333; text-align:center; padding:4px 2px; vertical-align:top;">
+                    <div style="font-size:10px; letter-spacing:4px;">원<br/>정</div>
+                    <div style="font-size:11px; font-weight:bold; margin-top:4px;"
+                         th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="border-top:1px solid #555; text-align:center; padding:4px 2px; font-size:10px;">
+                    거래처
+                  </td>
+                </tr>
+                <tr>
+                  <td style="text-align:center; padding:4px 2px; font-size:10px; word-break:break-all;"
+                      th:text="${slip.cltnm != null ? slip.cltnm : ''}"></td>
+                </tr>
+              </table>
+            </td>
 
-          <!-- ② 중앙: 정보 테이블 -->
-          <div class="gy1-center">
-            <table class="gy1-tbl">
+            <!-- ② 중앙: 정보 + 적요 + 하단 -->
+            <td style="border-right:1.5px solid #333; vertical-align:top; padding:0;">
 
-              <!-- 년도 세출부 -->
-              <tr>
-                <td class="val" colspan="2">
-                  <span th:text="${#strings.substring(slip.spdate, 0, 4)}">2026</span> 년 세출부
-                </td>
-              </tr>
+              <!-- 정보 테이블 -->
+              <table style="width:100%; border-collapse:collapse; font-size:10px;">
 
-              <!-- 과목: 계정과목(tb_aa010_accnm) -->
-              <tr>
-                <td class="lbl" rowspan="3">과<br>목</td>
-                <td class="val"
-                    th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].accnm : ''}"></td>
-              </tr>
+                <!-- 년도 세출부 -->
+                <tr>
+                  <td colspan="2" style="border-bottom:1px solid #555; padding:4px 6px; text-align:center;">
+                    <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년 세출부
+                  </td>
+                </tr>
 
-              <!-- 과목: 품목/세목(it1nm) + rowseq -->
-              <tr>
-                <td class="val"
-                    th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it1nm : ''}"></td>
-              </tr>
+                <!-- 과목: 관(accnm) -->
+                <tr>
+                  <td style="width:13mm; border-right:1px solid #555; border-bottom:1px solid #555;
+                             text-align:center; padding:4px 2px; vertical-align:middle;"
+                      rowspan="3">과<br/>목</td>
+                  <td style="border-bottom:1px solid #555; padding:4px 6px; text-align:center;"
+                      th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].accnm : ''}"></td>
+                </tr>
 
-              <!-- 차변/대변 it2nm -->
-              <tr>
-                <td style="padding:0;">
-                  <table class="gy1-inner">
-                    <tr>
-                      <td style="width:50%;border-right:1px solid #555;">
-                        차변&nbsp;|&nbsp;
-                        <span th:text="${slip.drcr == '1' or slip.drcr == 'D'
-                          ? (not #lists.isEmpty(slip.debit) ? slip.debit[0].it2nm : '')
-                          : ''}"></span>
-                      </td>
-                      <td style="width:50%;">
-                        대변&nbsp;|&nbsp;
-                        <span th:text="${slip.drcr == '2'
-                          ? (not #lists.isEmpty(slip.credit) ? slip.credit[0].it2nm : '')
-                          : ''}"></span>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
+                <!-- 과목: 항(it1nm) -->
+                <tr>
+                  <td style="border-bottom:1px solid #555; padding:4px 6px; text-align:center;"
+                      th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it1nm : ''}"></td>
+                </tr>
 
-              <!-- 발의 -->
-              <tr>
-                <td class="lbl">발&nbsp;의</td>
-                <td class="val">
-                  <span th:text="${#strings.substring(slip.spdate, 0, 4)}">2026</span> 년&nbsp;
-                  <span th:text="${#strings.substring(slip.spdate, 4, 6)}">04</span> 월&nbsp;
-                  <span th:text="${#strings.substring(slip.spdate, 6, 8)}">20</span> 일
-                </td>
-              </tr>
+                <!-- 과목: 차변/대변 it2nm -->
+                <tr>
+                  <td style="border-bottom:1px solid #555; padding:0;">
+                    <table style="width:100%; border-collapse:collapse;">
+                      <tr>
+                        <td style="width:50%; border-right:1px solid #555; padding:3px 6px; font-size:10px;">
+                          차변&#160;|&#160;
+                          <span th:text="${slip.drcr == '1' or slip.drcr == 'D'
+                            ? (not #lists.isEmpty(slip.debit) ? slip.debit[0].it2nm : '')
+                            : ''}"></span>
+                        </td>
+                        <td style="width:50%; padding:3px 6px; font-size:10px;">
+                          대변&#160;|&#160;
+                          <span th:text="${slip.drcr == '2'
+                            ? (not #lists.isEmpty(slip.credit) ? slip.credit[0].it2nm : '')
+                            : ''}"></span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
 
-              <!-- 지출일 (공란) -->
-              <tr>
-                <td class="lbl">지출일</td>
-                <td class="val">년&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;일</td>
-              </tr>
+                <!-- 발의 -->
+                <tr>
+                  <td style="border-right:1px solid #555; border-bottom:1px solid #555;
+                             text-align:center; padding:4px 2px;">발&#160;의</td>
+                  <td style="border-bottom:1px solid #555; padding:4px 6px; text-align:center;">
+                    <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
+                    <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
+                    <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
+                  </td>
+                </tr>
 
-              <!-- 기장필 + 번호 -->
-              <tr>
-                <td class="lbl">기장필</td>
-                <td style="padding:0;">
-                  <table class="gy1-inner">
-                    <tr>
-                      <td style="flex:1;padding:3px 8px;">
-                        <span th:text="${#strings.substring(slip.spdate, 0, 4)}">2026</span> 년&nbsp;
-                        <span th:text="${#strings.substring(slip.spdate, 4, 6)}">04</span> 월&nbsp;
-                        <span th:text="${#strings.substring(slip.spdate, 6, 8)}">20</span> 일
-                      </td>
-                      <td style="border-left:1px solid #555;text-align:center;
-                             padding:2px 3px;width:8mm;font-size:9px;
-                             writing-mode:vertical-rl;text-orientation:upright;">번호</td>
-                      <td style="text-align:center;width:18mm;padding:2px 4px;"
-                          th:text="${slip.spnum}"></td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
+                <!-- 지출일 -->
+                <tr>
+                  <td style="border-right:1px solid #555; border-bottom:1px solid #555;
+                             text-align:center; padding:4px 2px;">지출일</td>
+                  <td style="border-bottom:1px solid #555; padding:4px 6px; text-align:center;">
+                    년&#160;&#160;&#160;&#160;월&#160;&#160;&#160;&#160;일
+                  </td>
+                </tr>
 
-              <!-- 사업명 -->
-              <tr>
-                <td class="lbl">사업명</td>
-                <td class="val" th:text="${slip.subject != null ? slip.subject : ''}"></td>
-              </tr>
+                <!-- 기장필 + 번호 -->
+                <tr>
+                  <td style="border-right:1px solid #555; border-bottom:1px solid #555;
+                             text-align:center; padding:4px 2px;">기장필</td>
+                  <td style="border-bottom:1px solid #555; padding:0;">
+                    <table style="width:100%; border-collapse:collapse;">
+                      <tr>
+                        <td style="padding:3px 8px; font-size:10px;">
+                          <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
+                          <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
+                          <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
+                        </td>
+                        <td style="border-left:1px solid #555; text-align:center;
+                                   padding:2px 3px; width:8mm; font-size:9px;">번호</td>
+                        <td style="text-align:center; width:18mm; padding:2px 4px; font-size:10px;"
+                            th:text="${slip.spnum}"></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
 
-              <!-- 카드 정보 -->
-              <tr>
-                <td class="lbl">카드</td>
-                <td class="val">
-                  <th:block th:if="${slip.cardnm != null and !#strings.isEmpty(slip.cardnm)}">
-                    <span th:text="${slip.cardnm}"></span>
-                    <th:block th:if="${slip.cardnum != null and !#strings.isEmpty(slip.cardnum)}">&nbsp;:&nbsp;<span th:text="${slip.cardnum}"></span></th:block>
-                  </th:block>
-                </td>
-              </tr>
+                <!-- 사업명 -->
+                <tr>
+                  <td style="border-right:1px solid #555; border-bottom:1px solid #555;
+                             text-align:center; padding:4px 2px;">사업명</td>
+                  <td style="border-bottom:1px solid #555; padding:4px 6px;"
+                      th:text="${slip.subject != null ? slip.subject : ''}"></td>
+                </tr>
 
-              <!-- 계좌 정보 -->
-              <tr>
-                <td class="lbl">계좌</td>
-                <td class="val">
-                  <th:block th:if="${slip.banknm != null and !#strings.isEmpty(slip.banknm)}">
-                    <span th:text="${slip.banknm}"></span>
-                    <th:block th:if="${slip.accnum != null and !#strings.isEmpty(slip.accnum)}">&nbsp;:&nbsp;<span th:text="${slip.accnum}"></span></th:block>
-                  </th:block>
-                </td>
-              </tr>
+                <!-- 카드 정보 -->
+                <tr>
+                  <td style="border-right:1px solid #555; border-bottom:1px solid #555;
+                             text-align:center; padding:4px 2px;">카드</td>
+                  <td style="border-bottom:1px solid #555; padding:4px 6px;">
+                    <th:block th:if="${slip.cardnm != null and !#strings.isEmpty(slip.cardnm)}">
+                      <span th:text="${slip.cardnm}"></span>
+                      <th:block th:if="${slip.cardnum != null and !#strings.isEmpty(slip.cardnum)}">
+                        &#160;:&#160;<span th:text="${slip.cardnum}"></span>
+                      </th:block>
+                    </th:block>
+                  </td>
+                </tr>
 
-            </table>
+                <!-- 계좌 정보 -->
+                <tr>
+                  <td style="border-right:1px solid #555; border-bottom:1px solid #555;
+                             text-align:center; padding:4px 2px;">계좌</td>
+                  <td style="border-bottom:1px solid #555; padding:4px 6px;">
+                    <th:block th:if="${slip.banknm != null and !#strings.isEmpty(slip.banknm)}">
+                      <span th:text="${slip.banknm}"></span>
+                      <th:block th:if="${slip.accnum != null and !#strings.isEmpty(slip.accnum)}">
+                        &#160;:&#160;<span th:text="${slip.accnum}"></span>
+                      </th:block>
+                    </th:block>
+                  </td>
+                </tr>
 
-            <!-- 적요 헤더 -->
-            <div class="gy1-trade-row">
-              <div class="gy1-trade-val">적&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;요</div>
-            </div>
+              </table>
 
-            <!-- 적요 내용 -->
-            <div class="gy1-remark">
-              <span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
-              <br/>- 이 하 여 백 -
-            </div>
+              <!-- 적요 헤더 -->
+              <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td style="border-bottom:1px solid #555; border-top:1px solid #555;
+                             text-align:center; padding:4px 6px; font-size:10px;">
+                    적&#160;&#160;&#160;&#160;&#160;요
+                  </td>
+                </tr>
+              </table>
 
-            <!-- 하단: 증빙 + 감사 + 관리번호 -->
-            <div class="gy1-bottom">
-              <div class="gy1-jeungbi">상기 금액의 지출 증빙서는 이 면에 첨부합니다.</div>
-              <div class="gy1-gamsa-box">
-                <div class="gy1-gamsa-lbl">감&nbsp;&nbsp;&nbsp;사</div>
-                <div class="gy1-gamsa-sign"></div>
+              <!-- 적요 내용 -->
+              <div style="min-height:55mm; padding:7px 7px 7px 7px; font-size:10px;
+                          line-height:1.7; white-space:pre-wrap; vertical-align:top;
+                          border-bottom:1.5px solid #333;">
+                <span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
+                <br/>- 이 하 여 백 -
               </div>
-              <div style="border-left:1px solid #555;display:flex;flex-direction:column;width:24mm;">
-                <div style="text-align:center;font-size:9px;padding:3px;border-bottom:1px solid #555;">관리번호</div>
-                <div style="text-align:center;font-size:10px;padding:4px;"
-                     th:text="${slip.setnum != null ? slip.setnum : ''}"></div>
-              </div>
-            </div>
-          </div>
 
-          <!-- ③ 우측: 결재란 -->
-          <div class="gy1-right">
-            <div class="gy1-apv">
-              <div class="gy1-apv-title">사무처장</div>
-              <div class="gy1-apv-sign"></div>
-            </div>
-            <div class="gy1-apv">
-              <div class="gy1-apv-title">차&nbsp;&nbsp;장</div>
-              <div class="gy1-apv-sign"></div>
-            </div>
-            <div class="gy1-apv" style="border-bottom:none;">
-              <div class="gy1-apv-title">담&nbsp;&nbsp;당</div>
-              <div class="gy1-apv-sign"></div>
-            </div>
-          </div>
+              <!-- 하단: 증빙 + 감사 + 관리번호 -->
+              <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                  <td style="padding:5px 8px; font-size:10px; vertical-align:middle;">
+                    상기 금액의 지출 증빙서는 이 면에 첨부합니다.
+                  </td>
+                  <td style="border-left:1px solid #555; width:32mm; vertical-align:top; padding:0;">
+                    <div style="text-align:center; padding:3px; font-size:10px;
+                                border-bottom:1px solid #555;">감&#160;&#160;&#160;사</div>
+                    <div style="min-height:11mm;"></div>
+                  </td>
+                </tr>
+              </table>
 
-        </div><!-- /gy1-wrap -->
+            </td>
+
+            <!-- ③ 우측: 결재란 -->
+            <td style="width:18mm; vertical-align:top; padding:0;">
+              <table style="width:100%; border-collapse:collapse; height:100%;">
+                <tr>
+                  <td style="border-bottom:1px solid #555; text-align:center;
+                             font-size:9px; padding:3px; background:#f0f0f0; font-weight:700;">
+                    사무처장
+                  </td>
+                </tr>
+                <tr>
+                  <td style="height:40mm; border-bottom:1px solid #555;"></td>
+                </tr>
+                <tr>
+                  <td style="border-bottom:1px solid #555; text-align:center;
+                             font-size:9px; padding:3px; background:#f0f0f0; font-weight:700;">
+                    차&#160;&#160;장
+                  </td>
+                </tr>
+                <tr>
+                  <td style="height:40mm; border-bottom:1px solid #555;"></td>
+                </tr>
+                <tr>
+                  <td style="border-bottom:1px solid #555; text-align:center;
+                             font-size:9px; padding:3px; background:#f0f0f0; font-weight:700;">
+                    담&#160;&#160;당
+                  </td>
+                </tr>
+                <tr>
+                  <td style="height:40mm;"></td>
+                </tr>
+              </table>
+            </td>
+
+          </tr>
+        </table><!-- /메인 테이블 -->
 
         <!-- 기관명 하단 -->
-        <div style="text-align:center;font-size:12px;font-weight:700;margin-top:6px;letter-spacing:2px;"
+        <div style="text-align:center; font-size:12px; font-weight:700;
+                    margin-top:6px; letter-spacing:2px;"
              th:text="${slip.spjangnm}"></div>
 
       </div>
     </th:block>
 
     <!-- ════════════════════════════════════════════════════════
-       printType 3 : 결의양식2(하단)  ─ 결재란이 본문 아래
-       ════════════════════════════════════════════════════════ -->
+          printType 3 : 결의양식2(하단) ─ 결재란이 본문 아래 (table 기반)
+          ════════════════════════════════════════════════════════ -->
     <th:block th:if="${printType == '3'}">
       <div class="doc-page">
-        <table class="gy2-main">
 
+        <!-- ════ 메인 테이블 ════ -->
+        <table style="width:100%; border-collapse:collapse; border:1.5px solid #333;">
+
+          <!-- 제목 + 재원 -->
           <tr>
-            <td class="gy2-title-cell" colspan="3">지 출 결 의 서</td>
-            <td style="text-align:center;font-size:10px;width:14mm;">재&nbsp;원</td>
-            <td style="text-align:center;font-size:10px;font-weight:700;" colspan="2"
+            <td style="font-size:17px; font-weight:bold; letter-spacing:5px; text-align:center;
+                       padding:6px 10px; border:1px solid #555;" colspan="3">
+              지 출 결 의 서
+            </td>
+            <td style="text-align:center; font-size:10px; width:14mm; border:1px solid #555;">
+              재&#160;원
+            </td>
+            <td style="text-align:center; font-size:10px; font-weight:700; border:1px solid #555;"
+                colspan="2"
                 th:text="${slip.mssec != null ? slip.mssec : '자체'}"></td>
           </tr>
 
+          <!-- 년도 세출부 + No -->
           <tr>
-            <td style="text-align:center;font-size:11px;font-weight:700;" colspan="3">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년도&nbsp;&nbsp;세&nbsp;&nbsp;출&nbsp;&nbsp;부
+            <td style="text-align:center; font-size:11px; font-weight:700;
+                       border:1px solid #555; padding:4px 6px;" colspan="3">
+              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span>
+              년도&#160;&#160;세&#160;&#160;출&#160;&#160;부
             </td>
-            <td style="text-align:center;font-style:italic;font-size:10px;width:14mm;"><em>No.</em></td>
-            <td style="text-align:center;font-size:10px;" colspan="2"
+            <td style="text-align:center; font-style:italic; font-size:10px;
+                       width:14mm; border:1px solid #555;"><em>No.</em></td>
+            <td style="text-align:center; font-size:10px; border:1px solid #555;" colspan="2"
                 th:text="${slip.setnum != null and !#strings.isEmpty(slip.setnum) ? slip.setnum : slip.spnum}"></td>
           </tr>
 
-          <!-- 관(accnm) + 발의 -->
+          <!-- 과목: 관(accnm) + 발의 -->
           <tr>
-            <td class="gy2-kamok-label" rowspan="3">과<br>목</td>
-            <td class="gy2-kamok-sub">관</td>
-            <td class="gy2-kamok-val"
+            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
+                       letter-spacing:4px; font-size:10px; width:10mm;
+                       border:1px solid #555; padding:4px 2px;"
+                rowspan="3">과<br/>목</td>
+            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">관</td>
+            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;"
                 th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].accnm : ''}"></td>
-            <td class="gy2-date-label">발&nbsp;의</td>
-            <td class="gy2-date-val" colspan="2">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&nbsp;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&nbsp;
+            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">발&#160;의</td>
+            <td style="text-align:center; font-size:10px; border:1px solid #555;
+                       padding:4px 6px;" colspan="2">
+              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
+              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
               <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
             </td>
           </tr>
 
-          <!-- 항(it1nm) + 수입 -->
+          <!-- 과목: 항(it1nm) + 수입 -->
           <tr>
-            <td class="gy2-kamok-sub">항</td>
-            <td class="gy2-kamok-val"
+            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">항</td>
+            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;"
                 th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it1nm : ''}"></td>
-            <td class="gy2-date-label">수&nbsp;입</td>
-            <td class="gy2-date-val" colspan="2"
+            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">수&#160;입</td>
+            <td style="text-align:center; font-size:10px; border:1px solid #555;
+                       padding:4px 6px;" colspan="2"
                 th:text="${slip.tiosec == '1' ? #strings.substring(slip.spdate, 0, 4) + ' 년 세입부' : ''}"></td>
           </tr>
 
-          <!-- 목(it2nm) + 기장 -->
+          <!-- 과목: 목(it2nm) + 기장 -->
           <tr>
-            <td class="gy2-kamok-sub">목</td>
-            <td class="gy2-kamok-val"
+            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">목</td>
+            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;"
                 th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it2nm : ''}"></td>
-            <td class="gy2-date-label">기&nbsp;장</td>
-            <td class="gy2-date-val" colspan="2">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&nbsp;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&nbsp;
+            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">기&#160;장</td>
+            <td style="text-align:center; font-size:10px; border:1px solid #555;
+                       padding:4px 6px;" colspan="2">
+              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
+              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
               <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
             </td>
           </tr>
 
           <!-- 일금 -->
-          <tr class="gy2-ilgeum-row">
-            <td colspan="3">
-              일&nbsp;금&nbsp;&nbsp;
+          <tr>
+            <td style="font-size:11px; font-weight:bold; padding:5px 10px;
+                       border:1px solid #555;" colspan="3">
+              일&#160;금&#160;&#160;
               <span th:text="${slip.amtKorean != null ? slip.amtKorean : ''}"></span>
-              &nbsp;&nbsp;원정
+              &#160;&#160;원정
             </td>
-            <td colspan="3" style="text-align:right;">
-              (&nbsp;<span th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></span>&nbsp;)
+            <td style="text-align:right; font-size:11px; font-weight:bold;
+                       padding:5px 10px; border:1px solid #555;" colspan="3">
+              (&#160;<span th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></span>&#160;)
             </td>
           </tr>
 
           <!-- 내역 -->
           <tr>
-            <td class="gy2-naeyeok-label">내<br>역</td>
-            <td class="gy2-remark-cell" colspan="5">
+            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
+                       letter-spacing:8px; font-size:10px; width:10mm;
+                       border:1px solid #555; padding:4px 2px;">내<br/>역</td>
+            <td style="vertical-align:top; padding:7px 8px; font-size:10px;
+                       line-height:1.7; white-space:pre-wrap; min-height:55mm;
+                       border:1px solid #555;" colspan="5">
               <span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
               <br/>- 이 하 여 백 -
             </td>
@@ -835,21 +786,37 @@
 
           <!-- 비고 -->
           <tr>
-            <td class="gy2-bigo-label">비<br>고</td>
-            <td class="gy2-bigo-cell" colspan="5"></td>
+            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
+                       letter-spacing:8px; font-size:10px; width:10mm;
+                       border:1px solid #555; padding:4px 2px; min-height:18mm;">비<br/>고</td>
+            <td style="min-height:18mm; border:1px solid #555;" colspan="5"></td>
           </tr>
 
         </table>
 
-        <div style="text-align:center;font-size:12px;font-weight:700;margin-top:6px;letter-spacing:2px;"
+        <!-- 기관명 -->
+        <div style="text-align:center; font-size:12px; font-weight:700;
+                    margin-top:6px; letter-spacing:2px;"
              th:text="${slip.spjangnm}"></div>
 
         <!-- 결재란 하단 -->
-        <table class="gy2-apv-table" style="margin-top:8px;">
+        <table style="border-collapse:collapse; margin-top:8px;">
           <tr>
-            <td><div class="apv-title">담&nbsp;당</div><div class="apv-sign"></div></td>
-            <td><div class="apv-title">차&nbsp;장</div><div class="apv-sign"></div></td>
-            <td><div class="apv-title">사무처장</div><div class="apv-sign"></div></td>
+            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                          padding:3px 14px; font-size:10px; font-weight:700;">담&#160;당</div>
+              <div style="height:16mm; width:60px;"></div>
+            </td>
+            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                          padding:3px 14px; font-size:10px; font-weight:700;">차&#160;장</div>
+              <div style="height:16mm; width:60px;"></div>
+            </td>
+            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                          padding:3px 14px; font-size:10px; font-weight:700;">사무처장</div>
+              <div style="height:16mm; width:60px;"></div>
+            </td>
           </tr>
         </table>
 
@@ -857,91 +824,133 @@
     </th:block>
 
     <!-- ════════════════════════════════════════════════════════
-         printType 4 : 결의양식2(상단)  ─ 결재란이 본문 위
-         ════════════════════════════════════════════════════════ -->
+           printType 4 : 결의양식2(상단) ─ 결재란이 본문 위 (table 기반)
+           ════════════════════════════════════════════════════════ -->
     <th:block th:if="${printType == '4'}">
       <div class="doc-page">
 
         <!-- 결재란 상단 -->
-        <table class="gy2-apv-table" style="margin-bottom:8px;">
+        <table style="border-collapse:collapse; margin-bottom:8px;">
           <tr>
-            <td><div class="apv-title">담&nbsp;당</div><div class="apv-sign"></div></td>
-            <td><div class="apv-title">차&nbsp;장</div><div class="apv-sign"></div></td>
-            <td><div class="apv-title">사무처장</div><div class="apv-sign"></div></td>
+            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                          padding:3px 14px; font-size:10px; font-weight:700;">담&#160;당</div>
+              <div style="height:16mm; width:60px;"></div>
+            </td>
+            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                          padding:3px 14px; font-size:10px; font-weight:700;">차&#160;장</div>
+              <div style="height:16mm; width:60px;"></div>
+            </td>
+            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                          padding:3px 14px; font-size:10px; font-weight:700;">사무처장</div>
+              <div style="height:16mm; width:60px;"></div>
+            </td>
           </tr>
         </table>
 
-        <table class="gy2-main">
+        <!-- ════ 메인 테이블 ════ -->
+        <table style="width:100%; border-collapse:collapse; border:1.5px solid #333;">
 
+          <!-- 제목 + 재원 -->
           <tr>
-            <td class="gy2-title-cell" colspan="3">지 출 결 의 서</td>
-            <td style="text-align:center;font-size:10px;width:14mm;">재&nbsp;원</td>
-            <td style="text-align:center;font-size:10px;font-weight:700;" colspan="2"
+            <td style="font-size:17px; font-weight:bold; letter-spacing:5px; text-align:center;
+                       padding:6px 10px; border:1px solid #555;" colspan="3">
+              지 출 결 의 서
+            </td>
+            <td style="text-align:center; font-size:10px; width:14mm; border:1px solid #555;">
+              재&#160;원
+            </td>
+            <td style="text-align:center; font-size:10px; font-weight:700; border:1px solid #555;"
+                colspan="2"
                 th:text="${slip.mssec != null ? slip.mssec : '자체'}"></td>
           </tr>
 
+          <!-- 년도 세출부 + No -->
           <tr>
-            <td style="text-align:center;font-size:11px;font-weight:700;" colspan="3">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년도&nbsp;&nbsp;세&nbsp;&nbsp;출&nbsp;&nbsp;부
+            <td style="text-align:center; font-size:11px; font-weight:700;
+                       border:1px solid #555; padding:4px 6px;" colspan="3">
+              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span>
+              년도&#160;&#160;세&#160;&#160;출&#160;&#160;부
             </td>
-            <td style="text-align:center;font-style:italic;font-size:10px;width:14mm;"><em>No.</em></td>
-            <td style="text-align:center;font-size:10px;" colspan="2"
+            <td style="text-align:center; font-style:italic; font-size:10px;
+                       width:14mm; border:1px solid #555;"><em>No.</em></td>
+            <td style="text-align:center; font-size:10px; border:1px solid #555;" colspan="2"
                 th:text="${slip.setnum != null and !#strings.isEmpty(slip.setnum) ? slip.setnum : slip.spnum}"></td>
           </tr>
 
-          <!-- 관(accnm) + 발의 -->
+          <!-- 과목: 관(accnm) + 발의 -->
           <tr>
-            <td class="gy2-kamok-label" rowspan="3">과<br>목</td>
-            <td class="gy2-kamok-sub">관</td>
-            <td class="gy2-kamok-val"
+            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
+                       letter-spacing:4px; font-size:10px; width:10mm;
+                       border:1px solid #555; padding:4px 2px;"
+                rowspan="3">과<br/>목</td>
+            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">관</td>
+            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;"
                 th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].accnm : ''}"></td>
-            <td class="gy2-date-label">발&nbsp;의</td>
-            <td class="gy2-date-val" colspan="2">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&nbsp;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&nbsp;
+            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">발&#160;의</td>
+            <td style="text-align:center; font-size:10px; border:1px solid #555;
+                       padding:4px 6px;" colspan="2">
+              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
+              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
               <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
             </td>
           </tr>
 
-          <!-- 항(it1nm) + 수입 -->
+          <!-- 과목: 항(it1nm) + 수입 -->
           <tr>
-            <td class="gy2-kamok-sub">항</td>
-            <td class="gy2-kamok-val"
+            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">항</td>
+            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;"
                 th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it1nm : ''}"></td>
-            <td class="gy2-date-label">수&nbsp;입</td>
-            <td class="gy2-date-val" colspan="2"
+            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">수&#160;입</td>
+            <td style="text-align:center; font-size:10px; border:1px solid #555;
+                       padding:4px 6px;" colspan="2"
                 th:text="${slip.tiosec == '1' ? #strings.substring(slip.spdate, 0, 4) + ' 년 세입부' : ''}"></td>
           </tr>
 
-          <!-- 목(it2nm) + 기장 -->
+          <!-- 과목: 목(it2nm) + 기장 -->
           <tr>
-            <td class="gy2-kamok-sub">목</td>
-            <td class="gy2-kamok-val"
+            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">목</td>
+            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;"
                 th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it2nm : ''}"></td>
-            <td class="gy2-date-label">기&nbsp;장</td>
-            <td class="gy2-date-val" colspan="2">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&nbsp;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&nbsp;
+            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">기&#160;장</td>
+            <td style="text-align:center; font-size:10px; border:1px solid #555;
+                       padding:4px 6px;" colspan="2">
+              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
+              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
               <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
             </td>
           </tr>
 
           <!-- 일금 -->
-          <tr class="gy2-ilgeum-row">
-            <td colspan="3">
-              일&nbsp;금&nbsp;&nbsp;
+          <tr>
+            <td style="font-size:11px; font-weight:bold; padding:5px 10px;
+                       border:1px solid #555;" colspan="3">
+              일&#160;금&#160;&#160;
               <span th:text="${slip.amtKorean != null ? slip.amtKorean : ''}"></span>
-              &nbsp;&nbsp;원정
+              &#160;&#160;원정
             </td>
-            <td colspan="3" style="text-align:right;">
-              (&nbsp;<span th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></span>&nbsp;)
+            <td style="text-align:right; font-size:11px; font-weight:bold;
+                       padding:5px 10px; border:1px solid #555;" colspan="3">
+              (&#160;<span th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></span>&#160;)
             </td>
           </tr>
 
           <!-- 내역 -->
           <tr>
-            <td class="gy2-naeyeok-label">내<br>역</td>
-            <td class="gy2-remark-cell" colspan="5">
+            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
+                       letter-spacing:8px; font-size:10px; width:10mm;
+                       border:1px solid #555; padding:4px 2px;">내<br/>역</td>
+            <td style="vertical-align:top; padding:7px 8px; font-size:10px;
+                       line-height:1.7; white-space:pre-wrap; min-height:55mm;
+                       border:1px solid #555;" colspan="5">
               <span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
               <br/>- 이 하 여 백 -
             </td>
@@ -949,104 +958,141 @@
 
           <!-- 비고 -->
           <tr>
-            <td class="gy2-bigo-label">비<br>고</td>
-            <td class="gy2-bigo-cell" colspan="5"></td>
+            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
+                       letter-spacing:8px; font-size:10px; width:10mm;
+                       border:1px solid #555; padding:4px 2px; min-height:18mm;">비<br/>고</td>
+            <td style="min-height:18mm; border:1px solid #555;" colspan="5"></td>
           </tr>
 
         </table>
 
-        <div style="text-align:center;font-size:12px;font-weight:700;margin-top:6px;letter-spacing:2px;"
+        <!-- 기관명 -->
+        <div style="text-align:center; font-size:12px; font-weight:700;
+                    margin-top:6px; letter-spacing:2px;"
              th:text="${slip.spjangnm}"></div>
 
       </div>
     </th:block>
 
     <!-- ════════════════════════════════════════════════════════
-     printType 5 : 결의양식3 (세출입결의서)
-     ════════════════════════════════════════════════════════ -->
+         printType 5 : 결의양식3 (세출입결의서) (table 기반)
+         ════════════════════════════════════════════════════════ -->
     <th:block th:if="${printType == '5'}">
       <div class="doc-page">
 
         <!-- 결재란 상단 -->
-        <table class="gy2-apv-table" style="margin-bottom:8px;">
+        <table style="border-collapse:collapse; margin-bottom:8px;">
           <tr>
-            <td><div class="apv-title">담&nbsp;당</div><div class="apv-sign"></div></td>
-            <td><div class="apv-title">차&nbsp;장</div><div class="apv-sign"></div></td>
-            <td><div class="apv-title">사무처장</div><div class="apv-sign"></div></td>
+            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                          padding:3px 14px; font-size:10px; font-weight:700;">담&#160;당</div>
+              <div style="height:16mm; width:60px;"></div>
+            </td>
+            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                          padding:3px 14px; font-size:10px; font-weight:700;">차&#160;장</div>
+              <div style="height:16mm; width:60px;"></div>
+            </td>
+            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                          padding:3px 14px; font-size:10px; font-weight:700;">사무처장</div>
+              <div style="height:16mm; width:60px;"></div>
+            </td>
           </tr>
         </table>
 
-        <!-- 본문 테이블 -->
-        <table class="gy2-main">
+        <!-- ════ 메인 테이블 ════ -->
+        <table style="width:100%; border-collapse:collapse; border:1.5px solid #333;">
 
           <!-- 제목 + 재원 -->
           <tr>
-            <td class="gy2-title-cell" colspan="4">지 출 결 의 서</td>
-            <td style="text-align:center;font-size:10px;width:12mm;">재&nbsp;원</td>
-            <td style="text-align:center;font-size:10px;font-weight:700;"
+            <td style="font-size:17px; font-weight:bold; letter-spacing:5px; text-align:center;
+                       padding:6px 10px; border:1px solid #555;" colspan="4">
+              지 출 결 의 서
+            </td>
+            <td style="text-align:center; font-size:10px; width:12mm; border:1px solid #555;">
+              재&#160;원
+            </td>
+            <td style="text-align:center; font-size:10px; font-weight:700; border:1px solid #555;"
                 th:text="${slip.mssec != null ? slip.mssec : '자체'}"></td>
           </tr>
 
           <!-- 년도 세출/세입부 + No -->
           <tr>
-            <td style="text-align:center;font-size:11px;font-weight:700;" colspan="4"
+            <td style="text-align:center; font-size:11px; font-weight:700;
+                       border:1px solid #555; padding:4px 6px;" colspan="4"
                 th:text="${slip.tiosec == '1'
                       ? #strings.substring(slip.spdate,0,4) + ' 년도 세 입 부'
                       : #strings.substring(slip.spdate,0,4) + ' 년도 세 출 부'}"></td>
-            <td style="text-align:center;font-style:italic;font-size:10px;"><em>No.</em></td>
-            <td style="text-align:center;font-size:10px;"
+            <td style="text-align:center; font-style:italic; font-size:10px;
+                       border:1px solid #555;"><em>No.</em></td>
+            <td style="text-align:center; font-size:10px; border:1px solid #555;"
                 th:text="${slip.setnum != null and !#strings.isEmpty(slip.setnum) ? slip.setnum : slip.spnum}"></td>
           </tr>
 
           <!-- 과목: 관(accnm) + 기장 -->
           <tr>
-            <td class="gy2-kamok-label" rowspan="2">과<br>목</td>
-            <td class="gy2-kamok-sub">관</td>
-            <td colspan="2" class="gy2-kamok-val"
+            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
+                       letter-spacing:4px; font-size:10px; width:10mm;
+                       border:1px solid #555; padding:4px 2px;"
+                rowspan="2">과<br/>목</td>
+            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">관</td>
+            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;" colspan="2"
                 th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].accnm : ''}"></td>
-            <td class="gy2-date-label">기&nbsp;장</td>
-            <td class="gy2-date-val">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&nbsp;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&nbsp;
+            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">기&#160;장</td>
+            <td style="text-align:center; font-size:10px; border:1px solid #555; padding:4px 6px;">
+              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
+              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
               <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
             </td>
           </tr>
 
           <!-- 과목: 항(it1nm) + 작성 -->
           <tr>
-            <td class="gy2-kamok-sub">항</td>
-            <td colspan="2" class="gy2-kamok-val"
+            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">항</td>
+            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;" colspan="2"
                 th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it1nm : ''}"></td>
-            <td class="gy2-date-label">작&nbsp;성</td>
-            <td class="gy2-date-val">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&nbsp;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&nbsp;
+            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">작&#160;성</td>
+            <td style="text-align:center; font-size:10px; border:1px solid #555; padding:4px 6px;">
+              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
+              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
               <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
             </td>
           </tr>
 
           <!-- 제목 -->
           <tr>
-            <td style="text-align:center;font-size:10px;font-weight:700;background:#f5f5f5;width:12mm;">제&nbsp;&nbsp;목</td>
-            <td colspan="5" style="text-align:left;padding:4px 8px;font-size:10px;"
+            <td style="text-align:center; font-size:10px; font-weight:700; background:#f5f5f5;
+                       width:12mm; border:1px solid #555; padding:4px 2px;">제&#160;&#160;목</td>
+            <td style="text-align:left; padding:4px 8px; font-size:10px;
+                       border:1px solid #555;" colspan="5"
                 th:text="${slip.subject != null ? slip.subject : ''}"></td>
           </tr>
 
           <!-- 일금 -->
           <tr>
-            <td style="text-align:center;font-size:10px;font-weight:700;background:#f5f5f5;">일&nbsp;&nbsp;금</td>
-            <td colspan="5" style="font-size:11px;font-weight:bold;padding:5px 10px;">
+            <td style="text-align:center; font-size:10px; font-weight:700; background:#f5f5f5;
+                       border:1px solid #555; padding:4px 2px;">일&#160;&#160;금</td>
+            <td style="font-size:11px; font-weight:bold; padding:5px 10px;
+                       border:1px solid #555;" colspan="5">
               <span th:text="${slip.amtKorean != null ? slip.amtKorean : ''}"></span>
-              &nbsp;원정&nbsp;&nbsp;
-              (&nbsp;<span th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></span>&nbsp;원)
+              &#160;원정&#160;&#160;
+              (&#160;<span th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></span>&#160;원)
             </td>
           </tr>
 
           <!-- 비고(적요) -->
           <tr>
-            <td class="gy2-bigo-label" style="letter-spacing:4px;">비<br>고</td>
-            <td colspan="5" style="vertical-align:top;padding:7px 8px;font-size:10px;
-                               line-height:1.7;white-space:pre-wrap;min-height:40mm;">
+            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
+                       letter-spacing:4px; font-size:10px; width:10mm;
+                       border:1px solid #555; padding:4px 2px;">비<br/>고</td>
+            <td style="vertical-align:top; padding:7px 8px; font-size:10px;
+                       line-height:1.7; white-space:pre-wrap; min-height:40mm;
+                       border:1px solid #555;" colspan="5">
               <span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
               <br/>- 이 하 여 백 -
             </td>
@@ -1055,41 +1101,43 @@
         </table>
 
         <!-- 아래와 같이 지급 문구 -->
-        <div style="font-size:10px;margin:8px 0 4px;">
+        <div style="font-size:10px; margin:8px 0 4px;">
           아래와 같이 지급하고자 하오니 재가하여 주시기 바랍니다.
         </div>
 
         <!-- 명세 테이블 -->
-        <table style="width:100%;border-collapse:collapse;font-size:10px;">
+        <table style="width:100%; border-collapse:collapse; font-size:10px;">
           <thead>
           <tr style="background:#f0f0f0;">
-            <th style="border:1px solid #555;padding:4px;text-align:center;width:12mm;">재&nbsp;원</th>
-            <th style="border:1px solid #555;padding:4px;text-align:center;width:20mm;">항&nbsp;&nbsp;목</th>
-            <th style="border:1px solid #555;padding:4px;text-align:center;">내&nbsp;&nbsp;역</th>
-            <th style="border:1px solid #555;padding:4px;text-align:center;width:22mm;">금&nbsp;&nbsp;액</th>
-            <th style="border:1px solid #555;padding:4px;text-align:center;width:20mm;">지&nbsp;급&nbsp;처</th>
-            <th style="border:1px solid #555;padding:4px;text-align:center;width:18mm;">결제방법</th>
+            <th style="border:1px solid #555; padding:4px; text-align:center; width:12mm;">재&#160;원</th>
+            <th style="border:1px solid #555; padding:4px; text-align:center; width:20mm;">항&#160;&#160;목</th>
+            <th style="border:1px solid #555; padding:4px; text-align:center;">내&#160;&#160;역</th>
+            <th style="border:1px solid #555; padding:4px; text-align:center; width:22mm;">금&#160;&#160;액</th>
+            <th style="border:1px solid #555; padding:4px; text-align:center; width:20mm;">지&#160;급&#160;처</th>
+            <th style="border:1px solid #555; padding:4px; text-align:center; width:18mm;">결제방법</th>
           </tr>
           </thead>
           <tbody>
           <tr th:each="entry : ${slip.debit}">
-            <td style="border:1px solid #555;padding:4px;text-align:center;"
+            <td style="border:1px solid #555; padding:4px; text-align:center;"
                 th:text="${slip.mssec != null ? slip.mssec : ''}"></td>
-            <td style="border:1px solid #555;padding:4px;text-align:center;"
+            <td style="border:1px solid #555; padding:4px; text-align:center;"
                 th:text="${entry.it2nm != null ? entry.it2nm : ''}"></td>
-            <td style="border:1px solid #555;padding:4px;"
+            <td style="border:1px solid #555; padding:4px;"
                 th:text="${entry.summy != null ? entry.summy : ''}"></td>
-            <td style="border:1px solid #555;padding:4px;text-align:right;"
+            <td style="border:1px solid #555; padding:4px; text-align:right;"
                 th:text="${#numbers.formatInteger(slip.tiosec == '1' ? entry.cramt : entry.dramt, 1, 'COMMA')}"></td>
-            <td style="border:1px solid #555;padding:4px;text-align:center;"
+            <td style="border:1px solid #555; padding:4px; text-align:center;"
                 th:text="${slip.cltnm != null ? slip.cltnm : ''}"></td>
-            <td style="border:1px solid #555;padding:4px;text-align:center;"
-                th:text="${slip.cardnm != null and !#strings.isEmpty(slip.cardnm) ? slip.cardnm : (slip.banknm != null ? slip.banknm : '')}"></td>
+            <td style="border:1px solid #555; padding:4px; text-align:center;"
+                th:text="${slip.cardnm != null and !#strings.isEmpty(slip.cardnm)
+                            ? slip.cardnm : (slip.banknm != null ? slip.banknm : '')}"></td>
           </tr>
           <!-- 계 행 -->
           <tr>
-            <td colspan="3" style="border:1px solid #555;padding:4px;text-align:center;font-weight:700;">계</td>
-            <td style="border:1px solid #555;padding:4px;text-align:right;font-weight:700;"
+            <td colspan="3" style="border:1px solid #555; padding:4px;
+                                     text-align:center; font-weight:700;">계</td>
+            <td style="border:1px solid #555; padding:4px; text-align:right; font-weight:700;"
                 th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></td>
             <td colspan="2" style="border:1px solid #555;"></td>
           </tr>
@@ -1097,100 +1145,132 @@
         </table>
 
         <!-- 기관명 -->
-        <div style="text-align:center;font-size:15px;font-weight:700;margin-top:10px;letter-spacing:2px;"
+        <div style="text-align:center; font-size:15px; font-weight:700;
+                    margin-top:10px; letter-spacing:2px;"
              th:text="${slip.spjangnm}"></div>
 
       </div>
     </th:block>
 
     <!-- ════════════════════════════════════════════════════════
-     printType 6 : 대체결의서
-     ════════════════════════════════════════════════════════ -->
+           printType 6 : 대체결의서 (table 기반)
+           ════════════════════════════════════════════════════════ -->
     <th:block th:if="${printType == '6'}">
       <div class="doc-page">
 
         <!-- 결재란 상단 -->
-        <table class="gy2-apv-table" style="margin-bottom:8px;">
+        <table style="border-collapse:collapse; margin-bottom:8px;">
           <tr>
-            <td><div class="apv-title">담&nbsp;당</div><div class="apv-sign"></div></td>
-            <td><div class="apv-title">차&nbsp;장</div><div class="apv-sign"></div></td>
-            <td><div class="apv-title">사무처장</div><div class="apv-sign"></div></td>
+            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                          padding:3px 14px; font-size:10px; font-weight:700;">담&#160;당</div>
+              <div style="height:16mm; width:60px;"></div>
+            </td>
+            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                          padding:3px 14px; font-size:10px; font-weight:700;">차&#160;장</div>
+              <div style="height:16mm; width:60px;"></div>
+            </td>
+            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                          padding:3px 14px; font-size:10px; font-weight:700;">사무처장</div>
+              <div style="height:16mm; width:60px;"></div>
+            </td>
           </tr>
         </table>
 
-        <!-- 본문 테이블 -->
-        <table class="gy2-main">
+        <!-- ════ 메인 테이블 ════ -->
+        <table style="width:100%; border-collapse:collapse; border:1.5px solid #333;">
 
           <!-- 제목 + 재원 -->
           <tr>
-            <td class="gy2-title-cell" colspan="4">지 출 결 의 서</td>
-            <td style="text-align:center;font-size:10px;width:12mm;">재&nbsp;원</td>
-            <td style="text-align:center;font-size:10px;font-weight:700;"
+            <td style="font-size:17px; font-weight:bold; letter-spacing:5px; text-align:center;
+                       padding:6px 10px; border:1px solid #555;" colspan="4">
+              지 출 결 의 서
+            </td>
+            <td style="text-align:center; font-size:10px; width:12mm; border:1px solid #555;">
+              재&#160;원
+            </td>
+            <td style="text-align:center; font-size:10px; font-weight:700; border:1px solid #555;"
                 th:text="${slip.mssec != null ? slip.mssec : '자체'}"></td>
           </tr>
 
           <!-- 년도 세출/세입부 + No -->
           <tr>
-            <td style="text-align:center;font-size:11px;font-weight:700;" colspan="4"
+            <td style="text-align:center; font-size:11px; font-weight:700;
+                       border:1px solid #555; padding:4px 6px;" colspan="4"
                 th:text="${slip.tiosec == '1'
                       ? #strings.substring(slip.spdate,0,4) + ' 년도 세 입 부'
                       : #strings.substring(slip.spdate,0,4) + ' 년도 세 출 부'}"></td>
-            <td style="text-align:center;font-style:italic;font-size:10px;"><em>No.</em></td>
-            <td style="text-align:center;font-size:10px;"
+            <td style="text-align:center; font-style:italic; font-size:10px;
+                       border:1px solid #555;"><em>No.</em></td>
+            <td style="text-align:center; font-size:10px; border:1px solid #555;"
                 th:text="${slip.setnum != null and !#strings.isEmpty(slip.setnum) ? slip.setnum : slip.spnum}"></td>
           </tr>
 
           <!-- 과목: 관(accnm) + 기장 -->
           <tr>
-            <td class="gy2-kamok-label" rowspan="2">과<br>목</td>
-            <td class="gy2-kamok-sub">관</td>
-            <td colspan="2" class="gy2-kamok-val"
+            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
+                       letter-spacing:4px; font-size:10px; width:10mm;
+                       border:1px solid #555; padding:4px 2px;"
+                rowspan="2">과<br/>목</td>
+            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">관</td>
+            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;" colspan="2"
                 th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].accnm : ''}"></td>
-            <td class="gy2-date-label">기&nbsp;장</td>
-            <td class="gy2-date-val">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&nbsp;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&nbsp;
+            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">기&#160;장</td>
+            <td style="text-align:center; font-size:10px; border:1px solid #555; padding:4px 6px;">
+              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
+              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
               <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
             </td>
           </tr>
 
           <!-- 과목: 항(it1nm) + 작성 -->
           <tr>
-            <td class="gy2-kamok-sub">항</td>
-            <td colspan="2" class="gy2-kamok-val"
+            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">항</td>
+            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;" colspan="2"
                 th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it1nm : ''}"></td>
-            <td class="gy2-date-label">작&nbsp;성</td>
-            <td class="gy2-date-val">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&nbsp;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&nbsp;
+            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
+                       font-weight:700; border:1px solid #555; padding:4px 2px;">작&#160;성</td>
+            <td style="text-align:center; font-size:10px; border:1px solid #555; padding:4px 6px;">
+              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
+              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
               <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
             </td>
           </tr>
 
           <!-- 제목 -->
           <tr>
-            <td style="text-align:center;font-size:10px;font-weight:700;
-                   background:#f5f5f5;width:12mm;">제&nbsp;&nbsp;목</td>
-            <td colspan="5" style="text-align:left;padding:4px 8px;font-size:10px;"
+            <td style="text-align:center; font-size:10px; font-weight:700; background:#f5f5f5;
+                       width:12mm; border:1px solid #555; padding:4px 2px;">제&#160;&#160;목</td>
+            <td style="text-align:left; padding:4px 8px; font-size:10px;
+                       border:1px solid #555;" colspan="5"
                 th:text="${slip.subject != null ? slip.subject : ''}"></td>
           </tr>
 
           <!-- 일금 -->
           <tr>
-            <td style="text-align:center;font-size:10px;font-weight:700;
-                   background:#f5f5f5;">일&nbsp;&nbsp;금</td>
-            <td colspan="5" style="font-size:11px;font-weight:bold;padding:5px 10px;">
+            <td style="text-align:center; font-size:10px; font-weight:700; background:#f5f5f5;
+                       border:1px solid #555; padding:4px 2px;">일&#160;&#160;금</td>
+            <td style="font-size:11px; font-weight:bold; padding:5px 10px;
+                       border:1px solid #555;" colspan="5">
               <span th:text="${slip.amtKorean != null ? slip.amtKorean : ''}"></span>
-              &nbsp;원정&nbsp;&nbsp;
-              (&nbsp;<span th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></span>&nbsp;원)
+              &#160;원정&#160;&#160;
+              (&#160;<span th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></span>&#160;원)
             </td>
           </tr>
 
           <!-- 비고(적요) -->
           <tr>
-            <td class="gy2-bigo-label" style="letter-spacing:4px;">비<br>고</td>
-            <td colspan="5" style="vertical-align:top;padding:7px 8px;font-size:10px;
-                               line-height:1.7;white-space:pre-wrap;min-height:40mm;">
+            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
+                       letter-spacing:4px; font-size:10px; width:10mm;
+                       border:1px solid #555; padding:4px 2px;">비<br/>고</td>
+            <td style="vertical-align:top; padding:7px 8px; font-size:10px;
+                       line-height:1.7; white-space:pre-wrap; min-height:40mm;
+                       border:1px solid #555;" colspan="5">
               <span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
               <br/>- 이 하 여 백 -
             </td>
@@ -1199,52 +1279,51 @@
         </table>
 
         <!-- 아래와 같이 지급 문구 -->
-        <div style="font-size:10px;margin:8px 0 4px;">
+        <div style="font-size:10px; margin:8px 0 4px;">
           아래와 같이 지급하고자 하오니 재가하여 주시기 바랍니다.
         </div>
 
         <!-- 명세 테이블 -->
-        <table style="width:100%;border-collapse:collapse;font-size:10px;">
+        <table style="width:100%; border-collapse:collapse; font-size:10px;">
           <thead>
           <tr style="background:#f0f0f0;">
-            <th style="border:1px solid #555;padding:4px;text-align:center;width:12mm;">재&nbsp;원</th>
-            <th style="border:1px solid #555;padding:4px;text-align:center;width:20mm;">항&nbsp;&nbsp;목</th>
-            <th style="border:1px solid #555;padding:4px;text-align:center;">내&nbsp;&nbsp;역</th>
-            <th style="border:1px solid #555;padding:4px;text-align:center;width:22mm;">금&nbsp;&nbsp;액</th>
-            <th style="border:1px solid #555;padding:4px;text-align:center;width:20mm;">지&nbsp;급&nbsp;처</th>
-            <th style="border:1px solid #555;padding:4px;text-align:center;width:18mm;">결제방법</th>
+            <th style="border:1px solid #555; padding:4px; text-align:center; width:12mm;">재&#160;원</th>
+            <th style="border:1px solid #555; padding:4px; text-align:center; width:20mm;">항&#160;&#160;목</th>
+            <th style="border:1px solid #555; padding:4px; text-align:center;">내&#160;&#160;역</th>
+            <th style="border:1px solid #555; padding:4px; text-align:center; width:22mm;">금&#160;&#160;액</th>
+            <th style="border:1px solid #555; padding:4px; text-align:center; width:20mm;">지&#160;급&#160;처</th>
+            <th style="border:1px solid #555; padding:4px; text-align:center; width:18mm;">결제방법</th>
           </tr>
           </thead>
           <tbody>
           <tr th:each="entry : ${slip.debit}">
-            <td style="border:1px solid #555;padding:4px;text-align:center;"
+            <td style="border:1px solid #555; padding:4px; text-align:center;"
                 th:text="${slip.mssec != null ? slip.mssec : ''}"></td>
-            <td style="border:1px solid #555;padding:4px;text-align:center;"
+            <td style="border:1px solid #555; padding:4px; text-align:center;"
                 th:text="${entry.it2nm != null ? entry.it2nm : ''}"></td>
-            <td style="border:1px solid #555;padding:4px;"
+            <td style="border:1px solid #555; padding:4px;"
                 th:text="${entry.summy != null ? entry.summy : ''}"></td>
             <!-- 금액: dramt가 0이면 cramt 표시 -->
-            <td style="border:1px solid #555;padding:4px;text-align:right;"
+            <td style="border:1px solid #555; padding:4px; text-align:right;"
                 th:if="${entry.dramt != null and entry.dramt != 0}"
                 th:text="${#numbers.formatInteger(entry.dramt, 1, 'COMMA')}"></td>
-            <td style="border:1px solid #555;padding:4px;text-align:right;"
+            <td style="border:1px solid #555; padding:4px; text-align:right;"
                 th:unless="${entry.dramt != null and entry.dramt != 0}"
                 th:text="${#numbers.formatInteger(entry.cramt, 1, 'COMMA')}"></td>
-            <td style="border:1px solid #555;padding:4px;text-align:center;"
+            <td style="border:1px solid #555; padding:4px; text-align:center;"
                 th:text="${entry.cltnm != null ? entry.cltnm : ''}"></td>
-            <td style="border:1px solid #555;padding:4px;text-align:center;"
+            <td style="border:1px solid #555; padding:4px; text-align:center;"
                 th:text="${slip.cardnm != null and !#strings.isEmpty(slip.cardnm)
-                ? slip.cardnm
-                : (slip.banknm != null ? slip.banknm : '')}"></td>
+                            ? slip.cardnm : (slip.banknm != null ? slip.banknm : '')}"></td>
           </tr>
           <!-- 계 행 -->
           <tr>
-            <td colspan="3" style="border:1px solid #555;padding:4px;
-                          text-align:center;font-weight:700;">계</td>
-            <td style="border:1px solid #555;padding:4px;text-align:right;font-weight:700;"
+            <td colspan="3" style="border:1px solid #555; padding:4px;
+                                     text-align:center; font-weight:700;">계</td>
+            <td style="border:1px solid #555; padding:4px; text-align:right; font-weight:700;"
                 th:if="${slip.debit[0].dramt != null and slip.debit[0].dramt != 0}"
                 th:text="${#numbers.formatInteger(slip.debit[0].dramt, 1, 'COMMA')}"></td>
-            <td style="border:1px solid #555;padding:4px;text-align:right;font-weight:700;"
+            <td style="border:1px solid #555; padding:4px; text-align:right; font-weight:700;"
                 th:unless="${slip.debit[0].dramt != null and slip.debit[0].dramt != 0}"
                 th:text="${#numbers.formatInteger(slip.debit[0].cramt, 1, 'COMMA')}"></td>
             <td colspan="2" style="border:1px solid #555;"></td>
@@ -1254,8 +1333,8 @@
 
         <!-- 기관명 -->
         <div th:if="${slip.spjangnm != null}"
-             style="text-align:center;font-size:12px;font-weight:700;
-                margin-top:6px;letter-spacing:2px;"
+             style="text-align:center; font-size:12px; font-weight:700;
+                    margin-top:6px; letter-spacing:2px;"
              th:text="${slip.spjangnm}"></div>
 
       </div>

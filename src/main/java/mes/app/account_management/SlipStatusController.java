@@ -1,5 +1,6 @@
 package mes.app.account_management;
 
+import com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import lombok.extern.slf4j.Slf4j;
 import mes.app.account_management.service.SlipStatusService;
@@ -134,17 +135,17 @@ public class SlipStatusController {  //전표입력현황
 					break;*/
 
 				default:
-					log.warn("[SlipPrint] 알 수 없는 printType: {}", printType);
+//					log.warn("[SlipPrint] 알 수 없는 printType: {}", printType);
 					rows = slipStatusService.printSlip(printType, keys);
 					slipList = groupBySlip(rows);
 					break;
 			}
 
-			log.info("[SlipPrint] 그룹핑된 slip 수: {}", slipList.size());
+//			log.info("[SlipPrint] 그룹핑된 slip 수: {}", slipList.size());
 
 			com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
 			try {
-				log.info("[SlipPrint] slipList JSON:\n{}", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(slipList));
+//				log.info("[SlipPrint] slipList JSON:\n{}", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(slipList));
 			} catch (Exception ex) {
 				log.warn("[SlipPrint] JSON 직렬화 실패: {}", ex.getMessage());
 			}
@@ -236,7 +237,7 @@ public class SlipStatusController {  //전표입력현황
 			html = html.replace("&nbsp;", "&#160;");
 
 			// 한글 폰트 적용 CSS 주입
-			String fontOverride = "<style>* { font-family: 'Malgun Gothic', sans-serif !important; }</style>";
+			String fontOverride = "<style>body { font-family: 'Malgun Gothic', sans-serif; }</style>";
 			html = html.replace("</head>", fontOverride + "</head>");
 
 			String filename = URLEncoder.encode("전표.pdf", StandardCharsets.UTF_8);
@@ -246,11 +247,24 @@ public class SlipStatusController {  //전표입력현황
 			try (OutputStream os = response.getOutputStream()) {
 				PdfRendererBuilder builder = new PdfRendererBuilder();
 
-				// 윈도우 맑은고딕 폰트 등록 (한글 지원)
-				File malgunFont = new File("C:/Windows/Fonts/malgun.ttf");
-				if (malgunFont.exists()) {
-					builder.useFont(malgunFont, "Malgun Gothic");
-				}
+				String malgunPath = getClass().getClassLoader()
+															.getResource("static/font/malgun.ttf").getPath();
+				String malgunBoldPath = getClass().getClassLoader()
+																	.getResource("static/font/malgunbd.ttf").getPath();
+				String notoPath = getClass().getClassLoader()
+														.getResource("static/font/NotoSansKR-Regular.ttf").getPath();
+				String notoBoldPath = getClass().getClassLoader()
+																.getResource("static/font/NotoSansKR-Bold.otf").getPath();
+				String NanumMyeongjoath = getClass().getClassLoader()
+															.getResource("static/font/NanumMyeongjo-Bold.ttf").getPath();
+				builder.useFont(new File(NanumMyeongjoath), "NanumMyeongjo-Bold");
+
+				builder.useFont(new File(malgunPath), "Malgun Gothic");
+				builder.useFont(new File(malgunBoldPath), "Malgun Gothic", 700,
+					BaseRendererBuilder.FontStyle.NORMAL, true);
+				builder.useFont(new File(notoPath), "NotoSansKR");
+				builder.useFont(new File(notoBoldPath), "NotoSansKR", 700,
+					BaseRendererBuilder.FontStyle.NORMAL, true);
 
 				builder.withHtmlContent(html, null);
 				builder.toStream(os);

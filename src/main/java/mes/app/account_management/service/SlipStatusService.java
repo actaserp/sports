@@ -409,213 +409,232 @@ public class SlipStatusService {
 		//결의양식2(하단)
 		String sql = """
 			  SELECT   Z.spdate,
-			         Z.spnum,
-			         Z.remark,
-			         Z.acccd,
-			         Z.accnm,
-			         Z.it1cd,
-			         Z.it2cd,
-			         Z.mssec,
-			         Z.mssecnm,
-			         Z.dramt,
-			         Z.cramt,
-			         Z.it1nm,
-			         Z.it2nm,
-			         Z.it2nm_t,
-			         Z.tiosec,
-			         Z.subject,
-			         Z.businm,
-			         Z.upnm,
-			         Z.drcr,
-			         Z.summy,
-			         Z.setnum,
-			         Z.accnum,
-			         Z.banknm,
-			         Z.cardnum,
-			         Z.cardnm,
-			         Z.tiosec,
-			         CAST('' AS CHAR(1)) AS jichuldate,
-			         CAST('' AS CHAR(1)) AS spnumchk
-			FROM
-			(
-			      SELECT   max(a.spdate) as spdate,
-			               max(a.spnum) as spnum,
-			               max(a.remark) as remark,
-			               max(b.acccd) as acccd,
-			               max(b.accnm) as accnm,
-			               max(b.it1cd) as it1cd,
-			               max(b.it2cd) as it2cd,
-			               max(b.mssec) AS mssec,
-			               (SELECT mssecnm
-			                  FROM tb_x0005
-			                 WHERE mssec = max(b.mssec)
-			               ) AS mssecnm,
-			               sum(b.dramt) as dramt,
-			               sum(b.cramt) as cramt,
-			               (select it1nm
-			                  from VW_X0003 
-			                 where it1cd = max(B.it1cd)
-			                   and tiosec = max(A.tiosec)
-			               ) as it1nm,
-			               (select it2nm
-			                  from TB_X0004
-			                 where it2cd = max(B.it2cd)
-			                   and tiosec = max(A.tiosec)
-			               ) as it2nm,
-			               '' as it2nm_t,
-			               Max(a.tiosec) as tiosec,
-			               Max(a.subject) as subject,
-			               (select businm
-			                  From tb_x0002
-			                 where bsdate = Max(A.bsdate)
-			                   and bseccd = Max(A.bseccd)
-			                   and busicd = Max(A.busicd)
-			               ) as businm,
-			               CASE
-			                    WHEN max(b.acccd) BETWEEN '1000' AND '1999' THEN '자산'
-			                    WHEN max(b.acccd) BETWEEN '5600' AND '7999' THEN '비용'
-			                    WHEN max(b.acccd) BETWEEN '8300' AND '8499' THEN '비용'
-			                    WHEN max(b.acccd) BETWEEN '8650' AND '8699' THEN '비용'
-			                    WHEN max(b.acccd) BETWEEN '8750' AND '8799' THEN '비용'
-			                    WHEN max(b.acccd) BETWEEN '2000' AND '2999' THEN '부채'
-			                    WHEN max(b.acccd) BETWEEN '3000' AND '3999' THEN '자본'
-			                    WHEN max(b.acccd) BETWEEN '5000' AND '5599' THEN '수입'
-			                    WHEN max(b.acccd) BETWEEN '8000' AND '8299' THEN '수입'
-			                    WHEN max(b.acccd) BETWEEN '8500' AND '8649' THEN '수입'
-			                    ELSE '기타'
-			               END AS upnm,
-			               max(b.drcr) as drcr,
-			               max(b.summy) as summy,
-			               max(a.setnum) as setnum,
-			               (select accnum
-			                  from TB_AA040
-			                 where custcd = a.custcd
-			                   and spjangcd = a.spjangcd
-			                   and bank + bankcd = max(B.bankcd)
-			               ) as accnum,
-			               (select banknm
-			                  from TB_AA040
-			                 where custcd = a.custcd
-			                   and spjangcd = a.spjangcd
-			                   and bank + bankcd = max(B.bankcd)
-			               ) as banknm,
-			               (select cardnum
-			                  from TB_IZ010
-			                 where custcd = a.custcd
-			                   and spjangcd = a.spjangcd
-			                   and cardnum = max(B.cardnum)
-			               ) as cardnum,
-			               (select cardnm
-			                  from TB_IZ010
-			                 where custcd = a.custcd
-			                   and spjangcd = a.spjangcd
-			                   and cardnum = max(B.cardnum)
-			               ) as cardnm
-			      FROM TB_AA009 a,
-			           TB_AA010 b,
-			           TB_AC001 c
-			      WHERE a.custcd   = b.custcd
-			        AND a.spjangcd = b.spjangcd
-			        AND a.spdate   = b.spdate
-			        AND a.spnum    = b.spnum
-			        AND b.custcd   = c.custcd
-			        AND b.acccd    = c.acccd
-			        AND a.custcd   = :as_custcd
-			        AND a.spjangcd = :as_spjangcd
-			        AND a.spdate + a.spnum IN (:as_keys)
-			        AND Left(b.acccd, 1) IN ('7', '5')
-			      GROUP BY a.custcd, a.spjangcd, a.spdate, a.spnum
+			            Z.spnum,
+			            Z.remark,
+			            Z.acccd,
+			            Z.accnm,
+			            Z.it1cd,
+			            Z.it2cd,
+			            Z.mssec,
+			            Z.mssecnm,
+			            Z.dramt,
+			            Z.cramt,
+			            Z.it1nm,
+			            Z.it2nm,
+			            Z.it2nm_t,
+			            Z.tiosec,
+			            Z.subject,
+			            Z.businm,
+			            Z.upnm,
+			            Z.drcr,
+			            Z.summy,
+			            Z.setnum,
+			            Z.accnum,
+			            Z.banknm,
+			            Z.cardnum,
+			            Z.cardnm,
+			            Z.spjangnm,
+			            Z.tiosec,
+			            CAST('' AS CHAR(1)) AS jichuldate,
+			            CAST('' AS CHAR(1)) AS spnumchk
+			   FROM
+			   (
+			         SELECT   MAX(a.spdate) AS spdate,
+			                  MAX(a.spnum) AS spnum,
+			                  MAX(a.remark) AS remark,
+			                  MAX(b.acccd) AS acccd,
+			                  MAX(b.accnm) AS accnm,
+			                  MAX(b.it1cd) AS it1cd,
+			                  MAX(b.it2cd) AS it2cd,
+			                  MAX(b.mssec) AS mssec,
+			                  (
+			                      SELECT mssecnm
+			                      FROM tb_x0005
+			                      WHERE mssec = MAX(b.mssec)
+			                  ) AS mssecnm,
+			                  SUM(b.dramt) AS dramt,
+			                  SUM(b.cramt) AS cramt,
+			                  (
+			                      SELECT it1nm
+			                      FROM VW_X0003
+			                      WHERE it1cd = MAX(b.it1cd)
+			                        AND tiosec = MAX(a.tiosec)
+			                  ) AS it1nm,
+			                  (
+			                      SELECT it2nm
+			                      FROM TB_X0004
+			                      WHERE it2cd = MAX(b.it2cd)
+			                        AND tiosec = MAX(a.tiosec)
+			                  ) AS it2nm,
+			                  '' AS it2nm_t,
+			                  MAX(a.tiosec) AS tiosec,
+			                  MAX(a.subject) AS subject,
+			                  (
+			                      SELECT businm
+			                      FROM tb_x0002
+			                      WHERE bsdate = MAX(a.bsdate)
+			                        AND bseccd = MAX(a.bseccd)
+			                        AND busicd = MAX(a.busicd)
+			                  ) AS businm,
+			                  CASE
+			                       WHEN MAX(b.acccd) BETWEEN '1000' AND '1999' THEN '자산'
+			                       WHEN MAX(b.acccd) BETWEEN '5600' AND '7999' THEN '비용'
+			                       WHEN MAX(b.acccd) BETWEEN '8300' AND '8499' THEN '비용'
+			                       WHEN MAX(b.acccd) BETWEEN '8650' AND '8699' THEN '비용'
+			                       WHEN MAX(b.acccd) BETWEEN '8750' AND '8799' THEN '비용'
+			                       WHEN MAX(b.acccd) BETWEEN '2000' AND '2999' THEN '부채'
+			                       WHEN MAX(b.acccd) BETWEEN '3000' AND '3999' THEN '자본'
+			                       WHEN MAX(b.acccd) BETWEEN '5000' AND '5599' THEN '수입'
+			                       WHEN MAX(b.acccd) BETWEEN '8000' AND '8299' THEN '수입'
+			                       WHEN MAX(b.acccd) BETWEEN '8500' AND '8649' THEN '수입'
+			                       ELSE '기타'
+			                  END AS upnm,
+			                  MAX(b.drcr) AS drcr,
+			                  MAX(b.summy) AS summy,
+			                  MAX(a.setnum) AS setnum,
+			                  (
+			                      SELECT accnum
+			                      FROM TB_AA040
+			                      WHERE custcd = a.custcd
+			                        AND spjangcd = a.spjangcd
+			                        AND bank + bankcd = MAX(b.bankcd)
+			                  ) AS accnum,
+			                  (
+			                      SELECT banknm
+			                      FROM TB_AA040
+			                      WHERE custcd = a.custcd
+			                        AND spjangcd = a.spjangcd
+			                        AND bank + bankcd = MAX(b.bankcd)
+			                  ) AS banknm,
+			                  (
+			                      SELECT cardnum
+			                      FROM TB_IZ010
+			                      WHERE custcd = a.custcd
+			                        AND spjangcd = a.spjangcd
+			                        AND cardnum = MAX(b.cardnum)
+			                  ) AS cardnum,
+			                  (
+			                      SELECT cardnm
+			                      FROM TB_IZ010
+			                      WHERE custcd = a.custcd
+			                        AND spjangcd = a.spjangcd
+			                        AND cardnum = MAX(b.cardnum)
+			                  ) AS cardnm,
+			                  MAX(b.spjangnm) AS spjangnm
+			         FROM TB_AA009 a,
+			              TB_AA010 b,
+			              TB_AC001 c
+			         WHERE a.custcd   = b.custcd
+			           AND a.spjangcd = b.spjangcd
+			           AND a.spdate   = b.spdate
+			           AND a.spnum    = b.spnum
+			           AND b.custcd   = c.custcd
+			           AND b.acccd    = c.acccd
+			           AND a.custcd   = :as_custcd
+			           AND a.spjangcd = :as_spjangcd
+			           AND a.spdate + a.spnum IN (:as_keys)
+			           AND LEFT(b.acccd, 1) IN ('7', '5')
+			         GROUP BY a.custcd, a.spjangcd, a.spdate, a.spnum
 			
-			      UNION ALL
+			         UNION ALL
 			
-			      SELECT   max(a.spdate) as spdate,
-			               max(a.spnum) as spnum,
-			               max(a.remark) as remark,
-			               max(b.acccd) as acccd,
-			               max(b.accnm) as accnm,
-			               max(b.it1cd) as it1cd,
-			               max(b.it2cd) as it2cd,
-			               max(b.mssec) as mssec,
-			               (SELECT mssecnm
-			                  FROM tb_x0005
-			                 WHERE mssec = max(b.mssec)
-			               ) AS mssecnm,
-			               sum(b.dramt) as dramt,
-			               sum(b.cramt) as cramt,
-			               (select it1nm
-			                  from VW_X0003
-			                 where it1cd = max(B.it1cd)
-			                   and tiosec = max(A.tiosec)
-			               ) as it1nm,
-			               '' as it2nm,
-			               (select it2nm
-			                  from TB_X0004
-			                 where it2cd = max(B.it2cd)
-			                   and tiosec = max(A.tiosec)
-			               ) as it2nm_t,
-			               Max(a.tiosec) as tiosec,
-			               Max(a.subject) as subject,
-			               (select businm
-			                  From tb_x0002
-			                 where bsdate = Max(A.bsdate)
-			                   and bseccd = Max(A.bseccd)
-			                   and busicd = Max(A.busicd)
-			               ) as businm,
-			               CASE
-			                    WHEN max(b.acccd) BETWEEN '1000' AND '1999' THEN '자산'
-			                    WHEN max(b.acccd) BETWEEN '5600' AND '7999' THEN '비용'
-			                    WHEN max(b.acccd) BETWEEN '8300' AND '8499' THEN '비용'
-			                    WHEN max(b.acccd) BETWEEN '8650' AND '8699' THEN '비용'
-			                    WHEN max(b.acccd) BETWEEN '8750' AND '8799' THEN '비용'
-			                    WHEN max(b.acccd) BETWEEN '2000' AND '2999' THEN '부채'
-			                    WHEN max(b.acccd) BETWEEN '3000' AND '3999' THEN '자본'
-			                    WHEN max(b.acccd) BETWEEN '5000' AND '5599' THEN '수입'
-			                    WHEN max(b.acccd) BETWEEN '8000' AND '8299' THEN '수입'
-			                    WHEN max(b.acccd) BETWEEN '8500' AND '8649' THEN '수입'
-			                    ELSE '기타'
-			               END AS upnm,
-			               max(b.drcr) as drcr,
-			               max(b.summy) as summy,
-			               max(a.setnum) as setnum,
-			               (select accnum
-			                  from TB_AA040
-			                 where custcd = a.custcd
-			                   and spjangcd = a.spjangcd
-			                   and bank + bankcd = max(B.bankcd)
-			               ) as accnum,
-			               (select banknm
-			                  from TB_AA040
-			                 where custcd = a.custcd
-			                   and spjangcd = a.spjangcd
-			                   and bank + bankcd = max(B.bankcd)
-			               ) as banknm,
-			               (select cardnum
-			                  from TB_IZ010
-			                 where custcd = a.custcd
-			                   and spjangcd = a.spjangcd
-			                   and cardnum = max(B.cardnum)
-			               ) as cardnum,
-			               (select cardnm
-			                  from TB_IZ010
-			                 where custcd = a.custcd
-			                   and spjangcd = a.spjangcd
-			                   and cardnum = max(B.cardnum)
-			               ) as cardnm
-			      FROM TB_AA009 a,
-			           TB_AA010 b,
-			           TB_AC001 c
-			      WHERE a.custcd   = b.custcd
-			        AND a.spjangcd = b.spjangcd
-			        AND a.spdate   = b.spdate
-			        AND a.spnum    = b.spnum
-			        AND b.custcd   = c.custcd
-			        AND b.acccd    = c.acccd
-			        AND a.custcd   = :as_custcd
-			        AND a.spjangcd = :as_spjangcd
-			        AND a.spdate + a.spnum IN (:as_keys)
-			        AND Left(b.acccd, 1) NOT IN ('7', '5')
-			      GROUP BY a.custcd, a.spjangcd, a.spdate, a.spnum
-			) Z
+			         SELECT   MAX(a.spdate) AS spdate,
+			                  MAX(a.spnum) AS spnum,
+			                  MAX(a.remark) AS remark,
+			                  MAX(b.acccd) AS acccd,
+			                  MAX(b.accnm) AS accnm,
+			                  MAX(b.it1cd) AS it1cd,
+			                  MAX(b.it2cd) AS it2cd,
+			                  MAX(b.mssec) AS mssec,
+			                  (
+			                      SELECT mssecnm
+			                      FROM tb_x0005
+			                      WHERE mssec = MAX(b.mssec)
+			                  ) AS mssecnm,
+			                  SUM(b.dramt) AS dramt,
+			                  SUM(b.cramt) AS cramt,
+			                  (
+			                      SELECT it1nm
+			                      FROM VW_X0003
+			                      WHERE it1cd = MAX(b.it1cd)
+			                        AND tiosec = MAX(a.tiosec)
+			                  ) AS it1nm,
+			                  '' AS it2nm,
+			                  (
+			                      SELECT it2nm
+			                      FROM TB_X0004
+			                      WHERE it2cd = MAX(b.it2cd)
+			                        AND tiosec = MAX(a.tiosec)
+			                  ) AS it2nm_t,
+			                  MAX(a.tiosec) AS tiosec,
+			                  MAX(a.subject) AS subject,
+			                  (
+			                      SELECT businm
+			                      FROM tb_x0002
+			                      WHERE bsdate = MAX(a.bsdate)
+			                        AND bseccd = MAX(a.bseccd)
+			                        AND busicd = MAX(a.busicd)
+			                  ) AS businm,
+			                  CASE
+			                       WHEN MAX(b.acccd) BETWEEN '1000' AND '1999' THEN '자산'
+			                       WHEN MAX(b.acccd) BETWEEN '5600' AND '7999' THEN '비용'
+			                       WHEN MAX(b.acccd) BETWEEN '8300' AND '8499' THEN '비용'
+			                       WHEN MAX(b.acccd) BETWEEN '8650' AND '8699' THEN '비용'
+			                       WHEN MAX(b.acccd) BETWEEN '8750' AND '8799' THEN '비용'
+			                       WHEN MAX(b.acccd) BETWEEN '2000' AND '2999' THEN '부채'
+			                       WHEN MAX(b.acccd) BETWEEN '3000' AND '3999' THEN '자본'
+			                       WHEN MAX(b.acccd) BETWEEN '5000' AND '5599' THEN '수입'
+			                       WHEN MAX(b.acccd) BETWEEN '8000' AND '8299' THEN '수입'
+			                       WHEN MAX(b.acccd) BETWEEN '8500' AND '8649' THEN '수입'
+			                       ELSE '기타'
+			                  END AS upnm,
+			                  MAX(b.drcr) AS drcr,
+			                  MAX(b.summy) AS summy,
+			                  MAX(a.setnum) AS setnum,
+			                  (
+			                      SELECT accnum
+			                      FROM TB_AA040
+			                      WHERE custcd = a.custcd
+			                        AND spjangcd = a.spjangcd
+			                        AND bank + bankcd = MAX(b.bankcd)
+			                  ) AS accnum,
+			                  (
+			                      SELECT banknm
+			                      FROM TB_AA040
+			                      WHERE custcd = a.custcd
+			                        AND spjangcd = a.spjangcd
+			                        AND bank + bankcd = MAX(b.bankcd)
+			                  ) AS banknm,
+			                  (
+			                      SELECT cardnum
+			                      FROM TB_IZ010
+			                      WHERE custcd = a.custcd
+			                        AND spjangcd = a.spjangcd
+			                        AND cardnum = MAX(b.cardnum)
+			                  ) AS cardnum,
+			                  (
+			                      SELECT cardnm
+			                      FROM TB_IZ010
+			                      WHERE custcd = a.custcd
+			                        AND spjangcd = a.spjangcd
+			                        AND cardnum = MAX(b.cardnum)
+			                  ) AS cardnm,
+			                  MAX(b.spjangnm) AS spjangnm
+			         FROM TB_AA009 a,
+			              TB_AA010 b,
+			              TB_AC001 c
+			         WHERE a.custcd   = b.custcd
+			           AND a.spjangcd = b.spjangcd
+			           AND a.spdate   = b.spdate
+			           AND a.spnum    = b.spnum
+			           AND b.custcd   = c.custcd
+			           AND b.acccd    = c.acccd
+			           AND a.custcd   = :as_custcd
+			           AND a.spjangcd = :as_spjangcd
+			           AND a.spdate + a.spnum IN (:as_keys)
+			           AND LEFT(b.acccd, 1) NOT IN ('7', '5')
+			         GROUP BY a.custcd, a.spjangcd, a.spdate, a.spnum
+			   ) Z
 			""";
 		return sqlRunner.getRows(sql, param);
 	}
