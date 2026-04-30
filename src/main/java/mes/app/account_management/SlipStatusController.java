@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -240,31 +241,53 @@ public class SlipStatusController {  //전표입력현황
 			String fontOverride = "<style>body { font-family: 'Malgun Gothic', sans-serif; }</style>";
 			html = html.replace("</head>", fontOverride + "</head>");
 
-			String filename = URLEncoder.encode("전표.pdf", StandardCharsets.UTF_8);
+			// 파일명 매핑
+			Map<String, String> fileNameMap = Map.of(
+				"1", "전표(산출내역)",
+				"2", "결의양식1",
+				"3", "결의양식2(하단)",
+				"4", "결의양식2(상단)",
+				"5", "결의양식3(세입세출)",
+				"6", "결의양식3(대체)",
+				"7", "전표(산출내역):하단결재",
+				"8", "결의양식(한자)"
+			);
+
+			String pdfName = fileNameMap.getOrDefault(printType, "전표");
+			String filename = URLEncoder.encode(pdfName + ".pdf", StandardCharsets.UTF_8);
+
 			response.setContentType("application/pdf");
 			response.setHeader("Content-Disposition", "attachment; filename*=UTF-8''" + filename);
 
 			try (OutputStream os = response.getOutputStream()) {
 				PdfRendererBuilder builder = new PdfRendererBuilder();
 
-				String malgunPath = getClass().getClassLoader()
-															.getResource("static/font/malgun.ttf").getPath();
-				String malgunBoldPath = getClass().getClassLoader()
-																	.getResource("static/font/malgunbd.ttf").getPath();
-				String notoPath = getClass().getClassLoader()
-														.getResource("static/font/NotoSansKR-Regular.ttf").getPath();
-				String notoBoldPath = getClass().getClassLoader()
-																.getResource("static/font/NotoSansKR-Bold.ttf").getPath();
-				String NanumMyeongjoath = getClass().getClassLoader()
-															.getResource("static/font/NanumMyeongjo-Bold.ttf").getPath();
-				builder.useFont(new File(NanumMyeongjoath), "NanumMyeongjo-Bold");
+				// 한자 전용 폰트 (unicode-range로 한자 영역만 담당)
+				builder.useFont(
+					() -> getClass().getClassLoader().getResourceAsStream("static/font/HangeuljaeMin4-Regular.ttf"),
+					"HangeuljaeMin4"
+				);
 
-				builder.useFont(new File(malgunPath), "Malgun Gothic");
-				builder.useFont(new File(malgunBoldPath), "Malgun Gothic", 700,
-					BaseRendererBuilder.FontStyle.NORMAL, true);
-				builder.useFont(new File(notoPath), "NotoSansKR");
-				builder.useFont(new File(notoBoldPath), "NotoSansKR", 700,
-					BaseRendererBuilder.FontStyle.NORMAL, true);
+				builder.useFont(
+					() -> getClass().getClassLoader().getResourceAsStream("static/font/NanumMyeongjo-Bold.ttf"),
+					"NanumMyeongjo-Bold"
+				);
+				builder.useFont(
+					() -> getClass().getClassLoader().getResourceAsStream("static/font/malgun.ttf"),
+					"Malgun Gothic"
+				);
+				builder.useFont(
+					() -> getClass().getClassLoader().getResourceAsStream("static/font/malgunbd.ttf"),
+					"Malgun Gothic", 700, BaseRendererBuilder.FontStyle.NORMAL, true
+				);
+				builder.useFont(
+					() -> getClass().getClassLoader().getResourceAsStream("static/font/NotoSansKR-Regular.ttf"),
+					"NotoSansKR"
+				);
+				builder.useFont(
+					() -> getClass().getClassLoader().getResourceAsStream("static/font/NotoSansKR-Bold.ttf"),
+					"NotoSansKR", 700, BaseRendererBuilder.FontStyle.NORMAL, true
+				);
 
 				builder.withHtmlContent(html, null);
 				builder.toStream(os);
@@ -551,7 +574,12 @@ public class SlipStatusController {  //전표입력현황
 			sb.append(chunk).append(units2[i]);
 		}
 
-		return (negative ? "△" : "") + sb;
+		String result = (negative ? "△" : "") + sb;
+
+		// 한 글자씩 \n으로 연결해서 세로 표시
+		return result.chars()
+						 .mapToObj(c -> String.valueOf((char) c))
+						 .collect(Collectors.joining("\n"));
 	}
 
 
