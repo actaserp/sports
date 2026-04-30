@@ -9,8 +9,6 @@ WORKDIR /app
 
 RUN mkdir -p /app/data/sports
 
-COPY src/main/resources/static/font/ /app/fonts/
-
 COPY mes-0.0.1-SNAPSHOT.jar app.jar
 
 ENTRYPOINT ["java", \
