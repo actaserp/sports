@@ -4,7 +4,6 @@ import com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import lombok.extern.slf4j.Slf4j;
 import mes.app.account_management.service.SlipStatusService;
-import mes.app.common.FontLoader;
 import mes.domain.model.AjaxResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,8 +34,8 @@ public class SlipStatusController {  //전표입력현황
 	@Autowired
 	private TemplateEngine templateEngine;
 
-	@Autowired
-	private FontLoader fontLoader;
+//	@Autowired
+//	private FontLoader fontLoader;
 
 	@GetMapping("/read")
 	public AjaxResult getSlipList(@RequestParam("start") String start,
@@ -265,12 +264,30 @@ public class SlipStatusController {  //전표입력현황
 			try (OutputStream os = response.getOutputStream()) {
 				PdfRendererBuilder builder = new PdfRendererBuilder();
 
-				builder.useFont(fontLoader.get("hangeulMin4"),   "HangeuljaeMin4");
-				builder.useFont(fontLoader.get("nanumMyeongjo"), "NanumMyeongjo-Bold");
-				builder.useFont(fontLoader.get("malgun"),        "Malgun Gothic");
-				builder.useFont(fontLoader.get("malgunbd"),      "Malgun Gothic", 700, BaseRendererBuilder.FontStyle.NORMAL, true);
-				builder.useFont(fontLoader.get("notoSans"),      "NotoSansKR");
-				builder.useFont(fontLoader.get("notoSansBold"),  "NotoSansKR", 700, BaseRendererBuilder.FontStyle.NORMAL, true);
+				builder.useFont(
+					() -> getClass().getClassLoader().getResourceAsStream("static/font/HangeuljaeMin4-Regular.ttf"),
+					"HangeuljaeMin4"
+				);
+				builder.useFont(
+					() -> getClass().getClassLoader().getResourceAsStream("static/font/NanumMyeongjo-Bold.ttf"),
+					"NanumMyeongjo-Bold"
+				);
+				builder.useFont(
+					() -> getClass().getClassLoader().getResourceAsStream("static/font/malgun.ttf"),
+					"Malgun Gothic"
+				);
+				builder.useFont(
+					() -> getClass().getClassLoader().getResourceAsStream("static/font/malgunbd.ttf"),
+					"Malgun Gothic", 700, BaseRendererBuilder.FontStyle.NORMAL, true
+				);
+				builder.useFont(
+					() -> getClass().getClassLoader().getResourceAsStream("static/font/NotoSansKR-Regular.ttf"),
+					"NotoSansKR"
+				);
+				builder.useFont(
+					() -> getClass().getClassLoader().getResourceAsStream("static/font/NotoSansKR-Bold.otf"),
+					"NotoSansKR", 700, BaseRendererBuilder.FontStyle.NORMAL, true
+				);
 
 				builder.withHtmlContent(html, null);
 				builder.toStream(os);
