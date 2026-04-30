@@ -265,7 +265,7 @@ public class SlipStatusController {  //전표입력현황
 				PdfRendererBuilder builder = new PdfRendererBuilder();
 
 				builder.useFont(
-					() -> getClass().getClassLoader().getResourceAsStream("static/font/HangeuljaeMin4-Regular.ttf"),
+					() -> getClass().getClassLoader().getResourceAsStream("static/font/Hangeuljaemin4-Regular.ttf"),
 					"HangeuljaeMin4"
 				);
 				builder.useFont(
