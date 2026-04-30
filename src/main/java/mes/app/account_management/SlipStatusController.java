@@ -4,6 +4,7 @@ import com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import lombok.extern.slf4j.Slf4j;
 import mes.app.account_management.service.SlipStatusService;
+import mes.app.common.FontLoader;
 import mes.domain.model.AjaxResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,7 +15,6 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
 import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -34,6 +34,9 @@ public class SlipStatusController {  //전표입력현황
 
 	@Autowired
 	private TemplateEngine templateEngine;
+
+	@Autowired
+	private FontLoader fontLoader;
 
 	@GetMapping("/read")
 	public AjaxResult getSlipList(@RequestParam("start") String start,
@@ -262,32 +265,12 @@ public class SlipStatusController {  //전표입력현황
 			try (OutputStream os = response.getOutputStream()) {
 				PdfRendererBuilder builder = new PdfRendererBuilder();
 
-				// 한자 전용 폰트 (unicode-range로 한자 영역만 담당)
-				builder.useFont(
-					() -> getClass().getClassLoader().getResourceAsStream("static/font/HangeuljaeMin4-Regular.ttf"),
-					"HangeuljaeMin4"
-				);
-
-				builder.useFont(
-					() -> getClass().getClassLoader().getResourceAsStream("static/font/NanumMyeongjo-Bold.ttf"),
-					"NanumMyeongjo-Bold"
-				);
-				builder.useFont(
-					() -> getClass().getClassLoader().getResourceAsStream("static/font/malgun.ttf"),
-					"Malgun Gothic"
-				);
-				builder.useFont(
-					() -> getClass().getClassLoader().getResourceAsStream("static/font/malgunbd.ttf"),
-					"Malgun Gothic", 700, BaseRendererBuilder.FontStyle.NORMAL, true
-				);
-				builder.useFont(
-					() -> getClass().getClassLoader().getResourceAsStream("static/font/NotoSansKR-Regular.ttf"),
-					"NotoSansKR"
-				);
-				builder.useFont(
-					() -> getClass().getClassLoader().getResourceAsStream("static/font/NotoSansKR-Bold.ttf"),
-					"NotoSansKR", 700, BaseRendererBuilder.FontStyle.NORMAL, true
-				);
+				builder.useFont(fontLoader.get("hangeulMin4"),   "HangeuljaeMin4");
+				builder.useFont(fontLoader.get("nanumMyeongjo"), "NanumMyeongjo-Bold");
+				builder.useFont(fontLoader.get("malgun"),        "Malgun Gothic");
+				builder.useFont(fontLoader.get("malgunbd"),      "Malgun Gothic", 700, BaseRendererBuilder.FontStyle.NORMAL, true);
+				builder.useFont(fontLoader.get("notoSans"),      "NotoSansKR");
+				builder.useFont(fontLoader.get("notoSansBold"),  "NotoSansKR", 700, BaseRendererBuilder.FontStyle.NORMAL, true);
 
 				builder.withHtmlContent(html, null);
 				builder.toStream(os);
@@ -364,11 +347,11 @@ public class SlipStatusController {  //전표입력현황
 			Long cramt = cramtRaw != null ? ((Number) cramtRaw).longValue() : 0L;
 
 			if ("1".equals(drcr) || "D".equals(drcr)) {
-				log.info("[SlipPrint]   → 차변 추가 | accnm={} | dramt={}", row.get("accnm"), dramt);
+//				log.info("[SlipPrint]   → 차변 추가 | accnm={} | dramt={}", row.get("accnm"), dramt);
 				((List<Map<String, Object>>) group.get("debit")).add(entry);
 				group.put("amt", ((Long) group.get("amt")) + dramt);
 			} else if ("2".equals(drcr) || "C".equals(drcr)) {
-				log.info("[SlipPrint]   → 대변 추가 | accnm={} | cramt={}", row.get("accnm"), cramt);
+//				log.info("[SlipPrint]   → 대변 추가 | accnm={} | cramt={}", row.get("accnm"), cramt);
 				((List<Map<String, Object>>) group.get("credit")).add(entry);
 			} else {
 				// drcr 값이 없을 경우 dramt로 판단 (fallback)
