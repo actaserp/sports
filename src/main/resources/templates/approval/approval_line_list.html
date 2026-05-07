@@ -38,7 +38,7 @@
     <div class="tab-wrap">
       <div class="tab-contents">
         <!-- Section -->
-        <section class="tab-item" id="tab1">
+        <section class="tab-item">
           <div class="section-top">
             <div class="search-wrap">
               <dl>
@@ -58,13 +58,13 @@
           <div class="row">
             <div class="wp30 mg-r10">
               <div class="container-fluid col">
-                <div id="theGrid" style="height: 580px;"></div>
+                <div id="theGrid" ></div>
               </div>
             </div>
             <div class="col wp68">
               <div class="section">
                 <div class="container-fluid col">
-                  <div id="theGrid2" style="height: 580px;"></div>
+                  <div id="theGrid2"></div>
                 </div>
               </div>
             </div>
@@ -134,10 +134,11 @@
 
      // 오른쪽 그리드 생성
      this.theGrid2 = new wijmo.grid.FlexGrid('#theGrid2', {
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
       autoGenerateColumns: false,
       showMarquee: true,
       isReadOnly: true,
-      selectionMode: wijmo.grid.SelectionMode.Row,
       formatItem: (s, e) => {
        if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
         e.cell.style.textAlign = 'center';
@@ -157,6 +158,11 @@
      this.theGrid2.rowHeaders.columns.splice(0, 1);
      new FlexGridContextMenu(this.theGrid2);
      this.theGrid2.downloadFileName = '사원문서';
+
+     let emptyRows = [];
+     while (emptyRows.length < 14) emptyRows.push({});
+     this.viewData2 = new wijmo.collections.CollectionView(emptyRows);
+     this.theGrid2.itemsSource = this.viewData2;
 
     } // init
 

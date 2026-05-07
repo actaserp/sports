@@ -72,13 +72,13 @@
         <li>결재 할 내역</li>
       </ul>
     </div>
-    <div class="tab-contents">
-      <section class="tab-item" id="tab2" style="height: 830px; overflow: hidden;">
+    <div class="tab-contents" style="display: flex;" >
+      <section class="tab-item">
         <div class="section-top">
           <div class="search-wrap">
             <dl>
               <dt>
-                <label for="searchUserNm">
+                <label>
                   작성일자<span class="eq">*</span>
                 </label>
               </dt>
@@ -111,13 +111,13 @@
             </dl>
             <dl>
               <dt>
-                <label for="searchUserNm">
+                <label for="searchText">
                   제목<span class="eq">*</span>
                 </label>
               </dt>
               <dd>
                 <div class="srch-box">
-                  <input type="text" id="searchUserNm" name="searchUserNm" class="input-srch"
+                  <input type="text" id="searchText" name="searchText" class="input-srch"
                          placeholder="제목" style="border-radius: 5px;">
                 </div>
               </dd>
@@ -138,8 +138,8 @@
 
         <div class="container-fluid">
           <p id="selectedItem"></p>
-          <div id="theGrid1" style="max-height:76px"></div>
-          <div id="theGrid" style="max-height: 570px"></div>
+          <div id="theGrid1" style="min-height: 77px;"></div>
+          <div id="theGrid" ></div>
         </div>
       </section>
     </div> <!--//tab-wrap end-->
@@ -247,7 +247,7 @@
     setButtonStateByAppgubun(appgubun);
    });
 
-   document.getElementById('searchUserNm').addEventListener('keydown', function (event) {
+   document.getElementById('searchText').addEventListener('keydown', function (event) {
     if (event.key === 'Enter') {
      fetchListData(); // 엔터 키를 눌렀을 때 실행할 함수
     }
@@ -270,7 +270,7 @@
      startDate: $('#startDate').val(),
      endDate: $('#endDate').val(),
      SearchPayment: $('#SearchPayment').val(),
-     searchUserNm: $('#searchUserNm').val()
+     searchText: $('#searchText').val()
     };
 
     console.log("수집 데이터(결재 목록)", params);
@@ -832,7 +832,7 @@
     const params = {
      startDate: $('#startDate').val(),
      endDate: $('#endDate').val(),
-     searchUserNm: $('#searchUserNm').val()
+     searchText: $('#searchText').val()
     };
 
     // 서버에서 데이터 가져오기

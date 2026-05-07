@@ -97,8 +97,8 @@ public class NcpObjectStorageService {
         "NOTICE",    "01",
         "QNA",       "02",
         "MARKETING", "03",
-        "PDF","04",
-        "ATCH","05"
+        "VOUCHER","04", //PDF
+        "ATTACHMENT" , "05"        //첨부
     );
 
     public static String toCheckseq(String tableName) {
