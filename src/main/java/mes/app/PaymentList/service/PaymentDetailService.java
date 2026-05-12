@@ -22,7 +22,7 @@ public class PaymentDetailService {
 
   public List<Map<String, Object>> getPaymentList(String spjangcd, String startDate, String endDate, String searchPayment, String searchText, Integer personid) {
 
-    // 1. tenant DB에서 personid(PK)로 Code(사번) 조회
+    // 1. personid → personCode 조회
     String personSql = """
         SELECT Code AS personCode 
         FROM person 
@@ -37,81 +37,78 @@ public class PaymentDetailService {
     String personCode = null;
     if (personRow != null) {
       String code = (String) personRow.get("personCode");
-      personCode = code != null ? code.replaceFirst("^p", "") : null; // p 제거 (앞에 p가 있을 경우만)
+      personCode = code != null ? code.replaceFirst("^p", "") : null;
     }
 
-//    log.info("📌 personid={} → personCode={}", personid, personCode);
-
-    // personCode 못 찾으면 빈 리스트 반환
     if (personCode == null) {
       log.warn("⚠️ personCode 조회 실패 - personid={}, spjangcd={}", personid, spjangcd);
       return new ArrayList<>();
     }
 
-    // 2. personCode로 결재 내역 조회
+    // 2. 결재 내역 조회 - 검증된 SQL 그대로 사용
     MapSqlParameterSource params = new MapSqlParameterSource();
     params.addValue("as_spjangcd", spjangcd);
-    params.addValue("personid", personCode); // ← Code 값으로 교체
+    params.addValue("agencycd", personCode);
     params.addValue("as_stdate", startDate);
     params.addValue("as_enddate", endDate);
 
     StringBuilder sql = new StringBuilder("""
         SELECT
-            STUFF(STUFF(e080.repodate,5,0,'-'),8,0,'-') as repodate,
+             STUFF(STUFF(e080.repodate,5,0,'-'),8,0,'-') AS repodate,
             e080.repoperid,
             (SELECT pernm FROM tb_ja001 WHERE perid = 'p' + e080.repoperid) AS repopernm,
             e080.appgubun,
-            e080.papercd,
             ca510.com_code AS papercd,
             ca510.com_cnam AS papercd_name,
-            sc.Value AS appgubun_display,
-            STUFF(STUFF(e080.appdate,5,0,'-'),8,0,'-') as appdate,
+            uc.Value AS appgubun_display,
+           STUFF(STUFF(e080.appdate,5,0,'-'),8,0,'-') AS appdate,
             e080.appnum,
-            e080.indate,
+            e080.appperid,
             e080.title,
-            e080.remark
-            -- files.fileListJson
-        FROM tb_e080 e080
-        LEFT JOIN sys_code sc ON sc."Code" = e080.appgubun AND sc."CodeType" = 'Payment'
-        -- 휴가신청서 join
-        LEFT JOIN tb_pb204 pb204 ON e080.appnum = pb204.appnum
+            e080.remark,
+            files.fileListJson
+        FROM tb_e080 e080 WITH(NOLOCK)
+        LEFT JOIN user_code uc ON uc.Code = e080.appgubun
         LEFT JOIN tb_ca510 ca510 ON ca510.com_cls = '620' AND ca510.com_code = e080.papercd
-        -- LEFT JOIN LATERAL (
-        -- SELECT json_agg(row_to_json(f)) AS fileListJson
-        -- FROM (
-        --   SELECT spdate, filename AS fileornm, filename AS filesvnm, filepath, '첨부' AS fileType
-        --   FROM TB_AA010ATCH
-        --   WHERE spdate IN ('A' || e080.appnum, 'AS' || e080.appnum, 'AJ' || e080.appnum)
-        --   UNION ALL
-        --   SELECT spdate, filename, filename, filepath, '전표'
-        --   FROM TB_AA010PDF
-        --   WHERE spdate = e080.appnum
-        -- ) f
-        -- ) files ON TRUE
+        OUTER APPLY (
+            SELECT (
+                SELECT
+                    f.spdate,
+                    f.filename AS fileornm,
+                    f.filename AS filesvnm,
+                    f.filepath,
+                    f.fileType
+                FROM (
+                    SELECT spdate, filename, filepath, '첨부' AS fileType
+                    FROM TB_AA010ATCH
+                    WHERE spdate IN ('A' + e080.appnum, 'AS' + e080.appnum, 'AJ' + e080.appnum)
+                    UNION ALL
+                    SELECT spdate, filename, filepath, '전표' AS fileType
+                    FROM TB_AA010PDF
+                    WHERE spdate = e080.appnum
+                ) AS f
+                FOR JSON PATH
+            ) AS fileListJson
+        ) AS files
         WHERE e080.spjangcd = :as_spjangcd
-           AND e080.appperid = :personid
+          AND e080.appperid = :agencycd
           AND e080.flag = '1'
-          AND e080.indate BETWEEN :as_stdate AND :as_enddate
+          AND e080.repodate BETWEEN :as_stdate AND :as_enddate
     """);
 
-    // 검색 조건 추가
+    // 동적 조건만 추가
     if (searchText != null && !searchText.isEmpty()) {
       sql.append(" AND e080.title LIKE :searchText ");
       params.addValue("searchText", "%" + searchText + "%");
     }
 
-    if (searchPayment == null || searchPayment.equals("all") || searchPayment.isEmpty()) {
-      sql.append(" AND (e080.appgubun LIKE '%' OR :as_appgubun = '%') "); // 모든 값 허용
-      params.addValue("as_appgubun", "%");
-    } else {
+    if (searchPayment != null && !searchPayment.isEmpty() && !searchPayment.equals("all")) {
       sql.append(" AND e080.appgubun = :as_appgubun ");
       params.addValue("as_appgubun", searchPayment);
     }
 
-    sql.append(" ORDER BY e080.indate DESC ");
+    //sql.append(" ORDER BY e080.repodate DESC ");
 
-//    log.info("결재 할 내역 List SQL: {}", sql);
-//    log.info("SQL Parameters: {}", params.getValues());
     return sqlRunner.getRows(sql.toString(), params);
   }
 
@@ -208,8 +205,8 @@ public class PaymentDetailService {
 
     try {
       // SQL 실행 후 결과 조회
-//      log.info("결재승인PDF 파일 찾기 SQL: {}", sql);
-//      log.info("SQL Parameters: {}", params.getValues());
+      log.info("결재승인PDF 파일 찾기 SQL: {}", sql);
+      log.info("SQL Parameters: {}", params.getValues());
       List<Map<String, Object>> result = sqlRunner.getRows(sql, params);
 
       if (!result.isEmpty() && result.get(0).get("filename") != null) {
@@ -230,8 +227,8 @@ public class PaymentDetailService {
 
     try {
       // SQL 실행 후 결과 조회
-//      log.info("첨부파일 PDF 파일 찾기 SQL: {}", sql);
-//      log.info("SQL Parameters: {}", params.getValues());
+      log.info("첨부파일 PDF 파일 찾기 SQL: {}", sql);
+      log.info("SQL Parameters: {}", params.getValues());
       List<Map<String, Object>> result = sqlRunner.getRows(sql, params);
 
       if (!result.isEmpty() && result.get(0).get("filename") != null) {

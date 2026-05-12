@@ -310,13 +310,13 @@
         textColor: 'white'
        });
       });
-      setTimeout(() => _this.calendar.render(), 500);
+      setTimeout(() => _this.calendar.render(), 300);
      }).catch(err => console.error('공휴일 데이터를 가져오는 데 실패했습니다:', err));
 
      _this.calendar.render();
     }
 
-// ✅ 월별 결재현황 로드
+    // ✅ 월별 결재현황 로드
     loadCalendarEvents(startStr, endStr) {
      let _this = this;
 

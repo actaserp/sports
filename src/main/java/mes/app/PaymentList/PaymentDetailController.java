@@ -6,10 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import mes.app.PaymentList.service.PaymentDetailService;
 import mes.app.common.TenantContext;
+import mes.app.files.NcpObjectStorageService;
 import mes.domain.entity.User;
 import mes.domain.model.AjaxResult;
-//import mes.domain.repository.approval.TB_AA010ATCHRepository;
-//import mes.domain.repository.approval.tb_aa010Repository;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -17,12 +16,10 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.util.IOUtils;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
@@ -33,12 +30,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 @Slf4j
 @RestController
@@ -47,6 +45,9 @@ public class PaymentDetailController {  //결재 할 내역
 
   @Autowired
   PaymentDetailService paymentDetailService;
+
+  @Autowired
+  NcpObjectStorageService storageService;
 
   @GetMapping("/read")
   public AjaxResult getPaymentList(@RequestParam(value = "startDate") String startDate,
@@ -140,146 +141,145 @@ public class PaymentDetailController {  //결재 할 내역
     return result;
   }
 
+  /*@GetMapping("/pdf")
+  public void getPdf(@RequestParam("filepath") String filepath, HttpServletResponse response) {
+    try {
+      log.info("전표 PDF 요청: filepath={}", filepath);  // ← 추가
 
-  // 날짜 포맷
-  private void formatDateField(Map<String, Object> item, String fieldName) {
-    Object dateValue = item.get(fieldName);
-    if (dateValue instanceof String) {
-      String dateStr = (String) dateValue;
-      try {
-        if (dateStr.length() == 8) { // "yyyyMMdd" 형식인지 확인
-          String formattedDate = dateStr.substring(0, 4) + "-" + dateStr.substring(4, 6) + "-" + dateStr.substring(6, 8);
-          item.put(fieldName, formattedDate);
-        } else {
-          item.put(fieldName, "잘못된 날짜 형식");
+      if (filepath == null || filepath.isBlank()) {
+        log.warn("filepath 없음");  // ← 추가
+        response.sendError(HttpServletResponse.SC_NOT_FOUND, "파일 없음");
+        return;
+      }
+
+      if (filepath.startsWith("sports/")) {
+        log.info("NCP 다운로드 시작: {}", filepath);  // ← 추가
+        try (ResponseInputStream<GetObjectResponse> s3Stream = storageService.download(filepath)) {
+          response.setContentType("application/pdf");
+          response.setHeader("Content-Disposition", "inline; filename=\"file.pdf\"");
+          s3Stream.transferTo(response.getOutputStream());
+          response.flushBuffer();
+          log.info("NCP 다운로드 완료: {}", filepath);  // ← 추가
         }
-      } catch (Exception ex) {
-        log.error("{} 변환 중 오류 발생: {}", fieldName, ex.getMessage());
-        item.put(fieldName, "잘못된 날짜 형식");
+      } else {
+        log.info("로컬 파일 읽기: {}", filepath);  // ← 추가
+        Path pdfPath = Paths.get(filepath);
+        if (!Files.exists(pdfPath)) {
+          log.warn("로컬 파일 없음: {}", pdfPath);  // ← 추가
+          response.sendError(HttpServletResponse.SC_NOT_FOUND, "파일 없음");
+          return;
+        }
+        String filename = pdfPath.getFileName().toString();
+        response.setContentType("application/pdf");
+        response.setHeader("Content-Disposition", "inline; filename*=UTF-8''" +
+                                                    URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20"));
+        try (BufferedInputStream in = new BufferedInputStream(new FileInputStream(pdfPath.toFile()));
+             BufferedOutputStream out = new BufferedOutputStream(response.getOutputStream())) {
+          byte[] buffer = new byte[8192];
+          int bytesRead;
+          while ((bytesRead = in.read(buffer)) != -1) out.write(buffer, 0, bytesRead);
+          out.flush();
+          log.info("로컬 파일 전송 완료: {}", filepath);  // ← 추가
+        }
       }
+    } catch (Exception e) {
+      log.error("전표 PDF 오류: filepath={}, error={}", filepath, e.getMessage(), e);
+      try { response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); } catch (Exception ignored) {}
+    }
+  }*/
+
+  @GetMapping("/pdf")
+  public void getPdf(@RequestParam("filepath") String filepath, HttpServletResponse response) {
+    try {
+      log.info("PDF 요청 filepath: {}", filepath);
+
+      if (filepath == null || filepath.isBlank()) {
+        response.sendError(HttpServletResponse.SC_NOT_FOUND, "파일 없음");
+        return;
+      }
+
+      if (filepath.startsWith("sports/")) {
+        // ✅ NCP 처리
+        log.info("NCP에서 다운로드 시도: {}", filepath);
+        try (ResponseInputStream<GetObjectResponse> s3Stream = storageService.download(filepath)) {
+          log.info("NCP 다운로드 성공");
+          response.setContentType("application/pdf");
+          response.setHeader("Content-Disposition", "inline; filename=\"file.pdf\"");
+          response.setHeader("X-Frame-Options", "SAMEORIGIN");
+          s3Stream.transferTo(response.getOutputStream());
+          response.flushBuffer();
+        }
+      } else {
+        // ✅ 로컬 파일 처리 추가
+        log.info("로컬 파일 읽기: {}", filepath);
+        Path pdfPath = Paths.get(filepath);
+        if (!Files.exists(pdfPath)) {
+          log.warn("로컬 파일 없음: {}", pdfPath);
+          response.sendError(HttpServletResponse.SC_NOT_FOUND, "파일 없음");
+          return;
+        }
+        String filename = pdfPath.getFileName().toString();
+        response.setContentType("application/pdf");
+        response.setHeader("Content-Disposition", "inline; filename*=UTF-8''" +
+                                                    URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20"));
+        response.setHeader("X-Frame-Options", "SAMEORIGIN");
+        try (BufferedInputStream in = new BufferedInputStream(new FileInputStream(pdfPath.toFile()));
+             BufferedOutputStream out = new BufferedOutputStream(response.getOutputStream())) {
+          byte[] buffer = new byte[8192];
+          int bytesRead;
+          while ((bytesRead = in.read(buffer)) != -1) out.write(buffer, 0, bytesRead);
+          out.flush();
+          log.info("로컬 파일 전송 완료: {}", filepath);
+        }
+      }
+    } catch (Exception e) {
+      log.error("PDF 오류: filepath={}, error={}", filepath, e.getMessage(), e);
+      try { response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); } catch (Exception ignored) {}
     }
   }
 
-  @RequestMapping(value = "/pdf", method = RequestMethod.GET)
-  public ResponseEntity<Resource> getPdf(@RequestParam("appnum") String appnum) {
+  @GetMapping("/pdf2")
+  public void getPdf2(@RequestParam("filepath") String filepath, HttpServletResponse response) {
     try {
-    //  log.info("PDF 조회 요청: appnum={}", appnum);
+      log.info("첨부 PDF 요청 filepath: {}", filepath);
 
-      // DB에서 PDF 파일명 조회
-      Optional<String> optionalPdfFileName = paymentDetailService.findPdfFilenameByRealId(appnum);
-      if (optionalPdfFileName.isEmpty()) {
-        log.warn("PDF 파일명을 찾을 수 없음: appnum={}", appnum);
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+      if (filepath == null || filepath.isBlank()) {
+        response.sendError(HttpServletResponse.SC_NOT_FOUND, "파일 없음");
+        return;
       }
 
-      // 파일명 그대로 사용
-      String pdfFileName = optionalPdfFileName.get();
-   //   log.info("사용 파일명: {}", pdfFileName);
-
-      // 운영체제별 저장 경로 설정
-      String osName = System.getProperty("os.name").toLowerCase();
-      String uploadDir = osName.contains("win") ? "C:\\Temp\\APP\\S_KRU\\"
-          : System.getProperty("user.home") + "/APP/S_KRU";
-
-      // PDF 파일 경로 설정 및 존재 여부 확인
-      Path pdfPath = Paths.get(uploadDir, pdfFileName);
-    //  log.info("PDF 파일 경로: {}", pdfPath.toString());
-
-      if (!Files.exists(pdfPath)) {
-        log.warn("파일이 존재하지 않음: {}", pdfPath.toString());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+      if (filepath.startsWith("sports/")) {
+        log.info("NCP에서 다운로드 시도: {}", filepath);
+        try (ResponseInputStream<GetObjectResponse> s3Stream = storageService.download(filepath)) {
+          log.info("NCP 다운로드 성공");
+          response.setContentType("application/pdf");
+          response.setHeader("Content-Disposition", "inline; filename=\"file.pdf\"");
+          response.setHeader("X-Frame-Options", "SAMEORIGIN"); // ✅ 추가
+          s3Stream.transferTo(response.getOutputStream());
+          response.flushBuffer();
+        }
+      } else {
+        // 로컬 파일 처리
+        Path pdfPath = Paths.get(filepath);
+        if (!Files.exists(pdfPath)) {
+          response.sendError(HttpServletResponse.SC_NOT_FOUND, "파일 없음");
+          return;
+        }
+        String filename = pdfPath.getFileName().toString();
+        response.setContentType("application/pdf");
+        response.setHeader("Content-Disposition", "inline; filename*=UTF-8''" +
+                                                    URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20"));
+        try (BufferedInputStream in = new BufferedInputStream(new FileInputStream(pdfPath.toFile()));
+             BufferedOutputStream out = new BufferedOutputStream(response.getOutputStream())) {
+          byte[] buffer = new byte[8192];
+          int bytesRead;
+          while ((bytesRead = in.read(buffer)) != -1) out.write(buffer, 0, bytesRead);
+          out.flush();
+        }
       }
-
-      // 파일 정보 로깅
-      File file = pdfPath.toFile();
-    //  log.info("파일 존재 확인 완료 - 파일 크기: {} bytes", file.length());
-
-      // PDF 파일을 Resource로 변환 후 응답
-      Resource resource = new FileSystemResource(file);
-   //   log.info("Resource 변환 완료, 파일 응답 준비 시작");
-
-      HttpHeaders headers = new HttpHeaders();
-      headers.setContentType(MediaType.APPLICATION_PDF);
-      headers.setContentDisposition(ContentDisposition.inline().filename(pdfFileName, StandardCharsets.UTF_8).build());
-
-      // `X-Frame-Options` 제거 (필요한 경우 추가 가능)
-      headers.add("X-Frame-Options", "ALLOW-FROM http://localhost:8020");
-      headers.add("Access-Control-Allow-Origin", "*");  // 모든 도메인 허용
-      headers.add("Access-Control-Allow-Methods", "GET, OPTIONS");
-      headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-     // log.info("PDF 응답 완료 - 파일명: {}, 크기: {} bytes", pdfFileName, file.length());
-
-      return ResponseEntity.ok()
-          .headers(headers)
-          .contentLength(file.length())
-          .body(resource);
-
     } catch (Exception e) {
-      log.error("서버 내부 오류 발생: appnum={}, message={}", appnum, e.getMessage(), e);
-      return ResponseEntity.internalServerError().build();
-    }
-  }
-
-  //첨부파일
-  @RequestMapping(value = "/pdf2", method = RequestMethod.GET)
-  public ResponseEntity<Resource> getPdf2(@RequestParam("appnum") String appnum) {
-    try {
-     // log.info("PDF 조회 요청: appnum={}", appnum);
-
-      // DB에서 PDF 파일명 조회
-      Optional<String> optionalPdfFileName = paymentDetailService.findPdfFilenameByRealId2(appnum);
-      if (optionalPdfFileName.isEmpty()) {
-        log.warn("PDF 파일명을 찾을 수 없음: appnum={}", appnum);
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-      }
-
-      // 파일명 그대로 사용
-      String pdfFileName = optionalPdfFileName.get();
-      log.info("사용 파일명: {}", pdfFileName);
-
-      // 운영체제별 저장 경로 설정
-      String osName = System.getProperty("os.name").toLowerCase();
-      String uploadDir = osName.contains("win") ? "C:\\Temp\\APP\\S_KRU\\"
-          : System.getProperty("user.home") + "/APP/S_KRU";
-
-      // PDF 파일 경로 설정 및 존재 여부 확인
-      Path pdfPath = Paths.get(uploadDir, pdfFileName);
-     // log.info("PDF 파일 경로: {}", pdfPath.toString());
-
-      if (!Files.exists(pdfPath)) {
-        log.warn("파일이 존재하지 않음: {}", pdfPath.toString());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-      }
-
-      // 파일 정보 로깅
-      File file = pdfPath.toFile();
-     // log.info("파일 존재 확인 완료 - 파일 크기: {} bytes", file.length());
-
-      // PDF 파일을 Resource로 변환 후 응답
-      Resource resource = new FileSystemResource(file);
-      //log.info("Resource 변환 완료, 파일 응답 준비 시작");
-
-      HttpHeaders headers = new HttpHeaders();
-      headers.setContentType(MediaType.APPLICATION_PDF);
-      headers.setContentDisposition(ContentDisposition.inline().filename(pdfFileName, StandardCharsets.UTF_8).build());
-
-      // `X-Frame-Options` 제거 (필요한 경우 추가 가능)
-      headers.add("X-Frame-Options", "ALLOW-FROM http://localhost:8020");
-      headers.add("Access-Control-Allow-Origin", "*");  // 모든 도메인 허용
-      headers.add("Access-Control-Allow-Methods", "GET, OPTIONS");
-      headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-      //log.info("PDF 응답 완료 - 파일명: {}, 크기: {} bytes", pdfFileName, file.length());
-
-      return ResponseEntity.ok()
-          .headers(headers)
-          .contentLength(file.length())
-          .body(resource);
-
-    } catch (Exception e) {
-      log.error("서버 내부 오류 발생: appnum={}, message={}", appnum, e.getMessage(), e);
-      return ResponseEntity.internalServerError().build();
+      log.error("첨부 PDF 오류: filepath={}, error={}", filepath, e.getMessage(), e);
+      try { response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); } catch (Exception ignored) {}
     }
   }
 
