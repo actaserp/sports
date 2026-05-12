@@ -3,11 +3,10 @@ package mes.app.PaymentList;
 import lombok.extern.slf4j.Slf4j;
 import mes.app.PaymentList.service.ApprovalListService;
 import mes.app.common.TenantContext;
+import mes.app.files.NcpObjectStorageService;
 import mes.domain.entity.User;
 import mes.domain.model.AjaxResult;
 import mes.domain.repository.UserCodeRepository;
-//import mes.domain.repository.approval.TB_AA010ATCHRepository;
-//import mes.domain.repository.approval.tb_aa010Repository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
@@ -16,6 +15,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -37,6 +38,9 @@ public class ApprovalListController { //결재목록
 
   @Autowired
   private ApprovalListService approvalListService;
+
+  @Autowired
+  private NcpObjectStorageService storageService;
 
   @GetMapping("/read")
   public AjaxResult getPaymentList(@RequestParam(value = "startDate") String startDate,
@@ -246,110 +250,77 @@ public class ApprovalListController { //결재목록
   @PostMapping("/downloader")
   public ResponseEntity<?> downloadFile(@RequestBody List<Map<String, Object>> downloadList) throws IOException {
 
-    log.info("다운로드 들어옴");
+    log.info("다운로드 요청: {}건", downloadList.size());
 
-    // 파일 목록과 파일 이름을 담을 리스트 초기화
-    List<File> filesToDownload = new ArrayList<>();
+    // 각 파일의 바이트 데이터와 파일명을 담을 리스트
+    List<byte[]> fileDataList = new ArrayList<>();
     List<String> fileNames = new ArrayList<>();
 
-    // ZIP 파일 이름을 설정할 변수 초기화
-    String tketcrdtm = null;
-    String tketnm = null;
-
-    // 파일을 메모리에 쓰기
     for (Map<String, Object> fileInfo : downloadList) {
-      String filePath = (String) fileInfo.get("filepath");    // 파일 경로
-      String fileName = (String) fileInfo.get("filesvnm");    // 파일 이름(uuid)
-      String originFileName = (String) fileInfo.get("fileornm");  //파일 원본이름(origin Name)
+      String filePath = (String) fileInfo.get("filepath");
+      String fileName = (String) fileInfo.get("fileornm");
 
-      File file = new File(filePath); // filePath = 전체 경로
+      if (filePath == null || filePath.isBlank()) continue;
 
-      // 파일이 실제로 존재하는지 확인
-      if (file.exists()) {
-        filesToDownload.add(file);
-        fileNames.add(fileName); // 다운로드 받을 파일 이름을 originFileName으로 설정
+      try {
+        byte[] data;
+        if (filePath.startsWith("sports/")) {
+          // NCP Object Storage에서 다운로드
+          try (ResponseInputStream<GetObjectResponse> s3Stream = storageService.download(filePath)) {
+            data = s3Stream.readAllBytes();
+          }
+        } else {
+          // 로컬 파일
+          File file = new File(filePath);
+          if (!file.exists()) {
+            log.warn("로컬 파일 없음: {}", filePath);
+            continue;
+          }
+          data = Files.readAllBytes(file.toPath());
+        }
+        fileDataList.add(data);
+        fileNames.add(fileName != null ? fileName : new File(filePath).getName());
+      } catch (Exception e) {
+        log.error("파일 읽기 실패: {}", filePath, e);
       }
     }
 
-    // 파일이 없는 경우
-    if (filesToDownload.isEmpty()) {
+    if (fileDataList.isEmpty()) {
       return ResponseEntity.notFound().build();
     }
 
-    // 파일이 하나인 경우 그 파일을 바로 다운로드
-    if (filesToDownload.size() == 1) {
-      File file = filesToDownload.get(0);
-      String originFileName = fileNames.get(0); // originFileName 가져오기
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
 
-      HttpHeaders headers = new HttpHeaders();
-      String encodedFileName = URLEncoder.encode(originFileName, StandardCharsets.UTF_8.toString()).replaceAll("\\+", "%20");
-      headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=*''" + encodedFileName);
-      headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-      headers.setContentLength(file.length());
-
-      ByteArrayResource resource = new ByteArrayResource(Files.readAllBytes(file.toPath()));
-
-      return ResponseEntity.ok()
-          .headers(headers)
-          .body(resource);
+    // 단일 파일: 그대로 반환
+    if (fileDataList.size() == 1) {
+      String encodedFileName = URLEncoder.encode(fileNames.get(0), StandardCharsets.UTF_8).replace("+", "%20");
+      headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFileName);
+      return ResponseEntity.ok().headers(headers).body(new ByteArrayResource(fileDataList.get(0)));
     }
 
-    String zipFileName = (tketcrdtm != null && tketnm != null) ? tketcrdtm + "_" + tketnm + ".zip" : "download.zip";
-
-    // 파일이 두 개 이상인 경우 ZIP 파일로 묶어서 다운로드
+    // 복수 파일: ZIP으로 묶어서 반환
     ByteArrayOutputStream zipBaos = new ByteArrayOutputStream();
     try (ZipOutputStream zipOut = new ZipOutputStream(zipBaos)) {
-
-      Set<String> addedFileNames = new HashSet<>(); // 이미 추가된 파일 이름을 저장할 Set
-      int fileCount = 1;
-
-      for (int i = 0; i < filesToDownload.size(); i++) {
-        File file = filesToDownload.get(i);
-        String originFileName = fileNames.get(i); // originFileName 가져오기
-
-        // 파일 이름이 중복될 경우 숫자를 붙여 고유한 이름으로 만듦
-        String uniqueFileName = originFileName;
-        while (addedFileNames.contains(uniqueFileName)) {
-          uniqueFileName = originFileName.replace(".", "_" + fileCount++ + ".");
+      Set<String> usedNames = new HashSet<>();
+      for (int i = 0; i < fileDataList.size(); i++) {
+        String name = fileNames.get(i);
+        String uniqueName = name;
+        int count = 1;
+        while (usedNames.contains(uniqueName)) {
+          int dot = name.lastIndexOf('.');
+          uniqueName = (dot > 0) ? name.substring(0, dot) + "_" + count++ + name.substring(dot) : name + "_" + count++;
         }
-
-        // 고유한 파일 이름을 Set에 추가
-        addedFileNames.add(uniqueFileName);
-
-        try (FileInputStream fis = new FileInputStream(file)) {
-          ZipEntry zipEntry = new ZipEntry(originFileName);
-          zipOut.putNextEntry(zipEntry);
-
-          byte[] buffer = new byte[1024];
-          int len;
-          while ((len = fis.read(buffer)) > 0) {
-            zipOut.write(buffer, 0, len);
-          }
-
-          zipOut.closeEntry();
-        } catch (IOException e) {
-          e.printStackTrace();
-          return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        usedNames.add(uniqueName);
+        zipOut.putNextEntry(new ZipEntry(uniqueName));
+        zipOut.write(fileDataList.get(i));
+        zipOut.closeEntry();
       }
-
-      zipOut.finish();
-    } catch (IOException e) {
-      e.printStackTrace();
-      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 
-    ByteArrayResource zipResource = new ByteArrayResource(zipBaos.toByteArray());
-
-    HttpHeaders headers = new HttpHeaders();
-    String encodedZipFileName = URLEncoder.encode(zipFileName, StandardCharsets.UTF_8.toString()).replaceAll("\\+", "%20");
-    headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=*''" + encodedZipFileName);
-    headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-    headers.setContentLength(zipResource.contentLength());
-
-    return ResponseEntity.ok()
-        .headers(headers)
-        .body(zipResource);
+    String encodedZipName = URLEncoder.encode("download.zip", StandardCharsets.UTF_8).replace("+", "%20");
+    headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedZipName);
+    return ResponseEntity.ok().headers(headers).body(new ByteArrayResource(zipBaos.toByteArray()));
   }
 
 }

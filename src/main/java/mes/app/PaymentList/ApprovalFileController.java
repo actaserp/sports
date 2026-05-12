@@ -19,7 +19,7 @@ public class ApprovalFileController {
 	@Autowired
 	private ApprovalFilePDFService pdfService;
 
-/*	@GetMapping
+	@GetMapping
 	public ResponseEntity<String> generatePdf(@RequestParam String key) {
 		try {
 			String originalKey = key;
@@ -66,10 +66,10 @@ public class ApprovalFileController {
 			log.error("오류: key={}, error={}", key, e.getMessage(), e);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("오류: " + e.getMessage());
 		}
-	}*/
+	}
+}
 
-
-	@GetMapping
+/*	@GetMapping
 	public ResponseEntity<String> generatePdf(@RequestParam String key,
 																						@RequestParam(required = false) String spjangcd,
 																						@RequestParam(required = false) String dbKey) {
@@ -136,6 +136,4 @@ public class ApprovalFileController {
 		} finally {
 			TenantContext.clear();
 		}
-	}
-
-}
+	}*/

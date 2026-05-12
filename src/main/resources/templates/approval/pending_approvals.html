@@ -711,13 +711,57 @@
     });
    }
 
+   function downloadFiles(downloadList, url) {
+    let xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('X-CSRF-Token', document.querySelector('[name=_csrf]').value);
+    xhr.responseType = 'blob';
+
+    xhr.onload = function () {
+     if (xhr.status === 200) {
+      let blob = xhr.response;
+      let link = document.createElement('a');
+      let downloadUrl = window.URL.createObjectURL(blob);
+      let fileName = 'download';
+
+      let contentDisposition = xhr.getResponseHeader('Content-Disposition');
+      if (contentDisposition) {
+       let starMatch = /filename\*=UTF-8''([^;\n]*)/.exec(contentDisposition);
+       if (starMatch) {
+        fileName = decodeURIComponent(starMatch[1]);
+       } else {
+        let match = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+        if (match) fileName = decodeURIComponent(match[1].replace(/['"]/g, ''));
+       }
+      }
+
+      link.href = downloadUrl;
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+     } else if (xhr.status === 404) {
+      Alert.alert('', '파일이 존재하지 않습니다.');
+     } else {
+      Alert.alert('', '다운로드 중 오류가 발생했습니다.');
+     }
+    };
+
+    xhr.onerror = function () {
+     Alert.alert('', '다운로드 요청 중 오류가 발생했습니다.');
+    };
+
+    xhr.send(JSON.stringify(downloadList));
+   }
+
    function downloadFile(fileList) {
     if (!fileList || fileList.length === 0) {
-     console.warn("다운로드할 파일이 없습니다.");
+     Alert.alert('', '다운로드할 파일이 없습니다.');
      return;
     }
-
-    console.log("다운로드할 파일 목록:", fileList);
 
     let downloadList = fileList.map(file => ({
      filepath: file.filepath,
@@ -725,10 +769,7 @@
      fileornm: file.fileornm
     }));
 
-    let downloadUrl = '/api/PaymentList/downloader';
-
-    // 파일 리스트를 서버에 전송하여 다운로드 실행
-    downloadFiles(downloadList, downloadUrl);
+    downloadFiles(downloadList, withCtx('/api/PaymentList/downloader'));
    }
 
    // 폼 초기화 함수
