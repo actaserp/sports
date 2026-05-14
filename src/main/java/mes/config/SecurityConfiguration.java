@@ -88,7 +88,7 @@ public class SecurityConfiguration {
                                 // API 및 외부 연동
                                 "/useridchk/**", "/user-auth/**", "/user-auth/save",
                                 "/popbill/webhook", "/api/transaction/input/**",
-                                "/api/das_device", "/authentication/**", "/api/common/**", "/appkey"
+                                "/api/das_device", "/authentication/**", "/api/common/**"
                         ).permitAll()
                         .antMatchers("/setup").hasAuthority("admin")
                         .anyRequest().authenticated()
@@ -111,7 +111,7 @@ public class SecurityConfiguration {
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login")
                         .invalidateHttpSession(true)
-                        .deleteCookies(sessionCookieName)
+                        .deleteCookies(sessionCookieName, "MES_AUTO_LOGIN")
                         .clearAuthentication(true)
                         .permitAll()
                 );

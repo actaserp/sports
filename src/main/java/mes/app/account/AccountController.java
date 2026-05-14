@@ -142,12 +142,13 @@ public class AccountController {
 		handler.logout(request, response, auth);
 
 		// ✅ 자동로그인 쿠키 제거
+		String ctx = request.getContextPath();
+		String cookiePath = ctx.isEmpty() ? "/" : ctx;
 		Cookie clearCookie = new Cookie("MES_AUTO_LOGIN", null);
-		clearCookie.setMaxAge(0);     // 즉시 만료
-		clearCookie.setPath("/");     // 전체 경로 적용
+		clearCookie.setMaxAge(0);
+		clearCookie.setPath(cookiePath);
 		response.addCookie(clearCookie);
 
-		String ctx = request.getContextPath(); // "/mes"
 		response.sendRedirect(ctx + "/login");
 	}
 
