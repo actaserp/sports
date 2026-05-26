@@ -251,8 +251,8 @@ public class SlipStatusController {  //전표입력현황
 				"4", "결의양식2(상단)",
 				"5", "결의양식3(세입세출)",
 				"6", "결의양식3(대체)",
-				"7", "전표(산출내역):하단결재",
-				"8", "결의양식(한자)"
+				"7", "전표(산출내역):하단결재"
+//				"8", "결의양식(한자)"
 			);
 
 			String pdfName = fileNameMap.getOrDefault(printType, "전표");
