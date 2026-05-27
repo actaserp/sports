@@ -338,7 +338,7 @@ public class PopupController {
 
 	}
 
-	@RequestMapping("/search_Comp")
+	/*@RequestMapping("/search_Comp")
 	public AjaxResult getSearchComp(
 			@RequestParam(value = "compCode", required = false) String compCode,
 			@RequestParam(value = "compName", required = false) String compName,
@@ -383,11 +383,55 @@ public class PopupController {
 		}
 
 		if (business_number != null && !business_number.isEmpty()) {
-			sql += " AND \"BusinessNumber\" ILIKE :business_number ";
+			sql += " AND saupnum ILIKE :business_number ";
 			paramMap.addValue("business_number", "%" + business_number + "%");
 		}
 
 		sql += " ORDER BY \"Name\" ASC ";
+
+		result.data = this.sqlRunner.getRows(sql, paramMap);
+
+		return result;
+	}*/
+	@RequestMapping("/search_Comp")
+	public AjaxResult getSearchComp(
+		@RequestParam(value = "compCode", required = false) String compCode,
+		@RequestParam(value = "compName", required = false) String compName,
+		@RequestParam(value = "business_number", required = false) String business_number){
+
+		String spjangcd = TenantContext.get();
+		MapSqlParameterSource paramMap = new MapSqlParameterSource();
+		paramMap.addValue("compCode", compCode);
+		paramMap.addValue("spjangcd", spjangcd);
+		paramMap.addValue("compName", compName);
+		paramMap.addValue("business_number", business_number);
+		AjaxResult result = new AjaxResult();
+
+		String sql = """
+			select 
+				cltnm as compname
+			 , cltcd as compcode
+			 , saupnum as business_number
+			 from tb_xclient
+			 where useyn = '0' OR useyn IS NULL
+			""";
+
+		if (compCode != null && !compCode.isEmpty()) {
+			sql += " AND cltcd ILIKE :compCode ";
+			paramMap.addValue("compCode", "%" + compCode + "%");
+		}
+
+		if (compName != null && !compName.isEmpty()) {
+			sql += " AND cltnm ILIKE :compName ";
+			paramMap.addValue("compName", "%" + compName + "%");
+		}
+
+		if (business_number != null && !business_number.isEmpty()) {
+			sql += " AND saupnum ILIKE :business_number ";
+			paramMap.addValue("business_number", "%" + business_number + "%");
+		}
+
+		sql += " ORDER BY cltnm ASC ";
 
 		result.data = this.sqlRunner.getRows(sql, paramMap);
 

@@ -66,6 +66,16 @@ public class SlipEntryController {	//전표등록
 
 	}
 
+	@GetMapping("/mssec")
+	public AjaxResult getMssec(){
+		List<Map<String, Object>> items = this.slipEntryService.getMssec();
+
+		AjaxResult result = new AjaxResult();
+		result.data = items;
+
+		return result;
+	}
+
 	@GetMapping("/getHeader")
 	public AjaxResult getHeader(@RequestParam(value="spdate")String spdate,
 															@RequestParam(value="spnum") String spnum){

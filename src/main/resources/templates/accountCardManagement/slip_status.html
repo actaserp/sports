@@ -322,11 +322,60 @@
                     </td>
                   </tr>
 
-                  <!-- Row 5: 비고 -->
+                  <!-- Row 5: 비고 + 합계 테이블 -->
                   <tr>
                     <th><label for="remark">비고</label></th>
-                    <td colspan="11">
-                      <textarea class="wp100" id="remark" name="remark" placeholder="비고" style="height:200px;"></textarea>
+                    <td colspan="11" style="padding:0 !important;">
+                      <div style="display:flex; align-items:stretch; gap:0;">
+
+                        <!-- 비고 textarea (좌측 70%) -->
+                        <textarea class="wp100" id="remark" name="remark"
+                                  placeholder="비고"
+                                  style="flex:0 0 70%; height:200px; resize:none;
+                       border:none; border-right:1px solid #dee2e6;
+                       padding:6px 8px; font-size:inherit;
+                       box-sizing:border-box;"></textarea>
+
+                        <!-- 합계 테이블 (우측 30%) -->
+                        <div style="flex:0 0 30%; border-left:1px solid #dee2e6;">
+                          <table class="view-table" style="width:100%; margin:0; height:100%; table-layout:fixed;">
+                            <colgroup>
+                              <col style="width:40%">  <!-- 차변/대변/차액 라벨 -->
+                              <col style="width:60%">  <!-- 금액 -->
+                            </colgroup>
+                            <tbody>
+                            <tr>
+                              <th style="text-align:center; white-space:nowrap;">차변</th>
+                              <td style="padding:0 8px;">
+                                <input id="sum_dramt" readonly type="text" value="0"
+                                       style="width:100%; text-align:right; border:none;
+                        background:transparent; font-size:inherit;
+                        font-weight:600; color:#333;"/>
+                              </td>
+                            </tr>
+                            <tr>
+                              <th style="text-align:center; white-space:nowrap;">대변</th>
+                              <td style="padding:0 8px;">
+                                <input id="sum_cramt" readonly type="text" value="0"
+                                       style="width:100%; text-align:right; border:none;
+                        background:transparent; font-size:inherit;
+                        font-weight:600; color:#333;"/>
+                              </td>
+                            </tr>
+                            <tr>
+                              <th style="text-align:center; white-space:nowrap;">차액</th>
+                              <td style="padding:0 8px;">
+                                <input id="sum_diff" readonly type="text" value="0"
+                                       style="width:100%; text-align:right; border:none;
+                        background:transparent; font-size:inherit;
+                        font-weight:700;"/>
+                              </td>
+                            </tr>
+                            </tbody>
+                          </table>
+                        </div>
+
+                      </div>
                     </td>
                   </tr>
 
@@ -374,6 +423,7 @@
                     <td>
                       <div style="display:flex; gap:4px;">
                         <input name="acccd" placeholder="코드" readonly style="width:70px;" type="text"/>
+                        <input name="acnflag" placeholder="계좌필여부" type="hidden"/>
                         <input name="accnm" placeholder="관명(계정)" style="flex:1; width:150px !important;" type="text"/>
                       </div>
                     </td>
@@ -403,49 +453,73 @@
                       </a>
                     </td>
                   </tr>
+
+                  <tr class="slip-line-template slip-detail-template" style="display:none;">
+                    <td colspan="8" style="padding:0; border-top:none;">
+                      <div style="display:flex; align-items:stretch;
+                background:var(--color-background-secondary);
+                border-top:0.5px dashed var(--color-border-secondary);">
+
+                        <div style="width:14px; flex-shrink:0;
+                  border-left:2px solid var(--color-border-secondary);
+                  margin-left:14px;"></div>
+
+                        <div style="display:flex; align-items:center; flex:1; padding:4px 4px;">
+
+                          <!-- 거래처 -->
+                          <div style="display:flex; align-items:center; flex:1; min-width:0;
+                    border-right:0.5px solid var(--color-border-tertiary); padding:0 8px;">
+          <span style="font-size:11px; font-weight:500; white-space:nowrap;
+                       color:var(--color-text-secondary); margin-right:6px; flex-shrink:0;">거래처</span>
+                            <input name="cltcd"  type="hidden"/>
+                            <input name="cltflag" type="hidden"/>
+                            <input name="cltnm" placeholder="거래처" type="text" class="btn-clt-search"
+                                   style=" border-bottom:1px solid #ccc; background:transparent;
+                        padding:0; height:26px; font-size:12px; min-width:0; width:100%;"/>
+                          </div>
+
+                          <!-- 재원 -->
+                          <div style="display:flex; align-items:center; flex:1; min-width:0;
+                    border-right:0.5px solid var(--color-border-tertiary); padding:0 8px;">
+          <span style="font-size:11px; font-weight:500; white-space:nowrap;
+                       color:var(--color-text-secondary); margin-right:6px; flex-shrink:0;">재원</span>
+                            <input name="msseccd" type="hidden"/>
+                            <input name="mssecnm" placeholder="재원" type="text" class="btn-mssec-search"
+                                   style=" border-bottom:1px solid #ccc; background:transparent;
+                        padding:0; height:26px; font-size:12px; min-width:0; width:100%;"/>
+                          </div>
+
+                          <!-- 카드 -->
+                          <div style="display:flex; align-items:center; flex:1; min-width:0;
+                    border-right:0.5px solid var(--color-border-tertiary); padding:0 8px;">
+          <span style="font-size:11px; font-weight:500; white-space:nowrap;
+                       color:var(--color-text-secondary); margin-right:6px; flex-shrink:0;">카드</span>
+                            <input name="cardcd" type="hidden"/>
+                            <input name="cardnm" placeholder="카드" type="text" class="btn-card-search"
+                                   style=" border-bottom:1px solid #ccc; background:transparent;
+                        padding:0; height:26px; font-size:12px; min-width:0; width:100%;"/>
+                          </div>
+
+                          <!-- 계좌 -->
+                          <div style="display:flex; align-items:center; flex:1; min-width:0; padding:0 8px;">
+          <span class="bank-label" style="font-size:11px; font-weight:500; white-space:nowrap;
+                       color:var(--color-text-secondary); margin-right:6px; flex-shrink:0;">계좌</span>
+                            <input name="bankcd" type="hidden"/>
+                            <input name="banknm" placeholder="계좌" type="text" class="btn-bank-search"
+                                   style=" border-bottom:1px solid #ccc; background:transparent;
+                        padding:0; height:26px; font-size:12px; min-width:0; width:100%;"/>
+                          </div>
+
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+
                   </tbody>
                 </table>
               </div>
-
-              <!--&lt;!&ndash; ── 합계 테이블 (우측 정렬) ── &ndash;&gt;
-              <div style="display:flex; justify-content:flex-end; margin-top:4px;">
-                <table class="write-table" style="width:320px;">
-                  <thead>
-                  <tr>
-                    <th style="text-align:center;">구분</th>
-                    <th style="text-align:center;">차변금액</th>
-                    <th style="text-align:center;">대변금액</th>
-                    <th style="text-align:center;">차액</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                  <tr>
-                    <th style="text-align:center;">합계</th>
-                    <td style="text-align:right; padding:0 6px;">
-                      <input id="sum_dramt" readonly type="text" value="0"
-                             style="width:100%; text-align:right; border:none;
-                          background:transparent; font-size:inherit;
-                          font-weight:600; color:#333;"/>
-                    </td>
-                    <td style="text-align:right; padding:0 6px;">
-                      <input id="sum_cramt" readonly type="text" value="0"
-                             style="width:100%; text-align:right; border:none;
-                          background:transparent; font-size:inherit;
-                          font-weight:600; color:#333;"/>
-                    </td>
-                    <td style="text-align:right; padding:0 6px;">
-                      <input id="sum_diff" readonly type="text" value="0"
-                             style="width:100%; text-align:right; border:none;
-                          background:transparent; font-size:inherit;
-                          font-weight:700;"/>
-                    </td>
-                  </tr>
-                  </tbody>
-                </table>
-              </div>-->
             </div>
           </div>
-
         </section>
       </div>
     </div>
@@ -561,6 +635,11 @@
 </th:block>
 <th:block layout:fragment="scripts">
   <th:block th:replace="common/ax5_uploader :: ax5_uploader"></th:block>
+  <th:block th:replace="common/popup_company.html :: popup_company"></th:block>
+  <th:block th:replace="common/popup_account :: popup_account" />
+  <script th:src="@{/js/cycle/AccountInputHandler.js}"></script>
+  <th:block th:replace="common/popup_card :: popup_card" />
+  <script th:src="@{/js/cycle/CardInputHandler.js}"></script>
   <script type="text/javascript">
    class SlipStatusPage {
     constructor() {
@@ -571,6 +650,7 @@
      this.uploader = null;
      this.currentSlipId = null;
      this.lineIndex = 0;
+     this.mssecOptions = null;
      this.init();
     }
 
@@ -948,7 +1028,8 @@
         _this.addSlipLine(line.drcr || '1');
 
         // 방금 추가된 마지막 행에 데이터 바인딩
-        const $row = $('#slipLineTbody tr:not(.slip-line-template)').last();
+        const $row = $('#slipLineTbody tr:not(.slip-line-template)').filter(':not([data-detail-idx])').last();
+        const idx  = $row.attr('data-line-idx');
 
         $row.find('input[name^="spseq"]').val(line.spseq || '');
         $row.find('input[name^="acccd"]').val(line.acccd || '');
@@ -962,14 +1043,26 @@
         // $row.find('input[name^="hangcd"]').val(line.hangcd || '');
         // $row.find('input[name^="mokcd"]').val(line.mokcd || '');
 
-        // 금액 (포맷 적용)
-        const dramt = parseFloat(line.dramt || 0);
-        const cramt = parseFloat(line.cramt || 0);
-        $row.find('input[name^="dramt"]').val(dramt !== 0 ? dramt.toLocaleString() : '0');
-        $row.find('input[name^="cramt"]').val(cramt !== 0 ? cramt.toLocaleString() : '0');
+        // 금액 (포맷 적용) 부분 아래, applyDrcrRule 위에 추가
+        const accnmClean = (line.accnm || '').replace(/\s/g, '');
+        const hasValue   = line.cltnm || line.mssecnm || line.cardnm || line.banknm;
+        const isOpen     = accnmClean.includes('보통예금') || !!hasValue;
 
-        // 차대 규칙 재적용 (readonly 처리)
-        _this.applyDrcrRule($row);
+        const $detailRow = $(`tr[data-detail-idx="${idx}"]`);  // idx는 lineIndex
+        $detailRow[0].style.display = isOpen ? '' : 'none';
+
+        if (isOpen) {
+         $detailRow.find('input[name^="cltnm"]').val(line.cltnm   || '');
+         $detailRow.find('input[name^="cltcd"]').val(line.cltcd   || '');
+         $detailRow.find('input[name^="mssecnm"]').val(line.mssecnm || '');
+         $detailRow.find('input[name^="msseccd"]').val(line.msseccd || '');
+         $detailRow.find('input[name^="cardnm"]').val(line.cardnm  || '');
+         $detailRow.find('input[name^="cardcd"]').val(line.cardcd  || '');
+         $detailRow.find('input[name^="banknm"]').val(line.banknm  || '');
+         $detailRow.find('input[name^="bankcd"]').val(line.bankcd  || '');
+        }
+
+        _this.applyDrcrRule($row);  // ← 기존 코드 유지
        });
 
        // 합계 갱신
@@ -978,46 +1071,29 @@
      );
     }
 
-    fetchBankInfo(spdate, spnum) {
-     let _this = this;
-     const spdateFmt = (spdate || '').replace(/-/g, '');
-
-     AjaxUtil.getAsyncData(
-      _this.entry_url + '/getBankInfo',
-      { spdate: spdateFmt, spnum: spnum },
-      function (res) {
-       if (!res || !res.success || !res.data || res.data.length === 0) {
-        $('#bankInfoTbody').html('<tr><td colspan="2" style="color:#999; font-size:12px; padding:4px 6px;">계좌정보 없음</td></tr>');
-        return;
-       }
-
-       let html = '';
-       res.data.forEach(function (bank) {
-        const flagLabel = bank.bankflag === '1' ? '입금' : bank.bankflag === '2' ? '출금' : '';
-        html += `
-          <tr>
-            <td style="padding:3px 6px; font-size:12px; color:#666; white-space:nowrap;">${bank.banknm || ''}</td>
-            <td style="padding:3px 6px; font-size:12px;">
-              ${bank.accnum || ''}
-              ${flagLabel ? `<span style="margin-left:6px; font-size:11px; color:#888;">[${flagLabel}]</span>` : ''}
-            </td>
-          </tr>`;
-       });
-       $('#bankInfoTbody').html(html);
-      }
-     );
-    }
-
     // 행 추가 공통 함수
     addSlipLine(drcrVal = '1') {
      const $tbody = $('#slipLineTbody');
-     const $template = $tbody.find('.slip-line-template');
-     const $newRow = $template.clone().removeClass('slip-line-template').show();
+     const $template    = $tbody.find('.slip-line-template').not('.slip-detail-template').first();
+     const $detailTmpl  = $tbody.find('.slip-detail-template').first();
+
+     const $newRow    = $template.clone().removeClass('slip-line-template').show();
+     const $detailRow = $detailTmpl.clone().removeClass('slip-line-template slip-detail-template');
+     // 상세 행은 기본 숨김
+     $detailRow.hide();
+     // 상세 행과 메인 행 연결용 data 속성
+     const idx = this.lineIndex;
+     $newRow.attr('data-line-idx', idx);
+     $detailRow.attr('data-detail-idx', idx);
 
      // name에 index 부여
      $newRow.find('input, select').each(function () {
       const baseName = $(this).attr('name');
-      if (baseName) $(this).attr('name', `${baseName}_${this.lineIndex}`);
+      if (baseName) $(this).attr('name', `${baseName}_${idx}`);
+     });
+     $detailRow.find('input').each(function () {
+      const baseName = $(this).attr('name');
+      if (baseName) $(this).attr('name', `${baseName}_${idx}`);
      });
 
      $newRow.find('select[name^="drcr"]').val(drcrVal);
@@ -1027,8 +1103,124 @@
      $newRow.find('input[name^="cramt"]').val('0');
 
      $tbody.append($newRow);
+     $tbody.append($detailRow);  // 메인 행 바로 아래에 추가
+     // ── 핸들러 바인딩 ──
+     this.bindDetailHandlers($detailRow, idx);
+
      this.applyDrcrRule($newRow);
      this.lineIndex++;
+    }
+
+    bindDetailHandlers($detailRow, idx) {
+     let _this = this;
+
+     // ── 거래처 ──
+     const $cltInput  = $detailRow.find('input.btn-clt-search');
+     const $cltHidden = $detailRow.find('input[name^="cltcd"]');
+     const $cltFlag   = $detailRow.find('input[name^="cltflag"]');
+
+     const cltInputId  = `clt_nm_${idx}`;
+     const cltHiddenId = `clt_cd_${idx}`;
+     const cltFlagId   = `clt_flag_${idx}`;
+
+     $cltInput.attr('id', cltInputId);
+     $cltHidden.attr('id', cltHiddenId);
+     $cltFlag.attr('id', cltFlagId);
+
+     $cltInput.on('keydown', function(e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+
+      const poppage = new PopCompComponent();
+
+      poppage.show(function(item) {
+       $cltInput.val(item.compname || '');
+       $cltHidden.val(item.compcode || '');
+       $cltFlag.val(item.cltflag || '');
+
+       // 팝업 close() 완료 후 포커스 이동
+       setTimeout(() => {
+        $detailRow.find('input[name^="mssecnm"]').focus().select();
+       }, 200);
+      });
+     });
+
+     // ── 재원 ──
+     $detailRow.find('input.btn-mssec-search').on('keydown', function(e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+
+      _this.searchMssec($detailRow);  // ← $row 제거
+     });
+
+     // ── 카드 ──
+     const $cardInput  = $detailRow.find('input.btn-card-search');
+     const $cardHidden = $detailRow.find('input[name^="cardcd"]');
+
+     const cardInputId  = `card_nm_${idx}`;
+     const cardHiddenId = `card_cd_${idx}`;
+     $cardInput.attr('id', cardInputId);
+     $cardHidden.attr('id', cardHiddenId);
+
+     CardInputHandler.bind({
+      cardnumSelector: `#${cardInputId}`,
+      cardnmSelector:  `#${cardInputId}`,
+      cardidSelector:  `#${cardHiddenId}`,
+      minLength: 0,
+      onComplete: function(item) {
+       if (item) {
+        $cardInput.val( item.cardnum ||item.cardnm || '');
+        $cardHidden.val(item.cardid || '');
+       }
+       _this.focusAfterCard($detailRow, idx);
+      }
+     });
+
+// ── 계좌 ──
+     const $bankInput  = $detailRow.find('input.btn-bank-search');
+     const $bankHidden = $detailRow.find('input[name^="bankcd"]');
+
+     const bankInputId  = `bank_nm_${idx}`;
+     const bankHiddenId = `bank_cd_${idx}`;
+     $bankInput.attr('id', bankInputId);
+     $bankHidden.attr('id', bankHiddenId);
+
+     AccountInputHandler.bind({
+      accnumSelector: `#${bankInputId}`,
+      accidSelector:  `#${bankHiddenId}`,
+      minLength: 0,
+      onSelect: function() {
+       _this.focusNextAfterDetail($detailRow);
+      }
+     });
+    }
+    // 카드 선택 후 → acnflag 판단
+    focusAfterCard($detailRow, idx) {
+     const $mainRow = $(`tr[data-line-idx="${idx}"]`);
+     const acnflag  = $mainRow.find('input[name^="acnflag"]').val();
+
+     if (acnflag === '1') {
+      setTimeout(() => $detailRow.find('input[name^="banknm"]').focus().select(), 50);
+     } else {
+      this.focusNextAfterDetail($detailRow);
+     }
+    }
+
+// 상세행 완료 후 → 다음 메인행 관명으로
+    focusNextAfterDetail($detailRow) {
+     const idx      = $detailRow.attr('data-detail-idx');
+     const $mainRow = $(`tr[data-line-idx="${idx}"]`);
+     const $nextRow = $mainRow.nextAll('tr[data-line-idx]:visible').first();
+
+     if ($nextRow.length) {
+      setTimeout(() => $nextRow.find('input[name^="accnm"]').focus().select(), 50);
+     } else {
+      $('#addSlipLine').trigger('click');
+      setTimeout(() => {
+       const $newRow = $('#slipLineTbody tr[data-line-idx]:last');
+       $newRow.find('input[name^="accnm"]').focus().select();
+      }, 80);
+     }
     }
 
   // ── 사업명 팝업 ──
@@ -1149,7 +1341,8 @@
       autoGenerateColumns: false,
       columns: [
        {binding: 'acccd', header: '관코드', width: 100, align: 'center'},
-       {binding: 'accnm', header: '관명', width: '*', align: 'left'}
+       {binding: 'accnm', header: '관명', width: '*', align: 'left'},
+       {binding: 'acnflag', header: '계좌필수여부', visible: false}
       ],
       itemsSource: new wijmo.collections.CollectionView(dataList)
      });
@@ -1185,6 +1378,29 @@
     applyAccnmData(item, $row) {
      $row.find('input[name^="acccd"]').val(item.acccd || '');
      $row.find('input[name^="accnm"]').val(item.accnm || '');
+     $row.find('input[name^="acnflag"]').val(item.acnflag || '');
+
+     const idx        = $row.attr('data-line-idx');
+     const $detailRow = $(`tr[data-detail-idx="${idx}"]`);
+     const isOpen     = (item.accnm || '').replace(/\s/g, '').includes('보통예금');
+     const isBankReq  = item.acnflag === '1';
+
+     if (isOpen) {
+      $detailRow[0].style.display = '';
+
+      // 계좌 필수 라벨 색상 변경
+      const $bankLabel = $detailRow.find('span.bank-label');
+      $bankLabel.css('color', isBankReq
+       ? 'var(--color-text-danger)'
+       : 'var(--color-text-secondary)'
+      );
+      $detailRow.find('input[name^="banknm"]')
+      .attr('placeholder', isBankReq ? '계좌 (필수)' : '계좌');
+     } else {
+      $detailRow.find('input').val('');
+      $detailRow[0].style.display = 'none';
+     }
+
      setTimeout(() => $row.find('select[name^="drcr"]').focus(), 50);
     }
 
@@ -1346,6 +1562,94 @@
      setTimeout(() => $row.find('input[name^="summy"]').focus().select(), 50);
     }
 
+    // 재원 조회
+    searchMssec($detailRow) {
+     const  _this = this;
+// 이미 로드된 경우 바로 팝업
+     if (_this.mssecOptions && _this.mssecOptions.length > 0) {
+      _this.showMssecPopup(_this.mssecOptions, $detailRow);
+      return;
+     }
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/mssec',
+      {},
+      function(res) {
+       const list = res.data || [];
+
+       if (list.length === 0) {
+        Alert.alert('', '재원 목록이 없습니다.');
+        return;
+       }
+       _this.mssecOptions = list;  // 캐싱
+       _this.showMssecPopup(list, $detailRow);
+      }
+     );
+    }
+
+    showMssecPopup(dataList, $detailRow) {
+     let _this = this;
+
+     if (_this.mssecPopup) {
+      _this.mssecPopup.close();
+      _this.mssecPopup = null;
+     }
+
+     let content = tmpl('mssecTemplate', {});
+     _this.mssecPopup = new PopupDraggable('재원 조회');
+     _this.mssecPopup.open({ width: 400, height: 350, $content: $(content) });
+
+     _this.mssecGrid = new wijmo.grid.FlexGrid('#MssecGrid', {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: [
+       { binding: 'value', header: '코드', width: 100, align: 'center' },
+       { binding: 'text',  header: '재원명', width: '*', align: 'left' }
+      ],
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+     _this.mssecGrid.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const selectCurrent = function() {
+      let sel = _this.mssecGrid.selection;
+      if (!sel || sel.row < 0) return;
+
+      let selectedItem = _this.mssecGrid.rows[sel.row].dataItem;
+      _this.applyMssecData(selectedItem, $detailRow);
+
+      if (_this.mssecPopup) {
+       _this.mssecPopup.close();
+       _this.mssecPopup = null;
+      }
+      _this.mssecGrid = null;
+     };
+
+     setTimeout(function() {
+      if (_this.mssecGrid && _this.mssecGrid.rows.length > 0) {
+       _this.mssecGrid.select(0, 0);
+       _this.mssecGrid.focus();
+      }
+     }, 50);
+
+     _this.mssecGrid.hostElement.addEventListener('dblclick', selectCurrent);
+     _this.mssecGrid.hostElement.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectCurrent();
+      }
+     });
+    }
+
+    applyMssecData(selectedItem, $detailRow) {
+     $detailRow.find('input[name^="msseccd"]').val(selectedItem.value || '');
+     $detailRow.find('input[name^="mssecnm"]').val(selectedItem.text  || '');
+
+     // 선택 후 카드로 포커스
+     setTimeout(() => $detailRow.find('input[name^="cardnm"]').focus().select(), 50);
+    }
+
     setUploader(id) {
      let _this = this;
      let accept_files = 'hwp,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,gif,png,txt,zip,pdf';
@@ -1465,29 +1769,44 @@
       const popupFields = ['input[name^="accnm"]', 'input[name^="it1nm"]', 'input[name^="it2nm"]'];
       if (popupFields.includes(currentSelector)) return;
 
-      // 다음 칸으로 이동
+      // 다음 칸으로 이동 (readonly인 금액 칸은 건너뜀)
       if (currentIdx < focusOrder.length - 1) {
        const $next = $row.find(focusOrder[currentIdx + 1]);
-       if ($next.length) {
+       if ($next.length && !$next.prop('readonly')) {
         $next.focus();
         if ($next.is('input')) $next.select();
         return;
        }
+       // readonly면 그 다음 칸도 확인
+       if (currentIdx + 2 < focusOrder.length) {
+        const $nextNext = $row.find(focusOrder[currentIdx + 2]);
+        if ($nextNext.length && !$nextNext.prop('readonly')) {
+         $nextNext.focus();
+         if ($nextNext.is('input')) $nextNext.select();
+         return;
+        }
+       }
       }
 
-      // 마지막 칸(cramt)에서 엔터 → 다음 행으로
-      const $nextRow = $row.nextAll('tr:not(.slip-line-template):visible').first();
-      if ($nextRow.length) {
-       const $firstInput = $nextRow.find(focusOrder[0]);
-       if ($firstInput.length) $firstInput.focus().select();
+// 마지막 활성 금액 칸(dramt 또는 cramt)에서 엔터
+// → 상세행(토글)이 열려있으면 거래처로, 아니면 다음행으로
+      const lineIdx   = $row.attr('data-line-idx');
+      const $detailRow = $(`tr[data-detail-idx="${lineIdx}"]`);
+      const isDetailOpen = $detailRow.length && $detailRow.is(':visible');
+
+      if (isDetailOpen) {
+       $detailRow.find('input[name^="cltnm"]').focus().select();
       } else {
-       // 마지막 행이면 새 행 추가
-       $('#addSlipLine').trigger('click');
-       setTimeout(() => {
-        const $newRow = $('#slipLineTbody tr:not(.slip-line-template)').last();
-        const $firstInput = $newRow.find(focusOrder[0]);
-        if ($firstInput.length) $firstInput.focus().select();
-       }, 50);
+       const $nextRow = $row.nextAll('tr[data-line-idx]:visible').first();
+       if ($nextRow.length) {
+        $nextRow.find(focusOrder[0]).focus().select();
+       } else {
+        $('#addSlipLine').trigger('click');
+        setTimeout(() => {
+         const $newRow = $('#slipLineTbody tr[data-line-idx]:last');
+         $newRow.find(focusOrder[0]).focus().select();
+        }, 50);
+       }
       }
      });
 
@@ -1504,6 +1823,24 @@
      this.calcSum();
      this.currentSlipId = null;
      $('#readate').val(getNowDate());
+    }
+
+    // 상세행 입력 완료 후 → 다음 메인행의 관명으로 포커스
+    focusNextAfterDetail($detailRow) {
+     const idx      = $detailRow.attr('data-detail-idx');
+     const $mainRow = $(`tr[data-line-idx="${idx}"]`);
+     const $nextRow = $mainRow.nextAll('tr[data-line-idx]:visible').first();
+
+     if ($nextRow.length) {
+      $nextRow.find('input[name^="accnm"]').focus().select();
+     } else {
+      // 마지막 행이면 새 행 추가 후 포커스
+      $('#addSlipLine').trigger('click');
+      setTimeout(() => {
+       const $newRow = $('#slipLineTbody tr[data-line-idx]:last');
+       $newRow.find('input[name^="accnm"]').focus().select();
+      }, 50);
+     }
     }
 
     //전표 저장
@@ -1630,6 +1967,20 @@
     } // saveSlip
 
    }//SlipStatusPage
+
+   function companyPopupOpenCustom(intputId, hiddenid, hiddenflag) {
+    const $input  = $('#' + intputId);
+    const $hidden = $('#' + hiddenid);
+    const $flag   = $('#' + hiddenflag);
+
+    const poppage = new PopCompComponent();
+
+    poppage.show(function(item) {
+     $input.val(item.compname || '');
+     $hidden.val(item.compcode || '');
+     $flag.val(item.cltflag || '');
+    });
+   }
 
    // ── 금액 입력 시 합계 갱신 ──
    $('#slipLineTbody').on('input', 'input[name="dramt"], input[name="cramt"]', function () {

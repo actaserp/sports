@@ -56,7 +56,7 @@ public class SlipEntryService {
 		String sql = """
     select
       acccd,
-      accnm
+      accnm, acnflag
     from tb_ac001
     where useyn = '1' and spyn='1'
     and replace(isnull(accnm, ''), ' ', '') like '%' + replace(:accnm, ' ', '') + '%'
@@ -380,5 +380,13 @@ public class SlipEntryService {
 			AND spnum    = :spnum
 			""";
 		return sqlRunner.getRows(sql ,param);
+	}
+
+	public List<Map<String, Object>> getMssec() {
+		MapSqlParameterSource param = new MapSqlParameterSource();
+		String sql = """
+			select mssec as value, mssecnm as text from tb_x0005 where 1=1
+			""";
+		return sqlRunner.getRows(sql , param);
 	}
 }
