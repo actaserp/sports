@@ -413,26 +413,27 @@ public class PopupController {
 			 , cltcd as compcode
 			 , saupnum as business_number
 			 from tb_xclient
-			 where useyn = '0' OR useyn IS NULL
+			 where (useyn = '0' OR useyn IS NULL)
 			""";
 
 		if (compCode != null && !compCode.isEmpty()) {
-			sql += " AND cltcd ILIKE :compCode ";
+			sql += " AND cltcd LIKE  :compCode ";
 			paramMap.addValue("compCode", "%" + compCode + "%");
 		}
 
 		if (compName != null && !compName.isEmpty()) {
-			sql += " AND cltnm ILIKE :compName ";
+			sql += " AND cltnm LIKE  :compName ";
 			paramMap.addValue("compName", "%" + compName + "%");
 		}
 
 		if (business_number != null && !business_number.isEmpty()) {
-			sql += " AND saupnum ILIKE :business_number ";
+			sql += " AND saupnum LIKE  :business_number ";
 			paramMap.addValue("business_number", "%" + business_number + "%");
 		}
 
 		sql += " ORDER BY cltnm ASC ";
-
+//		log.info(" 최종 SQL: {}", sql);
+//		log.info(" 파라미터: {}", paramMap.getValues());
 		result.data = this.sqlRunner.getRows(sql, paramMap);
 
 		return result;
@@ -712,7 +713,7 @@ public class PopupController {
         select
             a.bank ,
             b.banknm as BankName,
-            a.bankcd as bankId,
+            CONCAT(a.bank, a.bankcd) as bankId,
             a.accnum as accountNumber,
             a.banknm as accountName,
             a.bnkpaypw as accountPw,
@@ -741,6 +742,10 @@ public class PopupController {
 
 			sql += "  and replace(replace(a.accnum, '-', ''), ' ', '') like :accountNumber ";
 			paramMap.addValue("accountNumber", "%" + accountNumber + "%");
+
+//			log.info(">>> accountNumber 원본: [{}]", accountNumber);
+//			log.info(">>> accountNumber 파라미터: [%{}%]", accountNumber);
+//			log.info(">>> 최종 SQL 조건: and replace(replace(a.accnum, '-', ''), ' ', '') like '%{}%'", accountNumber);
 		}
 
 		sql += " order by a.popflag desc, b.banknm, a.accnum ";

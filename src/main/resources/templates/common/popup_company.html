@@ -147,7 +147,7 @@
                 this.close();
             }
 
-            show(callback) {
+            show(callback, keyword) {
                 let _this = this;
 
                 this.callback = callback;
@@ -193,6 +193,9 @@
                     this.$btnCompSelect = $content.find('#btnCompSelect');
                     this.$businessNumber = $content.find('#business_number');
 
+                    if (keyword) {
+                        this.$compName.val(keyword);
+                    }
 
                     this.$btnCompSearch.click(function (e) {
                         _this.searchDataBind();

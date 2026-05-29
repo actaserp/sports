@@ -13,6 +13,8 @@ const AccountInputHandler = {
     const $accid = $(accidSelector);
 
     function setAccountInfo(item) {
+      // console.log('item 전체:', item);
+      // console.log('bankId:', item.bankId, '/ bankid:', item.bankid, '/ bankcd:', item.bankcd);
       $accnum.val(item.accountNumber);
       $accid.val(item.accid);
       $banknm.val(item.BankName);
@@ -44,7 +46,7 @@ const AccountInputHandler = {
 
         // ✅ 그 외에는 기존 Ajax 검색 로직
         if (accountNumber.length < minLength) return;
-        //console.log('검색할 계좌번호:', accountNumber);
+        console.log('검색할 계좌번호:', accountNumber);
 
         $.ajax({
           url: '/api/popup/search_Account',

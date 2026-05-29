@@ -94,7 +94,7 @@ public class SlipEntryService {
 	}
 
 	@Transactional
-	public Map<String, Object> saveSlip(Map<String, Object> payload, HttpServletRequest request) {
+	public Map<String, Object> saveSlip(Map<String, Object> payload, HttpServletRequest request, String  userID) {
 
 		// ── 테넌트/사업장 정보 ──
 		String spjangcd = TenantContext.get();
@@ -117,6 +117,9 @@ public class SlipEntryService {
 		String bseccd  = getString(payload, "bseccd");
 		String today   = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
+		// ── 마감 체크: 저장 대상 월이 마감 이월됐으면 저장/수정 불가 ──
+		checkMagam(custcd, spjangcd, spdate);
+
 		boolean isNew = isBlank(spnum);
 
 		// ── 신규 시 전표번호 채번 ──
@@ -130,18 +133,19 @@ public class SlipEntryService {
 			.addValue("spjangcd",  spjangcd)	//사업장코드
 			.addValue("spdate",    spdate)		//전표일자(발송일자)
 			.addValue("spnum",     spnum)		//전표 번호
-			.addValue("tiosec",    tiosec)		//
-			.addValue("cashyn",    cashyn)
-			.addValue("busipur",   busipur)
-			.addValue("spoccu",    spoccu)
-			.addValue("remark",    remark)
-			.addValue("subject",   subject)
-			.addValue("regdate",   isBlank(readate) ? today : readate)
+			.addValue("tiosec",    tiosec)		//입출구분
+			.addValue("cashyn",    cashyn)		//현금
+			.addValue("busipur",   busipur)	//사업구분
+			.addValue("spoccu",    spoccu)		//증빙구분
+			.addValue("remark",    remark)		//비고
+			.addValue("subject",   subject)	//제목
+			.addValue("regdate",   isBlank(readate) ? today : readate)	//작성일자
 			.addValue("bsdate",    bsdate)
 			.addValue("bseccd",    bseccd)
 			.addValue("busicd",    busicd)
 			.addValue("spjangnm",  spjangnm)
-			.addValue("inputdate", LocalDateTime.now());
+			.addValue("inputid",  userID)
+			.addValue("inputdate", LocalDateTime.now());	//최종수정일
 
 		if (isNew) {
 			String insertAa009 = """
@@ -150,13 +154,13 @@ public class SlipEntryService {
                 tiosec, cashyn, busipur, spoccu,
                 remark, subject, regdate,
                 bsdate, bseccd, busicd,
-                spjangnm, inputdate
+                spjangnm, inputdate, inputid
             ) VALUES (
                 :custcd, :spjangcd, :spdate, :spnum,
                 :tiosec, :cashyn, :busipur, :spoccu,
                 :remark, :subject, :regdate,
                 :bsdate, :bseccd, :busicd,
-                :spjangnm, :inputdate
+                :spjangnm, :inputdate, :inputid
             )
             """;
 			sqlRunner.execute(insertAa009, headerParam);
@@ -173,6 +177,7 @@ public class SlipEntryService {
                 bsdate    = :bsdate,
                 bseccd    = :bseccd,
                 busicd    = :busicd,
+                 spjangnm  = :spjangnm,
                 inputdate = :inputdate
             WHERE custcd   = :custcd
               AND spjangcd = :spjangcd
@@ -188,6 +193,7 @@ public class SlipEntryService {
 		 .addValue("spjangcd", spjangcd)
 		 .addValue("spdate",   spdate)
 		 .addValue("spnum",    spnum);
+
 
 		sqlRunner.execute("""
         DELETE FROM TB_AA010
@@ -209,14 +215,16 @@ public class SlipEntryService {
                 dramt, cramt, summy,
                 it1cd, it2cd,
                 tiosec, spoccu,
-                inputdate, rowseq
+                inputdate, rowseq,
+                 mssec, cltcd, cardnum, bankcd
             ) VALUES (
                 :custcd, :spjangcd, :spdate, :spnum, :spseq,
                 :spjangnm, :acccd, :accnm, :drcr,
                 :dramt, :cramt, :summy,
                 :it1cd, :it2cd,
                 :tiosec, :spoccu,
-                :inputdate, :rowseq
+                :inputdate, :rowseq,
+                :mssec, :cltcd, :cardnum, :bankcd
             )
             """;
 
@@ -250,7 +258,11 @@ public class SlipEntryService {
 					.addValue("tiosec",    tiosec)
 					.addValue("spoccu",    spoccu)
 					.addValue("inputdate", LocalDateTime.now())
-					.addValue("rowseq",    lineSeq);
+					.addValue("rowseq",    lineSeq)
+					.addValue("mssec",   getString(line, "msseccd"))
+					.addValue("cltcd",   getString(line, "cltcd"))
+					.addValue("cardnum", getString(line, "cardnum"))
+					.addValue("bankcd",  getString(line, "bankcd"));
 
 				sqlRunner.execute(insertAa010, lineParam);
 			}
@@ -352,11 +364,49 @@ public class SlipEntryService {
 		param.addValue("spjangcd", spjangcd);
 
 		String sql = """
-			select * from tb_aa010
-			        where custcd =:custcd
-			        and spjangcd =:spjangcd
-			        AND spdate   = :spdate
-			        AND spnum    = :spnum
+			SELECT
+			    a.spnum,
+			    a.spseq,
+			    a.acccd,
+			    a.accnm,
+			    a.drcr,
+			    a.it1cd,
+			    b.it1nm,
+			    a.it2cd,
+			    c.it2nm,
+			    a.summy,
+			    a.dramt,
+			    a.cramt,
+			    a.bankcd,
+			    bank.accnum,
+			    a.mssec,
+			    d.mssecnm,
+			    a.cltcd,
+					e.cltnm,
+					a.cardnum
+			FROM tb_aa010 a
+			LEFT JOIN (
+				SELECT custcd, it1cd, MAX(it1nm) AS it1nm
+				FROM tb_x0003
+				WHERE useyn = '1'
+				GROUP BY custcd, it1cd
+		) b ON a.custcd = b.custcd AND RIGHT(a.it1cd, 3) = b.it1cd
+			LEFT JOIN (
+			    SELECT custcd, it2cd, MAX(it2nm) AS it2nm
+			    FROM tb_x0004
+			    WHERE useyn = '1'
+			    GROUP BY custcd, it2cd
+			) c ON a.custcd = c.custcd AND a.it2cd = c.it2cd
+			LEFT JOIN tb_aa040 bank
+			    ON a.custcd = bank.custcd
+			    AND a.bankcd = CONCAT(bank.bank, bank.bankcd)
+			left join tb_x0005 d on a.custcd = d.custcd and a.mssec = d.mssec
+			left join tb_xclient e on a.custcd = e.custcd and a.cltcd = e.cltcd
+			WHERE a.custcd   = :custcd
+			AND a.spjangcd   = :spjangcd
+			AND a.spdate     = :spdate
+			AND a.spnum      = :spnum
+			ORDER BY a.spseq
 			""";
 		return sqlRunner.getRows(sql ,param);
 	}
@@ -389,4 +439,79 @@ public class SlipEntryService {
 			""";
 		return sqlRunner.getRows(sql , param);
 	}
+
+	@Transactional
+	public void deleteSlip(Map<String, Object> payload) {
+
+		String spjangcd = TenantContext.get();
+		Map<String, String> bizInfo = getBizInfoBySpjangcd(spjangcd);
+		String custcd = bizInfo.get("custcd");
+
+		String spdate = getString(payload, "spdate").replace("-", "");
+		String spnum  = getString(payload, "spnum");
+
+		if (isBlank(spnum)) {
+			throw new IllegalArgumentException("전표번호가 없습니다.");
+		}
+
+		MapSqlParameterSource param = new MapSqlParameterSource()
+																		.addValue("custcd",   custcd)
+																		.addValue("spjangcd", spjangcd)
+																		.addValue("spdate",   spdate)
+																		.addValue("spnum",    spnum);
+
+		// ── 마감 체크: 마감 이월된 월이면 삭제 불가 ──
+		String chkSql = """
+    SELECT COUNT(endyn) AS cnt
+    FROM tb_aa050
+    WHERE yyyymm   = LEFT(:spdate, 6)
+      AND endyn    = 'Y'
+      AND custcd   = :custcd
+      AND spjangcd = :spjangcd
+    """;
+		Map<String, Object> chk = sqlRunner.getRow(chkSql, param);
+		int cnt = (chk != null && chk.get("cnt") != null)
+								? Integer.parseInt(String.valueOf(chk.get("cnt")).trim())
+								: 0;
+		if (cnt > 0) {
+			throw new IllegalStateException("마감 이월된 자료가 있습니다. 이월취소 후 전표 삭제하세요.");
+		}
+
+		// ── 마감 아니면 삭제 진행 ──
+		// 라인 삭제
+		sqlRunner.execute("""
+    DELETE FROM TB_AA010
+    WHERE custcd=:custcd AND spjangcd=:spjangcd AND spdate=:spdate AND spnum=:spnum
+    """, param);
+
+		// 헤더 삭제
+		sqlRunner.execute("""
+    DELETE FROM TB_AA009
+    WHERE custcd=:custcd AND spjangcd=:spjangcd AND spdate=:spdate AND spnum=:spnum
+    """, param);
+	}
+
+	private void checkMagam(String custcd, String spjangcd, String spdate) {
+		MapSqlParameterSource param = new MapSqlParameterSource()
+																		.addValue("custcd",   custcd)
+																		.addValue("spjangcd", spjangcd)
+																		.addValue("spdate",   spdate);
+
+		String sql = """
+    SELECT COUNT(endyn) AS cnt
+    FROM tb_aa050
+    WHERE yyyymm   = LEFT(:spdate, 6)
+      AND endyn    = 'Y'
+      AND custcd   = :custcd
+      AND spjangcd = :spjangcd
+    """;
+		Map<String, Object> row = sqlRunner.getRow(sql, param);
+		int cnt = (row != null && row.get("cnt") != null)
+								? Integer.parseInt(String.valueOf(row.get("cnt")).trim())
+								: 0;
+		if (cnt > 0) {
+			throw new IllegalStateException("마감 이월된 자료가 있습니다. 이월취소 후 처리하세요.");
+		}
+	}
+
 }
