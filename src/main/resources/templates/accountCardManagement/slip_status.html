@@ -96,11 +96,20 @@
       height: 2em !important;
       margin: 0 auto !important;
   }
+
+  .grid-guide-box {
+      background: #eef3ff;
+      border-left: 4px solid #2f5cff;
+      padding: 6px 10px;
+      font-size: 13px;
+      margin-bottom: 6px;
+      color: #333;
+  }
 </style>
   <div class="layout-contents">
     <div class="page-title-wrap">
       <div class="left">
-        <h2>전표입력 현황</h2>
+        <h2>전표입력</h2>
         <a class="bookmark toggle" title="북마크">
           내 메뉴
         </a>
@@ -108,7 +117,7 @@
       <ul class="page-navi">
         <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
         <li>입금관리</li>
-        <li>전표입력 현황</li>
+        <li>전표입력</li>
       </ul>
     </div>
     <div class="tab-wrap">
@@ -188,7 +197,9 @@
               </ul>
             </div>
           </div>
-
+          <div class="grid-guide-box">
+            ※ 전표 목록을 더블클릭하면 [전표 등록] 탭에서 상세 내역을 수정·삭제할 수 있습니다.
+          </div>
           <div class="grid_box" id="divList">
             <div id="theGrid_slip_list" style="height: 540px;"></div>
           </div>
@@ -223,6 +234,12 @@
                   <a class="btn btn-delete" id="btnDelete" title="삭제">
                     <img alt="엑셀 아이콘" th:src="@{/images/icon/ico-delete.svg}">
                     삭제
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-excell" id="capy" title="전표복사">
+                    <img alt="등록 아이콘" th:src="@{/images/icon/ico-plus.svg}">
+                    전표복사
                   </a>
                 </li>
               </ul>
@@ -481,7 +498,7 @@
                             <input name="cltcd"  type="hidden"/>
                             <input name="cltflag" type="hidden"/>
                             <input name="cltnm" placeholder="거래처" type="text" class="btn-clt-search"
-                                   style="flex:1; min-width:0; width:100%; height:32px;
+                                   style="flex:1; min-width:0; width:100% !important; height:32px;
                         padding:0 8px; font-size:12px;
                         background:var(--color-background-primary, #fff);
                         border:1px solid var(--color-border-tertiary, #ccc);
@@ -494,7 +511,7 @@
                        color:var(--color-text-secondary); flex-shrink:0;">카드</span>
                             <input name="cardcd" type="hidden"/>
                             <input name="cardnm" placeholder="카드" type="text" class="btn-card-search"
-                                   style="flex:1; min-width:0; width:100%; height:32px;
+                                   style="flex:1; min-width:0; width:100% !important; height:32px;
                         padding:0 8px; font-size:12px;
                         background:var(--color-background-primary, #fff);
                         border:1px solid var(--color-border-tertiary, #ccc);
@@ -507,7 +524,7 @@
                        color:var(--color-text-secondary); flex-shrink:0;">계좌</span>
                             <input name="bankcd" type="hidden"/>
                             <input name="banknm" placeholder="계좌" type="text" class="btn-bank-search"
-                                   style="flex:1; min-width:0; width:100%; height:32px;
+                                   style="flex:1; min-width:0; width:100% !important; height:32px;
                         padding:0 8px; font-size:12px;
                         background:var(--color-background-primary, #fff);
                         border:1px solid var(--color-border-tertiary, #ccc);
@@ -628,11 +645,30 @@
     </div>
   </script>
 
-  <script id="spnumTemplate" type="text/x-tmpl">
+  <!-- 전표 복사: 새 일자 입력 팝업 -->
+  <script id="copyDateTemplate" type="text/x-tmpl">
     <div class="content_wrap popup">
-     <section class="section">
+      <section class="section" style="padding:20px;">
+        <dl style="display:flex; align-items:center; gap:10px;">
+          <dt><label for="copyNewSpdate" style="white-space:nowrap;">복사할 일자</label></dt>
+          <dd>
+            <input type="date" id="copyNewSpdate" name="copyNewSpdate" style="width:200px;"/>
+          </dd>
+        </dl>
+      </section>
+      <div class="popup-button">
+        <button type="button" class="btn-popup" id="btnCopyConfirm"><span>복사</span></button>
+        <button type="button" class="btn-popup" id="btnCopyCancel"><span>닫기</span></button>
+      </div>
+    </div>
+  </script>
 
-     </section>
+  <!-- 전표번호 변경 팝업 -->
+  <script id="spnumChangeTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup">
+      <section class="section">
+        <div id="SpnumGrid" style="height:350px; display:block;"></div>
+      </section>
     </div>
   </script>
 
@@ -1996,6 +2032,163 @@
 
     }//DeleteSlip
 
+    // 전표 복사 — 새 일자 입력 팝업
+    copySlip() {
+     let _this = this;
+
+     const spdate = $('#spdate').val();   // 원본 일자
+     const spnum  = $('#spnum').val();    // 원본 번호
+
+     if (!spnum) {
+      Alert.alert('', '복사할 전표가 없습니다. 먼저 전표를 선택하세요.');
+      return;
+     }
+
+     // 이전 팝업 정리
+     if (_this.copyPopup) {
+      _this.copyPopup.close();
+      _this.copyPopup = null;
+     }
+
+     let content = tmpl('copyDateTemplate', {});
+     let $content = $(content);
+     _this.copyPopup = new PopupDraggable('전표 복사');
+     _this.copyPopup.open({ width: 360, height: 200, $content });
+
+     setTimeout(() => {
+      // 기본값: 원본 일자
+      $content.find('#copyNewSpdate').val(spdate);
+
+      // 복사 실행
+      $content.find('#btnCopyConfirm').on('click', function () {
+       const newSpdate = $content.find('#copyNewSpdate').val();
+       if (!newSpdate) {
+        Alert.alert('', '복사할 일자를 입력하세요.');
+        return;
+       }
+
+       const payload = { spdate, spnum, newSpdate };
+       const url = _this.entry_url + '/copy';
+
+       AjaxUtil.postJsonData(url, payload, function (result) {
+        if (result && result.success) {
+         _this.copyPopup.close();
+         _this.copyPopup = null;
+         Alert.alert('', '복사되었습니다.', function () {
+          _this.resetForm();
+          _this.searchMainData();
+         });
+        } else {
+         const msg = result?.message || '복사 중 오류가 발생했습니다.';
+         Alert.alert('', msg);
+        }
+       });
+      });
+
+      // 닫기
+      $content.find('#btnCopyCancel').on('click', function () {
+       _this.copyPopup.close();
+       _this.copyPopup = null;
+      });
+     }, 50);
+
+    }//copySlip
+
+    // 전표번호 변경 — 빈 번호 목록 팝업
+    changeSpnum() {
+     let _this = this;
+
+     const spdate = $('#spdate').val();
+     const spnum  = $('#spnum').val();
+     const spdateFmt = (spdate || '').replace(/-/g, '');
+     if (!spnum) {
+      Alert.alert('', '변경할 전표가 없습니다. 먼저 전표를 선택하세요.');
+      return;
+     }
+
+     // 빈 전표번호 목록 조회 (spdate 무관, 전체 기준)
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/availableSpnums',
+      { spdate: spdateFmt },
+      function (res) {
+       const list = res.data || [];
+       if (list.length === 0) {
+        Alert.alert('', '사용 가능한 전표번호가 없습니다.');
+        return;
+       }
+       _this.showSpnumPopup(list, spdate, spnum);
+      }
+     );
+    }
+
+    showSpnumPopup(dataList, spdate, oldSpnum) {
+     let _this = this;
+
+     if (_this.spnumPopup) {
+      _this.spnumPopup.close();
+      _this.spnumPopup = null;
+     }
+
+     let content = tmpl('spnumChangeTemplate', {});
+     _this.spnumPopup = new PopupDraggable('전표번호 변경');
+     _this.spnumPopup.open({ width: 400, height: 420, $content: $(content) });
+
+     _this.spnumGrid = new wijmo.grid.FlexGrid('#SpnumGrid', {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: [
+       { binding: 'spnum', header: '사용 가능한 전표번호', width: '*', align: 'center' }
+      ],
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+     _this.spnumGrid.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const selectSpnum = function () {
+      let sel = _this.spnumGrid.selection;
+      if (!sel || sel.row < 0) return;
+      let item = _this.spnumGrid.rows[sel.row].dataItem;
+      const newSpnum = item.spnum;
+
+      // 헤더 + 분개라인 동시 변경 요청
+      const payload = { spdate, spnum: oldSpnum, newSpnum };
+      const url = _this.entry_url + '/changeSpnum';
+
+      AjaxUtil.postJsonData(url, payload, function (result) {
+       if (result && result.success) {
+        _this.spnumPopup.close();
+        _this.spnumPopup = null;
+        _this.spnumGrid = null;
+        Alert.alert('', '전표번호가 변경되었습니다.', function () {
+         $('#spnum').val(newSpnum);
+         _this.currentSlipId = newSpnum;
+         _this.searchMainData();
+        });
+       } else {
+        const msg = result?.message || '전표번호 변경 중 오류가 발생했습니다.';
+        Alert.alert('', msg);
+       }
+      });
+     };
+
+     setTimeout(function () {
+      if (_this.spnumGrid && _this.spnumGrid.rows.length > 0) {
+       _this.spnumGrid.select(0, 0);
+       _this.spnumGrid.focus();
+      }
+     }, 50);
+
+     _this.spnumGrid.hostElement.addEventListener('dblclick', selectSpnum);
+     _this.spnumGrid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectSpnum();
+      }
+     });
+    }//showSpnumPopup
+
    }//SlipStatusPage
 
    // ── 금액 입력 시 합계 갱신 ──
@@ -2117,6 +2310,16 @@
     // 삭제 버튼
     $('#btnDelete').on('click', function () {
      page.DeleteSlip();
+    });
+
+    // 전표복사 버튼
+    $('#capy').on('click', function () {
+     page.copySlip();
+    });
+
+    // 전표번호 변경 버튼
+    $('#spnum_btn').on('click', function () {
+     page.changeSpnum();
     });
 
    });

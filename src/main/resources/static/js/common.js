@@ -1121,6 +1121,7 @@ let AjaxUtil = {
     },
     getAsyncData: function (url, param_data, fn_success, fn_failure) {
         param_data = param_data || {};
+        AjaxUtil.showLoading();
         $.ajax({
             async: true,
             dataType: 'json',
@@ -1136,6 +1137,9 @@ let AjaxUtil = {
                 } else {
                     AjaxUtil.failureCallback(req, status, error);
                 }
+            },
+            complete: function () {
+                AjaxUtil.hideLoading();
             }
         });
     },
