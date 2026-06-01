@@ -1,111 +1,194 @@
 <html layout:decorate="~{layout_page}">
 <th:block layout:fragment="content">
-<style>
-  /* ── tab2 테이블 셀 크기 약 25% 축소 ──
-     font-size : % (부모 대비 상대값)
-     height/padding/width : em (현재 font-size 기준 상대값)
-     ※ th/td의 height는 CSS % 미지원 → em 사용
-  ── */
-  #tab2 table th,
-  #tab2 table td {
-    font-size: 90% !important;     /* 부모 font-size 대비 80% (약 20% 축소) */
-    height: 2em !important;        /* 80%×15px≈12px → 3×12px=36px */
-  }
-  #tab2 table.view-table th,
-  #tab2 table.view-table td {
-    padding: 0.25em 0.67em !important;  /* ≈ 3px 8px */
-  }
-  #tab2 table.write-table th {
-    padding: 0.58em 1.25em !important;  /* ≈ 7px 15px */
-  }
-  #tab2 table.write-table td {
-    padding: 0.33em 0.75em !important;  /* ≈ 4px 9px */
-  }
-  #tab2 table td input[type="text"],
-  #tab2 table td input[type="date"] {
-    font-size: 100% !important;    /* td의 80%를 그대로 상속 */
-    height: 2.17em !important;     /* ≈ 26px */
-    line-height: 2.17em !important;
-  }
-  #tab2 table td select {
-    font-size: 100% !important;
-    height: 2.17em !important;     /* ≈ 26px */
-    line-height: normal !important;  /* 추가 */
-    padding: 0 0.5em !important;     /* 추가: 좌우 여백 + 상하 0으로 중앙 정렬 */
-    vertical-align: middle !important; /* 추가 */
-    box-sizing: border-box !important; /* 추가 */
-  }
-  #tab2 table td textarea {
-    font-size: 100% !important;
-  }
-  /* ── 전표번호 변경 버튼 축소 ── */
-  #tab2 table .btn.in_btn {
-    font-size: 92% !important;     /* ≈ 11px */
-    padding: 0.18em 0.67em !important;
-    height: 2em !important;        /* ≈ 22~24px */
-    line-height: 2em !important;
-    white-space: nowrap;
-  }
+  <style>
+      /* ── tab2 테이블 셀 크기 약 25% 축소 ──
+         font-size : % (부모 대비 상대값)
+         height/padding/width : em (현재 font-size 기준 상대값)
+         ※ th/td의 height는 CSS % 미지원 → em 사용
+      ── */
+      #tab2 table th,
+      #tab2 table td {
+          font-size: 90% !important;     /* 부모 font-size 대비 80% (약 20% 축소) */
+          height: 2em !important;        /* 80%×15px≈12px → 3×12px=36px */
+      }
+      #tab2 table.view-table th,
+      #tab2 table.view-table td {
+          padding: 0.25em 0.67em !important;  /* ≈ 3px 8px */
+      }
+      #tab2 table.write-table th {
+          padding: 0.58em 1.25em !important;  /* ≈ 7px 15px */
+      }
+      #tab2 table.write-table td {
+          padding: 0.33em 0.75em !important;  /* ≈ 4px 9px */
+      }
+      #tab2 table td input[type="text"],
+      #tab2 table td input[type="date"] {
+          font-size: 100% !important;    /* td의 80%를 그대로 상속 */
+          height: 2.17em !important;     /* ≈ 26px */
+          line-height: 2.17em !important;
+      }
+      #tab2 table td select {
+          font-size: 100% !important;
+          height: 2.17em !important;     /* ≈ 26px */
+          line-height: normal !important;  /* 추가 */
+          padding: 0 0.5em !important;     /* 추가: 좌우 여백 + 상하 0으로 중앙 정렬 */
+          vertical-align: middle !important; /* 추가 */
+          box-sizing: border-box !important; /* 추가 */
+      }
+      #tab2 table td textarea {
+          font-size: 100% !important;
+      }
+      /* ── 전표번호 변경 버튼 축소 ── */
+      #tab2 table .btn.in_btn {
+          font-size: 92% !important;     /* ≈ 11px */
+          padding: 0.18em 0.67em !important;
+          height: 2em !important;        /* ≈ 22~24px */
+          line-height: 2em !important;
+          white-space: nowrap;
+      }
 
-  /* ── 분개 라인 행 추가(+) 버튼 축소 ── */
-  #addSlipLine {
-    width: 2em !important;         /* ≈ 24px */
-    height: 2em !important;
-  }
-  #addSlipLine img {
-    width: 0.83em !important;      /* ≈ 10px */
-    height: 0.83em !important;
-  }
+      /* ── 분개 라인 행 추가(+) 버튼 축소 ── */
+      #addSlipLine {
+          width: 2em !important;         /* ≈ 24px */
+          height: 2em !important;
+      }
+      #addSlipLine img {
+          width: 0.83em !important;      /* ≈ 10px */
+          height: 0.83em !important;
+      }
 
-  /* ── 분개 라인 행 삭제(휴지통) 버튼 축소 ── */
-  #slipLineTbody .btn.in_btn.del {
-    width: 2em !important;         /* ≈ 24px */
-    height: 2em !important;
-  }
-  #slipLineTbody .btn.in_btn.del img {
-    width: 0.83em !important;      /* ≈ 10px */
-    height: 0.83em !important;
-    margin-left: 0.42em !important; /* ≈ 5px */
-  }
-  /* ── 행 추가/삭제 버튼 컬럼 정렬 ── */
-  #slipLineTable thead th:last-child,
-  #slipLineTable tbody td:last-child {
-      width: 2.5em !important;
-      min-width: 2.5em !important;
-      text-align: center !important;
-      padding: 0 !important;
-      vertical-align: middle !important;
-  }
+      /* ── 분개 라인 행 삭제(휴지통) 버튼 축소 ── */
+      #slipLineTbody .btn.in_btn.del {
+          width: 2em !important;         /* ≈ 24px */
+          height: 2em !important;
+      }
+      #slipLineTbody .btn.in_btn.del img {
+          width: 0.83em !important;      /* ≈ 10px */
+          height: 0.83em !important;
+          margin-left: 0.42em !important; /* ≈ 5px */
+      }
+      /* ── 행 추가/삭제 버튼 컬럼 정렬 ── */
+      #slipLineTable thead th:last-child,
+      #slipLineTable tbody td:last-child {
+          width: 2.5em !important;
+          min-width: 2.5em !important;
+          text-align: center !important;
+          padding: 0 !important;
+          vertical-align: middle !important;
+      }
 
-  /* ── 행 추가(+) 버튼 ── */
-  #addSlipLine {
-      display: flex !important;
-      justify-content: center !important;
-      align-items: center !important;
-      width: 2em !important;
-      height: 2em !important;
-      margin: 0 auto !important;
-  }
+      /* ── 행 추가(+) 버튼 ── */
+      #addSlipLine {
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+          width: 2em !important;
+          height: 2em !important;
+          margin: 0 auto !important;
+      }
 
-  /* ── 행 삭제(휴지통) 버튼 ── */
-  #slipLineTbody .btn.in_btn.del {
-      display: flex !important;
-      justify-content: center !important;
-      align-items: center !important;
-      width: 2em !important;
-      height: 2em !important;
-      margin: 0 auto !important;
-  }
+      /* ── 행 삭제(휴지통) 버튼 ── */
+      #slipLineTbody .btn.in_btn.del {
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+          width: 2em !important;
+          height: 2em !important;
+          margin: 0 auto !important;
+      }
 
-  .grid-guide-box {
-      background: #eef3ff;
-      border-left: 4px solid #2f5cff;
-      padding: 6px 10px;
-      font-size: 13px;
-      margin-bottom: 6px;
-      color: #333;
-  }
-</style>
+      .grid-guide-box {
+          background: #eef3ff;
+          border-left: 4px solid #2f5cff;
+          padding: 6px 10px;
+          font-size: 13px;
+          margin-bottom: 6px;
+          color: #333;
+      }
+
+      /* ============================================================
+         분개 라인 카드 그룹핑
+         - 기존 테이블/JS 구조 유지, 시각 스타일만 추가
+         - 메인행(tr[data-line-idx]) + 상세행(tr[data-detail-idx])
+           한 쌍을 하나의 '카드'처럼 보이게 함
+         ============================================================ */
+      /* 행 쌍 사이 세로 간격 */
+      #slipLineTable {
+          border-collapse: separate !important;
+          border-spacing: 0 8px !important;
+      }
+      #slipLineTable thead th {
+          border-bottom: 1px solid #dee2e6 !important;
+      }
+      /* ── 메인행: 카드 윗부분 ── */
+      #slipLineTbody tr[data-line-idx] > td {
+          border-top: 1px solid #e5e7eb !important;
+          border-bottom: none !important;
+          background: #ffffff !important;
+      }
+      #slipLineTbody tr[data-line-idx] > td:first-child {
+          border-left: 3px solid #378ADD !important;   /* 기본 파랑(차변) */
+          border-top-left-radius: 8px !important;
+      }
+      #slipLineTbody tr[data-line-idx] > td:last-child {
+          border-right: 1px solid #e5e7eb !important;
+          border-top-right-radius: 8px !important;
+      }
+      #slipLineTbody tr[data-line-idx] > td:not(:first-child):not(:last-child) {
+          border-left: none !important;
+          border-right: none !important;
+      }
+      /* 대변행이면 색 바 주황 (applyDrcrRule에서 클래스 토글) */
+      #slipLineTbody tr.is-credit[data-line-idx] > td:first-child {
+          border-left-color: #D85A30 !important;
+      }
+
+      /* ── 상세행: 카드 아랫부분 ── */
+      #slipLineTbody tr[data-detail-idx] > td {
+          border-top: none !important;
+          border-bottom: 1px solid #e5e7eb !important;
+          border-left: 3px solid #378ADD !important;
+          border-right: 1px solid #e5e7eb !important;
+          border-bottom-left-radius: 8px !important;
+          border-bottom-right-radius: 8px !important;
+          background: #f8f9fa !important;              /* 옅은 회색 = 종속 정보 */
+          padding: 0 !important;                       /* ★추가: td 자체 패딩 제거 */
+      }
+      #slipLineTbody tr.is-credit-detail[data-detail-idx] > td {
+          border-left-color: #D85A30 !important;
+      }
+
+      /* ★추가: 상세행 안쪽 div — 메인행 첫 칸과 좌측 들여쓰기 통일 + 인라인 배경/테두리 무력화 */
+      #slipLineTbody tr[data-detail-idx] > td > div {
+          padding-left: 0.75em !important;
+          background: transparent !important;
+          border-top: none !important;
+      }
+      /* ★추가: 옛 들여쓰기 가이드 라인(첫 자식 div) 숨김 */
+      #slipLineTbody tr[data-detail-idx] > td > div > div:first-child {
+          display: none !important;
+      }
+
+      /* 상세행이 숨겨진 카드는 메인행 하단도 마감 */
+      #slipLineTbody tr[data-line-idx]:has(+ tr[data-detail-idx][style*="display: none"]) > td,
+      #slipLineTbody tr[data-line-idx]:has(+ tr[data-detail-idx][style*="display:none"]) > td {
+          border-bottom: 1px solid #e5e7eb !important;
+      }
+      #slipLineTbody tr[data-line-idx]:has(+ tr[data-detail-idx][style*="display: none"]) > td:first-child,
+      #slipLineTbody tr[data-line-idx]:has(+ tr[data-detail-idx][style*="display:none"]) > td:first-child {
+          border-bottom-left-radius: 8px !important;
+      }
+      #slipLineTbody tr[data-line-idx]:has(+ tr[data-detail-idx][style*="display: none"]) > td:last-child,
+      #slipLineTbody tr[data-line-idx]:has(+ tr[data-detail-idx][style*="display:none"]) > td:last-child {
+          border-bottom-right-radius: 8px !important;
+      }
+
+      /* readonly 금액칸 0 흐리게 (기존 회색 + 글자색 보강) */
+      #slipLineTbody input[name^="dramt"][readonly],
+      #slipLineTbody input[name^="cramt"][readonly] {
+          color: #c4c4c4 !important;
+      }
+  </style>
   <div class="layout-contents">
     <div class="page-title-wrap">
       <div class="left">
@@ -479,7 +562,7 @@
                   </tr>
 
                   <tr class="slip-line-template slip-detail-template" style="display:none;">
-                    <td colspan="8" style="padding:0; border-top:none;">
+                    <td colspan="9" style="padding:0; border-top:none;">
                       <div style="display:flex; align-items:stretch;
                 background:var(--color-background-secondary);
                 border-top:0.5px dashed var(--color-border-secondary);">
@@ -507,28 +590,44 @@
 
                           <!-- 카드 -->
                           <div style="display:flex; align-items:center; flex:1; min-width:0; gap:6px;">
-          <span style="font-size:11px; font-weight:500; white-space:nowrap;
-                       color:var(--color-text-secondary); flex-shrink:0;">카드</span>
+  <span style="font-size:11px; font-weight:500; white-space:nowrap;
+               color:var(--color-text-secondary); flex-shrink:0;">카드</span>
                             <input name="cardcd" type="hidden"/>
+                            <!-- ★추가: 카드명 표시칸 (읽기전용) -->
+                            <input name="cardnmdisp" placeholder="카드명" type="text" readonly
+                                   style="flex:0 0 90px; min-width:0; width:90px !important; height:32px;
+                padding:0 8px; font-size:12px; color:var(--color-text-secondary);
+                background:#f5f5f5;
+                border:1px solid var(--color-border-tertiary, #ccc);
+                border-radius:4px;"/>
+                            <!-- 기존 카드번호 칸 -->
                             <input name="cardnm" placeholder="카드" type="text" class="btn-card-search"
                                    style="flex:1; min-width:0; width:100% !important; height:32px;
-                        padding:0 8px; font-size:12px;
-                        background:var(--color-background-primary, #fff);
-                        border:1px solid var(--color-border-tertiary, #ccc);
-                        border-radius:4px;"/>
+                padding:0 8px; font-size:12px;
+                background:var(--color-background-primary, #fff);
+                border:1px solid var(--color-border-tertiary, #ccc);
+                border-radius:4px;"/>
                           </div>
 
                           <!-- 계좌 -->
                           <div style="display:flex; align-items:center; flex:1; min-width:0; gap:6px;">
-          <span class="bank-label" style="font-size:11px; font-weight:500; white-space:nowrap;
-                       color:var(--color-text-secondary); flex-shrink:0;">계좌</span>
+  <span class="bank-label" style="font-size:11px; font-weight:500; white-space:nowrap;
+               color:var(--color-text-secondary); flex-shrink:0;">계좌</span>
                             <input name="bankcd" type="hidden"/>
+                            <!-- ★추가: 은행명 표시칸 (읽기전용, 핸들러가 자동 채움) -->
+                            <input name="banknmdisp" placeholder="은행" type="text" readonly
+                                   style="flex:0 0 90px; min-width:0; width:90px !important; height:32px;
+                padding:0 8px; font-size:12px; color:var(--color-text-secondary);
+                background:#f5f5f5;
+                border:1px solid var(--color-border-tertiary, #ccc);
+                border-radius:4px;"/>
+                            <!-- 기존 계좌번호 칸 -->
                             <input name="banknm" placeholder="계좌" type="text" class="btn-bank-search"
                                    style="flex:1; min-width:0; width:100% !important; height:32px;
-                        padding:0 8px; font-size:12px;
-                        background:var(--color-background-primary, #fff);
-                        border:1px solid var(--color-border-tertiary, #ccc);
-                        border-radius:4px;"/>
+                padding:0 8px; font-size:12px;
+                background:var(--color-background-primary, #fff);
+                border:1px solid var(--color-border-tertiary, #ccc);
+                border-radius:4px;"/>
                           </div>
 
                         </div>
@@ -1102,8 +1201,10 @@
          $detailRow.find('input[name^="cltcd"]').val(line.cltcd  || '');
          $detailRow.find('input[name^="cardnm"]').val(line.cardnum || '');
          $detailRow.find('input[name^="cardcd"]').val(line.cardcd || '');
+         $detailRow.find('input[name^="cardnmdisp"]').val(line.cardnm || '');
          $detailRow.find('input[name^="banknm"]').val(line.accnum || '');
          $detailRow.find('input[name^="bankcd"]').val(line.bankcd || '');
+         $detailRow.find('input[name^="banknmdisp"]').val(line.banknm || '');
         }
        });
 
@@ -1194,10 +1295,13 @@
      // ── 카드 ──
      const $cardInput  = $detailRow.find('input.btn-card-search');
      const $cardHidden = $detailRow.find('input[name^="cardcd"]');
+     const $cardNmDisp  = $detailRow.find('input[name^="cardnmdisp"]');
      const cardInputId  = `card_nm_${idx}`;
      const cardHiddenId = `card_cd_${idx}`;
+     const cardNmDispId  = `card_nmdisp_${idx}`;
      $cardInput.attr('id', cardInputId);
      $cardHidden.attr('id', cardHiddenId);
+     $cardNmDisp.attr('id', cardNmDispId);
 
      $cardInput.off('keydown').off('input');
      CardInputHandler.bind({
@@ -1209,21 +1313,26 @@
        if (item) {
         $cardInput.val(item.cardnum || item.cardnm || '');
         $cardHidden.val(item.cardid || '');
+        $cardNmDisp.val(item.cardnm || item.cardName || '');
        }
        _this.focusAfterCard($detailRow, idx);
       }
      });
 
      // ── 계좌 ──
-     const $bankInput  = $detailRow.find('input.btn-bank-search');
-     const $bankHidden = $detailRow.find('input[name^="bankcd"]');
-     const bankInputId  = `bank_nm_${idx}`;
-     const bankHiddenId = `bank_cd_${idx}`;
+     const $bankInput    = $detailRow.find('input.btn-bank-search');
+     const $bankHidden   = $detailRow.find('input[name^="bankcd"]');
+     const $bankNmDisp   = $detailRow.find('input[name^="banknmdisp"]');  // ★추가
+     const bankInputId   = `bank_nm_${idx}`;
+     const bankHiddenId  = `bank_cd_${idx}`;
+     const bankNmDispId  = `bank_nmdisp_${idx}`;                          // ★추가
      $bankInput.attr('id', bankInputId);
      $bankHidden.attr('id', bankHiddenId);
+     $bankNmDisp.attr('id', bankNmDispId);                               // ★추가
 
      AccountInputHandler.bind({
       accnumSelector: `#${bankInputId}`,
+      banknmSelector: `#${bankNmDispId}`,
       bankidSelector:  `#${bankHiddenId}`,
       minLength: 0,
       onSelect: function() {
@@ -1734,7 +1843,12 @@
      const val = $row.find('select[name^="drcr"]').val();
      const $dramt = $row.find('input[name^="dramt"]');
      const $cramt = $row.find('input[name^="cramt"]');
-
+    // ── 추가: 차/대변에 따라 카드 색 바 토글 ──
+     const isCredit = (val === '2');
+     $row.toggleClass('is-credit', isCredit);
+     const idx = $row.attr('data-line-idx');
+     $(`tr[data-detail-idx="${idx}"]`).toggleClass('is-credit-detail', isCredit);
+     // ──────────────────────────────────────────
      if (val === '1') {
       $dramt.prop('readonly', false).css({ background: '', color: '', paddingRight: '30px' });
       $cramt.prop('readonly', true).val('').css({ background: '#f5f5f5', color: '#aaa', paddingRight: '30px' });

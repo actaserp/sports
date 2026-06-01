@@ -377,11 +377,13 @@ public class SlipEntryService {
 			    a.cramt,
 			    a.bankcd,
 			    bank.accnum,
+			    bank.banknm ,
 			    a.mssec,
 			    d.mssecnm,
 			    a.cltcd,
 					e.cltnm,
-					a.cardnum
+					a.cardnum ,
+					card.cardnm
 			FROM tb_aa010 a
 			LEFT JOIN (
 				SELECT custcd, it1cd, MAX(it1nm) AS it1nm
@@ -400,6 +402,7 @@ public class SlipEntryService {
 			    AND a.bankcd = CONCAT(bank.bank, bank.bankcd)
 			left join tb_x0005 d on a.custcd = d.custcd and a.mssec = d.mssec
 			left join tb_xclient e on a.custcd = e.custcd and a.cltcd = e.cltcd
+			left join tb_iz010 card on a.spjangcd = card.spjangcd and a.cardnum =card.cardnum
 			WHERE a.custcd   = :custcd
 			AND a.spjangcd   = :spjangcd
 			AND a.spdate     = :spdate
