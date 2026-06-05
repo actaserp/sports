@@ -223,21 +223,17 @@
 
             <!-- 오른쪽: 결재란 (printType=1만 표시) -->
             <td th:if="${printType == '1'}"
-                style="width:180px; vertical-align:bottom;">
-              <table style="border:1px solid #333; border-collapse:collapse; font-size:10px; width:180px;">
+                th:style="'vertical-align:bottom; width:' + (${approverList.size()} * 60) + 'px;'">
+              <table style="border:1px solid #333; border-collapse:collapse; font-size:10px;"
+                     th:style="'border:1px solid #333; border-collapse:collapse; font-size:10px; width:' + (${approverList.size()} * 60) + 'px;'">
                 <tr>
-                  <td style="border-right:1px solid #333; text-align:center; width:60px; padding:0;">
-                    <div style="background:#f0f0f0; border-bottom:1px solid #333; padding:2px 4px; font-weight:700;">담 당</div>
-                    <div style="height:44px;"></div>
-                  </td>
-                  <td style="border-right:1px solid #333; text-align:center; width:60px; padding:0;">
-                    <div style="background:#f0f0f0; border-bottom:1px solid #333; padding:2px 4px; font-weight:700;">차 장</div>
-                    <div style="height:44px;"></div>
-                  </td>
-                  <td style="text-align:center; width:60px; padding:0;">
-                    <div style="background:#f0f0f0; border-bottom:1px solid #333; padding:2px 4px; font-weight:700;">사무처장</div>
-                    <div style="height:44px;"></div>
-                  </td>
+                  <th:block th:each="apv, apvStat : ${approverList}">
+                    <td th:style="${!apvStat.last ? 'border-right:1px solid #333; text-align:center; width:60px; padding:0;' : 'text-align:center; width:60px; padding:0;'}">
+                      <div style="background:#f0f0f0; border-bottom:1px solid #333; padding:2px 4px; font-weight:700;"
+                           th:text="${apv}"></div>
+                      <div style="height:44px;"></div>
+                    </td>
+                  </th:block>
                 </tr>
               </table>
             </td>
@@ -382,18 +378,13 @@
           <div style="margin-top:10px;">
             <table style="border:1px solid #333; border-collapse:collapse; font-size:10px;">
               <tr>
-                <td style="border-right:1px solid #333; text-align:center; width:60px; padding:0;">
-                  <div style="background:#f0f0f0; border-bottom:1px solid #333; padding:2px 4px; font-weight:700;">담 당</div>
-                  <div style="height:44px;"></div>
-                </td>
-                <td style="border-right:1px solid #333; text-align:center; width:60px; padding:0;">
-                  <div style="background:#f0f0f0; border-bottom:1px solid #333; padding:2px 4px; font-weight:700;">차 장</div>
-                  <div style="height:44px;"></div>
-                </td>
-                <td style="text-align:center; width:60px; padding:0;">
-                  <div style="background:#f0f0f0; border-bottom:1px solid #333; padding:2px 4px; font-weight:700;">사무처장</div>
-                  <div style="height:44px;"></div>
-                </td>
+                <th:block th:each="apv, apvStat : ${approverList}">
+                  <td th:style="${!apvStat.last ? 'border-right:1px solid #333; text-align:center; width:60px; padding:0;' : 'text-align:center; width:60px; padding:0;'}">
+                    <div style="background:#f0f0f0; border-bottom:1px solid #333; padding:2px 4px; font-weight:700;"
+                         th:text="${apv}"></div>
+                    <div style="height:44px;"></div>
+                  </td>
+                </th:block>
               </tr>
             </table>
           </div>
@@ -633,33 +624,15 @@
             <!-- ③ 우측: 결재란 -->
             <td style="width:18mm; vertical-align:top; padding:0;">
               <table style="width:100%; border-collapse:collapse; height:100%;">
-                <tr>
-                  <td style="border-bottom:1px solid #555; text-align:center;
-                             font-size:9px; padding:3px; background:#f0f0f0; font-weight:700;">
-                    사무처장
-                  </td>
-                </tr>
-                <tr>
-                  <td style="height:40mm; border-bottom:1px solid #555;"></td>
-                </tr>
-                <tr>
-                  <td style="border-bottom:1px solid #555; text-align:center;
-                             font-size:9px; padding:3px; background:#f0f0f0; font-weight:700;">
-                    차&#160;&#160;장
-                  </td>
-                </tr>
-                <tr>
-                  <td style="height:40mm; border-bottom:1px solid #555;"></td>
-                </tr>
-                <tr>
-                  <td style="border-bottom:1px solid #555; text-align:center;
-                             font-size:9px; padding:3px; background:#f0f0f0; font-weight:700;">
-                    담&#160;&#160;당
-                  </td>
-                </tr>
-                <tr>
-                  <td style="height:40mm;"></td>
-                </tr>
+                <th:block th:each="apv, apvStat : ${approverList}">
+                  <tr>
+                    <td th:style="'text-align:center; font-size:9px; padding:3px; background:#f0f0f0; font-weight:700;' + (!apvStat.last ? 'border-bottom:1px solid #555;' : '')"
+                        th:text="${apv}"></td>
+                  </tr>
+                  <tr>
+                    <td th:style="'height:40mm;' + (!apvStat.last ? 'border-bottom:1px solid #555;' : '')"></td>
+                  </tr>
+                </th:block>
               </table>
             </td>
 
@@ -804,21 +777,14 @@
         <!-- 결재란 하단 -->
         <table style="border-collapse:collapse; margin-top:8px;">
           <tr>
-            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
-              <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                          padding:3px 14px; font-size:10px; font-weight:700;">담&#160;당</div>
-              <div style="height:16mm; width:60px;"></div>
-            </td>
-            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
-              <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                          padding:3px 14px; font-size:10px; font-weight:700;">차&#160;장</div>
-              <div style="height:16mm; width:60px;"></div>
-            </td>
-            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
-              <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                          padding:3px 14px; font-size:10px; font-weight:700;">사무처장</div>
-              <div style="height:16mm; width:60px;"></div>
-            </td>
+            <th:block th:each="apv, apvStat : ${approverList}">
+              <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+                <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                            padding:3px 14px; font-size:10px; font-weight:700;"
+                     th:text="${apv}"></div>
+                <div style="height:16mm; width:60px;"></div>
+              </td>
+            </th:block>
           </tr>
         </table>
 
@@ -834,21 +800,14 @@
         <!-- 결재란 상단 -->
         <table style="border-collapse:collapse; margin-bottom:8px;">
           <tr>
-            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
-              <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                          padding:3px 14px; font-size:10px; font-weight:700;">담&#160;당</div>
-              <div style="height:16mm; width:60px;"></div>
-            </td>
-            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
-              <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                          padding:3px 14px; font-size:10px; font-weight:700;">차&#160;장</div>
-              <div style="height:16mm; width:60px;"></div>
-            </td>
-            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
-              <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                          padding:3px 14px; font-size:10px; font-weight:700;">사무처장</div>
-              <div style="height:16mm; width:60px;"></div>
-            </td>
+            <th:block th:each="apv, apvStat : ${approverList}">
+              <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+                <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                            padding:3px 14px; font-size:10px; font-weight:700;"
+                     th:text="${apv}"></div>
+                <div style="height:16mm; width:60px;"></div>
+              </td>
+            </th:block>
           </tr>
         </table>
 
@@ -985,21 +944,14 @@
         <!-- 결재란 상단 -->
         <table style="border-collapse:collapse; margin-bottom:8px;">
           <tr>
-            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
-              <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                          padding:3px 14px; font-size:10px; font-weight:700;">담&#160;당</div>
-              <div style="height:16mm; width:60px;"></div>
-            </td>
-            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
-              <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                          padding:3px 14px; font-size:10px; font-weight:700;">차&#160;장</div>
-              <div style="height:16mm; width:60px;"></div>
-            </td>
-            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
-              <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                          padding:3px 14px; font-size:10px; font-weight:700;">사무처장</div>
-              <div style="height:16mm; width:60px;"></div>
-            </td>
+            <th:block th:each="apv, apvStat : ${approverList}">
+              <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+                <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                            padding:3px 14px; font-size:10px; font-weight:700;"
+                     th:text="${apv}"></div>
+                <div style="height:16mm; width:60px;"></div>
+              </td>
+            </th:block>
           </tr>
         </table>
 
@@ -1163,21 +1115,14 @@
         <!-- 결재란 상단 -->
         <table style="border-collapse:collapse; margin-bottom:8px;">
           <tr>
-            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
-              <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                          padding:3px 14px; font-size:10px; font-weight:700;">담&#160;당</div>
-              <div style="height:16mm; width:60px;"></div>
-            </td>
-            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
-              <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                          padding:3px 14px; font-size:10px; font-weight:700;">차&#160;장</div>
-              <div style="height:16mm; width:60px;"></div>
-            </td>
-            <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
-              <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                          padding:3px 14px; font-size:10px; font-weight:700;">사무처장</div>
-              <div style="height:16mm; width:60px;"></div>
-            </td>
+            <th:block th:each="apv, apvStat : ${approverList}">
+              <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+                <div style="background:#f0f0f0; border-bottom:1px solid #333;
+                            padding:3px 14px; font-size:10px; font-weight:700;"
+                     th:text="${apv}"></div>
+                <div style="height:16mm; width:60px;"></div>
+              </td>
+            </th:block>
           </tr>
         </table>
 

@@ -37,6 +37,14 @@ public class SlipStatusController {  //전표입력현황
 //	@Autowired
 //	private FontLoader fontLoader;
 
+	@GetMapping("/envInfo")
+	public AjaxResult getEnvInfo() {
+		Map<String, Object> info = slipStatusService.getSettleInfo();
+		AjaxResult result = new AjaxResult();
+		result.data = info;
+		return result;
+	}
+
 	@GetMapping("/read")
 	public AjaxResult getSlipList(@RequestParam("start") String start,
 																@RequestParam("end") String end,
@@ -55,6 +63,7 @@ public class SlipStatusController {  //전표입력현황
 	public void printSlip(
 		@RequestParam("printType") String printType,
 		@RequestParam("keys") String keys,
+		@RequestParam(value = "approvers", required = false) String approvers,
 		HttpServletResponse response) throws Exception {
 
 		try {
@@ -144,19 +153,14 @@ public class SlipStatusController {  //전표입력현황
 					break;
 			}
 
-//			log.info("[SlipPrint] 그룹핑된 slip 수: {}", slipList.size());
-
-			com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-			try {
-//				log.info("[SlipPrint] slipList JSON:\n{}", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(slipList));
-			} catch (Exception ex) {
-				log.warn("[SlipPrint] JSON 직렬화 실패: {}", ex.getMessage());
-			}
+			// ── 결재란: DB(settle1~5) 우선, 없으면 URL파라미터, 없으면 기본값 ──
+			List<String> approverList = resolveApproverList(approvers);
 
 			// Thymeleaf 렌더링
 			Context context = new Context();
 			context.setVariable("slipList", slipList);
 			context.setVariable("printType", printType);
+			context.setVariable("approverList", approverList);
 
 			String html = templateEngine.process(
 				"accountCardManagement/slip_print", context
@@ -176,6 +180,7 @@ public class SlipStatusController {  //전표입력현황
 	public void downloadSlipPdf(
 		@RequestParam("printType") String printType,
 		@RequestParam("keys") String keys,
+		@RequestParam(value = "approvers", required = false) String approvers,
 		HttpServletResponse response) throws Exception {
 
 		try {
@@ -235,6 +240,7 @@ public class SlipStatusController {  //전표입력현황
 			Context context = new Context();
 			context.setVariable("slipList", slipList);
 			context.setVariable("printType", printType);
+			context.setVariable("approverList", resolveApproverList(approvers));
 
 			String html = templateEngine.process("accountCardManagement/slip_print", context);
 			html = html.replace("&nbsp;", "&#160;");
@@ -311,12 +317,12 @@ public class SlipStatusController {  //전표입력현황
 			Object dramtRaw = row.get("dramt");
 			Object cramtRaw = row.get("cramt");
 
-			log.info("[SlipPrint] key={} | drcr=[{}] type={} | dramt={} | cramt={}",
+			/*log.info("[SlipPrint] key={} | drcr=[{}] type={} | dramt={} | cramt={}",
 				key,
 				drcrRaw,
 				drcrRaw != null ? drcrRaw.getClass().getSimpleName() : "null",
 				dramtRaw,
-				cramtRaw);
+				cramtRaw);*/
 
 			// spoccu 변환
 			String spoccuRaw = row.get("spoccu") != null ? row.get("spoccu").toString() : "";
@@ -582,6 +588,30 @@ public class SlipStatusController {  //전표입력현황
 						 .collect(Collectors.joining("\n"));
 	}
 
+	private List<String> resolveApproverList(String approversParam) {
+		// 1순위: DB(settle1~5)
+		Map<String, Object> settle = slipStatusService.getSettleInfo();
+		if (settle != null) {
+			List<String> dbList = java.util.Arrays.asList("settle1","settle2","settle3","settle4","settle5")
+				.stream()
+				.map(k -> settle.get(k))
+				.filter(v -> v != null && !v.toString().trim().isEmpty())
+				.map(Object::toString)
+				.collect(Collectors.toList());
+			if (!dbList.isEmpty()) return dbList;
+		}
 
+		// 2순위: URL 파라미터
+		if (approversParam != null && !approversParam.trim().isEmpty()) {
+			List<String> paramList = java.util.Arrays.stream(approversParam.split(","))
+				.map(String::trim)
+				.filter(s -> !s.isEmpty())
+				.collect(Collectors.toList());
+			if (!paramList.isEmpty()) return paramList;
+		}
+
+		// 3순위: 기본값
+		return java.util.Arrays.asList("담당", "차장", "사무처장");
+	}
 
 }

@@ -236,6 +236,26 @@ public class SlipStatusService {
 		return sqlRunner.getRows(sql, param);
 	}
 
+	public Map<String, Object> getSettleInfo() {
+		String spjangcd = TenantContext.get();
+
+		Map<String, String> bizInfo = getBizInfoBySpjangcd(spjangcd);
+		String custcd = bizInfo.get("custcd");
+
+		MapSqlParameterSource sqlParam = new MapSqlParameterSource();
+		sqlParam.addValue("custcd",   custcd);
+		sqlParam.addValue("spjangcd", spjangcd);
+
+		String sql = """
+			SELECT settle1, settle2, settle3, settle4, settle5, approflag
+			    FROM tb_xenv
+			    WHERE custcd = :custcd
+			    AND spjangcd = :spjangcd
+			""";
+
+		return sqlRunner.getRow(sql, sqlParam);
+	}
+
 	public List<Map<String, Object>> printGyeolui1(String keys) {
 
 		String spjangcd = TenantContext.get();
@@ -958,4 +978,5 @@ public class SlipStatusService {
 		""";
 		return sqlRunner.getRows(sql, param);
 	}
+
 }

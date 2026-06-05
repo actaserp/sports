@@ -54,7 +54,7 @@ public class SlipEntryService {
 		String sql = """
     select
       acccd,
-      accnm, acnflag
+      accnm, acnflag, drcr
     from tb_ac001
     where useyn = '1' and spyn='1'
     and replace(isnull(accnm, ''), ' ', '') like '%' + replace(:accnm, ' ', '') + '%'
@@ -64,27 +64,31 @@ public class SlipEntryService {
 		return sqlRunner.getRows(sql, param);
 	}
 
-	public List<Map<String, Object>> getIt1nm(String it1nm) {
+	public List<Map<String, Object>> getIt1nm(String it1nm, String tiosec) {
 
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("it1nm", it1nm);
+		param.addValue("tiosec", tiosec);
 
 		String sql = """
 			select it1cd ,it1nm from tb_x0003 
 			where useyn='1'
+			and tiosec = :tiosec
 			 and replace(isnull(it1nm, ''), ' ', '') like '%' + replace(:it1nm, ' ', '') + '%'
 			""";
 		return sqlRunner.getRows(sql, param);
 	}
 
-	public List<Map<String, Object>> getIt2nm(String it2nm) {
+	public List<Map<String, Object>> getIt2nm(String it2nm, String tiosec) {
 
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("it2nm", it2nm);
+		param.addValue("tiosec", tiosec);
 
 		String sql = """
 			select it2cd ,it2nm from tb_x0004
 			where useyn='1'
+			and tiosec = :tiosec
 			and replace(isnull(it2nm, ''), ' ', '') like '%' + replace(:it2nm, ' ', '') + '%'
 			""";
 		return sqlRunner.getRows(sql, param);
@@ -516,7 +520,7 @@ public class SlipEntryService {
 	}
 
 	@Transactional
-	public Map<String, Object> copySlip(Map<String, Object> payload) {
+	public Map<String, Object> copySlip(Map<String, Object> payload , String userId) {
 
 		// ── 테넌트/사업장 정보 ──
 		String spjangcd = TenantContext.get();
@@ -568,7 +572,8 @@ public class SlipEntryService {
 			.addValue("newSpdate", newSpdate)
 			.addValue("newSpnum",  newSpnum)
 			.addValue("today",     LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")))
-			.addValue("now",       LocalDateTime.now());
+			.addValue("now",       LocalDateTime.now())
+			.addValue("inputid", userId);
 
 		// ── 4. 헤더 복사 ──
 		sqlRunner.execute("""
@@ -577,13 +582,15 @@ public class SlipEntryService {
             tiosec, cashyn, busipur, spoccu, remark,
             taxdate, taxnum, subject, regdate,
             bsdate, bseccd, busicd,
-            orgspdate, orgspnum, copydate, appdate, appperid
+            orgspdate, orgspnum, copydate, appdate, appperid,
+            inputid
         )
         SELECT custcd, spjangcd, :newSpdate, :newSpnum,
             tiosec, cashyn, busipur, spoccu, remark,
             '', '', subject, :newSpdate,
             bsdate, bseccd, busicd,
-            :orgSpdate, :orgSpnum, :today, :today, ''
+            :orgSpdate, :orgSpnum, :today, :today, '',
+            :inputid
         FROM TB_AA009 WITH (NOLOCK)
         WHERE custcd   = :custcd
           AND spjangcd = :spjangcd

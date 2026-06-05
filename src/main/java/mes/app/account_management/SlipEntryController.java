@@ -45,9 +45,10 @@ public class SlipEntryController {	//전표등록
 	}
 
 	@GetMapping("/findIt1nm")
-	public AjaxResult getIt1nm(@RequestParam(value = "it1nm") String it1nm){
+	public AjaxResult getIt1nm(@RequestParam(value = "it1nm") String it1nm,
+														 @RequestParam(value = "tiosec")String tiosec){
 
-		List<Map<String, Object>> items = this.slipEntryService.getIt1nm(it1nm);
+		List<Map<String, Object>> items = this.slipEntryService.getIt1nm(it1nm, tiosec);
 
 		AjaxResult result = new AjaxResult();
 		result.data = items;
@@ -57,9 +58,10 @@ public class SlipEntryController {	//전표등록
 	}
 
 	@GetMapping("/findIt2nm")
-	public AjaxResult getIt2nm(@RequestParam(value = "it2nm") String it2nm){
+	public AjaxResult getIt2nm(@RequestParam(value = "it2nm") String it2nm,
+														 @RequestParam(value = "tiosec") String tiosec){
 
-		List<Map<String, Object>> items = this.slipEntryService.getIt2nm(it2nm);
+		List<Map<String, Object>> items = this.slipEntryService.getIt2nm(it2nm, tiosec);
 
 		AjaxResult result = new AjaxResult();
 		result.data = items;
@@ -146,10 +148,20 @@ public class SlipEntryController {	//전표등록
 	}
 
 	@PostMapping("/copy")
-	public AjaxResult slipEntryCopy(@RequestBody Map<String, Object> payload) {
+	public AjaxResult slipEntryCopy(@RequestBody Map<String, Object> payload, Authentication auth) {
 		AjaxResult result = new AjaxResult();
+
+		User user = (User) auth.getPrincipal();
+		String userId = user.getUsername();
+
+		if (userId == null || userId.trim().isEmpty()) {
+			result.success = false;
+			result.message = "로그인 정보가 없습니다.";
+			return result;
+		}
+
 		try {
-			Map<String, Object> copied = slipEntryService.copySlip(payload);
+			Map<String, Object> copied = slipEntryService.copySlip(payload, userId);
 			result.data = copied;
 			result.success = true;
 		} catch (Exception e) {
