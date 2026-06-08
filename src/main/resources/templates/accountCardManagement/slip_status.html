@@ -1028,6 +1028,12 @@
      overlay.appendChild(popup);
      document.body.appendChild(overlay);
 
+     // ── sessionStorage에서 이전 선택값 복원 ──
+     const savedPrintType = sessionStorage.getItem('slip_print_type');
+     if (savedPrintType) {
+      document.getElementById('spPrintType').value = savedPrintType;
+     }
+
      // ── iframe에 PDF URL 세팅 ──
      function renderPreview(printType) {
       const approvers = document.getElementById('spApprovers').value;
@@ -1038,6 +1044,7 @@
      renderPreview(document.getElementById('spPrintType').value);
 
      document.getElementById('spPrintType').addEventListener('change', function () {
+      sessionStorage.setItem('slip_print_type', this.value);
       renderPreview(this.value);
      });
 
