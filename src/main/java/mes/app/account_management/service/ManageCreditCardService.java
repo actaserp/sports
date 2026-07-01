@@ -53,6 +53,7 @@ public class ManageCreditCardService {
 			LEFT JOIN tb_aa040 b ON a.stlbanknm = b.accnum
 			                    AND a.custcd    = b.custcd
 			                    AND a.spjangcd  = b.spjangcd
+			                    and b.lockflag ='1'
 			LEFT JOIN tb_xbank c ON b.bank = c.bankcd
 			LEFT JOIN tb_xcard d ON a.cardco = d.cd
 			WHERE a.spjangcd = :spjangcd and a.useyn = :Combuseyn
@@ -228,6 +229,7 @@ public class ManageCreditCardService {
         LEFT JOIN tb_aa040 b ON a.stlbanknm = b.accnum
                             AND a.custcd    = b.custcd
                             AND a.spjangcd  = b.spjangcd
+                            and b.lockflag ='1'
         LEFT JOIN tb_xbank c ON b.bank = c.bankcd
         LEFT JOIN tb_xcard d ON a.cardco = d.cd
         WHERE a.spjangcd = :spjangcd
