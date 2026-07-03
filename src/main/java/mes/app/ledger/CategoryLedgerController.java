@@ -76,4 +76,15 @@ public class CategoryLedgerController { //관별원장
 		result.data = categoryLedgerService.selectDetail2List(start, end, mssec, accnm);
 		return result;
 	}
+
+	// 전표 팝업 : 헤더 + 분개
+	@GetMapping("/readSlip")
+	public AjaxResult searchSlip(
+		@RequestParam(value = "yymmdd") String yymmdd,
+		@RequestParam(value = "spnum") String spnum,
+		@RequestParam(value = "acccd", required = false) String acccd) {
+		AjaxResult result = new AjaxResult();
+		result.data = categoryLedgerService.selectSlip(yymmdd, spnum);
+		return result;
+	}
 }

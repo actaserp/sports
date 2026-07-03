@@ -1,7 +1,7 @@
 package mes.app.ledger;
 
 import lombok.extern.slf4j.Slf4j;
-import mes.app.ledger.service.CategoryItemLedgerService;
+import mes.app.ledger.service.CategoryItemDetailLedgerService;
 import mes.domain.model.AjaxResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,12 +10,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/ledger/CategoryItemLedger")
+@RequestMapping("/api/ledger/CategoryItemDetailLedger")
 @Slf4j
-public class CategoryItemLedgerController { //관항별원장
+public class CategoryItemDetailLedgerController { //관항목별원장
 
 	@Autowired
-	CategoryItemLedgerService categoryItemLedgerService;
+	CategoryItemDetailLedgerService categoryItemDetailLedgerService;
 
 	// tab1 좌측 : 관(계정) 목록
 	@GetMapping("/read")
@@ -24,49 +24,66 @@ public class CategoryItemLedgerController { //관항별원장
 		@RequestParam(value = "end") String end,
 		@RequestParam(value = "mssec", required = false) String mssec,
 		@RequestParam(value = "acccd", required = false) String acccd,
-		@RequestParam(value = "it1cd", required = false) String it1cd) {
+		@RequestParam(value = "it1cd", required = false) String it1cd,
+		@RequestParam(value = "it2cd", required = false) String it2cd) {
 		AjaxResult result = new AjaxResult();
-		result.data = categoryItemLedgerService.searchSummary(start, end, mssec, acccd, it1cd); // ← 인자 전달
+		result.data = categoryItemDetailLedgerService.searchSummary(start, end, mssec, acccd);
 		return result;
 	}
 
-	// tab1 우측 : 선택한 관의 항별 내역
+	// tab1 우측 : 선택 관의 항+목별 내역
 	@GetMapping("/readItem")
 	public AjaxResult searchItem(
 		@RequestParam(value = "start") String start,
 		@RequestParam(value = "end") String end,
 		@RequestParam(value = "mssec", required = false) String mssec,
 		@RequestParam(value = "acccd", required = false) String acccd,
-		@RequestParam(value = "it1cd", required = false) String it1cd) {
+		@RequestParam(value = "it1cd", required = false) String it1cd,
+		@RequestParam(value = "it2cd", required = false) String it2cd) {
 		AjaxResult result = new AjaxResult();
-		result.data = categoryItemLedgerService.searchItem(start, end, mssec, acccd, it1cd);
+		result.data = categoryItemDetailLedgerService.searchItem(start, end, mssec, acccd, it1cd, it2cd);
 		return result;
 	}
 
-	// tab2 상세내역
+	// ── tab2 : 상세내역 (관+항+목+전표일자, 마스터) ──
 	@GetMapping("/readItemDetail")
 	public AjaxResult searchItemDetail(
 		@RequestParam(value = "start") String start,
 		@RequestParam(value = "end") String end,
 		@RequestParam(value = "mssec", required = false) String mssec,
 		@RequestParam(value = "acccd", required = false) String acccd,
-		@RequestParam(value = "it1cd", required = false) String it1cd) {
+		@RequestParam(value = "it1cd", required = false) String it1cd,
+		@RequestParam(value = "it2cd", required = false) String it2cd) {
 		AjaxResult result = new AjaxResult();
-		result.data = categoryItemLedgerService.selectItemDetailList(start, end, mssec, acccd, it1cd);
+		result.data = categoryItemDetailLedgerService.selectItemDetailList(start, end, mssec, acccd, it1cd, it2cd);
 		return result;
 	}
 
-	// tab3 상세내역
+	// tab3 상세내역(재원별)
 	@GetMapping("/readDetail")
 	public AjaxResult searchDetail(
 		@RequestParam(value = "start") String start,
 		@RequestParam(value = "end") String end,
 		@RequestParam(value = "acccd", required = false) String acccd,
 		@RequestParam(value = "it1cd", required = false) String it1cd,
-		@RequestParam(value = "tiosec", required = false) String tiosec,
+		@RequestParam(value = "it2cd", required = false) String it2cd,
 		@RequestParam(value = "mssec", required = false) String mssec) {
 		AjaxResult result = new AjaxResult();
-		result.data = categoryItemLedgerService.selectDetailList(start, end, acccd, it1cd, tiosec, mssec);
+		result.data = categoryItemDetailLedgerService.selectDetailList(start, end, acccd, it1cd, it2cd, mssec);
+		return result;
+	}
+
+	// tab4 상세내역
+	@GetMapping("/readDetail2")
+	public AjaxResult searchDetail2(
+		@RequestParam(value = "start") String start,
+		@RequestParam(value = "end") String end,
+		@RequestParam(value = "acccd", required = false) String acccd,
+		@RequestParam(value = "it1cd", required = false) String it1cd,
+		@RequestParam(value = "it2cd", required = false) String it2cd,
+		@RequestParam(value = "mssec", required = false) String mssec) {
+		AjaxResult result = new AjaxResult();
+		result.data = categoryItemDetailLedgerService.selectDetail2List(start, end, acccd, it1cd, it2cd, mssec);
 		return result;
 	}
 
@@ -77,9 +94,7 @@ public class CategoryItemLedgerController { //관항별원장
 		@RequestParam(value = "spnum") String spnum,
 		@RequestParam(value = "acccd", required = false) String acccd) {
 		AjaxResult result = new AjaxResult();
-		result.data = categoryItemLedgerService.selectSlip(yymmdd, spnum);
+		result.data = categoryItemDetailLedgerService.selectSlip(yymmdd, spnum);
 		return result;
 	}
-
 }
-

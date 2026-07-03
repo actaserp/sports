@@ -1,0 +1,1354 @@
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
+  <style>
+      .grid-guide-box {
+          background: #eef3ff;
+          border-left: 4px solid #2f5cff;
+          padding: 6px 10px;
+          font-size: 13px;
+          margin-bottom: 6px;
+          color: #333;
+      }
+      .chk-inline { display:inline-flex; align-items:center; gap:4px; font-size:13px; margin-left:8px; }
+      /* ── 전표 팝업 레이아웃 ── */
+      .slip-popup .slip-head-table,
+      .slip-popup .slip-foot-table {
+          width: 100%;
+          border-collapse: collapse;
+          table-layout: fixed;
+      }
+      .slip-popup .slip-head-table th,
+      .slip-popup .slip-head-table td,
+      .slip-popup .slip-foot-table th,
+      .slip-popup .slip-foot-table td {
+          border: 1px solid #d5d9e0;
+          padding: 4px 6px;
+          font-size: 13px;
+          vertical-align: middle;
+      }
+      .slip-popup .slip-head-table th,
+      .slip-popup .slip-foot-table th {
+          background: #f5f6f8;
+          color: #333;
+          font-weight: 600;
+          text-align: center;
+          white-space: nowrap;
+      }
+      .slip-popup .slip-head-table td input,
+      .slip-popup .slip-head-table td textarea,
+      .slip-popup .slip-foot-table td input {
+          width: 100%;
+          border: none;
+          background: transparent;
+          font-size: 13px;
+          box-sizing: border-box;
+      }
+      .slip-popup .slip-head-table td textarea { resize: none; }
+      .slip-popup .chk-cell { text-align: center; white-space: nowrap; }
+      .slip-popup .slip-grid-box { margin: 8px 0; }
+      .slip-popup { width: 100%; box-sizing: border-box; padding: 4px; }
+      .slip-popup .section { width: 100%; }
+  </style>
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>사업별입출현황</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>장부출력</li>
+        <li>사업별입출현황</li>
+      </ul>
+    </div>
+    <div class="tab-wrap">
+      <ul class="tab-links">
+        <li><a href="#tab2" id="tab2Link" title="세입내역">세입내역</a></li>
+        <li><a href="#tab5" id="tab5Link" title="세출내역">세출내역</a></li>
+        <li><a href="#tab3" id="tab3Link" title="관련전표">관련전표</a></li>
+        <li><a href="#tab4" id="tab4Link" title="계좌현황">계좌현황</a></li>
+        <li><a href="#tab6" id="tab6Link" title="사업손익집계현황">사업손익집계현황</a></li>
+        <li><a href="#tab7" id="tab7Link" title="사업손익상세">사업손익상세</a></li>
+      </ul>
+      <div class="tab-contents">
+
+        <!-- ── 세입내역 (tab2, PB CASE 2, tiosec=1) ── -->
+        <section class="tab-item" id="tab2">
+          <div class="section-top">
+            <div class="search-wrap">
+              <dl>
+                <dt><label>기준일자<span class="eq"></span></label></dt>
+                <dd>
+                  <div class="srch-box">
+                    <input id="searchfrdate2" name="searchfrdate2" type="date"/>
+                    <span class="slow_sign">~</span>
+                    <input id="searchtodate2" name="searchtodate2" type="date"/>
+                  </div>
+                </dd>
+              </dl>
+              <dl>
+                <dt><label>사업명</label></dt>
+                <dd>
+                  <input class="form-control2" id="businm2" name="businm2" placeholder="사업명 (엔터로 검색)"/>
+                  <input type="hidden" id="busicd2" name="busicd2"/>
+                  <input type="hidden" id="bsdate2" name="bsdate2"/>
+                  <input type="hidden" id="bseccd2" name="bseccd2"/>
+                </dd>
+              </dl>
+              <dl>
+                <dt>&nbsp;</dt>
+                <dd>
+                  <li>
+                    <button class="btn btn-delete" id="btnSearch2" title="검색" type="button">
+                      <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
+                      검색
+                    </button>
+                  </li>
+                </dd>
+              </dl>
+            </div>
+          </div>
+          <div class="grid-guide-box">※ 사업명 입력 후 엔터로 검색합니다.
+            <label class="chk-inline"><input type="checkbox" id="cbxSlip2" checked/> 더블클릭 시 전표 팝업 열기</label>
+            (단축키 조회:F4)
+          </div>
+          <div class="grid_box" id="divSummary">
+            <div id="theGrid_summary" style="height: 540px;"></div>
+          </div>
+        </section>
+
+        <!-- ── 세출내역 (tab5, PB CASE 5, tiosec=2) ── -->
+        <section class="tab-item" id="tab5">
+          <div class="section-top">
+            <div class="search-wrap">
+              <dl>
+                <dt><label>기준일자<span class="eq"></span></label></dt>
+                <dd>
+                  <div class="srch-box">
+                    <input id="searchfrdate5" name="searchfrdate5" type="date"/>
+                    <span class="slow_sign">~</span>
+                    <input id="searchtodate5" name="searchtodate5" type="date"/>
+                  </div>
+                </dd>
+              </dl>
+              <dl>
+                <dt><label>사업명</label></dt>
+                <dd>
+                  <input class="form-control2" id="businm5" name="businm5" placeholder="사업명 (엔터로 검색)"/>
+                  <input type="hidden" id="busicd5" name="busicd5"/>
+                  <input type="hidden" id="bsdate5" name="bsdate5"/>
+                  <input type="hidden" id="bseccd5" name="bseccd5"/>
+                </dd>
+              </dl>
+              <dl>
+                <dt>&nbsp;</dt>
+                <dd>
+                  <li>
+                    <button class="btn btn-delete" id="btnSearch5" title="검색" type="button">
+                      <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
+                      검색
+                    </button>
+                  </li>
+                </dd>
+              </dl>
+            </div>
+          </div>
+          <div class="grid-guide-box">※ 사업명 입력 후 엔터로 검색합니다.
+            <label class="chk-inline"><input type="checkbox" id="cbxSlip5" checked/> 더블클릭 시 전표 팝업 열기</label>
+            (단축키 조회:F4)
+          </div>
+          <div class="grid_box" id="divDetail">
+            <div id="theGrid_detail" style="height: 540px;"></div>
+          </div>
+        </section>
+
+        <!-- ── 관련전표 (tab3) ── -->
+        <section class="tab-item" id="tab3">
+          <div class="section-top">
+            <div class="search-wrap">
+              <dl>
+                <dt><label>기준일자<span class="eq"></span></label></dt>
+                <dd>
+                  <div class="srch-box">
+                    <input id="searchfrdate3" name="searchfrdate3" type="date"/>
+                    <span class="slow_sign">~</span>
+                    <input id="searchtodate3" name="searchtodate3" type="date"/>
+                  </div>
+                </dd>
+              </dl>
+              <dl>
+                <dt><label>사업명</label></dt>
+                <dd>
+                  <input class="form-control2" id="businm3" name="businm3" placeholder="사업명 (엔터로 검색)"/>
+                  <input type="hidden" id="busicd3" name="busicd3"/>
+                  <input type="hidden" id="bsdate3" name="bsdate3"/>
+                  <input type="hidden" id="bseccd3" name="bseccd3"/>
+                </dd>
+              </dl>
+              <dl>
+                <dt><label>구분</label></dt>
+                <dd>
+                  <select class="form-control2" id="tiosec3" name="tiosec3">
+                    <option value="%">전체</option>
+                    <option value="1">세입</option>
+                    <option value="2">세출</option>
+                  </select>
+                </dd>
+              </dl>
+              <dl>
+                <dt>&nbsp;</dt>
+                <dd>
+                  <li>
+                    <button class="btn btn-delete" id="btnSearch3" title="검색" type="button">
+                      <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
+                      검색
+                    </button>
+                  </li>
+                </dd>
+              </dl>
+            </div>
+          </div>
+          <div class="grid-guide-box">※ 사업명 입력 후 엔터로 검색합니다. 더블클릭 시 전표 팝업이 열립니다. (단축키 조회:F4)</div>
+          <div class="grid_box" id="divRelated">
+            <div id="theGrid_related" style="height: 540px;"></div>
+          </div>
+        </section>
+
+        <!-- ── 계좌현황 (tab4) ── -->
+        <section class="tab-item" id="tab4">
+          <div class="section-top">
+            <div class="search-wrap">
+              <dl>
+                <dt><label>기준일자<span class="eq"></span></label></dt>
+                <dd>
+                  <div class="srch-box">
+                    <input id="searchfrdate4" name="searchfrdate4" type="date"/>
+                    <span class="slow_sign">~</span>
+                    <input id="searchtodate4" name="searchtodate4" type="date"/>
+                  </div>
+                </dd>
+              </dl>
+              <dl>
+                <dt><label>사업명</label></dt>
+                <dd>
+                  <input class="form-control2" id="businm4" name="businm4" placeholder="사업명 (엔터로 검색)"/>
+                  <input type="hidden" id="busicd4" name="busicd4"/>
+                  <input type="hidden" id="bsdate4" name="bsdate4"/>
+                  <input type="hidden" id="bseccd4" name="bseccd4"/>
+                </dd>
+              </dl>
+              <dl>
+                <dt>&nbsp;</dt>
+                <dd>
+                  <li>
+                    <button class="btn btn-delete" id="btnSearch4" title="검색" type="button">
+                      <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
+                      검색
+                    </button>
+                  </li>
+                </dd>
+              </dl>
+            </div>
+          </div>
+          <div class="grid-guide-box">※ 사업명 입력 후 엔터로 검색합니다. 더블클릭 시 전표 팝업이 열립니다. (단축키 조회:F4)</div>
+          <div class="grid_box" id="divAccount">
+            <div id="theGrid_account" style="height: 540px;"></div>
+          </div>
+        </section>
+
+        <!-- ── 사업손익집계현황 (tab6) ── -->
+        <section class="tab-item" id="tab6">
+          <div class="section-top">
+            <div class="search-wrap">
+              <dl>
+                <dt><label>기준일자<span class="eq"></span></label></dt>
+                <dd>
+                  <div class="srch-box">
+                    <input id="searchfrdate6" name="searchfrdate6" type="date"/>
+                    <span class="slow_sign">~</span>
+                    <input id="searchtodate6" name="searchtodate6" type="date"/>
+                  </div>
+                </dd>
+              </dl>
+              <dl>
+                <dt><label>사업명</label></dt>
+                <dd>
+                  <input class="form-control2" id="businm6" name="businm6" placeholder="사업명 (엔터로 검색)"/>
+                  <input type="hidden" id="busicd6" name="busicd6"/>
+                  <input type="hidden" id="bsdate6" name="bsdate6"/>
+                  <input type="hidden" id="bseccd6" name="bseccd6"/>
+                </dd>
+              </dl>
+              <dl>
+                <dt>&nbsp;</dt>
+                <dd>
+                  <li>
+                    <button class="btn btn-delete" id="btnSearch6" title="검색" type="button">
+                      <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
+                      검색
+                    </button>
+                  </li>
+                </dd>
+              </dl>
+            </div>
+          </div>
+          <div class="grid-guide-box">
+            <label class="chk-inline" style="margin-left:0;">
+              <input type="radio" name="profitMode6" id="rbDetail6" value="detail" checked/> 사업상세
+            </label>
+            <label class="chk-inline">
+              <input type="radio" name="profitMode6" id="rbSummary6" value="summary"/> 사업별현황
+            </label>
+            &nbsp;※ 사업명 입력 후 엔터로 검색합니다. (구분/관 단위 집계 화면으로 전표 팝업은 지원하지 않습니다)
+          </div>
+          <div class="grid_box" id="divProfit">
+            <div id="theGrid_profit" style="height: 460px;"></div>
+            <div id="theGrid_profit_summary" style="height: 460px; display:none;"></div>
+          </div>
+          <div id="profitSummaryBar" style="margin-top:8px; padding:10px 14px; background:#f5f6f8; border:1px solid #d5d9e0; font-size:14px; font-weight:600; text-align:right;">
+            순이익 : <span id="profitNetAmt" style="color:#2f5cff;">0</span> 원
+          </div>
+        </section>
+
+        <!-- ── 사업손익상세 (tab7, d_book23_5) ── -->
+        <section class="tab-item" id="tab7">
+          <div class="section-top">
+            <div class="search-wrap">
+              <dl>
+                <dt><label>기준일자<span class="eq"></span></label></dt>
+                <dd>
+                  <div class="srch-box">
+                    <input id="searchfrdate7" name="searchfrdate7" type="date"/>
+                    <span class="slow_sign">~</span>
+                    <input id="searchtodate7" name="searchtodate7" type="date"/>
+                  </div>
+                </dd>
+              </dl>
+              <dl>
+                <dt><label>사업명</label></dt>
+                <dd>
+                  <input class="form-control2" id="businm7" name="businm7" placeholder="사업명 (엔터로 검색)"/>
+                  <input type="hidden" id="busicd7" name="busicd7"/>
+                  <input type="hidden" id="bsdate7" name="bsdate7"/>
+                  <input type="hidden" id="bseccd7" name="bseccd7"/>
+                </dd>
+              </dl>
+              <dl>
+                <dt>&nbsp;</dt>
+                <dd>
+                  <li>
+                    <button class="btn btn-delete" id="btnSearch7" title="검색" type="button">
+                      <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
+                      검색
+                    </button>
+                  </li>
+                </dd>
+              </dl>
+            </div>
+          </div>
+          <div class="grid-guide-box">※ 사업명 입력 후 엔터로 검색합니다. (구분/일자별 손익 상세 화면으로 전표 팝업은 지원하지 않습니다) (단축키 조회:F4)</div>
+          <div class="grid_box" id="divProfitLoss">
+            <div id="theGrid_profitloss" style="height: 500px;"></div>
+          </div>
+          <div id="profitLossBar" style="margin-top:8px; padding:10px 14px; background:#f5f6f8; border:1px solid #d5d9e0; font-size:14px; font-weight:600; text-align:right;">
+            순이익 : <span id="profitLossNetAmt" style="color:#2f5cff;">0</span> 원
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 사업 팝업 -->
+  <script id="busimTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup">
+        <section class="section">
+            <div id="BusinessGrid" style="height:350px; display:block;"></div>
+        </section>
+    </div>
+  </script>
+
+  <!-- 전표 팝업 -->
+  <script id="slipPopupTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup slip-popup">
+      <section class="section">
+        <div class="slip-header">
+          <table class="slip-head-table">
+            <colgroup>
+              <col style="width:90px"><col>
+              <col style="width:90px"><col>
+              <col style="width:90px"><col>
+              <col style="width:80px"><col>
+            </colgroup>
+            <tbody>
+              <tr>
+                <th>전표일자</th><td><input type="date" id="sp_yymmdd" readonly></td>
+                <th>전표번호</th><td><input type="text" id="sp_slipno" readonly></td>
+                <th>입출금번호</th><td><input type="text" id="sp_tiosecnm" readonly></td>
+                <th>작성일자</th><td><input type="text" id="sp_inserdt" readonly></td>
+              </tr>
+              <tr>
+                <th>사업구분</th><td><input type="text" id="sp_buiscd" readonly></td>
+                <th>증빙구분</th><td><input type="text" id="sp_spoccu" readonly></td>
+                <th>최종수정일</th><td><input type="text" id="sp_updatedt" readonly></td>
+                <th>현금</th><td class="chk-cell"><input type="checkbox" id="sp_cashyn" disabled></td>
+              </tr>
+              <tr>
+                <th>제목</th><td colspan="3"><input type="text" id="sp_title" readonly></td>
+                <th>사업명</th><td colspan="3"><input type="text" id="sp_busim" readonly></td>
+              </tr>
+              <tr>
+                <th>기관명</th><td colspan="7"><input type="text" id="sp_orgnm" readonly></td>
+              </tr>
+              <tr>
+                <th>비고</th><td colspan="7"><textarea id="sp_remark" rows="4" readonly></textarea></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="slip-grid-box"><div id="SlipDetailGrid" style="height:200px; display:block;"></div></div>
+        <div class="slip-footer">
+          <table class="slip-foot-table">
+            <colgroup>
+              <col style="width:80px"><col>
+              <col style="width:80px"><col>
+              <col style="width:80px"><col>
+            </colgroup>
+            <tbody>
+              <tr>
+                <th>거래처</th><td><input type="text" id="sp_custnm" readonly></td>
+                <th>계좌번호</th><td><input type="text" id="sp_acctno" readonly></td>
+                <th>수입자체</th><td><input type="text" id="sp_msseccd" readonly></td>
+              </tr>
+              <tr>
+                <th>카드</th><td><input type="text" id="sp_cardnm" readonly></td>
+                <th>재원</th><td><input type="text" id="sp_mssecnm" readonly></td>
+                <th></th><td><input type="text" id="sp_acctno2" readonly></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </script>
+
+</th:block>
+<th:block layout:fragment="scripts">
+  <th:block th:replace="common/popup_account :: popup_account" />
+  <script type="text/javascript">
+   class BusinessInOutPage {
+    constructor() {
+     this.url = '/api/ledger/BusinessInOut';
+     this.entry_url = '/api/account_management/slip_entry';
+     this.summaryGrid = null;   // tab2 - 세입내역
+     this.detailGrid = null;    // tab5 - 세출내역
+     this.relatedGrid = null;   // tab3 - 관련전표
+     this.accountGrid = null;   // tab4 - 계좌현황
+     this.profitGrid = null;    // tab6 - 사업손익집계현황(사업상세)
+     this.profitSummaryGrid = null; // tab6 - 사업손익집계현황(사업별현황)
+     this.profitLossGrid = null;    // tab7 - 사업손익상세
+     this.init();
+    }
+
+    init() {
+     let _this = this;
+
+     // tab2 : 세입내역 (tiosec=1) — 전표일자/순번 컬럼 있음
+     _this.summaryGrid = _this.buildBudgetGrid('#theGrid_summary', true);
+     _this.summaryGrid.downloadFileName = '세입내역';
+     _this.bindSlipDblClick(_this.summaryGrid, '#cbxSlip2');
+
+     // tab5 : 세출내역 (tiosec=2) — 전표일자/순번 컬럼 없음
+     _this.detailGrid = _this.buildBudgetGrid('#theGrid_detail', false);
+     _this.detailGrid.downloadFileName = '세출내역';
+     _this.bindSlipDblClick(_this.detailGrid, '#cbxSlip5');
+
+     // tab3 : 관련전표
+     _this.relatedGrid = _this.buildRelatedGrid('#theGrid_related');
+     _this.relatedGrid.downloadFileName = '관련전표';
+
+     // tab4 : 계좌현황
+     _this.accountGrid = _this.buildAccountGrid('#theGrid_account');
+     _this.accountGrid.downloadFileName = '계좌현황';
+
+     // tab6 : 사업손익집계현황 (사업상세)
+     _this.profitGrid = _this.buildProfitGrid('#theGrid_profit');
+     _this.profitGrid.downloadFileName = '사업손익집계현황';
+
+     // tab6 : 사업손익집계현황 (사업별현황)
+     _this.profitSummaryGrid = _this.buildProfitSummaryGrid('#theGrid_profit_summary');
+     _this.profitSummaryGrid.downloadFileName = '사업별손익현황';
+
+     // tab7 : 사업손익상세 (d_book23_5)
+     _this.profitLossGrid = _this.buildProfitLossGrid('#theGrid_profitloss');
+     _this.profitLossGrid.downloadFileName = '사업손익상세';
+    }//init
+
+    // 예산·결산 비교 그리드 생성 (withSlipCols: 전표일자/순번 표시 여부)
+    buildBudgetGrid(sel, withSlipCols) {
+     let cols = [{binding: 'businm', header: '사업명', width: 200, align: 'left'}];
+     if (withSlipCols) {
+      cols.push({binding: 'spdate', header: '전표일자', width: 110, align: 'center'});
+      cols.push({binding: 'spnum', header: '순번', width: 80, align: 'center'});
+     }
+     cols.push(
+      {binding: 'mssec', header: '재원', width: 100, align: 'center'},
+      {binding: 'accnm', header: '관', width: 130, align: 'left'},
+      {binding: 'it1nm', header: '항', width: 130, align: 'left'},
+      {binding: 'it2nm', header: '목', width: 130, align: 'left'},
+      {binding: 'price', header: '예산액', width: 130, align: 'right', format: 'n0'},
+      {binding: 'amt', header: '결산액', width: 130, align: 'right', format: 'n0'},
+      {binding: 'c_sum', header: '차액', width: 130, align: 'right', format: 'n0'},
+      {binding: 'summy', header: '비고', width: '*', align: 'left'}
+     );
+
+     const grid = new wijmo.grid.FlexGrid(sel, {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      allowSorting: false,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      isReadOnly: true,
+      frozenColumns: 1,
+      showGroups: true,
+      groupHeaderFormat: '{value}',
+      formatItem: (s, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center';
+      },
+      columns: cols,
+     });
+     new FlexGridContextMenu(grid);
+
+     // 그룹 소계 + 전체 총계
+     ['price', 'amt', 'c_sum'].forEach(b => {
+      const col = grid.columns.getColumn(b);
+      if (col) col.aggregate = wijmo.Aggregate.Sum;
+     });
+     grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+     let tIdx = grid.columns.findIndex(c => c.binding === 'businm');
+     if (tIdx > -1) grid.columnFooters.setCellData(0, tIdx, '총계');
+
+     // 그룹 소계행 라벨/스타일
+     grid.formatItem.addHandler(function (s, e) {
+      if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+       const row = s.rows[e.row];
+       if (row instanceof wijmo.grid.GroupRow && row.dataItem == null) {
+        const c0 = s.columns.findIndex(c => c.binding === 'businm');
+        if (e.col === c0) {
+         e.cell.style.color = '#d33';
+         e.cell.style.fontWeight = '600';
+         e.cell.textContent = '사업소계';
+        }
+        const b = s.columns[e.col] && s.columns[e.col].binding;
+        if (b === 'price' || b === 'amt' || b === 'c_sum') {
+         e.cell.style.color = '#d33';
+         e.cell.style.fontWeight = '600';
+        }
+       }
+      }
+     });
+
+     return grid;
+    }
+
+    // 관련전표 그리드 생성 (tab3)
+    buildRelatedGrid(sel) {
+     let _this = this;
+     const grid = new wijmo.grid.FlexGrid(sel, {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      allowSorting: false,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      isReadOnly: true,
+      formatItem: (s, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center';
+      },
+      columns: [
+       {binding: 'spdate', header: '전표일자', width: 100, align: 'center'},
+       {binding: 'spnum', header: '전표번호', width: 90, align: 'center'},
+       {binding: 'tiosecnm', header: '구분', width: 70, align: 'center'},
+       {binding: 'cashyn', header: '현금', width: 60, align: 'center', dataType: wijmo.DataType.Boolean},
+       {binding: 'amt', header: '금액', width: 120, align: 'right', format: 'n0'},
+       {binding: 'subject', header: '제목', width: 220, align: 'left'},
+       {binding: 'spoccunm', header: '증빙구분', width: 110, align: 'center'},
+       {binding: 'summy', header: '비고', width: '*', align: 'left'},
+      ],
+     });
+     new FlexGridContextMenu(grid);
+
+     const col = grid.columns.getColumn('amt');
+     if (col) col.aggregate = wijmo.Aggregate.Sum;
+     grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+     let tIdx = grid.columns.findIndex(c => c.binding === 'subject');
+     if (tIdx > -1) grid.columnFooters.setCellData(0, tIdx, '합계');
+
+     // 더블클릭 → 전표 팝업 (acccd는 클릭한 행의 값을 그대로 전달)
+     grid.hostElement.addEventListener('dblclick', function (e) {
+      const ht = grid.hitTest(e);
+      if (ht.cellType !== wijmo.grid.CellType.Cell) return;
+      const item = grid.selectedItems[0];
+      if (!item) return;
+      _this.openSlipPopup({yymmdd: item.spdate, spnum: item.spnum, acccd: item.acccd});
+     });
+
+     return grid;
+    }
+
+    // 계좌현황 그리드 생성 (tab4) — 계정(group1) → 계좌(group2) 2단 그룹, 잔액은 group2 내 누적합
+    buildAccountGrid(sel) {
+     let _this = this;
+     const grid = new wijmo.grid.FlexGrid(sel, {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      allowSorting: false,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      isReadOnly: true,
+      showGroups: true,
+      groupHeaderFormat: '{value}',
+      formatItem: (s, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center';
+      },
+      columns: [
+       {binding: 'it1nm', header: '계좌명칭', width: 180, align: 'left'},
+       {binding: 'yymmdd', header: '전표일자', width: 110, align: 'center'},
+       {binding: 'dramt', header: '차변금액', width: 130, align: 'right', format: 'n0'},
+       {binding: 'cramt', header: '대변금액', width: 130, align: 'right', format: 'n0'},
+       {binding: 'balance', header: '잔액', width: 130, align: 'right', format: 'n0'},
+      ],
+     });
+     new FlexGridContextMenu(grid);
+
+     // 항소계(계좌별) / 계정소계(계정별) : 그룹 레벨별 차/대변 합계
+     ['dramt', 'cramt'].forEach(b => {
+      const col = grid.columns.getColumn(b);
+      if (col) col.aggregate = wijmo.Aggregate.Sum;
+     });
+     grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+     let tIdx = grid.columns.findIndex(c => c.binding === 'it1nm');
+     if (tIdx > -1) grid.columnFooters.setCellData(0, tIdx, '총계');
+
+     // 그룹 소계행 라벨/스타일 (계정소계 / 항소계)
+     grid.formatItem.addHandler(function (s, e) {
+      if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+       const row = s.rows[e.row];
+       if (row instanceof wijmo.grid.GroupRow && row.dataItem == null) {
+        const c0 = s.columns.findIndex(c => c.binding === 'it1nm');
+        if (e.col === c0) {
+         const label = row.level === 0 ? '계정소계' : '항소계';
+         e.cell.style.color = '#d33';
+         e.cell.style.fontWeight = '600';
+         e.cell.textContent = label;
+        }
+        const b = s.columns[e.col] && s.columns[e.col].binding;
+        if (b === 'dramt' || b === 'cramt') {
+         e.cell.style.color = '#d33';
+         e.cell.style.fontWeight = '600';
+        }
+       }
+      }
+     });
+
+     // 더블클릭 → 전표 팝업 (acccd는 PB 스크립트대로 '%' 고정)
+     grid.hostElement.addEventListener('dblclick', function (e) {
+      const ht = grid.hitTest(e);
+      if (ht.cellType !== wijmo.grid.CellType.Cell) return;
+      const item = grid.selectedItems[0];
+      if (!item) return;
+      _this.openSlipPopup({yymmdd: item.yymmdd, spnum: item.spnum, acccd: '%'});
+     });
+
+     return grid;
+    }
+
+    // 계좌현황 데이터 바인딩 — accnm/it1nm 기준 정렬 후, it1nm(계좌) 그룹 내 잔액 누적합 계산
+    bindAccountGrid(grid, rows) {
+     rows = rows || [];
+     rows.forEach(r => {
+      r.dramt = Number(r.dramt) || 0;
+      r.cramt = Number(r.cramt) || 0;
+      r.bfamt = Number(r.bfamt) || 0;
+     });
+     rows.sort((a, b) => {
+      if (a.accnm !== b.accnm) return a.accnm < b.accnm ? -1 : 1;
+      if (a.it1nm !== b.it1nm) return a.it1nm < b.it1nm ? -1 : 1;
+      if (a.yymmdd !== b.yymmdd) return a.yymmdd < b.yymmdd ? -1 : 1;
+      return String(a.spnum).localeCompare(String(b.spnum));
+     });
+     let runningKey = null, running = 0;
+     rows.forEach(r => {
+      const key = r.accnm + '|' + r.it1nm;
+      if (key !== runningKey) { runningKey = key; running = 0; }
+      running += r.bfamt;
+      r.balance = running;
+     });
+
+     const cv = new wijmo.collections.CollectionView(rows);
+     cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('accnm'));
+     cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('it1nm'));
+     grid.itemsSource = cv;
+    }
+
+    // 사업손익집계현황(사업상세) 그리드 생성 (tab6, d_book23_3)
+    // 구분(수입/영업외수익/지출) 그룹핑, 그룹별 계(수입금액/지출금액 합계) 자동 표시
+    buildProfitGrid(sel) {
+     const grid = new wijmo.grid.FlexGrid(sel, {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      allowSorting: false,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      isReadOnly: true,
+      showGroups: true,
+      groupHeaderFormat: '{value}',
+      formatItem: (s, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center';
+      },
+      columns: [
+       {binding: 'formnm', header: '관 명', width: 220, align: 'left'},
+       {binding: 'cramt', header: '수 입 금 액', width: 150, align: 'right', format: 'n0'},
+       {binding: 'dramt', header: '지 출 금 액', width: 150, align: 'right', format: 'n0'},
+       {binding: 'remark', header: '비 고', width: '*', align: 'left'},
+      ],
+     });
+     new FlexGridContextMenu(grid);
+
+     ['cramt', 'dramt'].forEach(b => {
+      const col = grid.columns.getColumn(b);
+      if (col) col.aggregate = wijmo.Aggregate.Sum;
+     });
+     grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+     let tIdx = grid.columns.findIndex(c => c.binding === 'formnm');
+     if (tIdx > -1) grid.columnFooters.setCellData(0, tIdx, '총계');
+
+     // 그룹 소계행(계) 라벨/스타일
+     grid.formatItem.addHandler(function (s, e) {
+      if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+       const row = s.rows[e.row];
+       if (row instanceof wijmo.grid.GroupRow && row.dataItem == null) {
+        const c0 = s.columns.findIndex(c => c.binding === 'formnm');
+        if (e.col === c0) {
+         e.cell.style.color = '#d33';
+         e.cell.style.fontWeight = '600';
+         e.cell.textContent = '계';
+        }
+        const b = s.columns[e.col] && s.columns[e.col].binding;
+        if (b === 'cramt' || b === 'dramt') {
+         e.cell.style.color = '#d33';
+         e.cell.style.fontWeight = '600';
+        }
+       }
+      }
+     });
+
+     return grid;
+    }
+
+    // 사업손익집계현황(사업상세) 데이터 바인딩
+    // 구분: acccd 첫글자 5→수입, 8→영업외수익, 7→지출
+    // 순이익: sum(cramt) - sum(dramt) (5/7/8 전체 대상)
+    bindProfitGrid(grid, rows) {
+     rows = rows || [];
+     let totalCramt = 0, totalDramt = 0;
+     rows.forEach(r => {
+      r.cramt = Number(r.cramt) || 0;
+      r.dramt = Number(r.dramt) || 0;
+      const head = String(r.acccd || '').substring(0, 1);
+      r.gubun = head === '5' ? '수 입' : (head === '8' ? '영업외수익' : '지 출');
+      totalCramt += r.cramt;
+      totalDramt += r.dramt;
+     });
+
+     const cv = new wijmo.collections.CollectionView(rows);
+     cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('gubun'));
+     grid.itemsSource = cv;
+
+     const net = totalCramt - totalDramt;
+     $('#profitNetAmt').text(net.toLocaleString());
+    }
+
+    // 사업손익집계현황(사업별현황) 그리드 생성 (tab6, d_book23_4)
+    buildProfitSummaryGrid(sel) {
+     const grid = new wijmo.grid.FlexGrid(sel, {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      allowSorting: false,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      isReadOnly: true,
+      showGroups: true,
+      groupHeaderFormat: '{value}',
+      formatItem: (s, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center';
+      },
+      columns: [
+       {binding: 'formnm', header: '관 명', width: 200, align: 'left'},
+       {binding: 'cramt', header: '수 입 금 액', width: 130, align: 'right', format: 'n0'},
+       {binding: 'dramt', header: '지 출 금 액', width: 130, align: 'right', format: 'n0'},
+       {binding: 'net', header: '순 이 익', width: 130, align: 'right', format: 'n0'},
+      ],
+     });
+     new FlexGridContextMenu(grid);
+
+     ['cramt', 'dramt', 'net'].forEach(b => {
+      const col = grid.columns.getColumn(b);
+      if (col) col.aggregate = wijmo.Aggregate.Sum;
+     });
+     grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+     let tIdx = grid.columns.findIndex(c => c.binding === 'formnm');
+     if (tIdx > -1) grid.columnFooters.setCellData(0, tIdx, '총계');
+
+     grid.formatItem.addHandler(function (s, e) {
+      if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+       const row = s.rows[e.row];
+       if (row instanceof wijmo.grid.GroupRow && row.dataItem == null) {
+        const b = s.columns[e.col] && s.columns[e.col].binding;
+        if (b === 'cramt' || b === 'dramt' || b === 'net') {
+         e.cell.style.color = '#d33';
+         e.cell.style.fontWeight = '600';
+        }
+       } else if (row instanceof wijmo.grid.Row) {
+        // 상세 행에서는 net(개별 차액) 컬럼 숨김
+        const b = s.columns[e.col] && s.columns[e.col].binding;
+        if (b === 'net') e.cell.textContent = '';
+       }
+      }
+     });
+
+     return grid;
+    }
+
+    // 사업손익집계현황(사업별현황) 데이터 바인딩
+    bindProfitSummaryGrid(grid, rows) {
+     rows = rows || [];
+     let totalCramt = 0, totalDramt = 0;
+     rows.forEach(r => {
+      r.cramt = Number(r.cramt) || 0;
+      r.dramt = Number(r.dramt) || 0;
+      r.net = r.cramt - r.dramt;
+      const head = String(r.acccd || '').substring(0, 1);
+      r.gubun = head === '5' ? '수 입' : (head === '8' ? '영업외수익' : '지 출');
+      totalCramt += r.cramt;
+      totalDramt += r.dramt;
+     });
+
+     const cv = new wijmo.collections.CollectionView(rows);
+     cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('businm'));
+     cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('gubun'));
+     grid.itemsSource = cv;
+
+     const net = totalCramt - totalDramt;
+     $('#profitNetAmt').text(net.toLocaleString());
+    }
+
+    // 사업손익상세 그리드 생성 (tab7, d_book23_5)
+    // 구분(수입/영업외수익/지출) 그룹핑, 그룹별 계(수입/지출 합계) 자동 표시
+    buildProfitLossGrid(sel) {
+     const grid = new wijmo.grid.FlexGrid(sel, {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      allowSorting: false,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      isReadOnly: true,
+      showGroups: true,
+      groupHeaderFormat: '{value}',
+      formatItem: (s, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center';
+      },
+      columns: [
+       {binding: 'spdate', header: '일 자', width: 110, align: 'center'},
+       {binding: 'accnm', header: '관', width: 160, align: 'left'},
+       {binding: 'it1nm', header: '항', width: 150, align: 'left'},
+       {binding: 'it2nm', header: '목', width: 150, align: 'left'},
+       {binding: 'cramt', header: '수 입 금 액', width: 140, align: 'right', format: 'n0'},
+       {binding: 'dramt', header: '지 출 금 액', width: 140, align: 'right', format: 'n0'},
+      ],
+     });
+     new FlexGridContextMenu(grid);
+
+     ['cramt', 'dramt'].forEach(b => {
+      const col = grid.columns.getColumn(b);
+      if (col) col.aggregate = wijmo.Aggregate.Sum;
+     });
+     grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+     let tIdx = grid.columns.findIndex(c => c.binding === 'spdate');
+     if (tIdx > -1) grid.columnFooters.setCellData(0, tIdx, '총계');
+
+     // 그룹 소계행(계) 라벨/스타일
+     grid.formatItem.addHandler(function (s, e) {
+      if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+       const row = s.rows[e.row];
+       if (row instanceof wijmo.grid.GroupRow && row.dataItem == null) {
+        const c0 = s.columns.findIndex(c => c.binding === 'spdate');
+        if (e.col === c0) {
+         e.cell.style.color = '#d33';
+         e.cell.style.fontWeight = '600';
+         e.cell.textContent = '계';
+        }
+        const b = s.columns[e.col] && s.columns[e.col].binding;
+        if (b === 'cramt' || b === 'dramt') {
+         e.cell.style.color = '#d33';
+         e.cell.style.fontWeight = '600';
+        }
+       }
+      }
+     });
+
+     return grid;
+    }
+
+    // 사업손익상세 데이터 바인딩 (tab7)
+    // 구분: acccd 첫글자 5→수입, 8→영업외수익, 7→지출
+    // 순이익: sum(cramt) - sum(dramt) (5/7/8 전체 대상, PB 식 전개 시 동일)
+    bindProfitLossGrid(grid, rows) {
+     rows = rows || [];
+     let totalCramt = 0, totalDramt = 0;
+     rows.forEach(r => {
+      r.cramt = Number(r.cramt) || 0;
+      r.dramt = Number(r.dramt) || 0;
+      r.spdate = (r.spdate || '').toString().replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+      const head = String(r.acccd || '').substring(0, 1);
+      r.gubun = head === '5' ? '수 입' : (head === '8' ? '영업외수익' : '지 출');
+      totalCramt += r.cramt;
+      totalDramt += r.dramt;
+     });
+
+     const cv = new wijmo.collections.CollectionView(rows);
+     cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('gubun'));
+     grid.itemsSource = cv;
+
+     const net = totalCramt - totalDramt;
+     $('#profitLossNetAmt').text(net.toLocaleString());
+    }
+
+    bindBudgetGrid(grid, rows) {
+     rows = rows || [];
+     rows.forEach(r => {
+      r.price = Number(r.price) || 0;
+      r.amt = Number(r.amt) || 0;
+      r.c_sum = r.price - r.amt;   // 차액 = 예산액 - 결산액
+     });
+     const cv = new wijmo.collections.CollectionView(rows);
+     cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('businm'));
+     grid.itemsSource = cv;
+    }
+
+    // 더블클릭 → 체크박스 ON + spnum 있을 때만 전표 팝업 (tab2/tab5 공용)
+    bindSlipDblClick(grid, chkSel) {
+     let _this = this;
+     grid.hostElement.addEventListener('dblclick', function (e) {
+      if (!$(chkSel).is(':checked')) return;
+      const ht = grid.hitTest(e);
+      if (ht.cellType !== wijmo.grid.CellType.Cell) return;
+      const item = grid.selectedItems[0];
+      if (!item || !item.spnum) return;
+      _this.openSlipPopup({yymmdd: item.spdate, spnum: item.spnum, acccd: item.acccd});
+     });
+    }
+
+    // tab2 : 세입내역 조회
+    searchSummary() {
+     let _this = this;
+     let data = {
+      start: $('#searchfrdate2').val(),
+      end: $('#searchtodate2').val(),
+      bsdate: $('#bsdate2').val() || '%',
+      bseccd: $('#bseccd2').val() || '%',
+      busicd: $('#busicd2').val() || '%'
+     };
+     AjaxUtil.getAsyncData(this.url + '/readIn', data, function (result) {
+      if (result != null && result.success) _this.bindBudgetGrid(_this.summaryGrid, result.data || []);
+      else console.log('세입내역 조회 오류');
+     });
+    }
+
+    // tab5 : 세출내역 조회
+    searchDetail() {
+     let _this = this;
+     let data = {
+      bsdate: $('#bsdate5').val() || '%',
+      bseccd: $('#bseccd5').val() || '%',
+      busicd: $('#busicd5').val() || '%',
+      start: $('#searchfrdate5').val(),
+      end: $('#searchtodate5').val(),
+      businm: $('#businm5').val()
+     };
+     AjaxUtil.getAsyncData(this.url + '/readOut', data, function (result) {
+      if (result != null && result.success) _this.bindBudgetGrid(_this.detailGrid, result.data || []);
+      else console.log('세출내역 조회 오류');
+     });
+    }
+
+    // tab3 : 관련전표 조회
+    searchRelated() {
+     let _this = this;
+     let data = {
+      start: $('#searchfrdate3').val(),
+      end: $('#searchtodate3').val(),
+      bsdate: $('#bsdate3').val() || '%',
+      bseccd: $('#bseccd3').val() || '%',
+      busicd: $('#busicd3').val() || '%',
+      tiosec: $('#tiosec3').val() || '%'
+     };
+     AjaxUtil.getAsyncData(this.url + '/readRelated', data, function (result) {
+      if (result != null && result.success) {
+       const rows = result.data || [];
+       rows.forEach(r => {
+        const dr = Number(r.dramt) || 0;
+        const cr = Number(r.cramt) || 0;
+        r.amt = dr !== 0 ? dr : cr;   // PB: if(dramt<>0, dramt, cramt)
+        r.tiosecnm = r.tiosec === '1' ? '세입' : (r.tiosec === '2' ? '세출' : '');
+        r.cashyn = (r.cashyn === '1' || r.cashyn === true);
+       });
+       _this.relatedGrid.itemsSource = new wijmo.collections.CollectionView(rows);
+      } else {
+       console.log('관련전표 조회 오류');
+      }
+     });
+    }
+
+    // tab4 : 계좌현황 조회
+    searchAccount() {
+     let _this = this;
+     let data = {
+      start: $('#searchfrdate4').val(),
+      end: $('#searchtodate4').val(),
+      bsdate: $('#bsdate4').val() || '%',
+      bseccd: $('#bseccd4').val() || '%',
+      busicd: $('#busicd4').val() || '%'
+     };
+     AjaxUtil.getAsyncData(this.url + '/readAccount', data, function (result) {
+      if (result != null && result.success) _this.bindAccountGrid(_this.accountGrid, result.data || []);
+      else console.log('계좌현황 조회 오류');
+     });
+    }
+
+    // tab6 : 사업손익집계현황 — 사업상세(d_book23_3) / 사업별현황(d_book23_4) 라디오 분기
+    searchProfit() {
+     if ($('#rbSummary6').is(':checked')) this.searchProfitSummary();
+     else this.searchProfitDetail();
+    }
+
+    // 사업상세 (d_book23_3)
+    searchProfitDetail() {
+     let _this = this;
+     let data = {
+      start: $('#searchfrdate6').val(),
+      end: $('#searchtodate6').val(),
+      bsdate: $('#bsdate6').val() || '%',
+      bseccd: $('#bseccd6').val() || '%',
+      busicd: $('#busicd6').val() || '%'
+     };
+     AjaxUtil.getAsyncData(this.url + '/readProfitDetail', data, function (result) {
+      if (result != null && result.success) _this.bindProfitGrid(_this.profitGrid, result.data || []);
+      else console.log('사업손익집계현황(사업상세) 조회 오류');
+     });
+    }
+
+    // 사업별현황 (d_book23_4)
+    searchProfitSummary() {
+     let _this = this;
+     let data = {
+      start: $('#searchfrdate6').val(),
+      end: $('#searchtodate6').val()
+     };
+     AjaxUtil.getAsyncData(this.url + '/readProfitSummary', data, function (result) {
+      if (result != null && result.success) _this.bindProfitSummaryGrid(_this.profitSummaryGrid, result.data || []);
+      else console.log('사업손익집계현황(사업별현황) 조회 오류');
+     });
+    }
+
+    // tab7 : 사업손익상세 조회
+    // PB: Retrieve(custcd, spjangcd, bsdate, bseccd, busicd, frdate, todate, businm)
+    searchProfitLoss() {
+     let _this = this;
+     let data = {
+      start: $('#searchfrdate7').val(),
+      end: $('#searchtodate7').val(),
+      bsdate: $('#bsdate7').val() || '%',
+      bseccd: $('#bseccd7').val() || '%',
+      busicd: $('#busicd7').val() || '%',
+      businm: $('#businm7').val() || ''
+     };
+     AjaxUtil.getAsyncData(this.url + '/readProfitLoss', data, function (result) {
+      if (result != null && result.success) _this.bindProfitLossGrid(_this.profitLossGrid, result.data || []);
+      else console.log('사업손익상세 조회 오류');
+     });
+    }
+
+    // ============================================================
+    // 전표 팝업
+    // ============================================================
+    openSlipPopup(item) {
+     let _this = this;
+     if (_this.slipPopup) {
+      _this.slipPopup.close();
+      _this.slipPopup = null;
+     }
+
+     let content = tmpl('slipPopupTemplate', {});
+     _this.slipPopup = new PopupDraggable('전표');
+     _this.slipPopup.open({width: 1130, height: 670, $content: $(content)});
+
+     _this.slipDetailGrid = new wijmo.grid.FlexGrid('#SlipDetailGrid', {
+      isReadOnly: true, headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false, selectionMode: wijmo.grid.SelectionMode.Row,
+      columns: [
+       {binding: 'acccd', header: '코드', width: 70, align: 'center'},
+       {binding: 'accnm', header: '관명(계정)', width: 150, align: 'left'},
+       {binding: 'drcrnm', header: '차대', width: 60, align: 'center'},
+       {binding: 'it1nm', header: '항', width: 130, align: 'left'},
+       {binding: 'it2nm', header: '목', width: 130, align: 'left'},
+       {binding: 'summy', header: '산출내역', width: '*', align: 'left'},
+       {binding: 'dramt', header: '차변금액', width: 110, align: 'right', format: 'n0'},
+       {binding: 'cramt', header: '대변금액', width: 110, align: 'right', format: 'n0'},
+      ],
+      itemsSource: new wijmo.collections.CollectionView([]),
+     });
+     _this.slipDetailGrid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+     ['dramt', 'cramt'].forEach(b => {
+      const col = _this.slipDetailGrid.columns.getColumn(b);
+      if (col) col.aggregate = wijmo.Aggregate.Sum;
+     });
+     _this.loadSlipDetail(item);
+    }
+
+    loadSlipDetail(item) {
+     let _this = this;
+     let data = {
+      yymmdd: item.yymmdd || '',
+      spnum: item.spnum || '',
+      slipno: item.spnum || '',
+      acccd: item.acccd || ''
+     };
+     AjaxUtil.getAsyncData(_this.url + '/readSlip', data, function (res) {
+      if (!res || !res.success) {
+       Alert.alert('', '전표 조회 결과가 없습니다.');
+       return;
+      }
+      _this.bindSlipPopup(res.data || {});
+     });
+    }
+
+    fmtDateTime(v) {
+     if (!v) return '';
+     let s = String(v).trim();
+     s = s.replace('T', ' ');
+     let m = s.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
+     if (m) return m[1];
+     let d = s.match(/^(\d{4})(\d{2})(\d{2})(\d{2})?(\d{2})?(\d{2})?/);
+     if (d) {
+      let out = d[1] + '-' + d[2] + '-' + d[3];
+      if (d[4]) out += ' ' + d[4] + ':' + (d[5] || '00') + ':' + (d[6] || '00');
+      return out;
+     }
+     return s.substring(0, 19);
+    }
+
+    bindSlipPopup(data) {
+     let _this = this;
+     const h = data.head || {};
+     const lines = data.lines || [];
+     const first = lines.length > 0 ? lines[0] : {};
+
+     const setV = (id, v) => {
+      const $e = $('#' + id);
+      if ($e.length) $e.val(v == null ? '' : v);
+     };
+
+     setV('sp_yymmdd', (h.spdate || '').toString().replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'));
+     setV('sp_slipno', h.spnum || '');
+     setV('sp_tiosecnm', h.tiosec || '');
+     setV('sp_inserdt', h.regdate || '');
+     setV('sp_buiscd', h.busipurnm || h.busipur || '');
+     setV('sp_spoccu', h.spoccunm || h.spoccu || '');
+     setV('sp_updatedt', _this.fmtDateTime(h.inputdate));
+     setV('sp_title', h.subject || '');
+     setV('sp_busim', h.businm || '');
+     setV('sp_orgnm', h.spjangnm || '');
+     setV('sp_remark', h.remark || '');
+     const $cash = $('#sp_cashyn');
+     if ($cash.length) $cash.prop('checked', (h.cashyn === '1' || h.cashyn === true));
+
+     setV('sp_custnm', first.cltnm || '');
+     setV('sp_acctno', first.accnum || '');
+     setV('sp_msseccd', first.mssec || '');
+     setV('sp_cardnm', first.cardnm || '');
+     setV('sp_mssecnm', first.mssecnm || '');
+     setV('sp_acctno2', first.banknm || '');
+
+     if (_this.slipDetailGrid) {
+      _this.slipDetailGrid.itemsSource = new wijmo.collections.CollectionView(lines);
+     }
+    }
+
+    // ── 사업 팝업 ──
+    searchBusim(tabNo) {
+     let _this = this;
+     let keyword = $('#businm' + tabNo).val();
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/findBusim',
+      {busim: keyword},
+      function (res) {
+       let list = res.data || [];
+       if (!list || list.length === 0) {
+        Alert.alert('', '사업 조회 결과가 없습니다.');
+        return;
+       }
+       _this.showBusimPopup(list, tabNo);
+      }
+     );
+    }
+
+    showBusimPopup(dataList, tabNo) {
+     let _this = this;
+     if (_this.busimPopup) {
+      _this.busimPopup.close();
+      _this.busimPopup = null;
+     }
+
+     let content = tmpl('busimTemplate', {});
+     _this.busimPopup = new PopupDraggable('사업 조회');
+     _this.busimPopup.open({width: 700, height: 420, $content: $(content)});
+
+     _this.busimGrid = new wijmo.grid.FlexGrid('#BusinessGrid', {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: [
+       {binding: 'bsdate', header: '사업코드1', width: 90, align: 'center'},
+       {binding: 'bseccd', header: '사업코드2', width: 90, align: 'center'},
+       {binding: 'buiscd', header: '사업코드', width: 90, align: 'center'},
+       {binding: 'busim', header: '사업명', width: '*', align: 'left'}
+      ],
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+     _this.busimGrid.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const selectBusim = function () {
+      let sel = _this.busimGrid.selection;
+      if (!sel || sel.row < 0) return;
+      let item = _this.busimGrid.rows[sel.row].dataItem;
+      _this.applyBusimData(item, tabNo);
+      _this.busimPopup.close();
+      _this.busimPopup = null;
+      _this.busimGrid = null;
+     };
+
+     setTimeout(function () {
+      if (_this.busimGrid && _this.busimGrid.rows.length > 0) {
+       _this.busimGrid.select(0, 0);
+       _this.busimGrid.focus();
+      }
+     }, 50);
+
+     _this.busimGrid.hostElement.addEventListener('dblclick', selectBusim);
+     _this.busimGrid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectBusim();
+      }
+     });
+    }
+
+    applyBusimData(item, tabNo) {
+     $('#businm' + tabNo).val(item.busim || '');
+     $('#busicd' + tabNo).val(item.buiscd || '');
+     $('#bsdate' + tabNo).val(item.bsdate || '');
+     $('#bseccd' + tabNo).val(item.bseccd || '');
+     this.searchMainData(tabNo);
+    }
+
+    activateTab(no) {
+     let $link = $('.tab-links a[href="#tab' + no + '"]');
+     if ($link.length) {
+      $link.trigger('click');
+      return;
+     }
+     $('.tab-item').removeClass('active');
+     $('#tab' + no).addClass('active');
+    }
+
+    searchMainData(tabNo) {
+     tabNo = tabNo || 2;
+     if (tabNo === 2) this.searchSummary();
+     else if (tabNo === 5) this.searchDetail();
+     else if (tabNo === 3) this.searchRelated();
+     else if (tabNo === 4) this.searchAccount();
+     else if (tabNo === 6) this.searchProfit();
+     else if (tabNo === 7) this.searchProfitLoss();
+    }
+
+   }//BusinessInOutPage
+
+   function getActiveTabNo() {
+    let $active = $('.tab-item.active');
+    if (!$active.length) $active = $('.tab-item:visible').first();
+    let id = ($active.attr('id') || 'tab2').replace('tab', '');
+    let no = parseInt(id, 10);
+    return isNaN(no) ? 2 : no;
+   }
+
+   let page = null;
+
+   $(document).ready(function (e) {
+    page = new BusinessInOutPage();
+
+    let fr = new Date();
+    fr = new Date(fr.getFullYear(), 0, 1);   // 올해 1월 1일
+    let frStr = CommonUtil.formatYYYYMMDD(fr);
+    let toStr = getNowDate();
+
+    [2, 5, 3, 4, 6, 7].forEach(function (i) {
+     $('#searchfrdate' + i).val(frStr);
+     $('#searchtodate' + i).val(toStr);
+     $('#btnSearch' + i).on('click', (function (tabNo) {
+      return function () {
+       page.searchMainData(tabNo);
+      };
+     })(i));
+
+     // 사업명 엔터 → 사업 팝업
+     $('#businm' + i).on('keydown', function (ev) {
+      if (ev.key === 'Enter') {
+       ev.preventDefault();
+       page.searchBusim(i);
+      }
+     });
+
+     // 사업명이 비워지면 히든 값도 초기화
+     $('#businm' + i).on('input', function () {
+      if ($(this).val() === '') {
+       $('#busicd' + i).val('');
+       $('#bsdate' + i).val('');
+       $('#bseccd' + i).val('');
+      }
+     });
+    });
+
+    page.searchMainData(2);
+
+    $(document).on('keydown', function (ev) {
+     if (ev.key === 'F4') {
+      ev.preventDefault();
+      page.searchMainData(getActiveTabNo());
+     }
+    });
+
+    // 탭 클릭 시 자동 조회
+    $('.tab-links a').on('click', function () {
+     let no = parseInt($(this).attr('href').replace('#tab', ''), 10);
+     if (!isNaN(no)) page.searchMainData(no);
+    });
+
+    // tab6 : 사업상세/사업별현황 라디오 전환 시 그리드 토글 + 자동 재조회
+    $('input[name="profitMode6"]').on('change', function () {
+     const isSummary = $('#rbSummary6').is(':checked');
+     $('#theGrid_profit').toggle(!isSummary);
+     $('#theGrid_profit_summary').toggle(isSummary);
+     // 사업별현황은 특정 사업 필터 없이 전체 사업 대상이라 사업명 입력 비활성화
+     $('#businm6').prop('disabled', isSummary).val(isSummary ? '' : $('#businm6').val());
+     $('#busicd6, #bsdate6, #bseccd6').val('');
+     page.searchProfit();
+    });
+   });
+  </script>
+</th:block></html>

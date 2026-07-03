@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -436,6 +437,92 @@ public class CategoryItemLedgerService {
 
 		return sqlRunner.getRows(sql, param);
 	}
+
+	// ============================================================
+	// 전표 팝업 : 헤더(TB_AA009) + 분개(TB_AA010)
+	//   (계좌별원장과 동일)
+	// ============================================================
+	public Object selectSlip(String spdate, String spnum) {
+		String spjangcd = TenantContext.get();
+		String custcd   = getBizInfoBySpjangcd(spjangcd).get("custcd");
+
+		MapSqlParameterSource param = new MapSqlParameterSource();
+		param.addValue("custcd", custcd);
+		param.addValue("spjangcd", spjangcd);
+		param.addValue("spdate", spdate);
+		param.addValue("spnum", spnum);
+
+		// ── 헤더 ──
+		String headSql = """
+        SELECT A.custcd, A.spjangcd, A.spdate, A.spnum, A.tiosec, A.cashyn,
+               A.busipur,
+               CASE A.busipur
+                    WHEN '1' THEN '고유목적'
+                    WHEN '2' THEN '수익'
+                    WHEN '3' THEN '공통'
+                    ELSE '' END AS busipurnm,
+               A.spoccu,
+               CASE A.spoccu
+                    WHEN 'AA' THEN '전표일반'
+                    WHEN 'I1' THEN '매출세금계산서'
+                    WHEN 'I2' THEN '매입세금계산서'
+                    WHEN 'I3' THEN '매출계산서'
+                    WHEN 'I4' THEN '매입계산서'
+                    WHEN 'I5' THEN '매출카드'
+                    WHEN 'I6' THEN '매입카드'
+                    WHEN 'I7' THEN '매출기타'
+                    WHEN 'I8' THEN '기타원천징수'
+                    ELSE '' END AS spoccunm,
+               A.remark, A.taxdate, A.taxnum, A.subject,
+               STUFF(STUFF(A.regdate,5,0,'-'),8,0,'-') AS regdate,
+               A.bsdate, A.bseccd, A.busicd,
+               (SELECT businm FROM tb_x0002 WHERE bsdate = A.bsdate AND bseccd = A.bseccd AND busicd = A.busicd) AS businm,
+               A.setnum, A.spjangnm, A.busicd_cnt, A.fixflag,
+               A.appdate, A.appperid, A.appgubun, A.appnum,
+               A.inputsabun, A.inputdate, A.inputid,
+               STUFF(STUFF(A.spdate,5,0,'-'),8,0,'-') AS spdate_fmt
+          FROM TB_AA009 A WITH (NOLOCK)
+         WHERE A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.spdate = :spdate AND A.spnum = :spnum
+        """;
+		Map<String, Object> head = sqlRunner.getRow(headSql, param);
+
+		// ── 분개 (그리드) ──
+		String lineSql = """
+        SELECT A.custcd, A.spjangcd, A.spdate, A.spnum, A.spseq, A.spjangnm,
+               A.bumuncd, A.gubun, A.acccd, A.accnm, A.drcr, A.dramt, A.cramt, A.summy,
+               A.cltcd,
+               (SELECT cltnm FROM tb_xclient WHERE cltcd = A.cltcd) AS cltnm,
+               A.it1cd,
+               (SELECT it1nm FROM TB_X0003 WHERE '00' + it1cd = A.it1cd AND tiosec = A.tiosec) AS it1nm,
+               A.it2cd,
+               (SELECT it2nm FROM TB_X0004 WHERE it2cd = A.it2cd AND tiosec = A.tiosec) AS it2nm,
+               A.tiosec, A.mssec,
+               (SELECT mssecnm FROM tb_x0005 WHERE mssec = A.mssec) AS mssecnm,
+               A.spoccu, A.inputdate, A.inputsabun, A.bankcd,
+               (SELECT banknm FROM tb_aa040 WHERE custcd = :custcd AND spjangcd = A.spjangcd AND bank + bankcd = A.bankcd) AS banknm,
+               (SELECT accnum FROM tb_aa040 WHERE custcd = :custcd AND spjangcd = A.spjangcd AND bank + bankcd = A.bankcd) AS accnum,
+               A.cardnum,
+               (SELECT cardnm FROM tb_iz010 WHERE custcd = :custcd AND spjangcd = A.spjangcd AND cardnum = A.cardnum) AS cardnm,
+               B.cltflag, B.divflag, B.acnflag, B.cardflag,
+               A.rowseq, A.taxdate, A.taxnum, B.vatflag,
+               CASE WHEN A.drcr = '1' THEN '차변' ELSE '대변' END AS drcrnm
+          FROM TB_AA010 A WITH (NOLOCK), TB_AA009 D WITH (NOLOCK), TB_AC001 B WITH (NOLOCK)
+         WHERE A.custcd = D.custcd AND A.spjangcd = D.spjangcd
+           AND A.spdate = D.spdate AND A.spnum = D.spnum
+           AND A.custcd = B.custcd AND A.acccd = B.acccd
+           AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.spdate = :spdate AND A.spnum = :spnum
+         ORDER BY A.spdate, A.spnum, A.spseq
+        """;
+		List<Map<String, Object>> lines = sqlRunner.getRows(lineSql, param);
+
+		Map<String, Object> result = new HashMap<>();
+		result.put("head", head);
+		result.put("lines", lines);
+		return result;
+	}
+
 
 	private Map<String, String> getBizInfoBySpjangcd(String spjangcd) {
 		MapSqlParameterSource param = new MapSqlParameterSource().addValue("spjangcd", spjangcd);

@@ -1,0 +1,449 @@
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml">
+<head>
+  <style>
+      .wj-header {
+          text-align: center !important;
+      }
+  </style>
+</head>
+
+<th:block layout:fragment="content">
+  <style>
+  </style>
+
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>전표 등록</h2>
+        <a title="북마크" class="bookmark toggle">
+          내 메뉴
+        </a>
+      </div>
+      <ul class="page-navi">
+        <li><img th:src="@{/images/icon/ico-nav-home.svg}" alt="홈아이콘"></li>
+        <li>계좌 카드관리</li>
+        <li>전표 등록</li>
+      </ul>
+    </div>
+    <div style="display: flex; gap: 5px">
+      <section class="section" style="width: 40%;">
+        <div class="section-top">
+          <div class="search-wrap" >
+            <dl>
+              <dt>
+                <label for="txtcardnm">
+                  카드명
+                </label>
+              </dt>
+              <dd>
+                <div class="srch-box">
+                  <input class="form-control2" type="text" id="txtcardnm" name="txtcardnm" placeholder="카드명" style="width:120px"/>
+                </div>
+              </dd>
+            </dl>
+            <dl>
+              <dt>
+                <label for="txtcardnum">
+                  카드번호
+                </label>
+              </dt>
+              <dd>
+                <div class="srch-box">
+                  <input class="form-control2" type="text" id="txtcardnum" name="txtcardnum" placeholder="카드번호" style="width:200px"/>
+                </div>
+              </dd>
+            </dl>
+            <dl>
+              <dt>
+                <label for="Combuseyn">
+                  사용여부
+                </label>
+              </dt>
+              <dd>
+                <select class="form-control2" id="Combuseyn" name="Combuseyn"  style="width:120px">
+                  <option value="1">사용</option>
+                  <option value="0">미사용</option>
+                </select>
+              </dd>
+            </dl>
+            <dl>
+              <dt>
+                <label for="cdflag">
+                  바로빌 연동 여부
+                </label>
+              </dt>
+              <dd>
+                <select class="form-control2" id="cdflag" name="cdflag"  style="width:120px">
+                  <option value="1">등록</option>
+                  <option value="0">미등록</option>
+                </select>
+              </dd>
+            </dl>
+            <dl>
+              <dt>&nbsp;</dt>
+              <dd>
+                <li>
+                  <a class="btn btn-delete" title="검색" id="btnSearch">
+                    <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘">
+                    검색
+                  </a>
+                </li>
+              </dd>
+            </dl>
+          </div>
+
+        </div>
+        <div class="container-fluid">
+          <p id="selectedItem"></p>
+          <div id="theGrid"></div>
+        </div>
+      </section>
+      <section style="width: 60%;">
+        <div class="section">
+          <div class="title-wrap">
+          </div>
+          <div class="button-wrap" style="border-top:none; display:flex; flex-direction:column;
+          align-items:flex-end; min-height:70px; justify-content:space-between;">
+            <ul>
+              <li>
+                <a class="btn btn-excell" title="신규등록" id="Newbtn">
+                  <img th:src="@{/images/icon/ico-plus.svg}" alt="등록 아이콘">
+                  신규등록
+                </a>
+              </li>
+              <li>
+                <a class="btn btn-edit" id="btnSave" title="저장">
+                  <img th:src="@{/images/icon/ico-save.svg}" alt="저장 아이콘">
+                  저장
+                </a>
+              </li>
+              <li>
+                <a class="btn btn-delete" title="삭제" id="btnDelete">
+                  <img th:src="@{/images/icon/ico-delete.svg}" alt="엑셀 아이콘">
+                  삭제
+                </a>
+              </li>
+            </ul>
+          </div>
+          <form id="CategoryForm">
+            <div class="table-wrap">
+              <table class="view-table" id="selectedData">
+                <caption>전표 등록 테이블</caption>
+                <colgroup>
+                  <col class="wp20">  <!-- th1 -->
+                  <col class="wauto"> <!-- td1 -->
+                  <col class="wp20">  <!-- th2 -->
+                  <col class="wauto"> <!-- td2 -->
+                </colgroup>
+                <tbody>
+
+                <!-- ── Row 1: 전표일자 / 전표번호 ── -->
+                <tr>
+                  <th><label for="spdate">전표일자</label></th>
+                  <td>
+                    <input type="date" id="spdate" name="spdate" class="wp100"/>
+                  </td>
+                  <th><label for="spnum">전표번호</label></th>
+                  <td>
+                    <input type="text" id="spnum" name="spnum" class="wp100" placeholder="전표번호"/>
+                  </td>
+                </tr>
+
+                <!-- ── Row 2: 입출구분 / 작성일자 ── -->
+                <tr>
+                  <th><label for="tiosec">입출구분</label></th>
+                  <td>
+                    <select id="tiosec" name="tiosec" class="wp100">
+                      <option value="">선택</option>
+                      <option value="1">세입</option>
+                      <option value="2">세출</option>
+                      <option value="3">대체</option>
+                    </select>
+                  </td>
+                  <th><label for="readate">작성일자</label></th>
+                  <td>
+                    <input type="date" id="readate" name="readate" class="wp100"/>
+                  </td>
+                </tr>
+
+                <!-- ── Row 3: 사업구분 / 증빙구분 ── -->
+                <tr>
+                  <th><label for="busipur">사업구분</label></th>
+                  <td>
+                    <select id="busipur" name="busipur" class="wp100">
+                      <option value="">선택</option>
+                    </select>
+                  </td>
+                  <th><label for="spoccu">증빙구분</label></th>
+                  <td>
+                    <select id="spoccu" name="spoccu" class="wp100">
+                      <option value="">전체</option>
+                      <option value="AA">전표일반</option>
+                      <option value="I1">매출세금계산서</option>
+                      <option value="I2">매입세금계산서</option>
+                      <option value="I3">매출계산서</option>
+                      <option value="I4">매입계산서</option>
+                      <option value="I5">매출카드</option>
+                      <option value="I6">매입카드</option>
+                      <option value="I7">매출기타</option>
+                      <option value="I8">기타원천징수</option>
+                    </select>
+                  </td>
+                </tr>
+
+                <!-- ── Row 4: 최종수정일 / 현금 ── -->
+                <tr>
+                  <th><label for="inputdate">최종수정일</label></th>
+                  <td>
+                    <input type="text" id="inputdate" name="inputdate" class="wp100" readonly placeholder="inputdate"/>
+                  </td>
+                  <th><label for="cashyn">현금</label></th>
+                  <td>
+                    <input type="checkbox" id="cashyn" name="cashyn"/>
+                  </td>
+                </tr>
+
+                <!-- ── Row 5: 제목 / 사업명 ── -->
+                <tr>
+                  <th><label for="subject">제목</label></th>
+                  <td  colspan="3">
+                    <input type="text" id="subject" name="subject" class="wp100" placeholder="subject"/>
+                  </td>
+                </tr>
+
+                <!-- ── Row 6: 비고 / businame ── -->
+                <tr >
+                  <th><label for="remark">비고</label></th>
+                  <td colspan="3">
+                    <input type="textarea" id="remark" name="remark" class="wp100" style="height: 150px" placeholder="비고"/>
+                  </td>
+                </tr>
+                <tr>
+                  <th><label for="busicd">사업명</label></th>
+                  <td colspan="3">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                      <input type="text" id="busicd" name="busicd" placeholder="사업코드" readonly/>
+                      <input type="text" id="businame" name="businame" placeholder="사업명"/>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- ── Row 7: 기관명 / 첨부파일 ── -->
+                <!--<tr>
+                  <th><label for="spjangcd">기관명</label></th>
+                  <td>
+                    <input type="hidden" id="spjangcd" name="spjangcd"/>
+                    <input type="text" id="spjangnm" name="spjangnm" class="wp100" placeholder="spjangcd" readonly/>
+                  </td>
+                  <th><label for="filepath">첨부파일</label></th>
+                  <td>
+                    <input type="text" id="filepath" name="filepath" class="wp100" placeholder="filepath" readonly/>
+                  </td>
+                </tr>-->
+
+                </tbody>
+              </table>
+            </div>
+          </form>
+
+          <!-- ── 분개 라인 테이블 ── -->
+          <div class="table-wrap" style="margin-top: 6px;">
+            <table class="list-table" id="slipLineTable" style="width:100%; border-collapse:collapse; font-size:12px;">
+              <caption style="display:none">분개 라인</caption>
+              <colgroup>
+                <col style="width: 60px;">   <!-- 코드 -->
+                <col style="width: 130px;">  <!-- 관명(계정) -->
+                <col style="width: 60px;">   <!-- 차대 -->
+                <col style="width: 60px;">   <!-- 항 -->
+                <col style="width: 80px;">   <!-- 목 -->
+                <col style="width: auto;">   <!-- 산출내역 -->
+                <col style="width: 100px;">  <!-- 차변금액 -->
+                <col style="width: 100px;">  <!-- 대변금액 -->
+                <col style="width: 60px;">   <!-- 항코드 -->
+                <col style="width: 60px;">   <!-- 목코드 -->
+              </colgroup>
+              <thead>
+              <tr style="background:#dce6f1; text-align:center;">
+                <th style="border:1px solid #bbb; padding:3px 4px;">코드</th>
+                <th style="border:1px solid #bbb; padding:3px 4px;">관명(계정)</th>
+                <th style="border:1px solid #bbb; padding:3px 4px;">차대</th>
+                <th style="border:1px solid #bbb; padding:3px 4px;">항</th>
+                <th style="border:1px solid #bbb; padding:3px 4px;">목</th>
+                <th style="border:1px solid #bbb; padding:3px 4px;">산출내역</th>
+                <th style="border:1px solid #bbb; padding:3px 4px;">차변금액</th>
+                <th style="border:1px solid #bbb; padding:3px 4px;">대변금액</th>
+                <th style="border:1px solid #bbb; padding:3px 4px;">항코드</th>
+                <th style="border:1px solid #bbb; padding:3px 4px;">목코드</th>
+              </tr>
+              </thead>
+              <tbody id="slipLineTbody">
+              <!-- ── 차변 행 ── -->
+              <tr data-line-type="dr">
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="text" name="acccd[]" style="width:100%; border:none; font-size:12px; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="text" name="accnm[]" style="width:100%; border:none; font-size:12px; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <select name="drcr[]" style="width:100%; border:none; font-size:12px;">
+                    <option value="D" selected>차변</option>
+                    <option value="C">대변</option>
+                  </select>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="text" name="hang[]" style="width:100%; border:none; font-size:12px; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="text" name="mok[]" style="width:100%; border:none; font-size:12px; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="text" name="summy[]" style="width:100%; border:none; font-size:12px; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="number" name="dramt[]" value="0" style="width:100%; border:none; font-size:12px; text-align:right; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="number" name="cramt[]" style="width:100%; border:none; font-size:12px; text-align:right; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="text" name="hangcd[]" style="width:100%; border:none; font-size:12px; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="text" name="mokcd[]" style="width:100%; border:none; font-size:12px; padding:1px 3px;"/>
+                </td>
+              </tr>
+              <!-- ── 대변 행 ── -->
+              <tr data-line-type="cr">
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="text" name="acccd[]" style="width:100%; border:none; font-size:12px; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="text" name="accnm[]" style="width:100%; border:none; font-size:12px; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <select name="drcr[]" style="width:100%; border:none; font-size:12px;">
+                    <option value="D">차변</option>
+                    <option value="C" selected>대변</option>
+                  </select>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="text" name="hang[]" style="width:100%; border:none; font-size:12px; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="text" name="mok[]" style="width:100%; border:none; font-size:12px; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="text" name="summy[]" style="width:100%; border:none; font-size:12px; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="number" name="dramt[]" style="width:100%; border:none; font-size:12px; text-align:right; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="number" name="cramt[]" value="0" style="width:100%; border:none; font-size:12px; text-align:right; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="text" name="hangcd[]" style="width:100%; border:none; font-size:12px; padding:1px 3px;"/>
+                </td>
+                <td style="border:1px solid #bbb; padding:1px;">
+                  <input type="text" name="mokcd[]" style="width:100%; border:none; font-size:12px; padding:1px 3px;"/>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <th:block th:replace="common/multiform_material :: multiform_material"></th:block>
+  <th:block th:replace="common/popup_account :: popup_account" />
+  <script type="text/javascript">
+   class SlipEntryPage {
+    constructor() {
+     this.grid = null;
+     this.$btnEdit = $('#btnEdit');
+     this.viewData = new wijmo.collections.CollectionView();
+     this.url = '/api/account_management/slip_entry';
+     this.init();
+    }
+
+    init() {
+     let _this = this;
+     this.grid = new wijmo.grid.FlexGrid('#theGrid', {
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      showMarquee: true,
+      isReadOnly: true,
+      formatItem: (sender, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+        e.cell.style.textAlign = 'center';
+       }
+      },
+      columns: [
+       {binding: 'cardnum', header: '카드번호', width: 200, align: 'center'},
+       {binding: 'cardnm', header: '카드명', width: 150, align: 'center' },
+       {binding: 'cdpernm', header: '성명', width: 170, align: 'center'},
+       {binding: 'remark', header: '비고', width: '*', align: 'center'},
+       {binding: 'cardco', header: '코드번호', width: 100, align: 'center',  visible: false }
+      ],
+      itemsSource: this.viewData, // 데이터를 설정할 배열
+     });
+
+     new FlexGridContextMenu(this.grid);
+     this.grid.downloadFileName = '전표 목록';
+     // 엔터키 검색
+     $('#txtcardnm, #txtcardnum').on('keypress', function (e) {
+      if (e.keyCode === 13) {
+       _this.searchMainData();
+      }
+     });
+    }//init
+
+    searchMainData() {
+     let _this = this;
+     let url = '/api/account_management/manageCreditCard/read'
+
+     let data = {
+      'txtcardnm' : $("#txtcardnm").val(),
+      'txtcardnum' : $("#txtcardnum").val(),
+      'Combuseyn' : $("#Combuseyn").val(),
+      'cdflag' : $("#cdflag").val(),
+     }
+     let fnsuccess = function(result) {
+      if (result != null) {
+       _this.viewData = new wijmo.collections.CollectionView(result.data);
+       _this.grid.itemsSource = _this.viewData;
+      }
+     };
+
+     AjaxUtil.getAsyncData(url, data, fnsuccess);
+    }
+
+
+   }// class page
+
+   let page = null;
+
+   $(document).ready(function (e) {
+    page = new SlipEntryPage();
+
+    AjaxUtil.fillSelectOptions($('#cardco'), 'cardco', 'choose', false);
+
+    let today = new Date();
+    let monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    $('#srchStartDt').val(CommonUtil.formatYYYYMMDD(monthStart));
+    $('#srchEndDt').val(CommonUtil.formatYYYYMMDD(today));
+
+    page.searchMainData();
+
+   })
+  </script>
+</th:block>
+
+</html>
