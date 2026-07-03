@@ -1,0 +1,808 @@
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
+  <style>
+      /* ── 전표 팝업 레이아웃 ── */
+      .slip-popup .slip-head-table, .slip-popup .slip-foot-table {
+          width: 100%; border-collapse: collapse; table-layout: fixed;
+      }
+      .slip-popup .slip-head-table th, .slip-popup .slip-head-table td,
+      .slip-popup .slip-foot-table th, .slip-popup .slip-foot-table td {
+          border: 1px solid #d5d9e0; padding: 4px 6px; font-size: 13px; vertical-align: middle;
+      }
+      .slip-popup .slip-head-table th, .slip-popup .slip-foot-table th {
+          background: #f5f6f8; color: #333; font-weight: 600; text-align: center; white-space: nowrap;
+      }
+      .slip-popup .slip-head-table td input, .slip-popup .slip-head-table td textarea,
+      .slip-popup .slip-foot-table td input {
+          width: 100%; border: none; background: transparent; font-size: 13px; box-sizing: border-box;
+      }
+      .slip-popup .slip-head-table td textarea { resize: none; }
+      .slip-popup .chk-cell { text-align: center; white-space: nowrap; }
+      .slip-popup .slip-grid-box { margin: 8px 0; }
+      .slip-popup { width: 100%; box-sizing: border-box; padding: 4px; }
+      .slip-popup .section { width: 100%; }
+  </style>
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>세출내역서</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>장부출력</li>
+        <li>세출내역서</li>
+      </ul>
+    </div>
+
+    <!-- 공통 검색조건 -->
+    <form autocomplete="off" id="searchForm">
+      <section class="section" style="padding-top: 10px; padding-bottom: 0px;">
+        <div class="section-top">
+          <div class="search-wrap">
+            <dl>
+              <dt><label>기간<span class="eq"></span></label></dt>
+              <dd>
+                <div class="srch-box">
+                  <input id="searchfrdate" name="searchfrdate" type="month"/>
+                  <span class="slow_sign">~</span>
+                  <input id="searchtodate" name="searchtodate" type="month"/>
+                </div>
+              </dd>
+            </dl>
+            <dl>
+              <dt><label>재원구분</label></dt>
+              <dd>
+                <select class="form-control2" id="mssec" name="mssec"></select>
+              </dd>
+            </dl>
+            <dl>
+              <dt><label>사업명</label></dt>
+              <dd>
+                <input id="businm" name="businm" placeholder="사업 (엔터로 검색)" type="text"/>
+                <input type="hidden" id="busicd" name="busicd"/>
+                <input type="hidden" id="bsdate" name="bsdate"/>
+                <input type="hidden" id="bseccd" name="bseccd"/>
+              </dd>
+            </dl>
+            <dl>
+              <dt><label>관(계정)</label></dt>
+              <dd>
+                <input id="accnm" name="accnm"  placeholder="관 (엔터로 검색)" type="text" style="width: 130px"/>
+                <input type="hidden" id="acccd" name="acccd"/>
+              </dd>
+            </dl>
+            <dl>
+              <dt><label>항</label></dt>
+              <dd>
+                <input id="it1nm" name="it1nm"  placeholder="항 (엔터로 검색)" type="text" style="width: 130px"/>
+                <input type="hidden" id="it1cd" name="it1cd"/>
+              </dd>
+            </dl>
+            <dl>
+              <dt><label>목</label></dt>
+              <dd>
+                <input id="it2nm" name="it2nm" placeholder="목 (엔터로 검색)" type="text" style="width: 130px"/>
+                <input type="hidden" id="it2cd" name="it2cd"/>
+              </dd>
+            </dl>
+            <dl>
+              <dt>&nbsp;</dt>
+              <dd>
+                <li>
+                  <button class="btn btn-delete" id="btnSearch" title="조회" type="button">
+                    <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
+                    조회
+                  </button>
+                </li>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </section>
+    </form>
+
+    <div class="tab-wrap">
+      <ul class="tab-links">
+        <li><a href="#tab1" id="tab1Link" title="관별내역서">관별내역서</a></li>
+        <li><a href="#tab2" id="tab2Link" title="재원별현황(관항목)">재원별현황(관항목)</a></li>
+        <li><a href="#tab3" id="tab3Link" title="재원별현황(관항)">재원별현황(관항)</a></li>
+        <li><a href="#tab4" id="tab4Link" title="재원별현황(사업별)">재원별현황(사업별)</a></li>
+      </ul>
+      <div class="tab-contents">
+        <!-- 탭1 : 관별내역서 -->
+        <section class="tab-item" id="tab1">
+          <section class="section">
+            <div class="grid_box" id="divTab1">
+              <div class="title_box" style="display:flex; align-items:center; width:100%;">
+                <dl style="display:flex; align-items:center; margin:0;">
+                  <dt style="margin-right:8px;"><label>항-사업내용표기</label></dt>
+                  <dd style="margin:0;">
+                    <label style="display:inline-flex; align-items:center; gap:4px; font-size:13px; white-space:nowrap;">
+                      <input type="checkbox" id="flagChk" checked/> 표기
+                    </label>
+                  </dd>
+                </dl>
+                <div style="margin:0 0 0 auto; font-size:14px; font-weight:600;">
+                  총계 : <span id="tab1Total" style="color:#2f5cff;">0</span> 원
+                </div>
+              </div>
+              <div id="theGrid_tab1" style="height: 520px;"></div>
+            </div>
+          </section>
+        </section>
+
+        <!-- 탭2 : 재원별현황(관항목) -->
+        <section class="tab-item" id="tab2">
+          <section class="section">
+            <div class="grid_box" id="divTab2">
+              <div class="title_box" style="display:flex; align-items:center; width:100%;">
+                <div style="margin:0 0 0 auto; font-size:14px; font-weight:600;">
+                  총계 : <span id="tab2Total" style="color:#2f5cff;">0</span> 원
+                </div>
+              </div>
+              <div id="theGrid_tab2" style="height: 520px;"></div>
+            </div>
+          </section>
+        </section>
+
+        <!-- 탭3 : 재원별현황(관항) - 크로스탭(재원=컬럼) -->
+        <section class="tab-item" id="tab3">
+          <section class="section">
+            <div class="grid_box" id="divTab3">
+              <div class="title_box" style="display:flex; align-items:center; width:100%;">
+                <div style="margin:0 0 0 auto; font-size:14px; font-weight:600;">
+                  총계 : <span id="tab3Total" style="color:#2f5cff;">0</span> 원
+                </div>
+              </div>
+              <div id="theGrid_tab3" style="height: 520px;"></div>
+            </div>
+          </section>
+        </section>
+
+        <!-- 탭4 : 재원별현황(사업별) - 크로스탭(재원=컬럼) -->
+        <section class="tab-item" id="tab4">
+          <section class="section">
+            <div class="grid_box" id="divTab4">
+              <div class="title_box" style="display:flex; align-items:center; width:100%;">
+                <div style="margin:0 0 0 auto; font-size:14px; font-weight:600;">
+                  총계 : <span id="tab4Total" style="color:#2f5cff;">0</span> 원
+                </div>
+              </div>
+              <div id="theGrid_tab4" style="height: 520px;"></div>
+            </div>
+          </section>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- 팝업 템플릿 -->
+  <script id="businmTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup"><section class="section"><div id="BusinessGrid" style="height:350px; display:block;"></div></section></div>
+  </script>
+  <script id="accnmTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup"><section class="section"><div id="AccGrid" style="height:350px; display:block;"></div></section></div>
+  </script>
+  <script id="it1Template" type="text/x-tmpl">
+    <div class="content_wrap popup"><section class="section"><div id="It1Grid" style="height:350px; display:block;"></div></section></div>
+  </script>
+  <script id="it2Template" type="text/x-tmpl">
+    <div class="content_wrap popup"><section class="section"><div id="It2Grid" style="height:350px; display:block;"></div></section></div>
+  </script>
+  <script id="slipPopupTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup slip-popup">
+      <section class="section">
+        <div class="slip-header">
+          <table class="slip-head-table">
+            <colgroup><col style="width:90px"><col><col style="width:90px"><col><col style="width:90px"><col><col style="width:80px"><col></colgroup>
+            <tbody>
+              <tr>
+                <th>전표일자</th><td><input type="date" id="sp_yymmdd" readonly></td>
+                <th>전표번호</th><td><input type="text" id="sp_slipno" readonly></td>
+                <th>입출금번호</th><td><input type="text" id="sp_tiosecnm" readonly></td>
+                <th>작성일자</th><td><input type="text" id="sp_inserdt" readonly></td>
+              </tr>
+              <tr>
+                <th>사업구분</th><td><input type="text" id="sp_buiscd" readonly></td>
+                <th>증빙구분</th><td><input type="text" id="sp_spoccu" readonly></td>
+                <th>최종수정일</th><td><input type="text" id="sp_updatedt" readonly></td>
+                <th>현금</th><td class="chk-cell"><input type="checkbox" id="sp_cashyn" disabled></td>
+              </tr>
+              <tr>
+                <th>제목</th><td colspan="3"><input type="text" id="sp_title" readonly></td>
+                <th>사업명</th><td colspan="3"><input type="text" id="sp_busim" readonly></td>
+              </tr>
+              <tr><th>기관명</th><td colspan="7"><input type="text" id="sp_orgnm" readonly></td></tr>
+              <tr><th>비고</th><td colspan="7"><textarea id="sp_remark" rows="4" readonly></textarea></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="slip-grid-box"><div id="SlipDetailGrid" style="height:200px; display:block;"></div></div>
+        <div class="slip-footer">
+          <table class="slip-foot-table">
+            <colgroup><col style="width:80px"><col><col style="width:80px"><col><col style="width:80px"><col></colgroup>
+            <tbody>
+              <tr>
+                <th>거래처</th><td><input type="text" id="sp_custnm" readonly></td>
+                <th>계좌번호</th><td><input type="text" id="sp_acctno" readonly></td>
+                <th>수입자체</th><td><input type="text" id="sp_msseccd" readonly></td>
+              </tr>
+              <tr>
+                <th>카드</th><td><input type="text" id="sp_cardnm" readonly></td>
+                <th>재원</th><td><input type="text" id="sp_mssecnm" readonly></td>
+                <th></th><td><input type="text" id="sp_acctno2" readonly></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </script>
+
+</th:block>
+<th:block layout:fragment="scripts">
+  <th:block th:replace="common/popup_account :: popup_account" />
+  <script type="text/javascript">
+   class ExpenseStatementPage { // 세출내역서
+    constructor() {
+     this.url = '/api/ledger/ExpenseStatement';
+     this.entry_url = '/api/account_management/slip_entry';
+     this.tab1Grid = null;   // 관별내역서
+     this.tab2Grid = null;   // 재원별현황(관항목)
+     this.tab3Grid = null;   // 재원별현황(관항)  - 크로스탭
+     this.tab4Grid = null;   // 재원별현황(사업별) - 크로스탭
+     this.mssecOptions = null;
+     this.init();
+    }
+
+    init() {
+     let _this = this;
+
+     // ── 탭1 : 관별내역서 (관→항 그룹, 소계/합계/총계) ──
+     _this.tab1Grid = new wijmo.grid.FlexGrid('#theGrid_tab1', {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false, showMarquee: true, allowSorting: false,
+      selectionMode: wijmo.grid.SelectionMode.Row, isReadOnly: true, frozenColumns: 1,
+      showGroups: true, groupHeaderFormat: '{value}',
+      formatItem: (s, e) => { if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center'; },
+      columns: [
+       {binding: 'accnm',  header: '관명(계정)', width: 180, align: 'left'},
+       {binding: 'hangnm', header: '항',         width: 200, align: 'left'},
+       {binding: 'it2nm',  header: '목',         width: 160, align: 'left'},
+       {binding: 'summy',  header: '산출내역',   width: '*', align: 'left'},
+       {binding: 'dramt',  header: '금액',       width: 150, align: 'right', format: 'n0'},
+      ],
+     });
+     new FlexGridContextMenu(_this.tab1Grid);
+     _this.tab1Grid.downloadFileName = '관별내역서';
+     const drCol1 = _this.tab1Grid.columns.getColumn('dramt');
+     if (drCol1) drCol1.aggregate = wijmo.Aggregate.Sum;
+     _this.tab1Grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+     let t1Idx = _this.tab1Grid.columns.findIndex(c => c.binding === 'summy');
+     if (t1Idx > -1) _this.tab1Grid.columnFooters.setCellData(0, t1Idx, '총계');
+     // 그룹 소계행 라벨(항 그룹=소계, 관 그룹=합계)
+     _this.tab1Grid.formatItem.addHandler(function (s, e) {
+      if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+       // 셀 재사용 색 잔상 방지 : 스타일 초기화 후 소계/합계행만 강조
+       e.cell.style.color = '';
+       e.cell.style.fontWeight = '';
+       const row = s.rows[e.row];
+       if (row instanceof wijmo.grid.GroupRow && row.dataItem == null) {
+        const gr = row;
+        const it2Idx = s.columns.findIndex(c => c.binding === 'it2nm');
+        if (e.col === it2Idx) {
+         e.cell.style.color = '#d33'; e.cell.style.fontWeight = '600';
+         e.cell.textContent = (gr.level === 1) ? '소계' : '합계';
+        }
+        if (s.columns[e.col] && s.columns[e.col].binding === 'dramt') { e.cell.style.color = '#d33'; e.cell.style.fontWeight = '600'; }
+       }
+      }
+     });
+     _this.tab1Grid.hostElement.addEventListener('dblclick', function (e) {
+      const ht = _this.tab1Grid.hitTest(e);
+      if (ht.cellType === wijmo.grid.CellType.Cell) {
+       const item = _this.tab1Grid.selectedItems[0];
+       if (item) _this.openSlipFromRow(item);
+      }
+     });
+
+     // ── 탭2 : 재원별현황(관항목) - 기존 평면 그리드 유지 ──
+     _this.tab2Grid = _this.buildFundGrid('#theGrid_tab2', '재원별현황(관항목)');
+
+     // ── 탭3 : 재원별현황(관항) - 크로스탭 ──
+     _this.tab3Grid = _this.buildCrosstabGrid('#theGrid_tab3');
+     _this.tab3Grid.downloadFileName = '재원별현황(관항)';
+
+     // ── 탭4 : 재원별현황(사업별) - 크로스탭 ──
+     _this.tab4Grid = _this.buildCrosstabGrid('#theGrid_tab4');
+     _this.tab4Grid.downloadFileName = '재원별현황(사업별)';
+    }//init
+
+    // 재원별현황 공통(평면) 그리드 - 탭2 전용
+    buildFundGrid(sel, fname, isBusi) {
+     let _this = this;
+     let cols = [];
+     if (isBusi) cols.push({binding: 'businm', header: '사업명', width: 180, align: 'left'});
+     cols.push(
+      {binding: 'code',     header: '코드',     width: 90,  align: 'center'},
+      {binding: 'accnm',    header: '관',       width: 160, align: 'left'},
+      {binding: 'it1nm',    header: '항',       width: 150, align: 'left'},
+      {binding: 'it2nm',    header: '목',       width: 150, align: 'left'},
+      {binding: 'summy',    header: '산출내역', width: '*', align: 'left'},
+      {binding: 'amt2',     header: '금액',     width: 140, align: 'right', format: 'n0'},
+      {binding: 're_mssecnm', header: '재원',   width: 120, align: 'left'}
+     );
+     const grid = new wijmo.grid.FlexGrid(sel, {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false, showMarquee: true, allowSorting: false,
+      selectionMode: wijmo.grid.SelectionMode.Row, isReadOnly: true, frozenColumns: 1,
+      formatItem: (s, e) => { if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center'; },
+      columns: cols,
+     });
+     new FlexGridContextMenu(grid);
+     grid.downloadFileName = fname;
+     const amtCol = grid.columns.getColumn('amt2');
+     if (amtCol) amtCol.aggregate = wijmo.Aggregate.Sum;
+     grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+     let cIdx = grid.columns.findIndex(c => c.binding === 'summy');
+     if (cIdx > -1) grid.columnFooters.setCellData(0, cIdx, '총계');
+     grid.hostElement.addEventListener('dblclick', function (e) {
+      const ht = grid.hitTest(e);
+      if (ht.cellType === wijmo.grid.CellType.Cell) {
+       const item = grid.selectedItems[0];
+       if (item) _this.openSlipFromRow(item);
+      }
+     });
+     return grid;
+    }
+
+    // ============================================================
+    // 크로스탭(재원=동적 컬럼) 공통 그리드 - 탭3, 탭4
+    // ============================================================
+    buildCrosstabGrid(sel) {
+     let _this = this;
+     const grid = new wijmo.grid.FlexGrid(sel, {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false, showMarquee: true, allowSorting: false,
+      selectionMode: wijmo.grid.SelectionMode.Row, isReadOnly: true,
+      showGroups: true, groupHeaderFormat: '{value}',
+     });
+     new FlexGridContextMenu(grid);
+     grid._numeric = new Set();     // 숫자(재원+계) 바인딩 집합 - 0을 공백처리 하기 위함
+     grid.formatItem.addHandler(function (s, e) {
+      if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) { e.cell.style.textAlign = 'center'; return; }
+      if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+       // 셀 DOM 재사용으로 인한 색 잔상 방지 : 매 렌더마다 스타일 초기화
+       e.cell.style.color = '';
+       e.cell.style.fontWeight = '';
+       const col = s.columns[e.col];
+       const row = s.rows[e.row];
+       const isGroup = row instanceof wijmo.grid.GroupRow; // 소계행
+       if (isGroup) { e.cell.style.color = '#d33'; e.cell.style.fontWeight = '600'; }
+       else if (col && s._numeric && s._numeric.has(col.binding)) {
+        const v = s.getCellData(e.row, e.col, false);
+        if (!v) e.cell.textContent = ''; // 0 은 공백
+       }
+      }
+     });
+     grid.hostElement.addEventListener('dblclick', function (e) {
+      const ht = grid.hitTest(e);
+      if (ht.cellType === wijmo.grid.CellType.Cell) {
+       const item = grid.selectedItems[0];
+       if (item) _this.openSlipFromRow(item);
+      }
+     });
+     return grid;
+    }
+
+    // 크로스탭 바인딩 공통
+    // opt = { keyFields:[], rowCols:[{binding,header,width,align}], groupBy, frozen, keepSlip }
+    bindCrosstab(grid, rows, totalId, opt) {
+     rows = rows || [];
+     rows.forEach(r => { r.dramt = Number(r.dramt) || 0; });
+
+     // 1) 재원(mssec) distinct → 동적 컬럼 (mssec 오름차순)
+     const fundMap = new Map();
+     rows.forEach(r => {
+      const mk = (r.mssec == null) ? '' : String(r.mssec);
+      if (!fundMap.has(mk)) fundMap.set(mk, r.re_mssecnm || '(재원미지정)');
+     });
+     const funds = Array.from(fundMap.entries())
+     .sort((a, b) => (a[0] < b[0] ? -1 : (a[0] > b[0] ? 1 : 0)))
+     .map((e, i) => ({ mssec: e[0], name: e[1], field: 'f' + i }));
+     const fundByMssec = {};
+     funds.forEach(f => { fundByMssec[f.mssec] = f.field; });
+
+     // 2) 행 피벗 (keyFields 기준 그룹핑, 재원별 sum(dramt), 계=행합계)
+     const map = new Map();
+     let grand = 0;
+     rows.forEach(r => {
+      const key = opt.keyFields.map(k => (r[k] == null ? '' : r[k])).join('\u0001');
+      let o = map.get(key);
+      if (!o) {
+       o = {};
+       opt.rowCols.forEach(c => { o[c.binding] = r[c.binding]; });
+       funds.forEach(f => { o[f.field] = 0; });
+       o.total = 0;
+       if (opt.keepSlip) { o.spdate = r.spdate; o.spnum = r.spnum; o.acccd = r.acccd; }
+       map.set(key, o);
+      }
+      const mk = (r.mssec == null) ? '' : String(r.mssec);
+      const fld = fundByMssec[mk];
+      if (fld) o[fld] += r.dramt;
+      o.total += r.dramt;
+      grand += r.dramt;
+     });
+     const data = Array.from(map.values());
+
+     // 3) 컬럼 재구성 (라벨 + 동적 재원 + 계)
+     const numeric = new Set();
+     grid._numeric = numeric;
+     grid.columns.deferUpdate(function () {
+      grid.columns.clear();
+      opt.rowCols.forEach(def => {
+       const c = new wijmo.grid.Column();
+       c.binding = def.binding; c.header = def.header; c.width = def.width; c.align = def.align;
+       grid.columns.push(c);
+      });
+      funds.forEach(f => {
+       const c = new wijmo.grid.Column();
+       c.binding = f.field; c.header = f.name; c.width = 130; c.align = 'right'; c.format = 'n0';
+       c.aggregate = wijmo.Aggregate.Sum;
+       grid.columns.push(c);
+       numeric.add(f.field);
+      });
+      const ct = new wijmo.grid.Column();
+      ct.binding = 'total'; ct.header = '계'; ct.width = 140; ct.align = 'right'; ct.format = 'n0';
+      ct.aggregate = wijmo.Aggregate.Sum;
+      grid.columns.push(ct);
+      numeric.add('total');
+     });
+     grid.frozenColumns = opt.frozen || 1;
+
+     // 4) 그룹(소계) + 바인딩
+     const cv = new wijmo.collections.CollectionView(data);
+     cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription(opt.groupBy));
+     grid.itemsSource = cv;
+
+     // 5) 합계 푸터
+     grid.columnFooters.rows.clear();
+     grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+     grid.columnFooters.setCellData(0, 0, '합계');
+
+     $('#' + totalId).text((grand).toLocaleString());
+    }
+
+    // 탭3 바인딩 : 관코드/관/항 + 재원컬럼 + 계  (관 그룹 소계)
+    bindTab3(rows) {
+     this.bindCrosstab(this.tab3Grid, rows, 'tab3Total', {
+      keyFields: ['acccd', 'it1cd'],
+      rowCols: [
+       {binding: 'acccd', header: '관코드', width: 90,  align: 'center'},
+       {binding: 'accnm', header: '관',     width: 160, align: 'left'},
+       {binding: 'it1nm', header: '항',     width: 200, align: 'left'},
+      ],
+      groupBy: 'accnm',
+      frozen: 3,
+     });
+    }
+
+    // 탭4 바인딩 : 사업명/코드/관/항/목/산출내역 + 재원컬럼 + 계  (사업 그룹 소계)
+    bindTab4(rows) {
+     this.bindCrosstab(this.tab4Grid, rows, 'tab4Total', {
+      keyFields: ['busicd', 'acccd', 'it1cd', 'it2cd', 'summy'],
+      rowCols: [
+       {binding: 'businm', header: '사업명',   width: 180, align: 'left'},
+       {binding: 'acccd',  header: '코드',     width: 80,  align: 'center'},
+       {binding: 'accnm',  header: '관',       width: 140, align: 'left'},
+       {binding: 'it1nm',  header: '항',       width: 130, align: 'left'},
+       {binding: 'it2nm',  header: '목',       width: 130, align: 'left'},
+       {binding: 'summy',  header: '산출내역', width: 220, align: 'left'},
+      ],
+      groupBy: 'businm',
+      frozen: 1,
+      keepSlip: true,   // 사업별은 전표 드릴 유지
+     });
+    }
+
+    // 탭별 조회
+    searchMainData(tabNo) {
+     let _this = this;
+     tabNo = tabNo || 1;
+     const urlMap = { 1: '/read', 2: '/readFund', 3: '/readFund2', 4: '/readFund3' };
+     let url = this.url + (urlMap[tabNo] || '/read');
+
+     let fr = ($('#searchfrdate').val() || '').replace('-', '');   // yyyyMM
+     let to = ($('#searchtodate').val() || '').replace('-', '');
+     let data = {
+      spdate1: fr, spdate2: to,
+      mssec: $('#mssec').val() || '%',
+      acccd: $('#acccd').val() || '',
+      it1cd: $('#it1cd').val() || '',
+      it2cd: $('#it2cd').val() || '',
+      bsdate: $('#bsdate').val() || '',
+      bseccd: $('#bseccd').val() || '',
+      busicd: $('#busicd').val() || '',
+      flag: $('#flagChk').is(':checked') ? '1' : '0'
+     };
+     if (!data.mssec) data.mssec = '%';
+
+     AjaxUtil.getAsyncData(url, data, function (result) {
+      if (result != null && result.success) {
+       const rows = result.data || [];
+       switch (tabNo) {
+        case 1: _this.bindTab1(rows); break;
+        case 2: _this.bindFund(_this.tab2Grid, rows, 'tab2Total', ['accnm','it1nm']); break;
+        case 3: _this.bindTab3(rows); break;
+        case 4: _this.bindTab4(rows); break;
+       }
+      } else {
+       console.log('세출내역서 조회 오류 (tab' + tabNo + ')');
+      }
+     });
+    }
+
+    // 탭1 바인딩 : 항 표기 규칙 + 관→항 그룹 + 총계
+    bindTab1(rows) {
+     rows = rows || [];
+     let flagOn = $('#flagChk').is(':checked');
+     let total = 0;
+     rows.forEach(function (r) {
+      r.dramt = Number(r.dramt) || 0;
+      r.cramt = Number(r.cramt) || 0;
+      let businm = (r.businm == null) ? '' : String(r.businm).trim();
+      let it1nm = (r.it1nm == null) ? '' : String(r.it1nm);
+      if (flagOn) {
+       r.hangnm = (businm.length === 0) ? it1nm : (businm + '     ' + it1nm);
+      } else {
+       r.hangnm = it1nm;
+      }
+      total += r.dramt;
+     });
+     const cv = new wijmo.collections.CollectionView(rows);
+     cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('accnm'));  // 관
+     cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('hangnm')); // 항
+     this.tab1Grid.itemsSource = cv;
+     $('#tab1Total').text(total.toLocaleString());
+    }
+
+    // 재원별현황(탭2) 바인딩 : 그룹 + 총계
+    bindFund(grid, rows, totalId, groupBindings) {
+     rows = rows || [];
+     let total = 0;
+     rows.forEach(function (r) {
+      r.amt2 = Number(r.amt2) || 0;
+      r.dramt = Number(r.dramt) || 0;
+      total += r.amt2;
+     });
+     const cv = new wijmo.collections.CollectionView(rows);
+     (groupBindings || []).forEach(function (b) {
+      cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription(b));
+     });
+     grid.itemsSource = cv;
+     $('#' + totalId).text(total.toLocaleString());
+    }
+
+    // 행 더블클릭 → 전표 팝업 (spdate/spnum 있는 행만)
+    openSlipFromRow(item) {
+     let spdate = String(item.spdate || item.yymmdd || '').replace(/[^0-9]/g, '');
+     let spnum = item.spnum || '';
+     if (!spdate || spdate === '00000000' || !spnum) {
+      Alert.alert('확인', '전표일자가 있는 내역을 선택해주세요.');
+      return;
+     }
+     this.openSlipPopup({ yymmdd: spdate, spnum: spnum, acccd: item.acccd || '' });
+    }
+
+    // ── 사업 팝업 ──
+    searchBusim() {
+     let _this = this;
+     AjaxUtil.getAsyncData(_this.entry_url + '/findBusim', {busim: $('#businm').val()}, function (res) {
+      let list = res.data || [];
+      if (!list || list.length === 0) { Alert.alert('', '사업 조회 결과가 없습니다.'); return; }
+      _this.showListPopup('사업 조회', 'businmTemplate', 'BusinessGrid',
+       [{binding:'bsdate',header:'사업코드1',width:90,align:'center'},
+        {binding:'bseccd',header:'사업코드2',width:90,align:'center'},
+        {binding:'buiscd',header:'사업코드',width:90,align:'center'},
+        {binding:'busim',header:'사업명',width:'*',align:'left'}],
+       list, function (item) {
+        $('#businm').val(item.busim || ''); $('#busicd').val(item.buiscd || '');
+        $('#bsdate').val(item.bsdate || ''); $('#bseccd').val(item.bseccd || '');
+        _this.searchCurrent();
+       });
+     });
+    }
+    // ── 관 팝업 ──
+    searchAccnm() {
+     let _this = this;
+     AjaxUtil.getAsyncData(_this.entry_url + '/findAccnm', {accnm: $('#accnm').val(), type: 'account'}, function (res) {
+      let list = res.data || [];
+      if (!list || list.length === 0) { Alert.alert('', '관 조회 결과가 없습니다.'); return; }
+      _this.showListPopup('관 조회', 'accnmTemplate', 'AccGrid',
+       [{binding:'acccd',header:'관코드',width:100,align:'center'},{binding:'accnm',header:'관명',width:'*',align:'left'}],
+       list, function (item) { $('#accnm').val(item.accnm || ''); $('#acccd').val(item.acccd || ''); _this.searchCurrent(); });
+     });
+    }
+    // ── 항 팝업 (세출 tiosec='2') ──
+    searchIt1nm() {
+     let _this = this;
+     AjaxUtil.getAsyncData(_this.entry_url + '/findIt1nm', {it1nm: $('#it1nm').val(), tiosec: '2'}, function (res) {
+      let list = res.data || [];
+      if (!list || list.length === 0) { Alert.alert('', '항 조회 결과가 없습니다.'); return; }
+      _this.showListPopup('항 조회', 'it1Template', 'It1Grid',
+       [{binding:'it1cd',header:'항코드',width:100,align:'center'},{binding:'it1nm',header:'항명',width:'*',align:'left'}],
+       list, function (item) { $('#it1nm').val(item.it1nm || ''); $('#it1cd').val(item.it1cd || ''); _this.searchCurrent(); });
+     });
+    }
+    // ── 목 팝업 (세출 tiosec='2') ──
+    searchIt2nm() {
+     let _this = this;
+     AjaxUtil.getAsyncData(_this.entry_url + '/findIt2nm', {it2nm: $('#it2nm').val(), tiosec: '2'}, function (res) {
+      let list = res.data || [];
+      if (!list || list.length === 0) { Alert.alert('', '목 조회 결과가 없습니다.'); return; }
+      _this.showListPopup('목 조회', 'it2Template', 'It2Grid',
+       [{binding:'it2cd',header:'목코드',width:100,align:'center'},{binding:'it2nm',header:'목명',width:'*',align:'left'}],
+       list, function (item) { $('#it2nm').val(item.it2nm || ''); $('#it2cd').val(item.it2cd || ''); _this.searchCurrent(); });
+     });
+    }
+
+    // 공통 리스트 팝업
+    showListPopup(title, tmplId, gridId, columns, dataList, onSelect) {
+     let _this = this;
+     if (_this.listPopup) { _this.listPopup.close(); _this.listPopup = null; }
+     let content = tmpl(tmplId, {});
+     _this.listPopup = new PopupDraggable(title);
+     _this.listPopup.open({width: 700, height: 420, $content: $(content)});
+     _this.listGrid = new wijmo.grid.FlexGrid('#' + gridId, {
+      isReadOnly: true, selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column, autoGenerateColumns: false,
+      columns: columns, itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+     _this.listGrid.keyActionEnter = wijmo.grid.KeyAction.None;
+     const sel = function () {
+      let s = _this.listGrid.selection; if (!s || s.row < 0) return;
+      let item = _this.listGrid.rows[s.row].dataItem;
+      onSelect(item);
+      _this.listPopup.close(); _this.listPopup = null; _this.listGrid = null;
+     };
+     setTimeout(function () { if (_this.listGrid && _this.listGrid.rows.length > 0) { _this.listGrid.select(0, 0); _this.listGrid.focus(); } }, 50);
+     _this.listGrid.hostElement.addEventListener('dblclick', sel);
+     _this.listGrid.hostElement.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); sel(); } });
+    }
+
+    // 현재 활성 탭 조회
+    searchCurrent() { this.searchMainData(getActiveTabNo()); }
+
+    // ============================================================
+    // 전표 팝업
+    // ============================================================
+    openSlipPopup(item) {
+     let _this = this;
+     if (_this.slipPopup) { _this.slipPopup.close(); _this.slipPopup = null; }
+     let content = tmpl('slipPopupTemplate', {});
+     _this.slipPopup = new PopupDraggable('전표');
+     _this.slipPopup.open({width: 1130, height: 670, $content: $(content)});
+     _this.slipDetailGrid = new wijmo.grid.FlexGrid('#SlipDetailGrid', {
+      isReadOnly: true, headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false, selectionMode: wijmo.grid.SelectionMode.Row,
+      columns: [
+       {binding: 'acccd', header: '코드', width: 70, align: 'center'},
+       {binding: 'accnm', header: '관명(계정)', width: 150, align: 'left'},
+       {binding: 'drcrnm', header: '차대', width: 60, align: 'center'},
+       {binding: 'it1nm', header: '항', width: 130, align: 'left'},
+       {binding: 'it2nm', header: '목', width: 130, align: 'left'},
+       {binding: 'summy', header: '산출내역', width: '*', align: 'left'},
+       {binding: 'dramt', header: '차변금액', width: 110, align: 'right', format: 'n0'},
+       {binding: 'cramt', header: '대변금액', width: 110, align: 'right', format: 'n0'},
+      ],
+      itemsSource: new wijmo.collections.CollectionView([]),
+     });
+     _this.slipDetailGrid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+     ['dramt', 'cramt'].forEach(b => { const col = _this.slipDetailGrid.columns.getColumn(b); if (col) col.aggregate = wijmo.Aggregate.Sum; });
+     _this.loadSlipDetail(item);
+    }
+    loadSlipDetail(item) {
+     let _this = this;
+     let spnum = item.spnum || item.slipno || '';
+     let data = { yymmdd: item.yymmdd || '', spnum: spnum, slipno: spnum, acccd: item.acccd || '' };
+     AjaxUtil.getAsyncData(_this.url + '/readSlip', data, function (res) {
+      if (!res || !res.success) { Alert.alert('', '전표 조회 결과가 없습니다.'); return; }
+      _this.bindSlipPopup(res.data || {});
+     });
+    }
+    fmtDateTime(v) {
+     if (!v) return '';
+     let s = String(v).trim().replace('T', ' ');
+     let m = s.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
+     if (m) return m[1];
+     let d = s.match(/^(\d{4})(\d{2})(\d{2})(\d{2})?(\d{2})?(\d{2})?/);
+     if (d) { let out = d[1] + '-' + d[2] + '-' + d[3]; if (d[4]) out += ' ' + d[4] + ':' + (d[5] || '00') + ':' + (d[6] || '00'); return out; }
+     return s.substring(0, 19);
+    }
+    bindSlipPopup(data) {
+     let _this = this;
+     const h = data.head || data || {};
+     const lines = data.lines || data.details || [];
+     const first = lines.length > 0 ? lines[0] : {};
+     const setV = (id, v) => { const $e = $('#' + id); if ($e.length) $e.val(v == null ? '' : v); };
+     const yymmdd = h.spdate || h.yymmdd || '';
+     setV('sp_yymmdd', String(yymmdd).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'));
+     setV('sp_slipno', h.spnum || h.slipno || '');
+     setV('sp_tiosecnm', h.tiosecnm || h.tiosec || '');
+     setV('sp_inserdt', h.regdate || h.inserdt || '');
+     setV('sp_buiscd', h.busipurnm || h.busipur || h.buiscd || '');
+     setV('sp_spoccu', h.spoccunm || h.spoccu || '');
+     setV('sp_updatedt', _this.fmtDateTime(h.inputdate || h.updatedt));
+     setV('sp_title', h.subject || h.title || '');
+     setV('sp_busim', h.businm || h.busim || '');
+     setV('sp_orgnm', h.spjangnm || h.orgnm || '');
+     setV('sp_remark', h.remark || '');
+     const $cash = $('#sp_cashyn'); if ($cash.length) $cash.prop('checked', (h.cashyn === '1' || h.cashyn === 'Y' || h.cashyn === true));
+     setV('sp_custnm', first.cltnm || first.custnm || '');
+     setV('sp_acctno', first.accnum || first.acctno || '');
+     setV('sp_msseccd', first.mssec || first.msseccd || '');
+     setV('sp_cardnm', first.cardnm || '');
+     setV('sp_mssecnm', first.mssecnm || '');
+     setV('sp_acctno2', first.banknm || '');
+     if (_this.slipDetailGrid) _this.slipDetailGrid.itemsSource = new wijmo.collections.CollectionView(lines);
+    }
+
+   }//ExpenseStatementPage
+
+   function getActiveTabNo() {
+    let $active = $('.tab-item.active');
+    if (!$active.length) $active = $('.tab-item:visible').first();
+    let id = ($active.attr('id') || 'tab1').replace('tab', '');
+    let no = parseInt(id, 10);
+    return isNaN(no) ? 1 : no;
+   }
+
+   let page = null;
+
+   $(document).ready(function (e) {
+    page = new ExpenseStatementPage();
+
+    let now = new Date();
+    let yyyy = now.getFullYear();
+    let mm = String(now.getMonth() + 1).padStart(2, '0');
+    $('#searchfrdate').val(yyyy + '-01');
+    $('#searchtodate').val(yyyy + '-' + mm);
+
+    let $sel = $('#mssec');
+    if ($sel.length) AjaxUtil.fillSelectOptions($sel, 'mssec', 'all', false);
+
+    $('#btnSearch').on('click', function () { page.searchCurrent(); });
+
+    $('#businm').on('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); page.searchBusim(); } });
+    $('#accnm').on('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); page.searchAccnm(); } });
+    $('#it1nm').on('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); page.searchIt1nm(); } });
+    $('#it2nm').on('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); page.searchIt2nm(); } });
+
+    $('#businm').on('input', function () { if ($(this).val() === '') { $('#busicd,#bsdate,#bseccd').val(''); } });
+    $('#accnm').on('input', function () { if ($(this).val() === '') $('#acccd').val(''); });
+    $('#it1nm').on('input', function () { if ($(this).val() === '') $('#it1cd').val(''); });
+    $('#it2nm').on('input', function () { if ($(this).val() === '') $('#it2cd').val(''); });
+
+    $('#flagChk').on('change', function () {
+     if (getActiveTabNo() === 1) page.searchMainData(1);
+    });
+
+    // 탭 클릭 시 자동 조회
+    $('.tab-links a').on('click', function () {
+     let no = parseInt($(this).attr('href').replace('#tab', ''), 10);
+     if (!isNaN(no)) page.searchMainData(no);
+    });
+
+    page.searchMainData(1);
+
+    $(document).on('keydown', function (ev) {
+     if (ev.key === 'F4') {
+      ev.preventDefault();
+      page.searchCurrent();
+     }
+    });
+   });
+  </script>
+</th:block>
+</html>
