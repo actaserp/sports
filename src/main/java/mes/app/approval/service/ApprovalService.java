@@ -169,10 +169,11 @@ public class ApprovalService {
         MapSqlParameterSource dicParam = new MapSqlParameterSource();
 
         String sql = """
-                select agencycd as perid, -- 사원 코드
-                       first_name as pernm
-                FROM auth_user
-                WHERE username = :username
+          select 
+          perid, -- 사원코드
+          pernm  -- 사원이름
+          from tb_xusers
+          where userid = :username
                 """;
         dicParam.addValue("username", username);
         Map<String, Object> userInfo = this.sqlRunner.getRow(sql, dicParam);

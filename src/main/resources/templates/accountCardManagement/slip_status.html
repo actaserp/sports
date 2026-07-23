@@ -295,12 +295,12 @@
             </div>
             <div class="button-wrap" style="border-top:none; display:flex; flex-direction:row; align-items:center; justify-content:space-between;">
               <ul style="display:flex; gap:5px;">
-                <li id="li_btnFileUpload" style="display:none;">
+                <!--<li id="li_btnFileUpload" style="display:none;">
                   <a class="btn btn-excell" id="btnFileUpload" title="첨부파일">
                     <img alt="등록 아이콘" th:src="@{/images/icon/ico-plus.svg}">
                     첨부파일
                   </a>
-                </li>
+                </li>-->
                 <li>
                   <a class="btn btn-excell" id="Newbtn" title="신규등록">
                     <img alt="등록 아이콘" th:src="@{/images/icon/ico-plus.svg}">
@@ -323,6 +323,12 @@
                   <a class="btn btn-excell" id="capy" title="전표복사">
                     <img alt="등록 아이콘" th:src="@{/images/icon/ico-plus.svg}">
                     전표복사
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-edit" id="btnSlipPrint2" title="전표출력">
+                    <img alt="출력 아이콘" th:src="@{/images/icon/ico-edit.svg}">
+                    전표 출력
                   </a>
                 </li>
               </ul>
@@ -914,7 +920,7 @@
     }
 
     // 전표 출력 팝업 열기
-    showPrintSelectPopup() {
+    showPrintSelectPopup(keysParam) {
      let _this = this;
      // html2pdf.js 동적 로드
      if (!document.getElementById('html2pdf-script')) {
@@ -927,8 +933,14 @@
      const existing = document.getElementById('slip-print-overlay');
      if (existing) existing.remove();
 
-     const selectedItems = _this.viewData.sourceCollection.filter(r => r.selected);
-     const keys = selectedItems.map(r => r.spdate.replace(/-/g, '') + r.spnum).join(',');
+     /*const selectedItems = _this.viewData.sourceCollection.filter(r => r.selected);
+     const keys = selectedItems.map(r => r.spdate.replace(/-/g, '') + r.spnum).join(',');*/
+     let keys = keysParam;
+     if (!keys) {
+      const selectedItems = _this.viewData.sourceCollection.filter(r => r.selected);
+      keys = selectedItems.map(r => r.spdate.replace(/-/g, '') + r.spnum).join(',');
+     }
+
      // console.log('keys:', keys);
 
      fetch(withCtx(`/api/account_management/slip_status/print?printType=1&keys=${encodeURIComponent(keys)}`))
@@ -2429,12 +2441,12 @@
 
     page.searchMainData();
 
-    // 첨부파일 버튼: tb_xenv.approflag = '1'인 경우에만 표시
-    AjaxUtil.getAsyncData(page.url + '/envInfo', {}, function(res) {
-     if (res && res.success && res.data && String(res.data.approflag) === '1') {
-      $('#li_btnFileUpload').show();
-     }
-    });
+    // // 첨부파일 버튼: tb_xenv.approflag = '1'인 경우에만 표시
+    // AjaxUtil.getAsyncData(page.url + '/envInfo', {}, function(res) {
+    //  if (res && res.success && res.data && String(res.data.approflag) === '1') {
+    //   $('#li_btnFileUpload').show();
+    //  }
+    // }); // 이후에 활성화 예정:
 
     $('#search_sbuject').on('keydown', function (e) {
      if (e.key === 'Enter') {
@@ -2455,6 +2467,19 @@
       return;
      }
      page.showPrintSelectPopup();
+    });
+    // 전표 등록 탭 — 현재 전표 출력
+    $('#btnSlipPrint2').on('click', function () {
+     const spdate = $('#spdate').val();
+     const spnum  = $('#spnum').val();
+
+     if (!spnum) {
+      Alert.alert('', '저장된 전표가 없습니다. 전표를 조회하거나 저장한 뒤 출력하세요.');
+      return;
+     }
+
+     const keys = spdate.replace(/-/g, '') + spnum;
+     page.showPrintSelectPopup(keys);
     });
 
     // 첨부파일 버튼 클릭

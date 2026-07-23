@@ -188,16 +188,20 @@ public class CategoryItemDetailLedgerService {
 		param.addValue("it2cd", (it2cd == null) ? "" : it2cd.trim());
 
 		String sql = """
-        SELECT A.yymmdd, A.acccd, A.accnm, A.it1cd, A.it1nm, A.it2cd, A.it2nm,
-               A.drcr, A.mssec,
-               (SELECT mssecnm FROM tb_x0005 WHERE mssec = A.mssec) AS mssecnm,
-               SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt, SUM(A.bfamt) AS bfamt,
-               CASE WHEN A.drcr = '1'
-                    THEN SUM(A.bfamt) + SUM(A.dramt) - SUM(A.cramt)
-                    ELSE SUM(A.bfamt) + SUM(A.cramt) - SUM(A.dramt)
-               END AS balamt,
-               STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
-               STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
+			SELECT 
+							CASE WHEN A.yymmdd = '00000000' THEN ''
+										ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
+							 END AS yymmdd,
+							 A.acccd, A.accnm, A.it1cd, A.it1nm, A.it2cd, A.it2nm,
+							 A.drcr, A.mssec,
+						 (SELECT mssecnm FROM tb_x0005 WHERE mssec = A.mssec) AS mssecnm,
+						 SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt, SUM(A.bfamt) AS bfamt,
+						 CASE WHEN A.drcr = '1'
+									THEN SUM(A.bfamt) + SUM(A.dramt) - SUM(A.cramt)
+									ELSE SUM(A.bfamt) + SUM(A.cramt) - SUM(A.dramt)
+						 END AS balamt,
+						 STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
+						 STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
           FROM
         (
         -- 이월 (TB_AB014)
@@ -280,18 +284,23 @@ public class CategoryItemDetailLedgerService {
 		param.addValue("mssec", (mssec == null || mssec.trim().isEmpty()) ? "%" : mssec.trim());
 
 		String sql = """
-        SELECT A.yymmdd, A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm,
-               A.it2cd, A.it2nm, A.summy, A.drcr,
-               SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt, SUM(A.bfamt) AS bfamt,
-               MAX(A.rowseq) AS rowseq,
-               MAX(A.cardnum) AS cardnum,
-               CASE WHEN A.drcr = '1'
-                    THEN SUM(A.bfamt) + SUM(A.dramt) - SUM(A.cramt)
-                    ELSE SUM(A.bfamt) + SUM(A.cramt) - SUM(A.dramt)
-               END AS balamt,
-               STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
-               STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
-          FROM
+        SELECT
+						CASE WHEN A.yymmdd = '00000000' THEN '00000000'
+								 WHEN RIGHT(A.yymmdd, 2) IN ('97','98') THEN A.yymmdd
+								 ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
+						END AS yymmdd,
+						A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm,
+						A.it2cd, A.it2nm, A.summy, A.drcr,
+						SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt, SUM(A.bfamt) AS bfamt,
+						MAX(A.rowseq) AS rowseq,
+						MAX(A.cardnum) AS cardnum,
+						CASE WHEN A.drcr = '1'
+								 THEN SUM(A.bfamt) + SUM(A.dramt) - SUM(A.cramt)
+								 ELSE SUM(A.bfamt) + SUM(A.cramt) - SUM(A.dramt)
+						END AS balamt,
+						STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
+						STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
+			 FROM
         (
         -- ① 이월 (TB_AB014)
         SELECT '00000000' AS yymmdd, '0000' AS spnum,
@@ -352,9 +361,14 @@ public class CategoryItemDetailLedgerService {
 
         UNION ALL
 
-        -- ④ 소계 (97 + 98)
-        SELECT A.yymmdd, A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm,
-               A.it2cd, A.it2nm, '' AS summy, '' AS drcr,
+			-- ④ 소계 (97 + 98)
+			        SELECT 
+			         CASE WHEN A.yymmdd = '00000000' THEN '00000000'
+										WHEN RIGHT(A.yymmdd, 2) IN ('97','98') THEN A.yymmdd
+										ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
+							 END AS yymmdd,
+							 A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm,
+							 A.it2cd, A.it2nm, '' AS summy, '' AS drcr,
                SUM(A.dramt), SUM(A.cramt), SUM(A.bfamt),
                0 AS rowseq, '' AS cardnum, 0 AS balamt,
                STUFF(STUFF(:frdate,5,0,'-'),8,0,'-'),

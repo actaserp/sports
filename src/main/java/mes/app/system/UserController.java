@@ -139,6 +139,7 @@ public class UserController {
 		AjaxResult result = new AjaxResult();
 		String dbKey = TenantContext.getDbKey();
 		String spjangcd = TenantContext.get();
+		String DEFAULT_PASSWORD = "1234";
 
 		String sql = null;
 		User user = null;
@@ -185,7 +186,7 @@ public class UserController {
 			}
 
 			user = new User();
-			user.setPassword(Pbkdf2Sha256.encode("1"));
+			user.setPassword(Pbkdf2Sha256.encode(DEFAULT_PASSWORD));
 			user.setSuperUser(false);
 			user.setLast_name("");
 			user.setIs_staff(false);

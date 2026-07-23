@@ -133,7 +133,7 @@ public class CategoryLedgerService {
 	}
 
 	// =====================================================================
-	// 탭2 : 보통예금 (전표 단위 상세)
+	// 탭2 : 상세내역 (전표 단위 상세)
 	// =====================================================================
 	public Object selectDepositList(String start, String end, String mssec, String accnm) {
 		MapSqlParameterSource param = buildBaseParam(start, end);
@@ -151,74 +151,80 @@ public class CategoryLedgerService {
 		}
 
 		String sql = """
-         SELECT  A.yymmdd, A.spnum, A.acccd, A.accnm, A.drcr,
-                 SUM(A.dramt) AS dramt,
-                 SUM(A.cramt) AS cramt,
-                 SUM(A.bfamt) AS bfamt,
-                 MAX(A.summy) AS summy,
-                 CASE WHEN A.drcr = '1'
-                      THEN SUM(A.bfamt) + SUM(A.dramt) - SUM(A.cramt)
-                      ELSE SUM(A.bfamt) + SUM(A.cramt) - SUM(A.dramt)
-                 END AS balamt,
-                 STUFF(STUFF(:frdate, 5, 0, '-'), 8, 0, '-') AS frdate,
-                 STUFF(STUFF(:todate, 5, 0, '-'), 8, 0, '-') AS todate
-           FROM
-         (
-         SELECT '00000000' AS yymmdd, '' AS spnum,
-                 A.acccd, B.accnm, B.drcr,
-                 A.dramt, A.cramt, '' AS summy,
-                 CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt
-           FROM TB_AB002 A, TB_AC001 B
-          WHERE A.custcd   = B.custcd
-            AND A.acccd    = B.acccd
-            AND B.spyn     = '1'
-            AND A.custcd   = :custcd
-            AND A.spjangcd = :spjangcd
-            AND A.yymm     = :indate
-            AND LEFT(A.acccd, 1) IN ('1', '2', '3')
-            AND NOT (A.dramt = 0 AND A.cramt = 0)
+        SELECT
+               CASE WHEN A.yymmdd = '00000000' THEN '00000000'
+                    ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
+               END AS yymmdd, A.spnum, A.acccd, A.accnm, A.drcr,
+               SUM(A.dramt) AS dramt,
+               SUM(A.cramt) AS cramt,
+               SUM(A.bfamt) AS bfamt,
+               MAX(A.summy) AS summy,
+               CASE WHEN A.drcr = '1'
+                    THEN SUM(A.bfamt) + SUM(A.dramt) - SUM(A.cramt)
+                    ELSE SUM(A.bfamt) + SUM(A.cramt) - SUM(A.dramt)
+               END AS balamt,
+               STUFF(STUFF(:frdate, 5, 0, '-'), 8, 0, '-') AS frdate,
+               STUFF(STUFF(:todate, 5, 0, '-'), 8, 0, '-') AS todate
+          FROM
+        (
+        -- ① 전기이월 (TB_AB002)
+        SELECT '00000000' AS yymmdd, '' AS spnum,
+                A.acccd, B.accnm, B.drcr,
+                A.dramt, A.cramt, '' AS summy,
+                CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt
+          FROM TB_AB002 A, TB_AC001 B
+         WHERE A.custcd   = B.custcd
+           AND A.acccd    = B.acccd
+           AND B.spyn     = '1'
+           AND A.custcd   = :custcd
+           AND A.spjangcd = :spjangcd
+           AND A.yymm     = :indate
+           AND LEFT(A.acccd, 1) IN ('1', '2', '3')
+           AND NOT (A.dramt = 0 AND A.cramt = 0)
 
-         UNION ALL
+        UNION ALL
 
-         SELECT C.spdate AS yymmdd, C.spnum,
-                 B.acccd, D.accnm, D.drcr,
-                 B.dramt, B.cramt, B.summy,
-                 CASE WHEN D.drcr = '1' THEN B.dramt - B.cramt ELSE B.cramt - B.dramt END AS bfamt
-           FROM TB_AA009 C, TB_AA010 B, TB_AC001 D
-          WHERE C.custcd   = B.custcd
-            AND C.spjangcd = B.spjangcd
-            AND C.spdate   = B.spdate
-            AND C.spnum    = B.spnum
-            AND B.acccd    = D.acccd
-            AND C.custcd   = :custcd
-            AND C.spjangcd = :spjangcd
-            AND C.spdate  >= LEFT(:frdate, 4) + '0101'
-            AND C.spdate  <  :frdate
-            """ + mssecCond + """
-            AND ( B.iwolflag <> '1' OR B.iwolflag IS NULL )
+        -- ② 연초~조회시작 직전 : 전잔액(bfamt)으로만 합산 (개별 전표로 노출하지 않음)
+        SELECT '00000000' AS yymmdd, '' AS spnum,
+                B.acccd, D.accnm, D.drcr,
+                0 AS dramt, 0 AS cramt, '' AS summy,
+                CASE WHEN D.drcr = '1' THEN B.dramt - B.cramt ELSE B.cramt - B.dramt END AS bfamt
+          FROM TB_AA009 C, TB_AA010 B, TB_AC001 D
+         WHERE C.custcd   = B.custcd
+           AND C.spjangcd = B.spjangcd
+           AND C.spdate   = B.spdate
+           AND C.spnum    = B.spnum
+           AND B.acccd    = D.acccd
+           AND C.custcd   = :custcd
+           AND C.spjangcd = :spjangcd
+           AND C.spdate  >= LEFT(:frdate, 4) + '0101'
+           AND C.spdate  <  :frdate
+           """ + mssecCond + """
+           AND ( B.iwolflag <> '1' OR B.iwolflag IS NULL )
 
-         UNION ALL
+        UNION ALL
 
-         SELECT C.spdate AS yymmdd, C.spnum,
-                 B.acccd, D.accnm, D.drcr,
-                 B.dramt, B.cramt, B.summy,
-                 CASE WHEN D.drcr = '1' THEN B.dramt - B.cramt ELSE B.cramt - B.dramt END AS bfamt
-           FROM TB_AA009 C, TB_AA010 B, TB_AC001 D
-          WHERE C.custcd   = B.custcd
-            AND C.spjangcd = B.spjangcd
-            AND C.spdate   = B.spdate
-            AND C.spnum    = B.spnum
-            AND B.acccd    = D.acccd
-            AND C.custcd   = :custcd
-            AND C.spjangcd = :spjangcd
-            AND C.spdate BETWEEN :frdate AND :todate
-            """ + mssecCond + """
-            AND ( B.iwolflag <> '1' OR B.iwolflag IS NULL )
-         ) A
-          WHERE 1=1
-          """ + acccdCond + """
-          GROUP BY A.yymmdd, A.spnum, A.acccd, A.accnm, A.drcr
-         """;
+        -- ③ 조회기간 : 실제 전표 상세
+        SELECT C.spdate AS yymmdd, C.spnum,
+                B.acccd, D.accnm, D.drcr,
+                B.dramt, B.cramt, B.summy,
+                CASE WHEN D.drcr = '1' THEN B.dramt - B.cramt ELSE B.cramt - B.dramt END AS bfamt
+          FROM TB_AA009 C, TB_AA010 B, TB_AC001 D
+         WHERE C.custcd   = B.custcd
+           AND C.spjangcd = B.spjangcd
+           AND C.spdate   = B.spdate
+           AND C.spnum    = B.spnum
+           AND B.acccd    = D.acccd
+           AND C.custcd   = :custcd
+           AND C.spjangcd = :spjangcd
+           AND C.spdate BETWEEN :frdate AND :todate
+           """ + mssecCond + """
+           AND ( B.iwolflag <> '1' OR B.iwolflag IS NULL )
+        ) A
+         WHERE 1=1
+         """ + acccdCond + """
+         GROUP BY A.yymmdd, A.spnum, A.acccd, A.accnm, A.drcr
+        """;
 
 		return sqlRunner.getRows(sql, param);
 	}
@@ -239,7 +245,9 @@ public class CategoryLedgerService {
 		param.addValue("messnm", "");
 
 		String sql = """
-         SELECT A.yymmdd, A.spnum, A.acccd, A.accnm, A.summy, A.drcr,
+         SELECT CASE WHEN A.yymmdd = '00000000' THEN '00000000'
+											ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
+								 END AS yymmdd, A.spnum, A.acccd, A.accnm, A.summy, A.drcr,
                 SUM(A.dramt) AS dramt,
                 SUM(A.cramt) AS cramt,
                 SUM(A.bfamt) AS bfamt,
@@ -447,7 +455,9 @@ public class CategoryLedgerService {
 		param.addValue("messnm", "");
 
 		String sql = """
-         SELECT A.yymmdd, A.spnum, A.acccd, A.accnm, A.summy, A.drcr,
+         SELECT CASE WHEN A.yymmdd = '00000000' THEN '00000000'
+										ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
+							 END AS yymmdd, A.spnum, A.acccd, A.accnm, A.summy, A.drcr,
                 SUM(A.dramt) AS dramt,
                 SUM(A.cramt) AS cramt,
                 SUM(A.bfamt) AS bfamt,

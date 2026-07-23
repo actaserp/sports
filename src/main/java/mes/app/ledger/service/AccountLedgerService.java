@@ -152,18 +152,22 @@ public class AccountLedgerService { //계좌별원장
 		param.addValue("spacc", (spacc == null || spacc.trim().isEmpty()) ? "" : spacc.trim());
 
 		String sql = """
-        SELECT A.yymmdd, A.acccd, A.accnm, A.it1cd, A.it1nm, A.drcr,
-               SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt, SUM(A.bfamt) AS bfamt,
-               CASE WHEN A.drcr = '1'
-                    THEN SUM(A.bfamt) + SUM(A.dramt) - SUM(A.cramt)
-                    ELSE SUM(A.bfamt) + SUM(A.cramt) - SUM(A.dramt)
-               END AS balamt,
-               STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
-               STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
-          FROM
-        (
-        -- 이월 (TB_AB015)
-        SELECT '00000000' AS yymmdd,
+			SELECT 
+					CASE WHEN A.yymmdd = '00000000' THEN '00000000'
+								ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
+					 END AS yymmdd,
+					 A.acccd, A.accnm, A.it1cd, A.it1nm, A.drcr,
+					 SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt, SUM(A.bfamt) AS bfamt,
+					 CASE WHEN A.drcr = '1'
+								THEN SUM(A.bfamt) + SUM(A.dramt) - SUM(A.cramt)
+								ELSE SUM(A.bfamt) + SUM(A.cramt) - SUM(A.dramt)
+					 END AS balamt,
+					 STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
+					 STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
+				FROM
+			(
+			-- 이월 (TB_AB015)
+			SELECT '00000000' AS yymmdd,
                A.acccd, B.accnm, A.bankcd AS it1cd, C.banknm AS it1nm, B.drcr,
                A.dramt, A.cramt,
                CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt
@@ -315,19 +319,22 @@ public class AccountLedgerService { //계좌별원장
            WHERE A.acccd = :acccd AND A.it1cd = :it1cd
            GROUP BY A.yymmdd, A.spnum, A.spseq, A.acccd, A.accnm, A.it1cd
         )
-        SELECT yymmdd, spnum, spseq, acccd, accnm, it1cd, it1nm, it2nm, summy, drcr,
-               dramt, cramt, bfamt, banknm, rowseq,
-               -- 잔액 : 소계행(97/98) 제외 누적
-               SUM(CASE WHEN RIGHT(yymmdd,2) IN ('97','98') THEN 0
-                        WHEN drcr = '1' THEN bfamt + dramt - cramt
-                        ELSE bfamt + cramt - dramt END)
-                   OVER (PARTITION BY acccd, it1cd ORDER BY yymmdd, spnum, spseq
-                         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS balamt,
-               CAST(:it1nm AS VARCHAR(50)) AS accnum,
-               STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
-               STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
-          FROM base
-         ORDER BY acccd, it1cd, yymmdd, spnum, spseq
+			SELECT CASE WHEN yymmdd = '00000000' THEN '00000000'
+								WHEN RIGHT(yymmdd,2) IN ('97','98') THEN yymmdd
+								ELSE STUFF(STUFF(yymmdd, 5, 0, '-'), 8, 0, '-')
+					 END AS yymmdd,
+					 spnum, spseq, acccd, accnm, it1cd, it1nm, it2nm, summy, drcr,
+					 dramt, cramt, bfamt, banknm, rowseq,
+					 SUM(CASE WHEN RIGHT(yymmdd,2) IN ('97','98') THEN 0
+										WHEN drcr = '1' THEN bfamt + dramt - cramt
+										ELSE bfamt + cramt - dramt END)
+							 OVER (PARTITION BY acccd, it1cd ORDER BY yymmdd, spnum, spseq
+										 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS balamt,
+					 CAST(:it1nm AS VARCHAR(50)) AS accnum,
+					 STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
+					 STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
+			FROM base
+		 ORDER BY acccd, it1cd, yymmdd, spnum, spseq
         """;
 		return sqlRunner.getRows(sql, param);
 	}
@@ -340,10 +347,15 @@ public class AccountLedgerService { //계좌별원장
 		param.addValue("acccd", (acccd == null) ? "" : acccd.trim());
 
 		String sql = """
-        SELECT A.yymmdd, A.spnum, A.spseq, A.acccd, A.accnm, A.it1cd, A.it1nm, A.it2nm,
-               A.summy, A.drcr, A.dramt, A.cramt, A.bfamt, A.banknm, A.rowseq,
-               STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
-               STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
+			SELECT 
+						CASE WHEN A.yymmdd = '00000000' THEN '00000000'
+								WHEN RIGHT(A.yymmdd, 2) IN ('97','98') THEN A.yymmdd
+								ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
+					 END AS yymmdd,
+					 A.spnum, A.spseq, A.acccd, A.accnm, A.it1cd, A.it1nm, A.it2nm,
+					 A.summy, A.drcr, A.dramt, A.cramt, A.bfamt, A.banknm, A.rowseq,
+					 STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
+					 STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
           FROM
         (
         SELECT A.spdate AS yymmdd, A.spnum, A.spseq,
@@ -377,11 +389,12 @@ public class AccountLedgerService { //계좌별원장
 	public Object selectSlip(String spdate, String spnum) {
 		String spjangcd = TenantContext.get();
 		String custcd   = getBizInfoBySpjangcd(spjangcd).get("custcd");
+		String spdateNorm = (spdate == null) ? "" : spdate.replaceAll("[^0-9]", "");
 
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("custcd", custcd);
 		param.addValue("spjangcd", spjangcd);
-		param.addValue("spdate", spdate);
+		param.addValue("spdate", spdateNorm);
 		param.addValue("spnum", spnum);
 
 		// ── 헤더 ──

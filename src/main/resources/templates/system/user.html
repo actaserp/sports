@@ -812,7 +812,7 @@
 
             let fnSuccess = function (res) {
                 if (res.success) {
-                    Alert.alert('', '저장되었습니다.');
+                    Alert.alert('', '저장되었습니다. 최초 비밀번호는 1234 입니다.');
                     searchDataBind();
                 } else if (!res.success) {
                     Alert.alert('', res.message);

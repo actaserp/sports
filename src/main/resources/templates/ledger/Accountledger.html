@@ -156,7 +156,7 @@
               </dl>
             </div>
           </div>
-          <div class="grid-guide-box">※ 행을 선택 후 '상세 내역' 탭을 누르면 상세내역이 조회됩니다. 행 더블클릭 시 전표 팝업이 열립니다.</div>
+          <div class="grid-guide-box">※ 행을 선택 후 '상세 내역' 탭을 누르면 상세내역이 조회됩니다.</div>
           <div class="grid_box" id="divDetailMaster">
             <div id="theGrid_detail_master" style="height: 540px;"></div>
           </div>
@@ -617,8 +617,9 @@
      const yy = String(item.yymmdd || '');
      if (yy.endsWith('97') || yy.endsWith('98')) return;
      if (!item.spnum || item.spnum === '9999' || item.spnum === '0000') return;
-     // PB: OpenwithParm(w_tb_a009_popup, yymmdd|spnum|acccd)
-     this.openSlipPopup({ yymmdd: item.yymmdd, spnum: item.spnum, acccd: item.acccd });
+     // 전표일자: 화면표기(2024-07-15)일 수 있으니 숫자만 추출
+     let spdate = yy.replace(/[^0-9]/g, '');
+     this.openSlipPopup({ yymmdd: spdate, spnum: item.spnum, acccd: item.acccd });
     }
 
     // ============================================================

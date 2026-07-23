@@ -225,16 +225,20 @@ public class CategoryItemLedgerService {
 		param.addValue("busipur", "%");
 
 		String sql = """
-        SELECT A.yymmdd, A.acccd, A.accnm, A.it1cd, A.it1nm, A.drcr, A.tiosec,
-               SUM(A.dramt) AS dramt,
-               SUM(A.cramt) AS cramt,
-               SUM(A.bfamt) AS bfamt,
-               CASE WHEN A.drcr = '1'
-                    THEN SUM(A.bfamt) + SUM(A.dramt) - SUM(A.cramt)
-                    ELSE SUM(A.bfamt) + SUM(A.cramt) - SUM(A.dramt)
-               END AS balamt,
-               STUFF(STUFF(:frdate, 5, 0, '-'), 8, 0, '-') AS frdate,
-               STUFF(STUFF(:todate, 5, 0, '-'), 8, 0, '-') AS todate
+        SELECT 
+						 CASE WHEN A.yymmdd = '00000000' THEN ''
+										ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
+						 END AS yymmdd,
+						 A.acccd, A.accnm, A.it1cd, A.it1nm, A.drcr, A.tiosec,
+						 SUM(A.dramt) AS dramt,
+						 SUM(A.cramt) AS cramt,
+						 SUM(A.bfamt) AS bfamt,
+						 CASE WHEN A.drcr = '1'
+									THEN SUM(A.bfamt) + SUM(A.dramt) - SUM(A.cramt)
+									ELSE SUM(A.bfamt) + SUM(A.cramt) - SUM(A.dramt)
+						 END AS balamt,
+						 STUFF(STUFF(:frdate, 5, 0, '-'), 8, 0, '-') AS frdate,
+						 STUFF(STUFF(:todate, 5, 0, '-'), 8, 0, '-') AS todate
           FROM
         (
         SELECT '00000000' AS yymmdd,
@@ -322,10 +326,15 @@ public class CategoryItemLedgerService {
 		param.addValue("busipur", "%");
 
 		String sql = """
-        SELECT A.yymmdd, A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm,
+        SELECT CASE WHEN A.yymmdd = '00000000' THEN ''
+                    WHEN RIGHT(A.yymmdd, 2) = '98' THEN '소계'
+                    ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
+               END AS yymmdd,
+               A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm,
                A.summy, A.drcr, A.tiosec,
                SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt, SUM(A.bfamt) AS bfamt,
                A.mssec AS mssec,
+               (SELECT mssecnm FROM tb_x0005 WHERE mssec = A.mssec) AS mssecnm,
                MAX(A.cardnum) AS cardnum, MAX(A.cardnm) AS cardnm,
                MAX(A.rowseq) AS rowseq,
                CASE WHEN A.drcr = '1'
@@ -406,6 +415,7 @@ public class CategoryItemLedgerService {
                '' AS summy, '' AS drcr, '' AS tiosec,
                SUM(A.dramt), SUM(A.cramt), SUM(A.bfamt),
                A.mssec AS mssec,
+               (SELECT mssecnm FROM tb_x0005 WHERE mssec = A.mssec) AS mssecnm,
                MAX(A.cardnum), MAX(A.cardnm), MAX(A.rowseq),
                CASE WHEN '' = '1' THEN 0 ELSE 0 END AS balamt,
                STUFF(STUFF(:frdate,5,0,'-'),8,0,'-'),

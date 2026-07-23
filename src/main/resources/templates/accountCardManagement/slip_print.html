@@ -223,12 +223,11 @@
 
             <!-- 오른쪽: 결재란 (printType=1만 표시) -->
             <td th:if="${printType == '1'}"
-                th:style="'vertical-align:bottom; width:' + (${approverList.size()} * 60) + 'px;'">
-              <table style="border:1px solid #333; border-collapse:collapse; font-size:10px;"
-                     th:style="'border:1px solid #333; border-collapse:collapse; font-size:10px; width:' + (${approverList.size()} * 60) + 'px;'">
+                th:style="'vertical-align:bottom; width:' + (${approverList.size()} * 100) + 'px;'">
+              <table th:style="'border:1px solid #333; border-collapse:collapse; font-size:10px; width:' + (${approverList.size()} * 100) + 'px;'">
                 <tr>
                   <th:block th:each="apv, apvStat : ${approverList}">
-                    <td th:style="${!apvStat.last ? 'border-right:1px solid #333; text-align:center; width:60px; padding:0;' : 'text-align:center; width:60px; padding:0;'}">
+                    <td th:style="${!apvStat.last ? 'border-right:1px solid #333; text-align:center; width:100px; padding:0;' : 'text-align:center; width:100px; padding:0;'}">
                       <div style="background:#f0f0f0; border-bottom:1px solid #333; padding:2px 4px; font-weight:700;"
                            th:text="${apv}"></div>
                       <div style="height:44px;"></div>
@@ -379,7 +378,7 @@
             <table style="border:1px solid #333; border-collapse:collapse; font-size:10px;">
               <tr>
                 <th:block th:each="apv, apvStat : ${approverList}">
-                  <td th:style="${!apvStat.last ? 'border-right:1px solid #333; text-align:center; width:60px; padding:0;' : 'text-align:center; width:60px; padding:0;'}">
+                  <td th:style="${!apvStat.last ? 'border-right:1px solid #333; text-align:center; width:100px; padding:0;' : 'text-align:center; width:100px; padding:0;'}">
                     <div style="background:#f0f0f0; border-bottom:1px solid #333; padding:2px 4px; font-weight:700;"
                          th:text="${apv}"></div>
                     <div style="height:44px;"></div>
@@ -778,11 +777,11 @@
         <table style="border-collapse:collapse; margin-top:8px;">
           <tr>
             <th:block th:each="apv, apvStat : ${approverList}">
-              <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <td style="border:1px solid #333; text-align:center; padding:0; width:100px;">
                 <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                            padding:3px 14px; font-size:10px; font-weight:700;"
+              padding:3px 14px; font-size:10px; font-weight:700;"
                      th:text="${apv}"></div>
-                <div style="height:16mm; width:60px;"></div>
+                <div style="height:16mm; width:100px;"></div>
               </td>
             </th:block>
           </tr>
@@ -801,11 +800,11 @@
         <table style="border-collapse:collapse; margin-bottom:8px;">
           <tr>
             <th:block th:each="apv, apvStat : ${approverList}">
-              <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <td style="border:1px solid #333; text-align:center; padding:0; width:100px;">
                 <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                            padding:3px 14px; font-size:10px; font-weight:700;"
+              padding:3px 14px; font-size:10px; font-weight:700;"
                      th:text="${apv}"></div>
-                <div style="height:16mm; width:60px;"></div>
+                <div style="height:16mm; width:100px;"></div>
               </td>
             </th:block>
           </tr>
@@ -945,11 +944,11 @@
         <table style="border-collapse:collapse; margin-bottom:8px;">
           <tr>
             <th:block th:each="apv, apvStat : ${approverList}">
-              <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <td style="border:1px solid #333; text-align:center; padding:0; width:100px;">
                 <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                            padding:3px 14px; font-size:10px; font-weight:700;"
+              padding:3px 14px; font-size:10px; font-weight:700;"
                      th:text="${apv}"></div>
-                <div style="height:16mm; width:60px;"></div>
+                <div style="height:16mm; width:100px;"></div>
               </td>
             </th:block>
           </tr>
@@ -1116,11 +1115,11 @@
         <table style="border-collapse:collapse; margin-bottom:8px;">
           <tr>
             <th:block th:each="apv, apvStat : ${approverList}">
-              <td style="border:1px solid #333; text-align:center; padding:0; width:70px;">
+              <td style="border:1px solid #333; text-align:center; padding:0; width:100px;">
                 <div style="background:#f0f0f0; border-bottom:1px solid #333;
-                            padding:3px 14px; font-size:10px; font-weight:700;"
+              padding:3px 14px; font-size:10px; font-weight:700;"
                      th:text="${apv}"></div>
-                <div style="height:16mm; width:60px;"></div>
+                <div style="height:16mm; width:100px;"></div>
               </td>
             </th:block>
           </tr>
