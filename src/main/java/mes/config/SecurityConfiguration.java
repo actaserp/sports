@@ -88,7 +88,9 @@ public class SecurityConfiguration {
                                 // API 및 외부 연동
                                 "/useridchk/**", "/user-auth/**", "/user-auth/save",
                                 "/popbill/webhook", "/api/transaction/input/**",
-                                "/api/das_device", "/authentication/**", "/api/common/**"
+                                "/api/das_device", "/authentication/**", "/api/common/**",
+																// 전자결재
+																"/appkey/**"
                         ).permitAll()
                         .antMatchers("/setup").hasAuthority("admin")
                         .anyRequest().authenticated()
