@@ -601,7 +601,6 @@
        if (yy.endsWith('97') || yy.endsWith('98')) {
         e.cell.style.color = '#d33';
         e.cell.style.fontWeight = '600';
-        if (s.columns[e.col] && s.columns[e.col].binding === labelBinding) e.cell.textContent = yy.endsWith('97') ? '월소계' : '계정소계';
         if (s.columns[e.col] && s.columns[e.col].binding === 'yymmdd') e.cell.textContent = '';
        }
       }

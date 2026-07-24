@@ -54,9 +54,8 @@
         padding: 10px;
         background: #f8f9fa;
         overflow-y: auto;
-        height: 500px;
+        height: 430px;
     }
-
 </style>
 <th:block layout:fragment="content">
   <div class="layout-contents">
@@ -178,10 +177,10 @@
                 <td colspan="2">
                   <div id="pdfWrapper" style="display: flex;">
                     <div id="pdfView">
-                      <div id="pdfContainer" style="width:100%; height:500px; overflow-y:auto; background:#f8f9fa;"></div>
+                      <div id="pdfContainer" style="width:100%; height:425px; overflow-y:auto; background:#f8f9fa;"></div>
                     </div>
                     <div id="pdfView2">
-                      <div id="pdfContainer2" style="width:100%; height:500px; overflow-y:auto; background:#f8f9fa;"></div>
+                      <div id="pdfContainer2" style="width:100%; height:425px; overflow-y:auto; background:#f8f9fa;"></div>
                     </div>
                   </div>
                 </td>
@@ -232,8 +231,6 @@
 
     init();
 
-    const appgubun = $('#appgubun').val();
-    setButtonStateByAppgubun(appgubun);
    });
 
    document.getElementById('searchText').addEventListener('keydown', function (event) {
@@ -640,8 +637,13 @@
       'X-CSRF-Token': $('[name=_csrf]').val() // CSRF 토큰을 헤더에 추가
      },
      success: function (response) {
+      if (!response.success) {
+       console.error('상태 변경 실패:', response.message);
+       Alert.alert('', response.message || '상태 변경 실패');
+       return;
+      }
       Alert.alert('', "결재가 되었습니다.");
-      NewClose(); // 팝업 닫기
+      NewClose();
       fetchListData();
       fetchListData1();
      },
@@ -661,6 +663,7 @@
     [$btnReject, $btnHold, $btnApprove, $btnCancel].forEach(btn => btn.prop("disabled", true));
 
     const appnum = document.getElementById('appnum').value;
+    if (!appnum) return;
 
     $.ajax({
      url: '/api/PaymentDetail/currentApprovalInfo',
@@ -762,14 +765,12 @@
      Alert.alert('', '다운로드할 파일이 없습니다.');
      return;
     }
-
     let downloadList = fileList.map(file => ({
      filepath: file.filepath,
      filesvnm: file.filesvnm,
      fileornm: file.fileornm
     }));
-
-    downloadFiles(downloadList, withCtx('/api/PaymentList/downloader'));
+    downloadFiles(downloadList, withCtx('/api/PaymentDetail/downloadFiles'));
    }
 
    // 폼 초기화 함수

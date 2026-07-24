@@ -231,6 +231,7 @@ public class CategoryLedgerService {
 
 	// =====================================================================
 	// 탭3 : 상세내역 (acccd 정확일치, 계정 미선택이면 결과 없음)
+	//        + 누계 잔액(balamt)
 	// =====================================================================
 	public Object selectDetailList(String start, String end, String mssec, String accnm) {
 		MapSqlParameterSource param = buildBaseParam(start, end);
@@ -245,82 +246,100 @@ public class CategoryLedgerService {
 		param.addValue("messnm", "");
 
 		String sql = """
-         SELECT CASE WHEN A.yymmdd = '00000000' THEN '00000000'
-											ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
-								 END AS yymmdd, A.spnum, A.acccd, A.accnm, A.summy, A.drcr,
-                SUM(A.dramt) AS dramt,
-                SUM(A.cramt) AS cramt,
-                SUM(A.bfamt) AS bfamt,
-                MAX(A.rowseq) AS rowseq,
-                CAST(:frdate AS CHAR(8)) AS frdate,
-                CAST(:todate AS CHAR(8)) AS todate,
-                CAST(:messnm AS VARCHAR(50)) AS messnm
-           FROM
-         (
-         SELECT '00000000' AS yymmdd, '0000' AS spnum,
-                A.acccd, B.accnm, '' AS summy, B.drcr,
-                A.dramt, A.cramt,
-                CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt,
-                '0' AS rowseq
-           FROM TB_AB002 A, TB_AC001 B
-          WHERE A.custcd   = B.custcd
-            AND A.acccd    = B.acccd
-            AND B.spyn     = '1'
-            AND A.custcd   = :custcd
-            AND A.spjangcd = :spjangcd
-            AND A.yymm     = LEFT(:indate, 6)
-            AND LEFT(A.acccd, 1) IN ('1', '2', '3')
-            AND NOT (A.dramt = 0 AND A.cramt = 0)
+        SELECT G.yymmdd, G.spnum, G.acccd, G.accnm, G.summy, G.drcr,
+               G.dramt, G.cramt, G.bfamt, G.rowseq,
+               G.frdate, G.todate, G.messnm,
+               SUM(G.netamt) OVER (ORDER BY G.yymmdd, G.spnum, TRY_CAST(G.rowseq AS INT)
+                                   ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS balamt
+          FROM
+        (
+          SELECT CASE WHEN A.yymmdd = '00000000' THEN '00000000'
+                      ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
+                 END AS yymmdd,
+                 A.spnum, A.acccd, A.accnm, A.summy, A.drcr,
+                 SUM(A.dramt)  AS dramt,
+                 SUM(A.cramt)  AS cramt,
+                 SUM(A.bfamt)  AS bfamt,
+                 MAX(A.rowseq) AS rowseq,
+                 -- 이월행은 bfamt, 기간행은 차대 부호 적용한 순증감
+                 CASE WHEN A.yymmdd = '00000000' THEN SUM(A.bfamt)
+                      WHEN A.drcr   = '1'        THEN SUM(A.dramt) - SUM(A.cramt)
+                      ELSE                            SUM(A.cramt) - SUM(A.dramt)
+                 END AS netamt,
+                 CAST(:frdate AS CHAR(8))     AS frdate,
+                 CAST(:todate AS CHAR(8))     AS todate,
+                 CAST(:messnm AS VARCHAR(50)) AS messnm
+            FROM
+          (
+          -- ① 전기이월 (TB_AB002)
+          SELECT '00000000' AS yymmdd, '0000' AS spnum,
+                 A.acccd, B.accnm, '' AS summy, B.drcr,
+                 A.dramt, A.cramt,
+                 CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt,
+                 '0' AS rowseq
+            FROM TB_AB002 A, TB_AC001 B
+           WHERE A.custcd   = B.custcd
+             AND A.acccd    = B.acccd
+             AND B.spyn     = '1'
+             AND A.custcd   = :custcd
+             AND A.spjangcd = :spjangcd
+             AND A.yymm     = LEFT(:indate, 6)
+             AND LEFT(A.acccd, 1) IN ('1', '2', '3')
+             AND NOT (A.dramt = 0 AND A.cramt = 0)
 
-         UNION ALL
+          UNION ALL
 
-         SELECT '00000000', '0000',
-                A.acccd, B.accnm, '', B.drcr,
-                A.dramt, A.cramt,
-                CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt,
-                A.rowseq
-           FROM TB_AA010 A, TB_AC001 B, TB_AA009 C
-          WHERE A.custcd   = B.custcd
-            AND A.acccd    = B.acccd
-            AND A.custcd   = C.custcd
-            AND A.spjangcd = C.spjangcd
-            AND A.spdate   = C.spdate
-            AND A.spnum    = C.spnum
-            AND B.spyn     = '1'
-            AND A.custcd   = :custcd
-            AND A.spjangcd = :spjangcd
-            AND A.spdate  >= LEFT(:frdate, 4) + '0101'
-            AND A.spdate  <  :frdate
-            AND ( ISNULL(A.mssec, '') LIKE :mssec )
-            AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
-            AND A.acccd = :acccd
+          -- ② 연초 ~ 조회시작 직전 : 이월행으로 합산
+          SELECT '00000000', '0000',
+                 A.acccd, B.accnm, '', B.drcr,
+                 A.dramt, A.cramt,
+                 CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt,
+                 A.rowseq
+            FROM TB_AA010 A, TB_AC001 B, TB_AA009 C
+           WHERE A.custcd   = B.custcd
+             AND A.acccd    = B.acccd
+             AND A.custcd   = C.custcd
+             AND A.spjangcd = C.spjangcd
+             AND A.spdate   = C.spdate
+             AND A.spnum    = C.spnum
+             AND B.spyn     = '1'
+             AND A.custcd   = :custcd
+             AND A.spjangcd = :spjangcd
+             AND A.spdate  >= LEFT(:frdate, 4) + '0101'
+             AND A.spdate  <  :frdate
+             AND ( ISNULL(A.mssec, '') LIKE :mssec )
+             AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
+             AND A.acccd = :acccd
 
-         UNION ALL
+          UNION ALL
 
-         SELECT A.spdate, A.spnum,
-                A.acccd, B.accnm, A.summy, B.drcr,
-                A.dramt, A.cramt,
-                CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt,
-                A.rowseq
-           FROM TB_AA010 A, TB_AC001 B, TB_AA009 C
-          WHERE A.custcd   = B.custcd
-            AND A.acccd    = B.acccd
-            AND A.custcd   = C.custcd
-            AND A.spjangcd = C.spjangcd
-            AND A.spdate   = C.spdate
-            AND A.spnum    = C.spnum
-            AND B.spyn     = '1'
-            AND A.custcd   = :custcd
-            AND A.spjangcd = :spjangcd
-            AND A.spdate BETWEEN :frdate AND :todate
-            AND NOT (A.dramt = 0 AND A.cramt = 0)
-            AND ( ISNULL(A.mssec, '') LIKE :mssec )
-            AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
-            AND A.acccd = :acccd
-         ) A
-          WHERE acccd = :acccd
-          GROUP BY A.yymmdd, A.spnum, A.acccd, A.accnm, A.summy, A.drcr
-         """;
+          -- ③ 조회기간 : 실제 전표 상세
+          SELECT A.spdate, A.spnum,
+                 A.acccd, B.accnm, A.summy, B.drcr,
+                 A.dramt, A.cramt,
+                 CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt,
+                 A.rowseq
+            FROM TB_AA010 A, TB_AC001 B, TB_AA009 C
+           WHERE A.custcd   = B.custcd
+             AND A.acccd    = B.acccd
+             AND A.custcd   = C.custcd
+             AND A.spjangcd = C.spjangcd
+             AND A.spdate   = C.spdate
+             AND A.spnum    = C.spnum
+             AND B.spyn     = '1'
+             AND A.custcd   = :custcd
+             AND A.spjangcd = :spjangcd
+             AND A.spdate BETWEEN :frdate AND :todate
+             AND NOT (A.dramt = 0 AND A.cramt = 0)
+             AND ( ISNULL(A.mssec, '') LIKE :mssec )
+             AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
+             AND A.acccd = :acccd
+          ) A
+           WHERE acccd = :acccd
+           GROUP BY A.yymmdd, A.spnum, A.acccd, A.accnm, A.summy, A.drcr
+        ) G
+         ORDER BY G.yymmdd, G.spnum, TRY_CAST(G.rowseq AS INT)
+        """;
 
 		return sqlRunner.getRows(sql, param);
 	}

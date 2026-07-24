@@ -87,24 +87,23 @@ public class ApprovalService {
     //결재라인등록 사원 그리드 리스트 불러오기
     public List<Map<String, Object>> getListPapercd(String papercd, String spjangcd) {
         MapSqlParameterSource dicParam = new MapSqlParameterSource();
-
+        dicParam.addValue("spjangcd", spjangcd);
         String sql = """
-                select
-                e.*,
-                s."Value" as papernm,
-                p."Name"
-                from TB_E063 e
-                LEFT JOIN sys_code s ON e.papercd = s."Code"
-                LEFT JOIN person p ON e.personid = p.id
-                WHERE 1=1
-                AND s."CodeType" = 'appr_doc'
-                """;
-            dicParam.addValue("papercd", papercd);
-            sql += " AND e.papercd = :papercd";
-        if(spjangcd != null && !spjangcd.isEmpty()) {
-            dicParam.addValue("spjangcd", spjangcd);
-            sql += " AND e.spjangcd = :spjangcd";
-        }
+        select
+            e.*,
+            s."Value" as papernm,
+            p."Name"
+        from TB_E063 e
+        LEFT JOIN sys_code s ON e.papercd = s."Code"
+        LEFT JOIN person p ON e.perid = p.id
+        WHERE 1=1
+            AND s."CodeType" = 'Payment'
+            AND e.spjangcd = :spjangcd
+        """;
+
+        dicParam.addValue("papercd", papercd);
+        sql += " AND e.papercd = :papercd";
+
         sql += " order by e.papercd ASC";
         List<Map<String, Object>> items = this.sqlRunner.getRows(sql, dicParam);
         return items;

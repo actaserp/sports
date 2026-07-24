@@ -38,6 +38,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/PaymentDetail")
@@ -57,7 +63,7 @@ public class PaymentDetailController {  //결재 할 내역
                                    Authentication auth) {
     AjaxResult result = new AjaxResult();
     String spjangcd = TenantContext.get();
-    log.info("결재 내역 read 들어온 데이터:startDate{}, endDate{}, spjangcd {}, SearchPayment {} ,searchUserNm {} ", startDate, endDate, spjangcd, SearchPayment, searchText);
+//    log.info("결재 내역 read 들어온 데이터:startDate{}, endDate{}, spjangcd {}, SearchPayment {} ,searchUserNm {} ", startDate, endDate, spjangcd, SearchPayment, searchText);
 
     try {
       User user = (User) auth.getPrincipal();
@@ -200,9 +206,9 @@ public class PaymentDetailController {  //결재 할 내역
 
       if (filepath.startsWith("sports/")) {
         // ✅ NCP 처리
-        log.info("NCP에서 다운로드 시도: {}", filepath);
+//        log.info("NCP에서 다운로드 시도: {}", filepath);
         try (ResponseInputStream<GetObjectResponse> s3Stream = storageService.download(filepath)) {
-          log.info("NCP 다운로드 성공");
+//          log.info("NCP 다운로드 성공");
           response.setContentType("application/pdf");
           response.setHeader("Content-Disposition", "inline; filename=\"file.pdf\"");
           response.setHeader("X-Frame-Options", "SAMEORIGIN");
@@ -214,7 +220,7 @@ public class PaymentDetailController {  //결재 할 내역
         log.info("로컬 파일 읽기: {}", filepath);
         Path pdfPath = Paths.get(filepath);
         if (!Files.exists(pdfPath)) {
-          log.warn("로컬 파일 없음: {}", pdfPath);
+//          log.warn("로컬 파일 없음: {}", pdfPath);
           response.sendError(HttpServletResponse.SC_NOT_FOUND, "파일 없음");
           return;
         }
@@ -229,7 +235,7 @@ public class PaymentDetailController {  //결재 할 내역
           int bytesRead;
           while ((bytesRead = in.read(buffer)) != -1) out.write(buffer, 0, bytesRead);
           out.flush();
-          log.info("로컬 파일 전송 완료: {}", filepath);
+//          log.info("로컬 파일 전송 완료: {}", filepath);
         }
       }
     } catch (Exception e) {
@@ -249,9 +255,9 @@ public class PaymentDetailController {  //결재 할 내역
       }
 
       if (filepath.startsWith("sports/")) {
-        log.info("NCP에서 다운로드 시도: {}", filepath);
+//        log.info("NCP에서 다운로드 시도: {}", filepath);
         try (ResponseInputStream<GetObjectResponse> s3Stream = storageService.download(filepath)) {
-          log.info("NCP 다운로드 성공");
+//          log.info("NCP 다운로드 성공");
           response.setContentType("application/pdf");
           response.setHeader("Content-Disposition", "inline; filename=\"file.pdf\"");
           response.setHeader("X-Frame-Options", "SAMEORIGIN"); // ✅ 추가
@@ -284,30 +290,37 @@ public class PaymentDetailController {  //결재 할 내역
   }
 
   @PostMapping("/changeState")
-  public AjaxResult ChangeState(@RequestBody Map<String, Object> request
-  , Authentication auth) {
+  public AjaxResult ChangeState(@RequestBody Map<String, Object> request,
+                                Authentication auth) {
     AjaxResult result = new AjaxResult();
 
     User user = (User) auth.getPrincipal();
-    String username = user.getUsername();
-    Integer userid = user.getPersonid();
-    String appnum = (String) request.get("appnum");
-    String appgubun = (String) request.get("appgubun");
-    // action = 결재변경 상태값
-    String action = (String) request.get("action");
-    String remark = (String) request.get("remark");
-    Integer appperid = userid;
-    String papercd = (String) request.get("papercd");
+    String spjangcd = TenantContext.get();
 
-    log.info("📥 결재 상태 변경 요청: appnum={}, appgubun={}, action={}, remark={} ,appperid={}, papercd={}",
-        appnum, appgubun, action, remark, appperid, papercd);
+    String appnum   = (String) request.get("appnum");
+    String appgubun = (String) request.get("appgubun");
+    String action   = (String) request.get("action");   // 결재변경 상태값
+    String remark   = (String) request.get("remark");
+    String papercd  = (String) request.get("papercd");
+
+    // 📌 personid(숫자 PK) → appperid(문자 사번코드) 변환
+    String appperid = paymentDetailService.getPersonCode(spjangcd, user.getPersonid());
+    if (appperid == null) {
+      log.warn("결재자 코드 조회 실패: personid={}, spjangcd={}", user.getPersonid(), spjangcd);
+      result.success = false;
+      result.message = "결재자 정보를 찾을 수 없습니다.";
+      return result;
+    }
+
+//    log.info("📥 결재 상태 변경 요청: appnum={}, appgubun={}, action={}, remark={}, papercd={}, appperid={} (personid={})",
+//      appnum, appgubun, action, remark, papercd, appperid, user.getPersonid());
 
     // 📌 action 문자열 → 상태코드로 변환
     Map<String, String> actionCodeMap = Map.of(
-        "reject", "131",
-        "hold", "201",
-        "approve", "101",
-        "cancel", "001"
+      "reject",  "131",
+      "hold",    "201",
+      "approve", "101",
+      "cancel",  "001"
     );
 
     String stateCode = actionCodeMap.get(action);
@@ -317,22 +330,21 @@ public class PaymentDetailController {  //결재 할 내역
       return result;
     }
 
-
     try {
-      boolean updated = false;
+      boolean updated;
 
-      // 분기 처리 (전표, 파일별로 구분)
-//      if (appnum.startsWith("S")) {
-//        updated = paymentDetailService.updateStateForS(appnum, appgubun, stateCode, remark, appperid, papercd);
-//      } else if (appnum.matches("^[0-9].*ZZ$")) {
-//        updated = paymentDetailService.updateStateForNumberZZ(appnum, appgubun, stateCode, remark, appperid, papercd);
-//      } else if (appnum.startsWith("V")) {
+      // 분기 처리 (문서 종류별)
+      if (appnum.startsWith("S")) {
+        updated = paymentDetailService.updateStateForS(appnum, appgubun, stateCode, remark, appperid, papercd);
+      } else if (appnum.matches("^[0-9].*ZZ$")) {
+        updated = paymentDetailService.updateStateForNumberZZ(appnum, appgubun, stateCode, remark, appperid, papercd);
+      } else if (appnum.startsWith("V")) {
         updated = paymentDetailService.updateStateForV(appnum, appgubun, stateCode, remark, appperid, papercd);
-//      } else {
-//        result.success = false;
-//        result.message = "지원되지 않는 문서번호 형식입니다.";
-//        return result;
-//      }
+      } else {
+        result.success = false;
+        result.message = "지원되지 않는 문서번호 형식입니다: " + appnum;
+        return result;
+      }
 
       if (updated) {
         result.success = true;
@@ -343,7 +355,7 @@ public class PaymentDetailController {  //결재 할 내역
       }
 
     } catch (Exception e) {
-      log.error("❌ 상태 변경 중 예외 발생", e);
+      log.error("❌ 상태 변경 중 예외 발생: appnum={}, appperid={}", appnum, appperid, e);
       result.success = false;
       result.message = "상태 변경 중 오류 발생: " + e.getMessage();
     }
@@ -357,156 +369,34 @@ public class PaymentDetailController {  //결재 할 내역
                                     Authentication auth) {
     AjaxResult result = new AjaxResult();
     try {
-      Object appnumObj = request.get("appnum");
-      String appnum;
-
-      if (appnumObj instanceof String) {
-        appnum = (String) appnumObj;
-      } else if (appnumObj instanceof Map) {
-        Map<?, ?> appnumMap = (Map<?, ?>) appnumObj;
-        appnum = String.valueOf(appnumMap.get("value")); // 프론트 구조 확인 필요
-      } else {
-        throw new IllegalArgumentException("올바르지 않은 appnum 값");
-      }
+      String appnum = String.valueOf(request.get("appnum"));
 
       User user = (User) auth.getPrincipal();
-//      String appperid = user.getAgencycd().replaceFirst("^p", "");
-      Integer personid = user.getPersonid();
-      personid = 8;
+      String appperid = paymentDetailService.getPersonCode(TenantContext.get(), user.getPersonid());
+      if (appperid == null) {
+        result.success = false;
+        result.message = "결재자 정보를 찾을 수 없습니다.";
+        return result;
+      }
 
-      boolean canCancel = paymentDetailService.canCancelApproval(appnum, personid);
-      boolean isApproved = paymentDetailService.isAlreadyApproved(appnum);
+      boolean canCancel  = paymentDetailService.canCancelApproval(appnum, appperid);
+      boolean isApproved = paymentDetailService.isAlreadyApproved(appnum, appperid);
+
+//      log.info("결재자 상태: appnum={}, appperid={}, canCancel={}, isApproved={}",
+//        appnum, appperid, canCancel, isApproved);
 
       result.success = true;
-      result.message = "";
-      result.data = Map.of(
-          "canCancel", canCancel,
-          "isApproved", isApproved
-      );
+      result.data = Map.of("canCancel", canCancel, "isApproved", isApproved);
 
     } catch (Exception e) {
+      log.error("결재자 정보 확인 오류", e);
       result.success = false;
       result.message = "결재자 정보 확인 중 오류 발생";
     }
-
     return result;
   }
 
-
-//  private boolean fileExistsInPdfTable(String appnum) {
-//    return tbAa010PdfRepository.existsBySpdateAndFilenameIsNotNull(appnum);
-//  }
-
-//  private boolean fileExistsInAtchTable(String appnum) {
-//    return tbAa010AtchRepository.existsBySpdateAndFilenameIsNotNull(appnum);
-//  }
-
-//  private Map<String, Object> createFileMapFromPdf(String appnum, String label) {
-//    var entity = tbAa010PdfRepository.findBySpdate(appnum);
-//    return Map.of(
-//        "filepath", entity.getFilepath(),
-//        "filesvnm", entity.getFilename(),
-//        "fileornm", label
-//    );
-//  }
-
-//  private Map<String, Object> createFileMapFromAtch(String appnum, String label) {
-//    var entity = tbAa010AtchRepository.findBySpdate(appnum);
-//    return Map.of(
-//        "filepath", entity.getFilepath(),
-//        "filesvnm", entity.getFilename(),
-//        "fileornm", label
-//    );
-//  }
-
-  @PostMapping("/downloader")
-  public void downloadFile(@RequestParam("appnum") String appnum, HttpServletResponse response) throws IOException, InterruptedException {
-    Map<String, Object> vacData = paymentDetailService.getVacFileList(appnum);
-
-    String frdateStr = vacData.get("frdate").toString();
-    String todateStr = vacData.get("todate").toString();
-    String daynum = vacData.get("daynum").toString();
-    String reqdateStr = vacData.get("reqdate").toString();
-
-    DateTimeFormatter ymdFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-    DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("yyyy 년 MM 월 dd 일");
-
-    LocalDate frDate = LocalDate.parse(frdateStr, ymdFormatter);
-    LocalDate toDate = LocalDate.parse(todateStr, ymdFormatter);
-    LocalDate reqDate = LocalDate.parse(reqdateStr, ymdFormatter);
-
-    String repodateFormat = String.format("%s  ~  %s  ( %s ) 일간",
-            frDate.format(displayFormatter),
-            toDate.format(displayFormatter),
-            daynum);
-
-    String uuid = UUID.randomUUID().toString();
-    Path tempXlsx = Files.createTempFile(uuid, ".xlsx");
-    Path tempPdf = Path.of(tempXlsx.toString().replace(".xlsx", ".pdf"));
-
-    try (FileInputStream fis = new FileInputStream("C:/Temp/mes21/문서/VacDemoFile.xlsx");
-         Workbook workbook = new XSSFWorkbook(fis);
-         FileOutputStream fos = new FileOutputStream(tempXlsx.toFile())) {
-
-      Sheet sheet = workbook.getSheetAt(0);
-      setCell(sheet, 2, 2, (String) vacData.get("worknm"));
-      setCell(sheet, 9, 2, (String) vacData.get("repopernm"));
-      setCell(sheet, 7, 2, (String) vacData.get("jiknm"));
-      setCell(sheet, 5, 2, (String) vacData.get("departnm"));
-      setCell(sheet, 16, 0, (String) vacData.get("remark"));
-      setCell(sheet, 11, 2, repodateFormat);
-      setCell(sheet, 24, 3, (String) vacData.get("worknm"));
-      setCell(sheet, 27, 0, reqDate.format(displayFormatter));
-      setCell(sheet, 30, 10, (String) vacData.get("repopernm"));
-
-      workbook.write(fos);
-    }
-
-    ProcessBuilder pb = new ProcessBuilder(
-            "C:/Program Files/LibreOffice/program/soffice.exe",
-            "--headless",
-            "--convert-to", "pdf",
-            "--outdir", tempPdf.getParent().toString(),
-            tempXlsx.toAbsolutePath().toString()
-    );
-    pb.inheritIO();
-    Process process = pb.start();
-    process.waitFor();
-
-    int retries = 0;
-    while ((!Files.exists(tempPdf) || Files.size(tempPdf) == 0) && retries++ < 100) {
-      Thread.sleep(100); // 최대 10초 대기
-    }
-    if (!Files.exists(tempPdf) || Files.size(tempPdf) == 0) {
-      throw new FileNotFoundException("PDF 변환 실패: " + tempPdf.toString());
-    }
-
-    try (FileInputStream fis = new FileInputStream(tempPdf.toFile())) {
-      response.setContentType("application/pdf");
-      response.setHeader("Content-Disposition", "attachment; filename*=UTF-8''휴가신청서.pdf");
-      response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      response.setHeader("Pragma", "no-cache");
-      response.setHeader("Expires", "0");
-
-      IOUtils.copy(fis, response.getOutputStream());
-      response.flushBuffer();
-    }
-    // ⬇ 여기서 executor 실행
-    ScheduledExecutorService cleaner = Executors.newSingleThreadScheduledExecutor();
-    cleaner.schedule(() -> {
-      try {
-        Files.deleteIfExists(tempXlsx);
-        Files.deleteIfExists(tempPdf);
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-    }, 5, TimeUnit.MINUTES);
-    cleaner.shutdown();
-  }
-
-
-
-  @GetMapping("/agencyName")
+ /* @GetMapping("/agencyName")
   public AjaxResult getAgencyName(Authentication auth) {
     AjaxResult result = new AjaxResult();
     try {
@@ -518,99 +408,106 @@ public class PaymentDetailController {  //결재 할 내역
       result.message = "기관명 조회 실패";
     }
     return result;
-  }
+  }*/
 
-  @GetMapping("/readVacFile")
-  public void readVacFile(@RequestParam("appnum") String appnum, HttpServletResponse response) throws Exception {
-    Map<String, Object> vacData = paymentDetailService.getVacFileList(appnum);
-
-    String frdateStr = vacData.get("frdate").toString();  // "YYYYMMDD"
-    String todateStr = vacData.get("todate").toString();  // "YYYYMMDD"
-    String daynum = vacData.get("daynum").toString();     //
-    String reqdateStr = vacData.get("reqdate").toString();
-
-    DateTimeFormatter ymdFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-    DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("yyyy 년 MM 월 dd 일");
-
-    LocalDate frDate = LocalDate.parse(frdateStr, ymdFormatter);
-    LocalDate toDate = LocalDate.parse(todateStr, ymdFormatter);
-    LocalDate reqDate = LocalDate.parse(reqdateStr, ymdFormatter);
-
-    String repodateFormat = String.format("%s  ~  %s  ( %s ) 일간",
-            frDate.format(displayFormatter),
-            toDate.format(displayFormatter),
-            daynum);
-
-
-    // 1. UUID 기반 임시 파일명 생성
-    String uuid = UUID.randomUUID().toString();
-    Path tempXlsx = Files.createTempFile(uuid, ".xlsx");
-    Path tempPdf = Path.of(tempXlsx.toString().replace(".xlsx", ".pdf"));
-
-    // 2. 엑셀 템플릿 불러오기 및 수정
-    try (FileInputStream fis = new FileInputStream("C:/Temp/mes21/문서/VacDemoFile.xlsx");
-         Workbook workbook = new XSSFWorkbook(fis);
-         FileOutputStream fos = new FileOutputStream(tempXlsx.toFile())) {
-
-      Sheet sheet = workbook.getSheetAt(0);
-      // sheet.getRow(5).getCell(2).setCellValue((String) vacData.get("papernm")); // 서류구분 (휴가신청서)
-//      sheet.getRow(2).getCell(2).setCellValue((String) vacData.get("worknm")); //  휴가구분 (연차, 반차, 병가 등)
-//      sheet.getRow(9).getCell(2).setCellValue((String) vacData.get("repopernm")); // 휴가신청자 이름
-//      sheet.getRow(7).getCell(2).setCellValue((String) vacData.get("jiknm")); // 직급명
-//      sheet.getRow(5).getCell(2).setCellValue((String) vacData.get("departnm")); // 부서명
-//      sheet.getRow(16).getCell(0).setCellValue((String) vacData.get("remark")); // 사유
-//      sheet.getRow(11).getCell(2).setCellValue(repodateFormat); // 기간
-//      sheet.getRow(24).getCell(3).setCellValue((String) vacData.get("worknm")); // 신청휴가구분
-//      sheet.getRow(27).getCell(0).setCellValue(reqDate.format(displayFormatter)); // 신청일
-//      sheet.getRow(29).getCell(10).setCellValue((String) vacData.get("repopernm")); // 제출인
-      setCell(sheet, 2, 2, (String) vacData.get("worknm"));
-      setCell(sheet, 9, 2, (String) vacData.get("repopernm"));
-      setCell(sheet, 7, 2, (String) vacData.get("jiknm"));
-      setCell(sheet, 5, 2, (String) vacData.get("departnm"));
-      setCell(sheet, 16, 0, (String) vacData.get("remark"));
-      setCell(sheet, 11, 2, repodateFormat);
-      setCell(sheet, 24, 3, (String) vacData.get("worknm"));
-      setCell(sheet, 27, 0, reqDate.format(displayFormatter));
-      setCell(sheet, 30, 10, (String) vacData.get("repopernm"));
-
-      workbook.write(fos);
+  @PostMapping("/downloadFiles")
+  public void downloadFiles(@RequestBody List<Map<String, String>> fileList,
+                            HttpServletResponse response) throws IOException {
+    if (fileList == null || fileList.isEmpty()) {
+      response.sendError(HttpServletResponse.SC_NOT_FOUND, "파일 없음");
+      return;
     }
 
-    // 3. LibreOffice로 PDF 변환
-    ProcessBuilder pb = new ProcessBuilder(
-            "C:/Program Files/LibreOffice/program/soffice.exe",
-            "--headless",
-            "--convert-to", "pdf",
-            "--outdir", tempPdf.getParent().toString(),
-            tempXlsx.toAbsolutePath().toString()
-    );
-    pb.inheritIO();
-    Process process = pb.start();
-    process.waitFor();
+    // 단일 파일 → 그대로 스트리밍
+    if (fileList.size() == 1) {
+      Map<String, String> f = fileList.get(0);
+      String filepath = f.get("filepath");
+      String filename = pickName(f, "download.pdf");
 
-    // 4. PDF 응답 전송
-    try (FileInputStream fis = new FileInputStream(tempPdf.toFile())) {
-      response.setContentType("application/pdf");
-      response.setHeader("Content-Disposition", "inline; filename=vacation.pdf");
-      IOUtils.copy(fis, response.getOutputStream());
-      response.flushBuffer();
-    }
-
-    // 5. 일정 시간 후 임시파일 자동 삭제 (5분)
-    Executors.newSingleThreadScheduledExecutor().schedule(() -> {
-      try {
-        Files.deleteIfExists(tempXlsx);
-        Files.deleteIfExists(tempPdf);
-      } catch (IOException e) {
-        e.printStackTrace();
+      try (InputStream in = openStream(filepath)) {
+        if (in == null) {
+          response.sendError(HttpServletResponse.SC_NOT_FOUND, "파일 없음");
+          return;
+        }
+        response.setContentType("application/pdf");
+        response.setHeader("Content-Disposition",
+          "attachment; filename*=UTF-8''" + encode(filename));
+        in.transferTo(response.getOutputStream());
+        response.flushBuffer();
       }
-    }, 5, TimeUnit.MINUTES);
+      return;
+    }
+
+    // 복수 파일 → zip
+    response.setContentType("application/zip");
+    response.setHeader("Content-Disposition",
+      "attachment; filename*=UTF-8''" + encode("결재파일.zip"));
+
+    Set<String> used = new HashSet<>();
+    try (ZipOutputStream zos = new ZipOutputStream(response.getOutputStream(), StandardCharsets.UTF_8)) {
+      for (Map<String, String> f : fileList) {
+        try (InputStream in = openStream(f.get("filepath"))) {
+          if (in == null) {
+            log.warn("zip 대상 파일 없음: {}", f.get("filepath"));
+            continue;
+          }
+          String name = uniqueName(used, pickName(f, "file.pdf"));
+          zos.putNextEntry(new ZipEntry(name));
+          in.transferTo(zos);
+          zos.closeEntry();
+        }
+      }
+    }
+    response.flushBuffer();
   }
+
   private void setCell(Sheet sheet, int rowIdx, int colIdx, String value) {
     Row row = sheet.getRow(rowIdx);
     if (row == null) row = sheet.createRow(rowIdx);
     Cell cell = row.getCell(colIdx);
     if (cell == null) cell = row.createCell(colIdx);
     cell.setCellValue(value);
+  }
+
+  /** NCP / 로컬 구분해서 InputStream 반환. 없으면 null */
+  private InputStream openStream(String filepath) throws IOException {
+    if (filepath == null || filepath.isBlank()) return null;
+
+    if (filepath.startsWith("sports/")) {
+      try {
+        return storageService.download(filepath);
+      } catch (NoSuchKeyException e) {
+        log.warn("NCP 오브젝트 없음: {}", filepath);
+        return null;
+      }
+    }
+    Path p = Paths.get(filepath);
+    return Files.exists(p) ? new BufferedInputStream(new FileInputStream(p.toFile())) : null;
+  }
+
+  /** fileornm → filesvnm 순으로 파일명 결정, 없으면 fallback */
+  private String pickName(Map<String, String> f, String fallback) {
+    for (String k : new String[]{"fileornm", "filesvnm"}) {
+      String v = f.get(k);
+      if (v != null && !v.isBlank()) {
+        return v.toLowerCase().endsWith(".pdf") ? v : v + ".pdf";
+      }
+    }
+    return fallback;
+  }
+
+  private String encode(String s) {
+    return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", "%20");
+  }
+
+  /** zip 내부 파일명 중복 방지: a.pdf, a(1).pdf ... */
+  private String uniqueName(Set<String> used, String name) {
+    String base = name, ext = "";
+    int dot = name.lastIndexOf('.');
+    if (dot > 0) { base = name.substring(0, dot); ext = name.substring(dot); }
+    String candidate = name;
+    int i = 1;
+    while (!used.add(candidate)) candidate = base + "(" + (i++) + ")" + ext;
+    return candidate;
   }
 }

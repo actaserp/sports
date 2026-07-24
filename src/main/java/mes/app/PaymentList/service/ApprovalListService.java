@@ -78,7 +78,7 @@ public class ApprovalListService {//결재목록
                 )
             END AS file_info
         FROM tb_e080 e080 WITH(NOLOCK)
-        LEFT JOIN user_code uc ON uc.Code = e080.appgubun
+        LEFT JOIN sys_code uc ON uc.CodeType = e080.appgubun
         LEFT JOIN tb_ca510 ca510
             ON ca510.com_cls = '620'
            AND ca510.com_code = e080.papercd
@@ -108,7 +108,7 @@ public class ApprovalListService {//결재목록
     return sqlRunner.getRows(sql.toString(), params);
   }
 
-  // 사용자의 사업장코드 return
+  /*// 사용자의 사업장코드 return
   public String getSpjangcd(String username
       , String searchSpjangcd) {
     MapSqlParameterSource dicParam = new MapSqlParameterSource();
@@ -141,7 +141,7 @@ public class ApprovalListService {//결재목록
         resultSpjangcd = userSpjangcd;
     }
     return resultSpjangcd;
-  }
+  }*/
 
   public List<Map<String, Object>> getPaymentList1(String spjangcd, String startDate, String endDate, Integer personid) {
 
@@ -206,8 +206,8 @@ public class ApprovalListService {//결재목록
            STUFF(STUFF(a.appdate,5,0,'-'),8,0,'-') as appdate,
            a.remark
            FROM tb_e080 a with(nolock)
-           LEFT JOIN user_code uc ON uc.Code = a.appgubun
-            JOIN tb_ja001 B on b.perid = 'p' + a.appperid and b.spjangcd=a.spjangcd
+           LEFT JOIN sys_code uc ON uc.CodeType = a.appgubun
+           LEFT JOIN tb_ja001 B on b.perid = 'p' + a.appperid and b.spjangcd=a.spjangcd
            AND  a.spjangcd = :as_spjangcd
            AND a.appnum = :as_appnum;
         """);

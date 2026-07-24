@@ -22,45 +22,50 @@ public class ApprovalFileController {
 	@GetMapping
 	public ResponseEntity<String> generatePdf(@RequestParam String key) {
 		try {
-			String originalKey = key;
-			byte[] pdfData;
-			String filename;
-			String fileType;
+			StringBuilder result = new StringBuilder();
 
 			if (key.startsWith("A")) {
-				// A 테이블(TB_AA010ATCH) 조회 — spdate 그대로 사용 (ex: AS202503310002ZZ)
-				pdfData  = pdfService.getPdfByKeyForA(key);
-				filename = pdfService.getFilenameByKeyForA(key);
-				fileType = "attachment";
+				// ── 1. 첨부파일 (TB_AA010ATCH) — 전체 key 그대로 ──
+				byte[] atchData = pdfService.getPdfByKeyForA(key);
+				String atchFilename = pdfService.getFilenameByKeyForA(key);
+
+				if (atchData != null) {
+					String objKey = pdfService.uploadToNcp(key, atchData, atchFilename, "attachment");
+					result.append(objKey != null ? "첨부파일 완료: " + objKey : "첨부파일 업로드 실패").append("\n");
+				} else {
+					result.append("첨부파일 데이터 없음\n");
+				}
+
+				// ── 2. 전표 PDF (TB_AA010PDF) — 접두사 제거 후 ──
+				String pdfKey = key.startsWith("AJ") ? key.substring(2) : key.substring(1);
+				byte[] pdfData = pdfService.getPdfByKey(pdfKey);
+				String pdfFilename = pdfService.getFilenameByKey(pdfKey);
+
+				log.info("전표 조회 key: {} → {}", key, pdfKey);
+
+				if (pdfData != null) {
+					String objKey = pdfService.uploadToNcp(pdfKey, pdfData, pdfFilename, "voucher");
+					result.append(objKey != null ? "전표 완료: " + objKey : "전표 업로드 실패");
+				} else {
+					result.append("전표 데이터 없음: " + pdfKey);
+				}
+
+			} else {
+				String pdfKey = key.startsWith("J") ? key.substring(1) : key;
+				byte[] pdfData = pdfService.getPdfByKey(pdfKey);
+				String pdfFilename = pdfService.getFilenameByKey(pdfKey);
 
 				if (pdfData == null) {
-					// A 테이블에 없으면 일반 테이블 fallback
-					// AJ → J 제거, A → 제거 후 일반 key 추출
-					String lookupKey = key.startsWith("AJ") ? key.substring(2) : key.substring(1);
-					pdfData  = pdfService.getPdfByKey(lookupKey);
-					filename = pdfService.getFilenameByKey(lookupKey);
-					fileType = "voucher";
-					originalKey = lookupKey; // DB 업데이트 key도 맞춰서 변경
+					return ResponseEntity.status(HttpStatus.NOT_FOUND).body("PDF 데이터 없음");
 				}
-			} else {
-				// 일반 테이블(TB_AA010PDF) 조회 — J 접두사 제거
-				String lookupKey = key.startsWith("J") ? key.substring(1) : key;
-				pdfData  = pdfService.getPdfByKey(lookupKey);
-				filename = pdfService.getFilenameByKey(lookupKey);
-				fileType = "voucher";
-				originalKey = lookupKey;
+				String objKey = pdfService.uploadToNcp(pdfKey, pdfData, pdfFilename, "voucher");
+				if (objKey == null) {
+					return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("전표 업로드 실패");
+				}
+				result.append("전표 완료: ").append(objKey);
 			}
 
-			if (pdfData == null) {
-				return ResponseEntity.status(HttpStatus.NOT_FOUND).body("PDF 데이터 없음");
-			}
-
-			String objectKey = pdfService.uploadToNcp(originalKey, pdfData, filename, fileType);
-			if (objectKey == null) {
-				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("NCP 업로드 실패");
-			}
-
-			return ResponseEntity.ok("완료: " + objectKey);
+			return ResponseEntity.ok(result.toString());
 
 		} catch (Exception e) {
 			log.error("오류: key={}, error={}", key, e.getMessage(), e);

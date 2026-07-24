@@ -49,7 +49,7 @@ public class ApprovalListController { //결재목록
                                    @RequestParam(value = "searchUserNm", required = false) String searchUserNm,
                                    Authentication auth) {
     AjaxResult result = new AjaxResult();
-    log.info("주문 확인 read 들어온 데이터:startDate{}, endDate{},SearchPayment {} ,searchUserNm {} ", startDate, endDate, SearchPayment, searchUserNm);
+//    log.info("결재목록 read 들어온 데이터:startDate{}, endDate{},SearchPayment {} ,searchUserNm {} ", startDate, endDate, SearchPayment, searchUserNm);
     String spjangcd = TenantContext.get();
     try {
 
