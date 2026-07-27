@@ -130,7 +130,7 @@ public class ApprovalFilePDFService {
       params.addValue("file_key", key.trim());
 
       int updatedRows = sqlRunner.execute(sql, params);
-      log.info("filepath 업데이트 완료: key={}, objectKey={}, updatedRows={}", key, objectKey, updatedRows);
+//      log.info("filepath 업데이트 완료: key={}, objectKey={}, updatedRows={}", key, objectKey, updatedRows);
       return updatedRows > 0;
     } catch (Exception e) {
       log.error("filepath 업데이트 오류: key={}, error={}", key, e.getMessage(), e);
@@ -144,7 +144,7 @@ public class ApprovalFilePDFService {
       // 파일명 보정
       if (filename == null || filename.isBlank()) {
         filename = key + ".pdf";
-        log.warn("파일명 없음 → 기본값 사용: {}", filename);
+//        log.warn("파일명 없음 → 기본값 사용: {}", filename);
       } else if (!filename.toLowerCase().endsWith(".pdf")) {
         filename += ".pdf";
       }
@@ -159,7 +159,7 @@ public class ApprovalFilePDFService {
       // 이미 NCP에 업로드된 경우 스킵
       String existingPath = getFilepath(key, fileType);
       if (existingPath != null && existingPath.startsWith("sports/")) {
-        log.info("이미 NCP 업로드됨, 스킵: key={}, path={}", key, existingPath);
+//        log.info("이미 NCP 업로드됨, 스킵: key={}, path={}", key, existingPath);
         return existingPath;
       }
 
@@ -169,7 +169,7 @@ public class ApprovalFilePDFService {
 
       try (ByteArrayInputStream bis = new ByteArrayInputStream(pdfData)) {
         storageService.upload(objectKey, bis, pdfData.length, "application/pdf");
-        log.info("NCP 업로드 완료: key={}, objectKey={}", key, objectKey);
+//        log.info("NCP 업로드 완료: key={}, objectKey={}", key, objectKey);
       }
 
       // filepath 업데이트

@@ -80,12 +80,16 @@ public class PaymentDetailService {
                     f.fileType
                 FROM (
                     SELECT spdate, filename, filepath, '첨부' AS fileType
-                    FROM TB_AA010ATCH
-                    WHERE spdate IN ('A' + e080.appnum, 'AS' + e080.appnum, 'AJ' + e080.appnum)
+                     FROM TB_AA010ATCH
+                     WHERE spdate IN ('A' + e080.appnum, 'AS' + e080.appnum, 'AJ' + e080.appnum)
+                        OR spdate LIKE 'AJ' + e080.appnum + '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+                        OR spdate LIKE 'AS' + e080.appnum + '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+                        OR spdate LIKE 'A'  + e080.appnum + '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
                     UNION ALL
                     SELECT spdate, filename, filepath, '전표' AS fileType
                     FROM TB_AA010PDF
-                    WHERE spdate = e080.appnum
+                    WHERE spdate = e080.appnum   -- ① 순수 저장 (안 붙음)
+                    OR spdate LIKE e080.appnum + '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'  -- ② 사업자번호 붙음
                 ) AS f
                 FOR JSON PATH
             ) AS fileListJson

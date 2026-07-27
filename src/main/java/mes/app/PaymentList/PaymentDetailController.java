@@ -197,7 +197,7 @@ public class PaymentDetailController {  //결재 할 내역
   @GetMapping("/pdf")
   public void getPdf(@RequestParam("filepath") String filepath, HttpServletResponse response) {
     try {
-      log.info("PDF 요청 filepath: {}", filepath);
+//      log.info("PDF 요청 filepath: {}", filepath);
 
       if (filepath == null || filepath.isBlank()) {
         response.sendError(HttpServletResponse.SC_NOT_FOUND, "파일 없음");
@@ -217,7 +217,7 @@ public class PaymentDetailController {  //결재 할 내역
         }
       } else {
         // ✅ 로컬 파일 처리 추가
-        log.info("로컬 파일 읽기: {}", filepath);
+//        log.info("로컬 파일 읽기: {}", filepath);
         Path pdfPath = Paths.get(filepath);
         if (!Files.exists(pdfPath)) {
 //          log.warn("로컬 파일 없음: {}", pdfPath);
@@ -247,7 +247,7 @@ public class PaymentDetailController {  //결재 할 내역
   @GetMapping("/pdf2")
   public void getPdf2(@RequestParam("filepath") String filepath, HttpServletResponse response) {
     try {
-      log.info("첨부 PDF 요청 filepath: {}", filepath);
+//      log.info("첨부 PDF 요청 filepath: {}", filepath);
 
       if (filepath == null || filepath.isBlank()) {
         response.sendError(HttpServletResponse.SC_NOT_FOUND, "파일 없음");
