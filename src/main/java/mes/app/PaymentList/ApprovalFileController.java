@@ -21,124 +21,83 @@ public class ApprovalFileController {
 
 	@GetMapping
 	public ResponseEntity<String> generatePdf(@RequestParam String key) {
+
+		log.info("[APPKEY] 진입 key={}", key);
+		key = key.trim();
+
+		if (key.length() <= 10) {
+			return ResponseEntity.badRequest().body("FAIL: key 형식 오류 (길이 부족): " + key);
+		}
+
+		// 사업자번호는 뒤 10자리 (dbKey 조회용으로만 사용)
+		String saupnum = key.substring(key.length() - 10);
+		if (!saupnum.matches("\\d{10}")) {
+			return ResponseEntity.badRequest().body("FAIL: 사업자번호 형식 오류: " + saupnum);
+		}
+		log.info("[APPKEY] saupnum(뒤10자리)={}", saupnum);
+
 		try {
+			String dbKey = pdfService.findDbKeyBySaupnum(saupnum);
+			if (dbKey == null || dbKey.isBlank()) {
+				return ResponseEntity.badRequest().body("FAIL: 사업장 없음 saupnum=" + saupnum);
+			}
+			TenantContext.setDbKey(dbKey);
+			log.info("[APPKEY] saupnum={} → dbKey={}", saupnum, dbKey);
+
 			StringBuilder result = new StringBuilder();
+			boolean voucherOk = false;
 
+			// ★ 조회는 분해 안 한 원본 key 그대로 사용
 			if (key.startsWith("A")) {
-				// ── 1. 첨부파일 (TB_AA010ATCH) — 전체 key 그대로 ──
-				byte[] atchData = pdfService.getPdfByKeyForA(key);
+				byte[] atchData     = pdfService.getPdfByKeyForA(key);
 				String atchFilename = pdfService.getFilenameByKeyForA(key);
-
 				if (atchData != null) {
 					String objKey = pdfService.uploadToNcp(key, atchData, atchFilename, "attachment");
-					result.append(objKey != null ? "첨부파일 완료: " + objKey : "첨부파일 업로드 실패").append("\n");
+					result.append(objKey != null ? "첨부완료:" + objKey : "첨부실패").append(" / ");
 				} else {
-					result.append("첨부파일 데이터 없음\n");
+					result.append("첨부없음 / ");
 				}
 
-				// ── 2. 전표 PDF (TB_AA010PDF) — 접두사 제거 후 ──
 				String pdfKey = key.startsWith("AJ") ? key.substring(2) : key.substring(1);
-				byte[] pdfData = pdfService.getPdfByKey(pdfKey);
-				String pdfFilename = pdfService.getFilenameByKey(pdfKey);
-
 				log.info("전표 조회 key: {} → {}", key, pdfKey);
 
+				byte[] pdfData     = pdfService.getPdfByKey(pdfKey);
+				String pdfFilename = pdfService.getFilenameByKey(pdfKey);
 				if (pdfData != null) {
 					String objKey = pdfService.uploadToNcp(pdfKey, pdfData, pdfFilename, "voucher");
-					result.append(objKey != null ? "전표 완료: " + objKey : "전표 업로드 실패");
+					voucherOk = (objKey != null);
+					result.append(voucherOk ? "전표완료:" + objKey : "전표업로드실패");
 				} else {
-					result.append("전표 데이터 없음: " + pdfKey);
+					result.append("전표데이터없음:" + pdfKey);
 				}
 
 			} else {
-				String pdfKey = key.startsWith("J") ? key.substring(1) : key;
-				byte[] pdfData = pdfService.getPdfByKey(pdfKey);
+				String pdfKey      = key.startsWith("J") ? key.substring(1) : key;
+				byte[] pdfData     = pdfService.getPdfByKey(pdfKey);
 				String pdfFilename = pdfService.getFilenameByKey(pdfKey);
-
 				if (pdfData == null) {
-					return ResponseEntity.status(HttpStatus.NOT_FOUND).body("PDF 데이터 없음");
+					return ResponseEntity.status(HttpStatus.NOT_FOUND)
+									 .body("FAIL: 전표데이터없음 " + pdfKey);
 				}
 				String objKey = pdfService.uploadToNcp(pdfKey, pdfData, pdfFilename, "voucher");
 				if (objKey == null) {
-					return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("전표 업로드 실패");
+					return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+									 .body("FAIL: 전표업로드실패");
 				}
-				result.append("전표 완료: ").append(objKey);
+				voucherOk = true;
+				result.append("전표완료:").append(objKey);
 			}
 
-			return ResponseEntity.ok(result.toString());
+			return ResponseEntity.ok((voucherOk ? "SUCCESS: " : "FAIL: ") + result);
 
 		} catch (Exception e) {
-			log.error("오류: key={}, error={}", key, e.getMessage(), e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("오류: " + e.getMessage());
-		}
-	}
-}
-
-/*	@GetMapping
-	public ResponseEntity<String> generatePdf(@RequestParam String key,
-																						@RequestParam(required = false) String spjangcd,
-																						@RequestParam(required = false) String dbKey) {
-		try {
-			if (spjangcd != null && !spjangcd.isBlank()) TenantContext.set(spjangcd);
-			if (dbKey != null && !dbKey.isBlank()) TenantContext.setDbKey(dbKey);
-
-			String resultMsg = "";
-
-			if (key.startsWith("A")) {
-				// ── 1. 첨부파일 처리 (TB_AA010ATCH) ──────────────────────
-				byte[] atchData    = pdfService.getPdfByKeyForA(key);
-				String atchFilename = pdfService.getFilenameByKeyForA(key);
-
-				if (atchData != null) {
-					String atchObjectKey = pdfService.uploadToNcp(key, atchData, atchFilename, "attachment");
-					if (atchObjectKey == null) {
-						return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("첨부파일 NCP 업로드 실패");
-					}
-					resultMsg += "첨부파일 완료: " + atchObjectKey + "\n";
-				} else {
-					log.warn("첨부파일 데이터 없음: key={}", key);
-				}
-
-				// ── 2. PDF 전표 처리 (TB_AA010PDF) ───────────────────────
-				// AJ → J 제거, A → 제거 후 일반 key 추출
-				String pdfKey = key.startsWith("AJ") ? key.substring(2) : key.substring(1);
-				byte[] pdfData    = pdfService.getPdfByKey(pdfKey);
-				String pdfFilename = pdfService.getFilenameByKey(pdfKey);
-
-				if (pdfData != null) {
-					String pdfObjectKey = pdfService.uploadToNcp(pdfKey, pdfData, pdfFilename, "voucher");
-					if (pdfObjectKey == null) {
-						return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("PDF 전표 NCP 업로드 실패");
-					}
-					resultMsg += "PDF 전표 완료: " + pdfObjectKey;
-				} else {
-					log.warn("PDF 전표 데이터 없음: key={}", pdfKey);
-					resultMsg += "PDF 전표 데이터 없음";
-				}
-
-			} else {
-				// ── A 없는 경우 PDF 전표만 처리 ──────────────────────────
-				String pdfKey = key.startsWith("J") ? key.substring(1) : key;
-				byte[] pdfData    = pdfService.getPdfByKey(pdfKey);
-				String pdfFilename = pdfService.getFilenameByKey(pdfKey);
-
-				if (pdfData == null) {
-					return ResponseEntity.status(HttpStatus.NOT_FOUND).body("PDF 데이터 없음");
-				}
-
-				String pdfObjectKey = pdfService.uploadToNcp(pdfKey, pdfData, pdfFilename, "voucher");
-				if (pdfObjectKey == null) {
-					return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("PDF 전표 NCP 업로드 실패");
-				}
-				resultMsg = "PDF 전표 완료: " + pdfObjectKey;
-			}
-
-			return ResponseEntity.ok(resultMsg);
-
-		} catch (Exception e) {
-			log.error("오류: key={}, error={}", key, e.getMessage(), e);
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("오류: " + e.getMessage());
+			log.error("오류: key={}", key, e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+							 .body("FAIL: " + e.getMessage());
 		} finally {
 			TenantContext.clear();
 		}
-	}*/
+	}
+
+
+}

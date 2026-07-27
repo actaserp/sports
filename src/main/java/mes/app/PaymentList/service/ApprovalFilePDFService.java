@@ -5,6 +5,7 @@ import mes.app.common.TenantContext;
 import mes.app.files.NcpObjectStorageService;
 import mes.domain.services.SqlRunner;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +21,25 @@ public class ApprovalFilePDFService {
   SqlRunner sqlRunner;
 
   @Autowired
+  @Qualifier("mainSqlRunner")
+  SqlRunner mainSqlRunner;
+
+  @Autowired
   NcpObjectStorageService storageService;
+
+  public String findDbKeyBySaupnum(String saupnum) {
+    String normalized = saupnum.replaceAll("[^0-9]", "");   // 하이픈 제거
+    MapSqlParameterSource params = new MapSqlParameterSource();
+    params.addValue("saupnum", normalized);
+
+    Map<String, Object> row = mainSqlRunner.getRow("""
+        SELECT spjangcd FROM tb_xa012
+        WHERE REPLACE(saupnum, '-', '') = :saupnum
+        """, params);
+
+    if (row == null || row.get("spjangcd") == null) return null;
+    return row.get("spjangcd").toString().trim();
+  }
 
   // 전표 PDF 바이너리 조회 (TB_AA010PDF)
   public byte[] getPdfByKey(String key) {
@@ -188,4 +207,6 @@ public class ApprovalFilePDFService {
       return null;
     }
   }
+
+
 }
