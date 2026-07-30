@@ -201,6 +201,44 @@
           }
           .doc-page:last-child { page-break-after: avoid; }
       }
+      
+      /* ── 전체 배율 조정 (화면·인쇄 공통) ───────── */
+      .doc-page { padding: 18mm 20mm; }
+
+      .doc-page, .doc-page td, .doc-page th,
+      .doc-page span, .doc-page div, .doc-page em {
+          font-size: 12px !important;
+          line-height: 1.7 !important;
+      }
+      .doc-page .doc-title,
+      .doc-page [style*="font-size:17px"],
+      .doc-page [style*="font-size:20px"] { font-size: 24px !important; }
+
+      .doc-page td:not([style*="padding:0"]),
+      .doc-page th:not([style*="padding:0"]) { padding: 7px 9px; }
+
+      .doc-page td[style*="padding:0"] > div:last-child { height: 56px !important; }
+      .doc-page td[rowspan] { white-space: nowrap; }
+
+      /* ── 인쇄 (반드시 마지막) ──────────────────── */
+      @page { size: A4; margin: 0; }   /* 브라우저 기본 여백 제거 */
+
+      @media print {
+          body { background: #fff; }
+          #preview { padding: 0; gap: 0; }
+          .doc-page {
+              border: none;
+              box-shadow: none;
+              width: 210mm;
+              min-height: auto;
+              padding: 12mm 14mm;      /* 인쇄용 여백은 여기서 결정 */
+              page-break-after: always;
+          }
+          .doc-page:last-child { page-break-after: avoid; }
+
+          /* 결재란·헤더 회색 배경이 인쇄에도 나오도록 */
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      }
   </style>
 </head>
 <body>
