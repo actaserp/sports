@@ -91,6 +91,109 @@
           margin-bottom: 3px;
       }
 
+      /* ════════════════════════════════════════
+         구형 전표 양식 (printType=1,7) 전용
+         ════════════════════════════════════════ */
+      .lg-topbar {
+          display: flex;
+          justify-content: space-between;
+          font-size: 11px;
+          margin-bottom: 4px;
+      }
+      .lg-frame {
+          border: 1.5px solid #000;
+          padding: 10px 12px 14px;
+      }
+      .lg-clear { clear: none; }
+
+      /* 결재란 */
+      .lg-apv {
+          float: right;
+          border-collapse: collapse;
+          margin: 0 0 6px 12px;
+      }
+      .lg-apv td {
+          border: 1px solid #000;
+          width: 64px;
+          padding: 0;
+          text-align: center;
+          vertical-align: top;
+      }
+      .lg-apv .apv-h {
+          border-bottom: 1px solid #000;
+          padding: 3px 2px;
+          font-size: 10px;
+          white-space: nowrap;
+          overflow: hidden;
+      }
+      .lg-apv .apv-b { height: 56px; }
+
+      /* 표제 / 일자 */
+      .lg-title {
+          font-size: 26px;
+          font-weight: 700;
+          letter-spacing: 8px;
+          color: #23237a;
+          margin: 4px 0 12px;
+      }
+      .lg-meta {
+          font-size: 11px;
+          letter-spacing: 1px;
+          line-height: 1.8;
+      }
+      .lg-subject {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          font-size: 11px;
+          margin: 14px 0 5px;
+          clear: both;
+      }
+
+      /* 내역 테이블 */
+      .lg-table {
+          width: 100%;
+          border-collapse: collapse;
+          table-layout: fixed;
+          font-size: 11px;
+      }
+      .lg-table th, .lg-table td {
+          border: 1px solid #000;
+          padding: 3px 5px;
+          text-align: center;
+          vertical-align: middle;
+          word-break: break-all;
+      }
+      .lg-table th {
+          font-weight: 400;
+          letter-spacing: 2px;
+      }
+      .lg-table td.l { text-align: left; }
+      .lg-table td.r {
+          text-align: right;
+          letter-spacing: 0;
+          white-space: nowrap;
+          word-break: keep-all;
+      }
+      .lg-table td.mssec {
+          font-size: 9px;
+          color: #1552b0;
+      }
+      .lg-table td.sub {
+          font-size: 10px;
+          height: 17px;
+      }
+      .lg-table .lg-total td:first-child { letter-spacing: 4px; }
+
+      /* 적요 */
+      .lg-remark {
+          font-size: 11px;
+          line-height: 1.7;
+          padding: 4px 2px 0;
+          min-height: 70px;
+          white-space: pre-line;
+      }
+
       /* ── 지출결의서 전용 ─────────────────────────── */
       .res-table {
           width: 100%;
@@ -201,7 +304,7 @@
           }
           .doc-page:last-child { page-break-after: avoid; }
       }
-      
+
       /* ── 전체 배율 조정 (화면·인쇄 공통) ───────── */
       .doc-page { padding: 18mm 20mm; }
 
@@ -251,185 +354,146 @@
     <th:block th:if="${printType == '1' or printType == '7'}">
       <div class="doc-page">
 
-        <!-- ── 상단: 기관명 + 결재란 ── -->
-        <table style="width:100%; border-collapse:collapse; margin-bottom:8px;">
-          <tr>
-            <!-- 왼쪽: 기관명 -->
-            <td style="font-size:12px; font-weight:700; vertical-align:bottom;">
-              <span th:text="${slip.spjangnm}"></span>
-            </td>
+        <!-- ── 상단 바 : 기관명 / 페이지 ── -->
+        <div class="lg-topbar">
+          <span th:text="'[' + ${slip.spjangnm} + ']'"></span>
+          <span th:text="'페이지 : ' + ${slipStat.index + 1} + ' (' + ${slipList.size()} + ')'"></span>
+        </div>
 
-            <!-- 오른쪽: 결재란 (printType=1만 표시) -->
-            <td th:if="${printType == '1'}"
-                th:style="'vertical-align:bottom; width:' + (${approverList.size()} * 100) + 'px;'">
-              <table th:style="'border:1px solid #333; border-collapse:collapse; font-size:10px; width:' + (${approverList.size()} * 100) + 'px;'">
-                <tr>
-                  <th:block th:each="apv, apvStat : ${approverList}">
-                    <td th:style="${!apvStat.last ? 'border-right:1px solid #333; text-align:center; width:100px; padding:0;' : 'text-align:center; width:100px; padding:0;'}">
-                      <div style="background:#f0f0f0; border-bottom:1px solid #333; padding:2px 4px; font-weight:700;"
-                           th:text="${apv}"></div>
-                      <div style="height:44px;"></div>
-                    </td>
-                  </th:block>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
+        <!-- ── 전표 본문 프레임 ── -->
+        <div class="lg-frame">
 
-        <!-- ── 제목 ── -->
-        <div style="text-align:center; margin-bottom:6px;">
-          <div class="doc-title"
+          <!-- 결재란 (우측 상단, printType=1만) -->
+          <table class="lg-apv" th:if="${printType == '1'}">
+            <tr>
+              <th:block th:each="apv : ${approverList}">
+                <td>
+                  <div class="apv-h" th:text="${apv}"></div>
+                  <div class="apv-b"></div>
+                </td>
+              </th:block>
+            </tr>
+          </table>
+
+          <!-- 표제 -->
+          <div class="lg-title"
                th:text="${slip.tiosec == '1' ? '세 입 전 표' :
                           slip.tiosec == '2' ? '세 출 전 표' : '대 체 전 표'}">
           </div>
-        </div>
 
-        <!-- ── 전표 기본 정보 ── -->
-        <table class="slip-table">
-          <colgroup>
-            <col style="width:18%"/>
-            <col style="width:32%"/>
-            <col style="width:18%"/>
-            <col style="width:32%"/>
-          </colgroup>
-          <tr>
-            <th>전표일자</th>
-            <td th:text="${slip.spdate + ' / ' + slip.spnum}"></td>
-            <th>증빙구분</th>
-            <td th:text="${slip.spoccu}"></td>
-          </tr>
-          <tr>
-            <th>작성일자</th>
-            <td>&#160;&#160;&#160;년&#160;&#160;&#160;월&#160;&#160;&#160;일</td>
-            <th>재원구분</th>
-            <td th:text="${slip.mssec}"></td>
-          </tr>
-          <tr>
-            <th>제 목</th>
-            <td colspan="3" class="left" th:text="${slip.subject}"></td>
-          </tr>
-        </table>
+          <!-- 일자 -->
+          <div class="lg-meta" th:text="'전 표 일 자 : ' + ${slip.spdate}"></div>
+          <div class="lg-meta">작 성 일 자 :&#160;&#160;&#160;&#160;&#160;&#160;년&#160;&#160;&#160;&#160;월&#160;&#160;&#160;&#160;일</div>
 
-        <!-- ── 차변/대변 내역 ── -->
-        <table class="slip-table" style="margin-top:8px;">
-          <colgroup>
-            <col style="width:10%"/>  <!-- 구분 -->
-            <col style="width:13%"/>  <!-- 관 -->
-            <col style="width:13%"/>  <!-- 항 -->
-            <col style="width:13%"/>  <!-- 목 -->
-            <col style="width:7%"/>   <!-- 재원 -->
-            <col style="width:22%"/>  <!-- 차변 -->
-            <col style="width:22%"/>  <!-- 대변 -->
-          </colgroup>
-          <tr>
-            <th>구분</th>
-            <th>관</th>
-            <th>항</th>
-            <th>목</th>
-            <th>재원</th>
-            <th>차변</th>
-            <th>대변</th>
-          </tr>
+          <div class="lg-clear"></div>
 
-          <!-- 차변 섹션 헤더 -->
-          <tr class="section-header">
-            <td colspan="7"
-                th:text="${slip.debit != null and !slip.debit.isEmpty() ? slip.debit[0].upnm : '비용'}">
-            </td>
-          </tr>
+          <!-- 제목 / 증빙구분 -->
+          <div class="lg-subject">
+            <span th:text="'제&#160;&#160;&#160;&#160;&#160;&#160;목 : ' + ${slip.subject}"></span>
+            <span th:text="'증 빙 구 분 : ' + ${slip.spoccu}"></span>
+          </div>
 
-          <!-- 차변 행 -->
-          <th:block th:if="${slip.debit != null and !slip.debit.isEmpty()}">
-            <th:block th:each="d, dStat : ${slip.debit}">
-              <tr>
-                <td th:if="${dStat.first}"
-                    th:rowspan="${slip.debit.size()}"
-                    style="vertical-align:middle;"
-                    th:text="${d.upnm}"></td>
-                <td th:text="${d.it1nm}"></td>
-                <td th:text="${d.it2nm}"></td>
-                <td th:text="${d.accnm}"></td>
-                <td th:text="${d.mssec}"></td>
-                <td class="right" th:text="${#numbers.formatInteger(d.dramt, 0, 'COMMA')}"></td>
-                <td class="right">0</td>
-              </tr>
-              <!-- 적요(summy) 행 -->
-              <tr th:if="${d.summy != null and !#strings.isEmpty(d.summy)}">
-                <td colspan="4"></td>
-                <td colspan="3" class="left"
-                    style="font-size:10px; color:#555; padding-left:8px;"
-                    th:text="${d.summy}"></td>
-              </tr>
+          <!-- ── 차변/대변 내역 ── -->
+          <table class="lg-table">
+            <colgroup>
+              <col style="width:8%"/>   <!-- 구분 -->
+              <col style="width:17%"/>  <!-- 관   -->
+              <col style="width:22%"/>  <!-- 항   -->
+              <col style="width:16%"/>  <!-- 목   -->
+              <col style="width:7%"/>   <!-- 재원 -->
+              <col style="width:15%"/>  <!-- 차변 -->
+              <col style="width:15%"/>  <!-- 대변 -->
+            </colgroup>
+
+            <tr>
+              <th rowspan="2">구분</th>
+              <th colspan="4">과&#160;&#160;&#160;&#160;&#160;&#160;목</th>
+              <th rowspan="2">차변</th>
+              <th rowspan="2">대변</th>
+            </tr>
+            <tr>
+              <th>관</th>
+              <th>항</th>
+              <th>목</th>
+              <th>재원</th>
+            </tr>
+
+            <!-- 차변/대변을 라인 단위로 짝지어 출력 -->
+            <th:block th:with="dbCnt=${slip.debit  == null ? 0 : slip.debit.size()},
+                               crCnt=${slip.credit == null ? 0 : slip.credit.size()}">
+              <th:block th:with="lineCnt=${dbCnt > crCnt ? dbCnt : crCnt}">
+                <th:block th:if="${lineCnt > 0}">
+                  <th:block th:each="i : ${#numbers.sequence(0, lineCnt - 1)}">
+
+                    <!-- ▸ 차변 라인 -->
+                    <th:block th:if="${i &lt; dbCnt}" th:with="d=${slip.debit[i]}">
+                      <tr>
+                        <td rowspan="2" th:text="${d.upnm}"></td>
+                        <td rowspan="2" class="l" th:text="${d.accnm}"></td>
+                        <td class="l" th:text="${d.it1nm}"></td>
+                        <td rowspan="2" class="l" th:text="${d.it2nm}"></td>
+                        <td class="mssec" th:text="${d.mssec}"></td>
+                        <td class="r" th:text="${#numbers.formatInteger(d.dramt, 0, 'COMMA')}"></td>
+                        <td class="r">0</td>
+                      </tr>
+                      <tr>
+                        <td class="l sub"
+                            th:text="${#strings.isEmpty(slip.banknm) ? '' : slip.banknm + ' : ' + slip.accnum}"></td>
+                        <td colspan="3" class="l sub" th:text="${d.summy}"></td>
+                      </tr>
+                    </th:block>
+
+                    <!-- ▸ 대변 라인 -->
+                    <th:block th:if="${i &lt; crCnt}" th:with="c=${slip.credit[i]}">
+                      <tr>
+                        <td rowspan="2" th:text="${c.upnm}"></td>
+                        <td rowspan="2" class="l" th:text="${c.accnm}"></td>
+                        <td class="l" th:text="${c.it1nm}"></td>
+                        <td rowspan="2" class="l" th:text="${c.it2nm}"></td>
+                        <td class="mssec" th:text="${c.mssec}"></td>
+                        <td class="r">0</td>
+                        <td class="r" th:text="${#numbers.formatInteger(c.cramt, 0, 'COMMA')}"></td>
+                      </tr>
+                      <tr>
+                        <td class="l sub"
+                            th:text="${#strings.isEmpty(slip.banknm) ? '' : slip.banknm + ' : ' + slip.accnum}"></td>
+                        <td colspan="3" class="l sub" th:text="${c.summy}"></td>
+                      </tr>
+                    </th:block>
+
+                  </th:block>
+                </th:block>
+              </th:block>
             </th:block>
-          </th:block>
 
-          <!-- 대변 섹션 헤더 -->
-          <tr class="section-header">
-            <td colspan="7"
-                th:text="${slip.credit != null and !slip.credit.isEmpty() ? slip.credit[0].upnm : '부채'}">
-            </td>
-          </tr>
+            <!-- 합계 -->
+            <tr class="lg-total">
+              <td colspan="5">합&#160;&#160;&#160;&#160;&#160;&#160;계</td>
+              <td class="r" th:text="${#numbers.formatInteger(slip.amt, 0, 'COMMA')}"></td>
+              <td class="r" th:text="${#numbers.formatInteger(slip.amt, 0, 'COMMA')}"></td>
+            </tr>
+          </table>
 
-          <!-- 대변 행 -->
-          <th:block th:if="${slip.credit != null and !slip.credit.isEmpty()}">
-            <th:block th:each="c, cStat : ${slip.credit}">
+          <!-- ── 적요 ── -->
+          <div class="lg-remark">
+            <div th:text="${slip.subject}"></div>
+            <div th:text="${slip.remark}"></div>
+          </div>
+
+          <!-- 결재란 하단 (printType=7) -->
+          <th:block th:if="${printType == '7'}">
+            <table class="lg-apv" style="float:none; margin:10px 0 0;">
               <tr>
-                <td th:if="${cStat.first}"
-                    th:rowspan="${slip.credit.size()}"
-                    style="vertical-align:middle;"
-                    th:text="${c.upnm}"></td>
-                <td th:text="${c.it1nm}"></td>
-                <td th:text="${c.it2nm}"></td>
-                <td th:text="${c.accnm}"></td>
-                <td th:text="${c.mssec}"></td>
-                <td class="right">0</td>
-                <td class="right" th:text="${#numbers.formatInteger(c.cramt, 0, 'COMMA')}"></td>
-              </tr>
-              <!-- 적요(summy) 행 -->
-              <tr th:if="${c.summy != null and !#strings.isEmpty(c.summy)}">
-                <td colspan="4"></td>
-                <td colspan="3" class="left"
-                    style="font-size:10px; color:#555; padding-left:8px;"
-                    th:text="${c.summy}"></td>
-              </tr>
-            </th:block>
-          </th:block>
-
-          <!-- 합계 -->
-          <tr class="total-row">
-            <td colspan="5" style="text-align:center; font-weight:700;">합 계</td>
-            <td class="right" th:text="${#numbers.formatInteger(slip.amt, 0, 'COMMA')}"></td>
-            <td class="right" th:text="${#numbers.formatInteger(slip.amt, 0, 'COMMA')}"></td>
-          </tr>
-        </table>
-
-        <!-- ── 적요 ── -->
-        <div class="remark-box" style="margin-top:8px;">
-          <div class="rb-title">&#9632; 적요</div>
-          <div th:text="${slip.remark}"></div>
-        </div>
-
-        <!-- ── 결재란 하단 (printType=7) ── -->
-        <th:block th:if="${printType == '7'}">
-          <div style="margin-top:10px;">
-            <table style="border:1px solid #333; border-collapse:collapse; font-size:10px;">
-              <tr>
-                <th:block th:each="apv, apvStat : ${approverList}">
-                  <td th:style="${!apvStat.last ? 'border-right:1px solid #333; text-align:center; width:100px; padding:0;' : 'text-align:center; width:100px; padding:0;'}">
-                    <div style="background:#f0f0f0; border-bottom:1px solid #333; padding:2px 4px; font-weight:700;"
-                         th:text="${apv}"></div>
-                    <div style="height:44px;"></div>
+                <th:block th:each="apv : ${approverList}">
+                  <td>
+                    <div class="apv-h" th:text="${apv}"></div>
+                    <div class="apv-b"></div>
                   </td>
                 </th:block>
               </tr>
             </table>
-          </div>
-        </th:block>
+          </th:block>
 
-        <!-- ── 페이지 번호 ── -->
-        <div style="position:absolute; bottom:8mm; right:14mm; font-size:10px; color:#888;"
-             th:text="'페이지 : ' + ${slipStat.index + 1} + ' (' + ${slipList.size()} + ')'">
         </div>
 
       </div>
