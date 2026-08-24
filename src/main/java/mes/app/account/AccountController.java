@@ -72,168 +72,159 @@ public class AccountController {
 	@Resource(name="authenticationManager")
     private AuthenticationManager authManager;
 	
-	@GetMapping("/login")
-    public ModelAndView loginPage(
-    		HttpServletRequest request,
-    		HttpServletResponse response,
-    		HttpSession session, Authentication auth) {
+	/* ----------------------------------------------------------------------------
+   [1] GET /login — 자동로그인 쿠키 경로에 상태 검사 추가
+   ---------------------------------------------------------------------------- */
 
-		// ✅ 1️⃣ 자동로그인 쿠키 검사
+	@GetMapping("/login")
+	public ModelAndView loginPage(
+		HttpServletRequest request,
+		HttpServletResponse response,
+		HttpSession session,
+		Authentication auth) {
+
+		// 1) 자동로그인 쿠키 검사
 		if (auth == null) {
 			Cookie[] cookies = request.getCookies();
 			if (cookies != null) {
 				for (Cookie cookie : cookies) {
-					if ("MES_AUTO_LOGIN".equals(cookie.getName())) {
-						String username = cookie.getValue();
-
-						User user = userRepository.findByUsername(username).orElse(null);
-
-						if (user != null && user.getActive()) {
-							UsernamePasswordAuthenticationToken token =
-									new UsernamePasswordAuthenticationToken(
-											user, null, Collections.emptyList());
-
-							SecurityContextHolder.getContext().setAuthentication(token);
-							session.setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
-
-							return new ModelAndView("redirect:/");
-						} else {
-							Cookie clearCookie = new Cookie("MES_AUTO_LOGIN", null);
-							clearCookie.setMaxAge(0);
-							clearCookie.setPath(request.getContextPath().equals("") ? "/" : request.getContextPath()); // 경로 통일
-							response.addCookie(clearCookie);
-						}
+					if (!"MES_AUTO_LOGIN".equals(cookie.getName())) {
+						continue;
 					}
 
+					String username = cookie.getValue();
+					User user = userRepository.findByUsername(username).orElse(null);
+
+					// ▼ 변경: getActive() 만 보던 것 → 사업장 상태까지 검사
+					String state = checkTenantState(user);
+
+					if ("OK".equals(state)) {
+						UsernamePasswordAuthenticationToken token =
+							new UsernamePasswordAuthenticationToken(
+								user, null, Collections.emptyList());
+
+						SecurityContextHolder.getContext().setAuthentication(token);
+						session.setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
+
+						// ▼ 추가: 자동로그인 시에도 테넌트 세션 세팅 (기존 누락분)
+						bindTenantSession(session, user);
+
+						return new ModelAndView("redirect:/");
+					} else {
+						// 중지/미승인/비활성 → 쿠키 폐기하고 로그인 화면으로
+						clearAutoLoginCookie(request, response);
+						break;
+					}
 				}
 			}
 		}
 
-		//User-Agent를 기반으로 모바일 여부 감지
-		String userAgent = request.getHeader("User-Agent").toLowerCase();
-		boolean isMobile = userAgent.contains("mobile") || userAgent.contains("android") || userAgent.contains("iphone");
+		// 2) User-Agent 기반 모바일 여부 감지
+		String uaHeader = request.getHeader("User-Agent");
+		String userAgent = (uaHeader == null) ? "" : uaHeader.toLowerCase();   // ▼ NPE 방어
+		boolean isMobile = userAgent.contains("mobile")
+												 || userAgent.contains("android")
+												 || userAgent.contains("iphone");
 
-		// 모바일이면 "mlogin" 뷰 반환, 웹이면 "login" 뷰 반환
 		ModelAndView mv = new ModelAndView(isMobile ? "mlogin" : "login");
-		
-		Map<String, Object> userInfo = new HashMap<String, Object>(); 
-		Map<String, Object> gui = new HashMap<String, Object>();
-		
-		mv.addObject("userinfo", userInfo);
-		mv.addObject("gui", gui);
-		if(auth!=null) {
-			SecurityContextLogoutHandler handler =  new SecurityContextLogoutHandler();
-			handler.logout(request, response, auth);
+
+		mv.addObject("userinfo", new HashMap<String, Object>());
+		mv.addObject("gui", new HashMap<String, Object>());
+
+		if (auth != null) {
+			new SecurityContextLogoutHandler().logout(request, response, auth);
 		}
-		
+
 		return mv;
 	}
-	
+
+
+	/* ----------------------------------------------------------------------------
+   [3] GET /logout — cookiePath 헬퍼 적용 (동작 동일, 중복 제거)
+   ---------------------------------------------------------------------------- */
+
 	@GetMapping("/logout")
-	public void logout(
-			HttpServletRequest request
-			, HttpServletResponse response) throws IOException {
-		
-		Authentication auth = SecurityContextHolder.getContext().getAuthentication();		
-		SecurityContextLogoutHandler handler =  new SecurityContextLogoutHandler();
-		
+	public void logout(HttpServletRequest request, HttpServletResponse response) throws IOException {
+
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
 		this.accountService.saveLoginLog("logout", auth, request);
-		
-		handler.logout(request, response, auth);
+		new SecurityContextLogoutHandler().logout(request, response, auth);
 
-		// ✅ 자동로그인 쿠키 제거
-		String ctx = request.getContextPath();
-		String cookiePath = ctx.isEmpty() ? "/" : ctx;
-		Cookie clearCookie = new Cookie("MES_AUTO_LOGIN", null);
-		clearCookie.setMaxAge(0);
-		clearCookie.setPath(cookiePath);
-		response.addCookie(clearCookie);
+		clearAutoLoginCookie(request, response);
 
-		response.sendRedirect(ctx + "/login");
+		response.sendRedirect(request.getContextPath() + "/login");
 	}
 
-    @PostMapping("/login")
-    public AjaxResult postLogin(
-    		@RequestParam("username") final String username, 
-    		@RequestParam("password") final String password,
-			@RequestParam(value = "autoLogin", required = false) String autoLogin,
-    		final HttpServletRequest request,
-			HttpServletResponse response) {
-    	// 여기로 들어오지 않음.
-    	
-    	AjaxResult result = new AjaxResult();
-    	
-    	HashMap<String, Object> data = new HashMap<String, Object>();
-    	result.data = data;
-    	
-        UsernamePasswordAuthenticationToken authReq = new UsernamePasswordAuthenticationToken(username, password);
-        // 폼의 hidden spjangcd를 details로 전달 → CustomAuthenticationManager에서 테넌트 DB 선택에 사용
-        authReq.setDetails(new mes.domain.security.TenantWebAuthenticationDetails(request));
+
+    /* ----------------------------------------------------------------------------
+   [2] POST /login — 상태 검사 기준을 db_key 로 변경
+   ---------------------------------------------------------------------------- */
+
+	@PostMapping("/login")
+	public AjaxResult postLogin(
+		@RequestParam("username") final String username,
+		@RequestParam("password") final String password,
+		@RequestParam(value = "autoLogin", required = false) String autoLogin,
+		final HttpServletRequest request,
+		HttpServletResponse response) {
+
+		AjaxResult result = new AjaxResult();
+		HashMap<String, Object> data = new HashMap<>();
+		result.data = data;
+
+		UsernamePasswordAuthenticationToken authReq =
+			new UsernamePasswordAuthenticationToken(username, password);
+		authReq.setDetails(new mes.domain.security.TenantWebAuthenticationDetails(request));
+
 		CustomAuthenticationToken auth = null;
 
-		try{
-			auth = (CustomAuthenticationToken)authManager.authenticate(authReq);
-
-
+		try {
+			auth = (CustomAuthenticationToken) authManager.authenticate(authReq);
 		} catch (InsufficientAuthenticationException e) {
 			data.put("code", "null");
 			return result;
-		}catch (AuthenticationException e){
-			//e.printStackTrace();
+		} catch (AuthenticationException e) {
 			data.put("code", "NOUSER");
 			return result;
 		}
 
-
-		if(auth!=null) {
-			User user = (User)auth.getPrincipal();
-
-			if (!user.getActive()) {  // user.getActive()가 false인 경우
-				data.put("code", "noactive");
-			} else{
-				String spjangcd = user.getSpjangcd();
-				Tb_xa012 xa012 = xa012Repository.findById(spjangcd).orElse(null);
-
-				if (xa012 == null) {
-					data.put("code", "noactive");
-				} else if ("중지".equals(xa012.getState())) {
-					data.put("code", "STOPPED"); // 중지된 사업체
-				} else if (!"O".equals(xa012.getState())) {
-					data.put("code", "NOTCONFIRM"); // 미승인
-				} else{
-					data.put("code", "OK");
-
-					this.accountService.saveLoginLog("login", auth, request);
-					// 자동 로그인
-					if ("on".equals(autoLogin)) {
-						Cookie autoLoginCookie = new Cookie("MES_AUTO_LOGIN", username);
-						autoLoginCookie.setHttpOnly(true);
-						autoLoginCookie.setPath(request.getContextPath().equals("") ? "/" : request.getContextPath());
-						autoLoginCookie.setMaxAge(60 * 60 * 24 * 365); // 자동 로그인
-						response.addCookie(autoLoginCookie);
-					}
-				}
-			}
-		} else {
-			result.success=false;
+		if (auth == null) {
+			result.success = false;
 			data.put("code", "NOID");
+			return result;
 		}
 
-		if ("OK".equals(data.get("code"))) {
-			SecurityContext sc = SecurityContextHolder.getContext();
-			sc.setAuthentication(auth);
-			HttpSession session = request.getSession(true);
-			session.setAttribute("SPRING_SECURITY_CONTEXT", sc);
+		User user = (User) auth.getPrincipal();
 
-			String spjangcd = auth.getPrincipal() instanceof User
-					? ((User) auth.getPrincipal()).getSpjangcd() : null;
+		// ▼ 핵심 변경: spjangcd(항상 'ZZ') 대신 db_key 기준으로 사업장 상태 판정
+		String state = checkTenantState(user);
+		data.put("code", state);
 
-			if (spjangcd != null && !spjangcd.isBlank()) {
-				// 테넌트 로그인: db_key + spjangcd 세션 세팅 (Main DB 인증이므로 ID 일관성 보장)
-				session.setAttribute("db_key", spjangcd);
-				session.setAttribute("spjangcd", spjangcd);
-			}
+		if (!"OK".equals(state)) {
+			result.success = false;   // 중지/미승인/비활성은 실패로 처리
+			return result;            // SecurityContext 세팅 없이 종료
 		}
+
+		// --- 인증 성공 ---
+		this.accountService.saveLoginLog("login", auth, request);
+
+		SecurityContext sc = SecurityContextHolder.getContext();
+		sc.setAuthentication(auth);
+		HttpSession session = request.getSession(true);
+		session.setAttribute("SPRING_SECURITY_CONTEXT", sc);
+
+		bindTenantSession(session, user);
+
+		// 자동 로그인 쿠키 발급
+		if ("on".equals(autoLogin)) {
+			Cookie autoLoginCookie = new Cookie("MES_AUTO_LOGIN", username);
+			autoLoginCookie.setHttpOnly(true);
+			autoLoginCookie.setPath(cookiePath(request));
+			autoLoginCookie.setMaxAge(60 * 60 * 24 * 365);
+			response.addCookie(autoLoginCookie);
+		}
+
 		return result;
 	}
 
@@ -707,6 +698,68 @@ public class AccountController {
 			result.message = "요금제 정보를 불러오는데 실패했습니다.";
 		}
 		return result;
+	}
+
+	/* ----------------------------------------------------------------------------
+   [0] 공통 헬퍼 — 클래스 하단(private 메서드 영역)에 추가
+   ---------------------------------------------------------------------------- */
+
+	/** 사용자의 실제 소속 사업장 코드. db_key 우선, 없으면 spjangcd 폴백. */
+	private String resolveTenantCd(User user) {
+		if (user == null) return null;
+		String dbKey = user.getDbKey();
+		if (dbKey != null && !dbKey.isBlank()) return dbKey;
+		return user.getSpjangcd();
+	}
+
+	/**
+	 * 사업장 상태 판정.
+	 * @return "OK" | "STOPPED" | "NOTCONFIRM" | "noactive"
+	 */
+	private String checkTenantState(User user) {
+		if (user == null || !Boolean.TRUE.equals(user.getActive())) {
+			return "noactive";
+		}
+
+		String tenantCd = resolveTenantCd(user);
+		if (tenantCd == null || tenantCd.isBlank()) {
+			return "noactive";
+		}
+
+		Tb_xa012 xa012 = xa012Repository.findById(tenantCd).orElse(null);
+		if (xa012 == null) {
+			return "noactive";
+		}
+		if ("중지".equals(xa012.getState())) {
+			return "STOPPED";
+		}
+		if (!"O".equals(xa012.getState())) {
+			return "NOTCONFIRM";
+		}
+		return "OK";
+	}
+
+	/** 컨텍스트 경로 기준 쿠키 path (쿠키 생성/삭제 시 반드시 동일해야 함). */
+	private String cookiePath(HttpServletRequest request) {
+		String ctx = request.getContextPath();
+		return (ctx == null || ctx.isEmpty()) ? "/" : ctx;
+	}
+
+	/** 자동로그인 쿠키 제거. */
+	private void clearAutoLoginCookie(HttpServletRequest request, HttpServletResponse response) {
+		Cookie clearCookie = new Cookie("MES_AUTO_LOGIN", null);
+		clearCookie.setMaxAge(0);
+		clearCookie.setPath(cookiePath(request));
+		response.addCookie(clearCookie);
+	}
+
+	/** 인증 성공 후 세션에 테넌트 정보 세팅. */
+	private void bindTenantSession(HttpSession session, User user) {
+		String tenantCd = resolveTenantCd(user);
+		if (tenantCd != null && !tenantCd.isBlank()) {
+			session.setAttribute("db_key", tenantCd);
+			session.setAttribute("spjangcd", tenantCd);
+		}
 	}
 
 }
