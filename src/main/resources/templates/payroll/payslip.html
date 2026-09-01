@@ -1,0 +1,861 @@
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
+  <style>
+      /* ── 팔레트 : payslip_pdf.html 과 동일한 잉크·괘선 계열 ──
+         :root 여야 한다. PopupDraggable 은 팝업을 body 바로 아래에 붙이므로
+         .layout-contents 에 걸면 팝업 안에서 var() 가 전부 빈 값이 되고,
+         그 선언이 통째로 버려진다(테두리·배경이 사라진다). */
+      :root {
+          --ps-ink:    #1B2430;
+          --ps-label:  #45566A;
+          --ps-mute:   #8A99A8;
+          --ps-rule:   #CBD3DB;
+          --ps-frame:  #8A99A8;
+          --ps-band:   #EDF1F4;
+          --ps-band2:  #DCE3E9;
+          --ps-value:  #24466F;
+          --ps-alert:  #9E2A20;
+          --ps-ok:     #1F6B3A;
+          --ps-warn:   #8A5A00;
+          --ps-paper:  #fff;
+          /* 좌우 패널 높이. 고정하면 낮은 창에서 아래가 잘린다.
+             상단(제목 + 조회줄 + 안내줄)이 대략 300px 를 먹는다. */
+          --ps-h: clamp(360px, calc(100vh - 340px), 900px);
+      }
+
+      /* ── 조회 조건 ─────────────────────────────────────── */
+      /* 조건 + 버튼을 한 줄에 둔다.
+         기본 search-wrap 은 라벨을 입력 위에 얹어 두 줄을 먹으므로
+         이 화면에서만 dl 을 가로로 눕힌다. */
+      .ps-top {
+          display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      }
+      .ps-top .search-wrap.ps-search {
+          flex: 1 1 auto; min-width: 0;
+          display: flex; align-items: center;
+          justify-content: flex-start; gap: 0; flex-wrap: wrap;
+      }
+      .ps-top .search-wrap.ps-search > dl {
+          flex: 0 0 auto;
+          display: flex; align-items: center; gap: 6px;
+          margin: 0 12px 0 0;
+      }
+      .ps-top .search-wrap.ps-search > dl > dt,
+      .ps-top .search-wrap.ps-search > dl > dd { margin: 0; padding: 0; }
+      /* 입력이 dd 폭에 갇히지 않게 한다 */
+      .ps-top .search-wrap.ps-search > dl > dd { flex: 1 1 auto; min-width: 0; }
+      /* 회차는 300px 고정 */
+      .ps-top .search-wrap.ps-search > dl:first-child { flex: 0 0 auto; }
+      .ps-top .search-wrap.ps-search > dl > dt label {
+          white-space: nowrap; font-size: 12.5px; color: var(--ps-label);
+      }
+      /* 검색 버튼 앞의 빈 dt(&nbsp;)는 자리만 차지한다 */
+      .ps-top .search-wrap.ps-search > dl:last-child { margin-right: 0; }
+      .ps-top .search-wrap.ps-search > dl:last-child > dt { display: none; }
+      .ps-top .search-wrap.ps-search li { list-style: none; }
+
+      .ps-top .button-wrap { flex: 0 0 auto; margin-left: auto; }
+      .ps-top .button-wrap ul { display: flex; align-items: center; gap: 6px; margin: 0; }
+      .ps-top .button-wrap li { list-style: none; }
+
+      .search-wrap.ps-search input[type=text],
+      .search-wrap.ps-search select { height: 34px; padding: 0 10px; }
+      .search-wrap.ps-search .w-batch { width: 300px; }
+      .search-wrap.ps-search .w-sel   { width: 104px; }
+      .search-wrap.ps-search .w-txt   { width: 112px; }
+
+      /* 폭이 모자라면 버튼 묶음만 다음 줄로 내려보낸다 */
+      @media (max-width: 1500px) {
+          .ps-top .button-wrap { margin-left: 0; }
+      }
+      .search-wrap.ps-search input[type=text]:focus-visible,
+      .search-wrap.ps-search select:focus-visible {
+          outline: 2px solid var(--ps-value); outline-offset: 1px;
+      }
+
+      /* ── 안내 줄 ───────────────────────────────────────
+         파란 강조 대신 왼쪽 괘선 하나로만 구분한다. */
+      .grid-guide-box {
+          background: var(--ps-band);
+          border: 1px solid var(--ps-rule);
+          border-left: 3px solid var(--ps-frame);
+          padding: 8px 12px;
+          font-size: 12.5px;
+          line-height: 1.6;
+          margin-bottom: 8px;
+          color: var(--ps-label);
+      }
+      .grid-guide-box b { color: var(--ps-ink); }
+
+      /* ── 2분할 ─────────────────────────────────────────
+         두 패널 사이 간격을 없애고 괘선 하나를 공유해
+         한 장의 서류처럼 보이게 한다. */
+      .ps-body  { display: flex; align-items: stretch; margin-bottom: 14px; }
+      .ps-left  {
+          width: 330px; flex: 0 0 330px;
+          display: flex; flex-direction: column;
+          background: var(--ps-paper);
+          border: 1px solid var(--ps-frame);
+      }
+      .ps-right {
+          flex: 1 1 auto; min-width: 0;
+          overflow: auto; height: var(--ps-h);
+          background: var(--ps-paper);
+          border: 1px solid var(--ps-frame);
+          border-left: none;
+          padding: 22px 26px 34px;   /* 마지막 줄이 바닥에 붙지 않게 */
+      }
+
+      .ps-panel-hd {
+          padding: 7px 10px;
+          background: var(--ps-band2);
+          border-bottom: 1px solid var(--ps-frame);
+          color: var(--ps-ink);
+          display: flex; justify-content: space-between; align-items: baseline;
+          font-size: 12.5px;
+          letter-spacing: .5px;
+      }
+      .ps-panel-hd .cnt { color: var(--ps-label); font-size: 12px; letter-spacing: 0; }
+
+      /* ── 대상자 목록 ───────────────────────────────────── */
+      /* 패널 머리를 뺀 나머지를 전부 차지한다 (min-height:0 이 없으면 flex 가 안 줄어든다) */
+      .ps-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; }
+
+      table.ps-grid { width: 100%; border-collapse: collapse; font-size: 12px; }
+      table.ps-grid th {
+          position: sticky; top: 0; z-index: 1;
+          background: var(--ps-band);
+          border-bottom: 1px solid var(--ps-frame);
+          padding: 7px 4px;
+          font-size: 12px; font-weight: 600;
+          color: var(--ps-label);
+          letter-spacing: 1px;
+      }
+      /* 세로 괘선을 걷어내고 가로선만 남긴다 — 행이 목록으로 읽힌다 */
+      table.ps-grid td {
+          border: none;
+          border-bottom: 1px solid #E7EBEF;
+          padding: 6px 5px; text-align: center; height: 30px;
+          color: var(--ps-ink);
+      }
+      table.ps-grid tbody tr { cursor: pointer; }
+      table.ps-grid tbody tr:hover { background: #F5F8FA; }
+
+      /* 선택 행 : 채도 대신 왼쪽 표식 막대로 표시한다 */
+      table.ps-grid tbody tr.on { background: var(--ps-band); }
+      table.ps-grid tbody tr.on td:first-child { box-shadow: inset 3px 0 0 var(--ps-value); }
+      table.ps-grid tbody tr.on .ps-nm { color: var(--ps-value); }
+
+      table.ps-grid td.nm  { text-align: left; }
+      table.ps-grid td.num { text-align: right; }
+      table.ps-grid td.who { text-align: left; line-height: 1.45; padding: 5px 8px; }
+
+      .ps-nm   { font-weight: 600; color: var(--ps-ink); }
+      .ps-mail { font-size: 11px; color: var(--ps-mute); word-break: break-all; }
+      .ps-mail.none { color: var(--ps-alert); }
+
+      /* 상태 : 앞의 점이 상태를 나르고 글자는 조용히 둔다 */
+      .ps-st { font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+      .ps-st::before {
+          content: ''; display: inline-block;
+          width: 5px; height: 5px; border-radius: 50%;
+          margin-right: 5px; vertical-align: 1px;
+          background: currentColor;
+      }
+      .ps-st.done { color: var(--ps-ok); }
+      .ps-st.test { color: var(--ps-warn); }
+      .ps-st.fail { color: var(--ps-alert); }
+      .ps-st.none { color: var(--ps-mute); font-weight: normal; }
+      .ps-st.noml { color: var(--ps-alert); }
+
+      .ps-empty {
+          padding: 60px 20px; text-align: center;
+          color: var(--ps-mute); line-height: 1.9; font-size: 13px;
+      }
+
+      /* ── 진행 표시 ─────────────────────────────────────── */
+      .ps-progress {
+          display: none; align-items: center; gap: 7px;
+          color: var(--ps-value); font-weight: 600; font-size: 12.5px; margin-left: 10px;
+      }
+      .ps-progress.on { display: inline-flex; }
+      .ps-spin {
+          width: 13px; height: 13px;
+          border: 2px solid var(--ps-rule); border-top-color: var(--ps-value);
+          border-radius: 50%; animation: ps-spin .8s linear infinite;
+      }
+      @keyframes ps-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .ps-spin { animation: none; } }
+
+      /* ── 발송 팝업 ─────────────────────────────────────
+         가장 중요한 결정은 '테스트냐 실제냐'다. 그걸 맨 위로 올리고
+         나머지 입력을 아래로 내린다. */
+      .ps-send { font-size: 13px; color: var(--ps-ink); text-align: left; }
+
+      .ps-send .fld { margin-bottom: 14px; }
+      .ps-send .fld > label.k {
+          display: block; margin-bottom: 5px;
+          font-size: 12px; font-weight: 600; color: var(--ps-label); letter-spacing: .5px;
+      }
+      .ps-send .fld .hint { margin-top: 4px; font-size: 11.5px; color: var(--ps-mute); }
+      .ps-send input[type=text] {
+          width: 100%; height: 34px; padding: 0 10px; box-sizing: border-box;
+          border: 1px solid #C0CAD3; background: #fff;
+          font-family: inherit; font-size: 13px; color: var(--ps-ink);
+      }
+      .ps-send input[type=text]::placeholder { color: var(--ps-mute); }
+      .ps-send input[type=text]:focus-visible {
+          outline: 2px solid var(--ps-value); outline-offset: 1px; border-color: var(--ps-value);
+      }
+
+      /* 발송 방식 : 라디오를 눌러야 할 카드로 키운다 */
+      .ps-modes { display: flex; gap: 8px; }
+      .ps-opt {
+          flex: 1 1 0; display: flex; align-items: flex-start; gap: 7px;
+          border: 1px solid #C0CAD3; padding: 9px 11px; cursor: pointer; background: #fff;
+      }
+      /* 네이티브 라디오는 감추고 표식을 직접 그린다.
+         다른 스타일시트가 appearance:none 으로 컨트롤을 다시 그리고 있어서,
+         기본 라디오를 쓰면 크기·정렬이 그쪽 규칙에 끌려간다.
+         선택자를 3단으로 올려 우선순위 싸움도 피한다. */
+      .ps-send .ps-opt input[type=radio] {
+          position: absolute; opacity: 0; width: 0; height: 0; margin: 0;
+      }
+      .ps-send .ps-opt .dot {
+          flex: 0 0 15px; width: 15px; height: 15px; margin-top: 2px;
+          border: 1px solid #98A6B3; border-radius: 50%;
+          background: #fff; position: relative; box-sizing: border-box;
+      }
+      .ps-send .ps-opt input[type=radio]:checked + .dot { border-color: var(--ps-value); }
+      .ps-send .ps-opt input[type=radio]:checked + .dot::after {
+          content: ''; position: absolute; left: 3px; top: 3px;
+          width: 7px; height: 7px; border-radius: 50%; background: var(--ps-value);
+      }
+      .ps-send .ps-opt input[type=radio]:focus-visible + .dot {
+          outline: 2px solid var(--ps-value); outline-offset: 2px;
+      }
+
+      .ps-opt .t { font-weight: 600; font-size: 13px; }
+      .ps-opt .d { display: block; margin-top: 2px; font-size: 11.5px; color: var(--ps-mute); }
+
+      /* 선택 강조는 :has() 대신 JS 가 붙이는 .sel 로 한다 (구형 브라우저 대응) */
+      .ps-opt.sel { border-color: var(--ps-value); background: var(--ps-band); }
+      .ps-send .ps-opt.live.sel { border-color: var(--ps-alert); background: #FBF0EE; }
+      .ps-send .ps-opt.live.sel .t { color: var(--ps-alert); }
+      .ps-send .ps-opt.live input[type=radio]:checked + .dot { border-color: var(--ps-alert); }
+      .ps-send .ps-opt.live input[type=radio]:checked + .dot::after { background: var(--ps-alert); }
+
+      /* 요약 · 경고 */
+      .ps-warn {
+          background: #FBF0EE; border: 1px solid #E0BDB8; border-left: 4px solid var(--ps-alert);
+          padding: 11px 13px; color: var(--ps-alert);
+          line-height: 1.65; margin: 0 0 12px; font-size: 12.5px; text-align: left;
+      }
+      .ps-note {
+          background: var(--ps-band); border: 1px solid var(--ps-rule); border-left: 4px solid var(--ps-frame);
+          padding: 11px 13px; color: var(--ps-label);
+          line-height: 1.65; margin: 0 0 12px; font-size: 12.5px; text-align: left;
+      }
+      .ps-warn b, .ps-note b { color: inherit; }
+
+      .ps-recap {
+          border-top: 1px solid var(--ps-rule); padding-top: 10px;
+          font-size: 12.5px; line-height: 1.75; text-align: left; color: var(--ps-label);
+      }
+      .ps-recap b { color: var(--ps-ink); font-weight: 600; }
+      .ps-recap .sub { display: block; font-size: 11.5px; color: var(--ps-mute); }
+
+      /* 실제 발송이면 발송 버튼도 경고색으로 */
+      .btn-popup.danger { background: var(--ps-alert); border-color: var(--ps-alert); }
+      .btn-popup.danger, .btn-popup.danger span { color: #fff; }
+
+      /* ── 발송 결과 ─────────────────────────────────────── */
+      .ps-result { width: 100%; border-collapse: collapse; font-size: 12px; }
+      .ps-result th, .ps-result td {
+          border: 1px solid var(--ps-rule); padding: 6px 8px; color: var(--ps-ink);
+      }
+      .ps-result th {
+          background: var(--ps-band); color: var(--ps-label);
+          font-weight: 600; letter-spacing: .5px;
+      }
+      .ps-result td.ok { color: var(--ps-ok);    font-weight: 600; text-align: center; }
+      .ps-result td.ng { color: var(--ps-alert); font-weight: 600; text-align: center; }
+  </style>
+
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>급여명세서 발송</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>급여관리</li>
+        <li>급여명세서 발송</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <div class="section-top ps-top">
+        <div class="search-wrap ps-search">
+          <dl>
+            <dt><label for="batch">급여회차<span class="eq"></span></label></dt>
+            <dd>
+              <select id="batch" name="batch" class="form-control2 w-batch">
+                <option value="">불러오는 중…</option>
+              </select>
+            </dd>
+          </dl>
+          <dl>
+            <dt><label for="mpclafi">근무형태</label></dt>
+            <dd>
+              <select class="form-control2 w-sel" id="mpclafi" name="mpclafi">
+                <option value="">전 체</option>
+              </select>
+            </dd>
+          </dl>
+          <dl>
+            <dt><label for="divicd">부서</label></dt>
+            <dd><input id="divicd" name="divicd" class="w-txt" placeholder="부서코드" type="text"/></dd>
+          </dl>
+          <dl>
+            <dt><label for="rspcd">직위</label></dt>
+            <dd><input id="rspcd" name="rspcd" class="w-txt" placeholder="직위코드" type="text"/></dd>
+          </dl>
+          <dl>
+            <dt><label for="perid">사원</label></dt>
+            <dd><input id="perid" name="perid" class="w-txt" placeholder="사번" type="text"/></dd>
+          </dl>
+          <dl>
+            <dt><label for="rtclafi">재직구분</label></dt>
+            <dd>
+              <select class="form-control2 w-sel" id="rtclafi" name="rtclafi">
+                <option value="">전 체</option>
+              </select>
+            </dd>
+          </dl>
+          <dl>
+            <dt>&nbsp;</dt>
+            <dd>
+              <li>
+                <button class="btn btn-delete" id="btnSearch" title="검색" type="button">
+                  <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
+                  검색
+                </button>
+              </li>
+            </dd>
+          </dl>
+        </div>
+
+        <div class="button-wrap">
+          <ul>
+            <li>
+              <a class="btn btn-edit" id="btnPrint" title="명세서 출력">
+                <img alt="출력 아이콘" th:src="@{/images/icon/ico-edit.svg}">
+                명세서 출력
+              </a>
+            </li>
+            <li>
+              <a class="btn btn-excell" id="btnSaveZip" title="명세서 저장">
+                <img alt="저장 아이콘" th:src="@{/images/icon/ico-save.svg}">
+                명세서 저장
+              </a>
+            </li>
+            <li>
+              <a class="btn btn-edit" id="btnMail" title="메일 발송">
+                <img alt="발송 아이콘" th:src="@{/images/icon/ico-save.svg}">
+                메일 발송
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid-guide-box">
+        ※ 왼쪽에서 직원을 선택하면 오른쪽에 급여명세서가 표시됩니다. 메일은 체크한 직원에게 <b>1명씩 개별 발송</b>됩니다.
+        조회하면 전원이 선택된 상태이며, 메일주소가 없는 직원은 선택할 수 없습니다. (단축키 조회:F4)
+        <span class="ps-progress" id="psProgress"><span class="ps-spin"></span><span id="psProgressText">처리 중</span></span>
+      </div>
+
+      <div class="ps-body">
+        <div class="ps-left">
+          <div class="ps-panel-hd">
+            <span>발송 대상</span>
+            <span class="cnt" id="psCount">선택 0 / 전체 0</span>
+          </div>
+          <div class="ps-scroll">
+            <table class="ps-grid">
+              <thead>
+              <tr>
+                <th style="width:40px"><input type="checkbox" id="chkAll" title="전체 선택" checked/></th>
+                <th style="width:64px">사 번</th>
+                <th>성 명</th>
+                <th style="width:66px">상 태</th>
+              </tr>
+              </thead>
+              <tbody id="psGridBody">
+              <tr><td colspan="4" class="ps-empty">급여회차를 선택하고 검색하세요.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="ps-right" id="psPreview">
+          <div class="ps-empty">왼쪽에서 직원을 선택하면 급여명세서가 표시됩니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 발송 팝업 ══════════════════════════════════════════ -->
+  <script id="psSendTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup ps-send">
+      <section class="section" style="padding:16px 18px;">
+
+        <div class="fld">
+          <label class="k">발송 방식</label>
+          <div class="ps-modes">
+            <label class="ps-opt">
+              <input type="radio" name="psMode" value="Y" checked/><span class="dot"></span>
+              <span class="tx"><span class="t">테스트 발송</span>
+                <span class="d">담당자 주소로만 옵니다</span></span>
+            </label>
+            <label class="ps-opt live">
+              <input type="radio" name="psMode" value="N"/><span class="dot"></span>
+              <span class="tx"><span class="t">실제 발송</span>
+                <span class="d">직원에게 바로 갑니다</span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="fld" id="psTrTest">
+          <label class="k" for="psTestEmail">테스트 수신 주소</label>
+          <input type="text" id="psTestEmail" placeholder="hong@example.com"/>
+          <div class="hint">선택한 인원 전원의 명세서가 이 주소 하나로만 옵니다.</div>
+        </div>
+
+        <div class="fld">
+          <label class="k" for="psReplyTo">회신 주소 <span style="font-weight:normal">(선택)</span></label>
+          <input type="text" id="psReplyTo" placeholder="담당자 이메일 — 직원이 답장할 주소"/>
+          <div class="hint">비우면 본문이 회계부로 연락하도록 안내합니다.</div>
+        </div>
+
+        <div id="psSendBody"></div>
+      </section>
+      <div class="popup-button">
+        <button type="button" class="btn-popup" id="btnSendGo"><span>발송</span></button>
+        <button type="button" class="btn-popup" id="btnSendCancel"><span>취소</span></button>
+      </div>
+    </div>
+  </script>
+
+  <!-- ══ 결과 팝업 ══════════════════════════════════════════ -->
+  <script id="psResultTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup">
+      <section class="section" style="padding:14px 16px;">
+        <div id="psResultBody"></div>
+      </section>
+      <div class="popup-button">
+        <button type="button" class="btn-popup" id="btnResultClose"><span>닫기</span></button>
+      </div>
+    </div>
+  </script>
+
+</th:block>
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   // ══════════════════════════════════════════════════════════
+   //  빈 값이면 서버에서 '%' 로 바꿔 전체 조회한다.
+   //  ★ 근무형태(mpclafi)만 아직 미확정 — TB_PZ007 이 코드 마스터다.
+   //    rtclafi 처럼 3자리 코드일 가능성이 높다.
+   // ══════════════════════════════════════════════════════════
+   const MPCLAFI_OPTS = [
+    { v: '',  t: '전 체' },
+    { v: '1', t: '관리직' },
+    { v: '2', t: '생산직' }
+   ];
+   // 확인된 값 : TB_JA001.rtclafi — 001 재직자 / 002 퇴직자
+   const RTCLAFI_OPTS = [
+    { v: '',    t: '전 체' },
+    { v: '001', t: '재직자' },
+    { v: '002', t: '퇴직자' }
+   ];
+
+   class PayslipPage {
+    constructor() {
+     this.url = '/api/payslip';
+     this.rows = [];
+     this.batches = [];
+     this.current = null;
+     this.sendPopup = null;
+     this.resultPopup = null;
+     this.initSelects();
+     this.bind();
+    }
+
+    initSelects() {
+     const fill = function (sel, opts) {
+      const $s = $(sel).empty();
+      opts.forEach(o => $s.append('<option value="' + o.v + '">' + o.t + '</option>'));
+     };
+     fill('#mpclafi', MPCLAFI_OPTS);
+     fill('#rtclafi', RTCLAFI_OPTS);
+    }
+
+    bind() {
+     let _this = this;
+     $('#btnSearch').on('click', function () { _this.search(); });
+     $('#btnPrint').on('click', function () { _this.printOne(); });
+     $('#btnSaveZip').on('click', function () { _this.saveZip(); });
+     $('#btnMail').on('click', function () { _this.confirmSend(); });
+     $('#batch, #mpclafi, #rtclafi').on('change', function () { _this.search(); });
+     $('#divicd, #rspcd, #perid').on('keydown', function (e) { if (e.key === 'Enter') _this.search(); });
+
+     $('#chkAll').on('change', function () {
+      $('#psGridBody .ps-chk:not(:disabled)').prop('checked', this.checked);
+      _this.updateCount();
+     });
+     $('#psGridBody').on('change', '.ps-chk', function () { _this.syncChkAll(); _this.updateCount(); });
+     $('#psGridBody').on('click', 'tr', function (e) {
+      if ($(e.target).is('input')) return;
+      const perid = $(this).data('perid');
+      if (!perid) return;
+      $('#psGridBody tr').removeClass('on');
+      $(this).addClass('on');
+      _this.loadPreview(perid);
+     });
+    }
+
+    // ── 급여 회차 목록 ────────────────────────────────────
+    //  paydate 가 완전일치 조건이라 직접 입력할 수 없다.
+    //  지급구분·귀속월·지급일자 세 값을 이 드롭다운에서 한 번에 받는다.
+    loadBatches(after) {
+     let _this = this;
+     const $s = $('#batch');
+     $s.empty().append('<option value="">불러오는 중…</option>');
+
+     AjaxUtil.getAsyncData(_this.url + '/batches', {}, function (result) {
+      $s.empty();
+
+      if (!result || !result.success) {
+       const msg = (result && result.message) ? result.message : '회차 목록 조회 실패';
+       $s.append('<option value="">' + _this.esc(msg) + '</option>');
+       Alert.alert('', '급여 회차를 불러오지 못했습니다.\n' + msg);
+       return;
+      }
+
+      _this.batches = result.data || [];
+      if (!_this.batches.length) {
+       $s.append('<option value="">확정된 급여 자료가 없습니다</option>');
+       $('#psGridBody').html(
+        '<tr><td colspan="4" class="ps-empty">확정된 급여 자료가 없습니다.<br/>' +
+        'TB_JB001 에 spcheck = \'1\' 인 자료가 있는지 확인하세요.</td></tr>');
+       return;
+      }
+
+      _this.batches.forEach(function (r, i) {
+       $s.append('<option value="' + i + '">' +
+        _this.paytypeNm(r.paytype) + ' · ' + _this.fmtYm(r.paybasic) +
+        ' · 지급 ' + _this.fmtYmd(r.paydate) +
+        (r.percnt ? ' (' + r.percnt + '명)' : '') + '</option>');
+      });
+      $s.val('0');   // 최신 회차
+      if (after) after();
+     });
+    }
+
+    batch() {
+     const i = $('#batch').val();
+     return (i === '' || i === null) ? null : this.batches[Number(i)];
+    }
+
+    // ── 조회 조건 (레거시 strCondition) ───────────────────
+    cond() {
+     const b = this.batch();
+     if (!b) return null;
+     return {
+      paytype:  b.paytype,                       // [7]
+      paybasic: String(b.paybasic),              // [8]
+      paydate:  String(b.paydate),               // [9]
+      mpclafi:  $('#mpclafi').val(),             // [1]
+      divicd:   $('#divicd').val().trim(),       // [2]
+      rspcd:    $('#rspcd').val().trim(),        // [4]
+      rtclafi:  $('#rtclafi').val(),             // [6]
+      perid:    $('#perid').val().trim()         // [11]
+     };
+    }
+    keyOf(perid) {
+     const c = this.cond();
+     return { paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate, perid: perid };
+    }
+
+    paytypeNm(t) { return t === '002' ? '상여' : (t === '003' ? '급상여' : '급여'); }
+    fmtYm(v)  { v = String(v || ''); return v.length < 6 ? v : v.substring(0,4) + '.' + v.substring(4,6); }
+    fmtYmd(v) { v = String(v || ''); return v.length < 8 ? v : v.substring(0,4) + '.' + v.substring(4,6) + '.' + v.substring(6,8); }
+
+    // ── 조회 ──────────────────────────────────────────────
+    search() {
+     let _this = this;
+     const c = _this.cond();
+     if (!c) { Alert.alert('', '급여회차를 선택하세요.'); return; }
+
+     _this.busy(true, '조회 중');
+     AjaxUtil.getAsyncData(_this.url + '/list', c, function (result) {
+      _this.busy(false);
+      if (result && result.success) {
+       _this.rows = result.data || [];
+       _this.render();
+       _this.current = null;
+       $('#psPreview').html('<div class="ps-empty">왼쪽에서 직원을 선택하면 급여명세서가 표시됩니다.</div>');
+      } else {
+       Alert.alert('', (result && result.message) || '조회에 실패했습니다.');
+      }
+     });
+    }
+
+    render() {
+     let _this = this;
+     const $b = $('#psGridBody').empty();
+
+     if (!_this.rows.length) {
+      $('#chkAll').prop('checked', false);
+      $b.append('<tr><td colspan="4" class="ps-empty">해당 조건의 급여 자료가 없습니다.</td></tr>');
+      _this.updateCount();
+      return;
+     }
+
+     _this.rows.forEach(function (r, i) {
+      const mail = String(r.email || '').trim();
+      const noMail = mail.indexOf('@') < 0;
+
+      let st, cls;
+      if (noMail)                    { st = '메일없음'; cls = 'noml'; }
+      else if (r.sendstatus === 'S') { st = r.testyn === 'Y' ? '테스트' : '발송완료';
+       cls = r.testyn === 'Y' ? 'test' : 'done'; }
+      else if (r.sendstatus === 'F') { st = '실패';     cls = 'fail'; }
+      else                           { st = '미발송';   cls = 'none'; }
+
+      // 레거시 SQL 의 '1' AS prtchk — 조회 직후 전원 체크
+      const chk = noMail ? ' disabled' : ' checked';
+
+      $b.append(
+       '<tr data-i="' + i + '" data-perid="' + _this.esc(r.perid) + '">' +
+       '<td><input type="checkbox" class="ps-chk"' + chk + '/></td>' +
+       '<td>' + _this.esc(r.peridview) + '</td>' +
+       '<td class="who">' +
+       '<div class="ps-nm">' + _this.esc(r.pernm) + '</div>' +
+       '<div class="ps-mail' + (noMail ? ' none' : '') + '">' +
+       (noMail ? '메일주소 없음' : _this.esc(mail)) + '</div>' +
+       '</td>' +
+       '<td><span class="ps-st ' + cls + '">' + st + '</span></td>' +
+       '</tr>');
+     });
+
+     _this.syncChkAll();
+     _this.updateCount();
+    }
+
+    /** 헤더 체크박스를 본문 상태에 맞춘다 */
+    syncChkAll() {
+     const $c = $('#psGridBody .ps-chk:not(:disabled)');
+     $('#chkAll').prop('checked', $c.length > 0 && $c.filter(':checked').length === $c.length);
+    }
+
+    updateCount() {
+     $('#psCount').text('선택 ' + $('#psGridBody .ps-chk:checked').length + ' / 전체 ' + this.rows.length);
+    }
+
+    checked() {
+     let _this = this, out = [];
+     $('#psGridBody .ps-chk:checked').each(function () {
+      out.push(_this.rows[$(this).closest('tr').data('i')]);
+     });
+     return out;
+    }
+
+    loadPreview(perid) {
+     let _this = this;
+     _this.current = perid;
+     _this.busy(true, '불러오는 중');
+     $.get(_this.url + '/preview', _this.keyOf(perid))
+     .done(function (html) { $('#psPreview').html(html); })
+     .fail(function () { $('#psPreview').html('<div class="ps-empty">명세서를 불러오지 못했습니다.</div>'); })
+     .always(function () { _this.busy(false); });
+    }
+
+    printOne() {
+     if (!this.cond())  { Alert.alert('', '급여회차를 선택하세요.'); return; }
+     if (!this.current) { Alert.alert('', '직원을 선택하세요.'); return; }
+     window.open(this.url + '/print?' + $.param(this.keyOf(this.current)), '_blank');
+    }
+
+    saveZip() {
+     const c = this.cond();
+     if (!c) { Alert.alert('', '급여회차를 선택하세요.'); return; }
+     const sel = this.checked();
+     if (!sel.length) { Alert.alert('', '저장할 직원을 선택하세요.'); return; }
+
+     let qs = $.param({ paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate, lock: 'Y' });
+     sel.forEach(r => { qs += '&perids=' + encodeURIComponent(r.perid); });
+     AjaxUtil.downloadFile(this.url + '/downloadZip?' + qs,
+      this.paytypeNm(c.paytype) + '명세서_' + c.paybasic + '.zip');
+    }
+
+    // ── 메일 발송 ─────────────────────────────────────────
+    confirmSend() {
+     let _this = this;
+     const c = _this.cond();
+     if (!c) { Alert.alert('', '급여회차를 선택하세요.'); return; }
+     const sel = _this.checked();
+     if (!sel.length) { Alert.alert('', '발송할 직원을 선택하세요.'); return; }
+
+     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+     if (_this.sendPopup) { _this.sendPopup.close(); _this.sendPopup = null; }
+     let $c = $(tmpl('psSendTemplate', {}));
+     _this.sendPopup = new PopupDraggable('급여명세서 발송');
+     _this.sendPopup.open({ width: 520, height: 520, $content: $c });
+
+     const redraw = function () {
+      const test = $c.find('input[name=psMode]:checked').val() !== 'N';
+      $c.find('#psTrTest').toggle(test);
+
+      $c.find('.ps-opt').removeClass('sel');
+      $c.find('input[name=psMode]:checked').closest('.ps-opt').addClass('sel');
+      $c.find('#btnSendGo').toggleClass('danger', !test);
+
+      let html;
+      if (test) {
+       html = '<div class="ps-note"><b>테스트 발송입니다.</b><br/>' + sel.length +
+        '건이 모두 테스트 수신 주소로만 전송됩니다. 직원에게는 가지 않습니다.</div>';
+      } else {
+       html = '<div class="ps-warn"><b>실제 발송입니다.</b><br/>직원 <b>' + sel.length +
+        '명</b>에게 각자의 급여명세서가 바로 전송됩니다. 한 번 나간 메일은 회수할 수 없습니다.</div>';
+      }
+      html += '<div class="ps-recap">' +
+       _this.paytypeNm(c.paytype) + ' · 귀속월 <b>' + _this.fmtYm(c.paybasic) + '</b>' +
+       ' · 지급일 <b>' + _this.fmtYmd(c.paydate) + '</b> · 대상 <b>' + sel.length + '명</b>' +
+       '<span class="sub">1명씩 개별 발송하므로 인원수만큼 시간이 걸립니다.</span></div>';
+      $c.find('#psSendBody').html(html);
+     };
+
+     setTimeout(function () {
+      redraw();
+      $c.find('input[name=psMode]').on('change', redraw);
+
+      $c.find('#btnSendCancel').on('click', function () {
+       _this.sendPopup.close(); _this.sendPopup = null;
+      });
+
+      $c.find('#btnSendGo').on('click', function () {
+       const testYn    = $c.find('input[name=psMode]:checked').val();
+       const replyTo   = $c.find('#psReplyTo').val().trim();
+       const testEmail = $c.find('#psTestEmail').val().trim();
+
+       if (replyTo && !emailRe.test(replyTo)) {
+        Alert.alert('', '회신 주소 이메일 형식이 올바르지 않습니다.'); return;
+       }
+       if (testYn === 'Y' && !emailRe.test(testEmail)) {
+        Alert.alert('', '테스트 수신 주소를 입력하세요.'); return;
+       }
+
+       const go = function () {
+        _this.sendPopup.close(); _this.sendPopup = null;
+        _this.doSend(sel, { testYn: testYn, replyTo: replyTo, testEmail: testEmail });
+       };
+       if (testYn === 'N') {
+        Alert.confirm('', '직원 ' + sel.length + '명에게 실제로 발송합니다. 진행하시겠습니까?', go);
+       } else {
+        go();
+       }
+      });
+     }, 0);
+    }
+
+    doSend(sel, opt) {
+     let _this = this;
+     const c = _this.cond();
+     _this.busy(true, '발송 중 (' + sel.length + '건)');
+
+     AjaxUtil.postJsonData(_this.url + '/sendMail', {
+      paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate,
+      perids: sel.map(r => r.perid),
+      testYn: opt.testYn, replyTo: opt.replyTo, testEmail: opt.testEmail
+     }, function (result) {
+      _this.busy(false);
+      if (result && result.success) {
+       _this.showResult(result.data ? result.data.results : [], result.message);
+       _this.search();
+      } else {
+       Alert.alert('', (result && result.message) || '발송 처리 중 오류가 발생했습니다.');
+      }
+     });
+    }
+
+    showResult(list, msg) {
+     let _this = this;
+     let html = msg ? '<div class="ps-note">' + _this.esc(msg) + '</div>' : '';
+     html += '<table class="ps-result"><thead><tr><th style="width:70px">사번</th>' +
+      '<th style="width:80px">성명</th><th style="width:56px">결과</th><th>비고</th>' +
+      '</tr></thead><tbody>';
+     (list || []).forEach(function (r) {
+      html += '<tr><td style="text-align:center">' + _this.esc(r.peridview || r.perid) + '</td>' +
+       '<td>' + _this.esc(r.pernm || '') + '</td>' +
+       '<td class="' + (r.success ? 'ok' : 'ng') + '">' + (r.success ? '성공' : '실패') + '</td>' +
+       '<td>' + _this.esc(r.success ? (r.email || '') : (r.message || '')) + '</td></tr>';
+     });
+     html += '</tbody></table>';
+
+     if (_this.resultPopup) { _this.resultPopup.close(); _this.resultPopup = null; }
+     let $c = $(tmpl('psResultTemplate', {}));
+     _this.resultPopup = new PopupDraggable('발송 결과');
+     _this.resultPopup.open({ width: 600, height: 460, $content: $c });
+
+     setTimeout(function () {
+      $c.find('#psResultBody').html(html);
+      $c.find('#btnResultClose').on('click', function () {
+       _this.resultPopup.close(); _this.resultPopup = null;
+      });
+     }, 0);
+    }
+
+    // ── 공통 ──────────────────────────────────────────────
+    busy(on, text) {
+     $('#psProgress').toggleClass('on', !!on);
+     if (text) $('#psProgressText').text(text);
+     $('.section-top .btn').css('pointer-events', on ? 'none' : '').css('opacity', on ? .5 : '');
+    }
+
+    num(v) {
+     if (v === null || v === undefined || v === '') return '';
+     const n = Number(v);
+     return isNaN(n) ? '' : n.toLocaleString();
+    }
+
+    esc(s) {
+     return String(s == null ? '' : s)
+     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+   }
+
+   let page;
+   $(document).ready(function () {
+    page = new PayslipPage();
+
+    // 회차 목록을 받은 뒤 최신 회차로 자동 조회
+    // (레거시 Toolbar.Post Event ue_Retrieve() 에 대응)
+    page.loadBatches(function () {
+     page.search();
+    });
+
+    $(document).on('keydown', function (ev) {
+     if (ev.key === 'F4') {
+      ev.preventDefault();
+      page.search();
+     }
+    });
+   });
+  </script>
+</th:block>
+</html>

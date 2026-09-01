@@ -1,0 +1,118 @@
+<div class="ps-sheet" xmlns:th="http://www.thymeleaf.org">
+  <style>
+      .ps-sheet { font-family: "NanumGothic", "맑은 고딕", sans-serif; font-size: 9pt; color: #000; }
+      .ps-sheet h1 { text-align:center; font-size:18pt; letter-spacing:5px; margin:0 0 12px 0; font-weight:bold; }
+      .ps-sheet table { border-collapse: collapse; width: 100%; }
+      .ps-sheet td { border: 1px solid #4a6741; padding: 3px 6px; height: 19px; }
+      .ps-hd    { background:#d9e6d4; font-weight:bold; text-align:center; }
+      .ps-hd2   { background:#c3d9bb; font-weight:bold; text-align:center; }
+      .ps-c     { text-align:center; }
+      .ps-n     { text-align:right; }
+      .ps-blue  { color:#0000cc; }
+      .ps-gap   { height:9px; }
+      .ps-sum   { background:#d9e6d4; font-weight:bold; text-align:center; }
+      .ps-net   { text-align:right; font-weight:bold; font-size:11pt; color:#c00000; }
+      .ps-calc td { font-size:8pt; }
+      .ps-foot  { text-align:right; font-weight:bold; font-size:12pt; margin-top:16px; }
+      .ps-empty { padding:60px; text-align:center; color:#888; }
+  </style>
+
+  <!-- 레거시 헤더: string(paybasic,'@@@@년 @@월') + case(paytype) -->
+  <h1 th:text="${head.title}">2026년 08월 급여명세서</h1>
+
+  <table>
+    <tr>
+      <td class="ps-hd" style="width:13%">기준월</td>
+      <td class="ps-c" colspan="2" style="width:37%; font-weight:bold"
+          th:text="${#strings.substring(head.paybasic,0,4)} + '년 ' + ${#strings.substring(head.paybasic,4,6)} + '월'"></td>
+      <td class="ps-hd" style="width:17%">급여지급일</td>
+      <td class="ps-c ps-blue" colspan="2" style="width:33%" th:text="${payDateText}"></td>
+    </tr>
+    <tr>
+      <td class="ps-hd" rowspan="3">인적사항</td>
+      <td class="ps-hd">부서명</td>
+      <td class="ps-c ps-blue" th:text="${head.divinm}"></td>
+      <td class="ps-hd">직위</td>
+      <td class="ps-c ps-blue" colspan="2" th:text="${head.rspnm}"></td>
+    </tr>
+    <tr>
+      <td class="ps-hd">성명</td>
+      <td class="ps-c ps-blue" th:text="${head.pernm}"></td>
+      <td class="ps-hd">사원번호</td>
+      <!-- 레거시 mid(perid, 2) — 앞 한 자리를 잘라 표시 -->
+      <td class="ps-c ps-blue" colspan="2" th:text="${head.peridview}"></td>
+    </tr>
+    <tr>
+      <td class="ps-hd">생년월일</td>
+      <td class="ps-c ps-blue" th:text="${birthText}"></td>
+      <td class="ps-hd">급여계좌</td>
+      <td class="ps-c ps-blue" colspan="2" th:text="${head.accnum}"></td>
+    </tr>
+  </table>
+
+  <div class="ps-gap"></div>
+
+  <!-- 지급 / 공제 -->
+  <table>
+    <tr>
+      <td class="ps-hd2" style="width:22%">지 급 항 목</td>
+      <td class="ps-hd2" style="width:16%"></td>
+      <td class="ps-hd2" style="width:12%">근로시간</td>
+      <td class="ps-hd2" style="width:25%">공 제 항 목</td>
+      <td class="ps-hd2" style="width:25%"></td>
+    </tr>
+
+    <tr th:each="i : ${#numbers.sequence(0, rowCount - 1)}">
+      <td class="ps-c" th:text="${i &lt; payItems.size()} ? ${payItems[i].itemnm} : ''"></td>
+      <td class="ps-n" th:text="${i &lt; payItems.size()} ? ${#numbers.formatInteger(payItems[i].amount,0,'COMMA')} : ''"></td>
+      <td class="ps-c" th:text="${i &lt; payItems.size()} ? (${payItems[i].workhour} ?: '') : ''"></td>
+      <td class="ps-c" th:text="${i &lt; deductItems.size()} ? ${deductItems[i].itemnm} : ''"></td>
+      <td class="ps-n" th:text="${i &lt; deductItems.size()} ? ${#numbers.formatInteger(deductItems[i].amount,0,'COMMA')} : ''"></td>
+    </tr>
+
+    <tr>
+      <td class="ps-sum">지급총액</td>
+      <td class="ps-n" colspan="2" th:text="${#numbers.formatInteger(head.paysum,0,'COMMA')}"></td>
+      <td class="ps-sum">공제총액</td>
+      <td class="ps-n" th:text="${#numbers.formatInteger(head.dedsum,0,'COMMA')}"></td>
+    </tr>
+    <tr>
+      <td class="ps-sum">실수령액</td>
+      <td class="ps-net" colspan="4" th:text="${#numbers.formatInteger(head.netpay,0,'COMMA')}"></td>
+    </tr>
+  </table>
+
+  <div class="ps-gap"></div>
+
+  <!-- TB_PB203 근태 -->
+  <table>
+    <tr>
+      <td class="ps-hd" style="width:22%">근 무 일 수</td>
+      <td class="ps-c" style="width:28%" th:text="${head.workday}"></td>
+      <td class="ps-hd" style="width:25%">근 무 시 간</td>
+      <td class="ps-c" style="width:25%" th:text="${head.worktime}"></td>
+    </tr>
+  </table>
+
+  <div class="ps-gap"></div>
+
+  <!-- 항목별 계산방법 : 근로기준법 제48조② 필수 기재사항 -->
+  <table class="ps-calc">
+    <tr><td class="ps-hd2" colspan="4">항 목 별 계 산 방 법</td></tr>
+    <tr>
+      <td class="ps-hd" style="width:14%">구 분</td>
+      <td class="ps-hd" style="width:36%">산출식 및 산출방법</td>
+      <td class="ps-hd" style="width:14%">구 분</td>
+      <td class="ps-hd" style="width:36%">산출식 및 산출방법</td>
+    </tr>
+    <tr th:each="c : ${calcItems}">
+      <td class="ps-c" th:text="${c.lgb}"></td>
+      <td th:text="${c.lformula}"></td>
+      <td class="ps-c" th:text="${c.rgb}"></td>
+      <td th:text="${c.rformula}"></td>
+    </tr>
+  </table>
+
+  <!-- 레거시 하단 spjangnm -->
+  <div class="ps-foot" th:text="${head.spjangnm}"></div>
+</div>

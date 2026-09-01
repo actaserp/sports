@@ -1,0 +1,189 @@
+<div class="ps-view" xmlns:th="http://www.thymeleaf.org">
+  <style>
+      /* 화면 전용. PDF(payslip_pdf.html)와 완전히 별개다.
+         openhtmltopdf 를 거치지 않으므로 flex · CSS 변수 · 반올림을 그대로 쓴다.
+         목적은 서식 재현이 아니라 발송 전 확인이다.
+         그래서 레거시의 빈 16행을 찍지 않고 실제 항목만 보여준다. */
+      .ps-view {
+          --v-ink:   #1B2430;
+          --v-label: #45566A;
+          --v-mute:  #8A99A8;
+          --v-rule:  #DDE3E9;
+          --v-frame: #C0CAD3;
+          --v-band:  #F2F5F7;
+          --v-blue:  #1D4E9C;
+          --v-red:   #B02418;
+          --v-ok:    #1F6B3A;
+          font-size: 13px;
+          line-height: 1.5;
+          color: var(--v-ink);
+      }
+      .ps-view table { border-collapse: collapse; width: 100%; }
+
+      /* ── 머리 ─────────────────────────────────────── */
+      .v-head { border-bottom: 2px solid var(--v-frame); padding-bottom: 12px; margin-bottom: 14px; }
+      .v-title { font-size: 17px; font-weight: 600; letter-spacing: 1px; }
+      .v-who { margin-top: 6px; font-size: 15px; }
+      .v-who .nm { font-weight: 600; }
+      .v-who .rs { color: var(--v-label); }
+      .v-meta { margin-top: 8px; color: var(--v-label); font-size: 12px; }
+      .v-meta span { margin-right: 16px; white-space: nowrap; }
+      .v-meta b { margin-left: 5px; }
+      .v-meta b { font-weight: 600; color: var(--v-ink); }
+
+      /* ── 합계 3분할 : 화면에서 제일 먼저 읽혀야 할 값 ── */
+      .v-sums { display: flex; gap: 10px; margin-bottom: 16px; }
+      .v-sum {
+          flex: 1 1 0; min-width: 0;
+          border: 1px solid var(--v-rule); padding: 10px 12px;
+      }
+      .v-sum .k { font-size: 11.5px; color: var(--v-label); letter-spacing: 1px; }
+      .v-sum .n { font-size: 17px; text-align: right; margin-top: 3px; font-variant-numeric: tabular-nums; }
+      .v-sum.net { border-color: var(--v-red); }
+      .v-sum.net .k, .v-sum.net .n { color: var(--v-red); }
+      .v-sum.net .n { font-size: 21px; font-weight: 600; }
+
+      /* ── 지급 / 공제 ──────────────────────────────── */
+      .v-cols { display: flex; gap: 14px; align-items: flex-start; }
+      .v-col { flex: 1 1 0; min-width: 0; }
+      .v-col h4 {
+          margin: 0 0 6px; font-size: 12.5px; letter-spacing: 3px; font-weight: 600;
+          padding-bottom: 4px; border-bottom: 1px solid var(--v-frame);
+      }
+      .v-col.pay h4 { color: var(--v-blue); }
+      .v-col.ded h4 { color: var(--v-red); }
+
+      .v-list td {
+          border-bottom: 1px solid var(--v-rule);
+          padding: 5px 2px; height: 26px;
+      }
+      .v-list td.n { text-align: right; width: 38%; font-variant-numeric: tabular-nums; }
+      .v-list td.h { text-align: right; width: 20%; color: var(--v-mute); font-size: 11.5px; }
+      .v-list tr.tot td { border-top: 1px solid var(--v-frame); border-bottom: none; padding-top: 7px; }
+      .v-list tr.tot td.k { color: var(--v-label); letter-spacing: 1px; }
+      .v-list tr.tot td.n { font-weight: 600; }
+      .v-none { color: var(--v-mute); padding: 12px 2px; font-size: 12.5px; }
+
+      /* ── 근태 ─────────────────────────────────────── */
+      .v-work { margin-top: 16px; background: var(--v-band); border: 1px solid var(--v-rule); padding: 8px 12px; font-size: 12.5px; }
+      .v-work span { margin-right: 20px; color: var(--v-label); }
+      .v-work b { color: var(--v-ink); font-weight: 600; }
+
+      /* ── 발송 가능 여부 : 화면에만 있는 정보 ────────── */
+      .v-check { margin-top: 14px; border: 1px solid var(--v-rule); padding: 9px 12px; font-size: 12.5px; }
+      /* 공백 문자에 기대지 않는다. 렌더 경로에 따라 사라진다 */
+      .v-check .row { margin: 3px 0; color: var(--v-label); }
+      .v-check .row > * { margin-right: 8px; }
+      .v-check .row > *:last-child { margin-right: 0; }
+      .v-check .k { color: var(--v-label); }
+      .v-check .sub { color: var(--v-mute); }
+      .v-check b { color: var(--v-ink); }
+      .v-check .ok { color: var(--v-ok); }
+      .v-check .ng { color: var(--v-red); font-weight: 600; }
+
+      /* ── 계산방법 ─────────────────────────────────── */
+      .v-calc { margin-top: 18px; }
+      .v-calc h4 { margin: 0 0 6px; font-size: 12.5px; letter-spacing: 2px; color: var(--v-label);
+          font-weight: 600; padding-bottom: 4px; border-bottom: 1px solid var(--v-frame); }
+      .v-calc td { border-bottom: 1px solid var(--v-rule); padding: 4px 6px; font-size: 12px; }
+      .v-calc td.k { width: 13%; color: var(--v-label); }
+      .v-calc td.f { width: 37%; }
+
+      .v-foot { margin-top: 18px; color: var(--v-label); font-size: 12.5px; letter-spacing: 1px; }
+  </style>
+
+  <div class="v-head">
+    <div class="v-title" th:text="${head.title}">2026년 08월 급여명세서</div>
+    <div class="v-who">
+      <span class="nm" th:text="${head.pernm}"></span>
+      <span class="rs" th:text="${head.rspnm}"></span>
+    </div>
+    <div class="v-meta">
+      <span>사번 <b th:text="${head.peridview}"></b></span>
+      <span th:if="${!#strings.isEmpty(head.divinm)}">부서 <b th:text="${head.divinm}"></b></span>
+      <span>지급일 <b th:text="${payDateText}"></b></span>
+      <span>생년월일 <b th:text="${birthText}"></b></span>
+      <span th:if="${!#strings.isEmpty(head.accnum)}">계좌 <b th:text="${head.accnum}"></b></span>
+    </div>
+  </div>
+
+  <div class="v-sums">
+    <div class="v-sum">
+      <div class="k">지급총액</div>
+      <div class="n" th:text="${#numbers.formatInteger(head.paysum ?: 0,0,'COMMA')}"></div>
+    </div>
+    <div class="v-sum">
+      <div class="k">공제총액</div>
+      <div class="n" th:text="${#numbers.formatInteger(head.dedsum ?: 0,0,'COMMA')}"></div>
+    </div>
+    <div class="v-sum net">
+      <div class="k">실수령액</div>
+      <div class="n" th:text="${#numbers.formatInteger(head.netpay ?: 0,0,'COMMA')}"></div>
+    </div>
+  </div>
+
+  <div class="v-cols">
+    <div class="v-col pay">
+      <h4>지 급 항 목</h4>
+      <div class="v-none" th:if="${payItems == null or payItems.isEmpty()}">지급 항목이 없습니다.</div>
+      <table class="v-list" th:if="${payItems != null and !payItems.isEmpty()}">
+        <tr th:each="p : ${payItems}">
+          <td th:text="${p.itemnm}"></td>
+          <td class="n" th:text="${#numbers.formatInteger(p.amount ?: 0,0,'COMMA')}"></td>
+          <td class="h" th:text="${p.workhour} ?: ''"></td>
+        </tr>
+        <tr class="tot">
+          <td class="k">합계</td>
+          <td class="n" colspan="2" th:text="${#numbers.formatInteger(head.paysum ?: 0,0,'COMMA')}"></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="v-col ded">
+      <h4>공 제 항 목</h4>
+      <div class="v-none" th:if="${deductItems == null or deductItems.isEmpty()}">공제 항목이 없습니다.</div>
+      <table class="v-list" th:if="${deductItems != null and !deductItems.isEmpty()}">
+        <tr th:each="d : ${deductItems}">
+          <td th:text="${d.itemnm}"></td>
+          <td class="n" th:text="${#numbers.formatInteger(d.amount ?: 0,0,'COMMA')}"></td>
+        </tr>
+        <tr class="tot">
+          <td class="k">합계</td>
+          <td class="n" th:text="${#numbers.formatInteger(head.dedsum ?: 0,0,'COMMA')}"></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="v-work">
+    <span>근무일수 <b th:text="${head.workday}"></b></span>
+    <span>근무시간 <b th:text="${head.worktime}"></b></span>
+  </div>
+
+  <!-- 발송 전 확인용. PDF 에는 절대 들어가면 안 되는 정보라 화면 템플릿에만 둔다. -->
+  <div class="v-check">
+    <div class="row" th:if="${#strings.isEmpty(head.email) or !#strings.contains(head.email, '@')}">
+      <span class="k">수신 메일</span><span class="ng">없음 — 이 직원은 발송 대상에서 제외됩니다</span>
+    </div>
+    <div class="row" th:if="${!#strings.isEmpty(head.email) and #strings.contains(head.email, '@')}">
+      <span class="k">수신 메일</span><b th:text="${head.email}"></b><span class="ok">발송 가능</span>
+    </div>
+    <div class="row">
+      <span class="k">PDF 비밀번호</span><b>생년월일 6자리</b><span class="sub">첨부 열람 시 직원이 직접 입력합니다.</span>
+    </div>
+  </div>
+
+  <div class="v-calc" th:if="${calcItems != null and !calcItems.isEmpty()}">
+    <h4>항목별 계산방법</h4>
+    <table>
+      <tr th:each="c : ${calcItems}">
+        <td class="k" th:text="${c.lgb}"></td>
+        <td class="f" th:text="${c.lformula}"></td>
+        <td class="k" th:text="${c.rgb}"></td>
+        <td class="f" th:text="${c.rformula}"></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="v-foot" th:text="${head.spjangnm}"></div>
+</div>
