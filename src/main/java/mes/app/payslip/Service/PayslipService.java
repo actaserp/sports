@@ -6,10 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 급여명세서 데이터 조회 (레거시 d_p3012_2 이식).
@@ -543,4 +540,28 @@ public class PayslipService {
 		if (s == null) return null;
 		return s.length() <= len ? s : s.substring(0, len);
 	}
+
+	/** 발송 팝업의 회신 주소 기본값. 없으면 "" 를 돌려준다 — 화면은 빈 칸으로 둔다. */
+	public String getSpjangEmail(String spjangcd) {
+		return getBizInfoBySpjangcd(spjangcd).get("emailadres");
+	}
+
+	private Map<String, String> getBizInfoBySpjangcd(String spjangcd) {
+		MapSqlParameterSource param = new MapSqlParameterSource().addValue("spjangcd", spjangcd);
+		String sql = """
+       SELECT saupnum, custcd, spjangnm, emailadres
+       FROM tb_xa012 WHERE spjangcd = :spjangcd
+       """;
+		Map<String, Object> row = sqlRunner.getRow(sql, param);
+		Map<String, String> result = new HashMap<>();
+		result.put("custcd", "");
+		result.put("spjangnm", "");
+		result.put("emailadres", "");
+		if (row == null || row.isEmpty()) return result;
+		result.put("custcd",     row.get("custcd")     == null ? "" : String.valueOf(row.get("custcd")).trim());
+		result.put("spjangnm",   row.get("spjangnm")   == null ? "" : String.valueOf(row.get("spjangnm")).trim());
+		result.put("emailadres", row.get("emailadres") == null ? "" : String.valueOf(row.get("emailadres")).trim());
+		return result;
+	}
+
 }

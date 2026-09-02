@@ -86,7 +86,7 @@ public class PayslipMailService {
 						 + "<p>" + esc(str(head.get("title"))) + "를 첨부해 드립니다.</p>"
 						 + "<div style='background:#f4f6f3;padding:12px 14px;border-left:3px solid #4a6741;margin:14px 0'>"
 						 + "첨부된 PDF는 비밀번호로 보호되어 있습니다.<br/>"
-						 + "비밀번호는 <b>본인 생년월일 6자리</b>입니다. (1977년 4월 6일 → 770406)"
+						 + "비밀번호는 <b>본인 생년월일 6자리</b>입니다. 예:(1977년 4월 6일 → 770406)"
 						 + "</div>"
 						 + "<p>" + contact + "</p>"
 						 + "<p style='color:#888;font-size:12px;margin-top:20px'>" + esc(companyName) + "</p></div>";
