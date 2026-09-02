@@ -195,6 +195,10 @@ public class PayslipController {
 		String paydate   = str(body.get("paydate"));
 		String replyTo   = str(body.get("replyTo"));
 		String testEmail = str(body.get("testEmail"));
+		String subjectTpl = str(body.get("subject"));
+		String bodyTpl    = String.valueOf(body.get("body") == null ? "" : body.get("body"));
+		// 첨부 잠금은 기본이 해제다. 걸려면 화면에서 명시적으로 'Y' 를 보내야 한다.
+		boolean lock = "Y".equals(str(body.get("lockYn")));
 		// 기본은 항상 테스트. 화면에서 명시적으로 'N' 을 보내야 실발송한다.
 		boolean testMode = !"N".equals(str(body.get("testYn")));
 
@@ -241,21 +245,21 @@ public class PayslipController {
 				out.put("peridview", head.get("peridview"));
 				out.put("pernm", head.get("pernm"));
 
-				validate(head);
+				validate(head, lock);
 
 				sentTo = testMode ? testEmail : String.valueOf(head.get("email")).trim();
 
 				// PDF 는 메모리에서만 만들어 바로 첨부하고 버린다
-				String pw = pdfService.toPassword(head.get("birthday"));
+				String pw = lock ? pdfService.toPassword(head.get("birthday")) : null;
 				byte[] pdf = pdfService.toPdfBytes(data, str(head.get("spjangnm")), pw);
 				String fileName = pdfService.buildFileName(head);
 
-				String subject = String.format("[%s] %s",
-					str(head.get("spjangnm")), str(head.get("title")));
+				// 제목·본문은 화면에서 받은 문안을 사람마다 치환해 쓴다.
+				String subject = mailService.buildSubject(subjectTpl, head);
 
 				// 수신자 1명 = 메일 1통. 이 반복이 전체 설계의 핵심이다.
 				mailService.sendToOne(sentTo, subject,
-					mailService.buildBody(head, str(head.get("spjangnm")), replyTo),
+					mailService.buildBody(bodyTpl, head, str(head.get("spjangnm")), replyTo, lock),
 					pdf, fileName, replyTo);
 
 				payslipService.saveSendLog(spjangcd, paytype, paybasic, perid, sentTo, "S", head, null, testMode, userId);
@@ -301,12 +305,13 @@ public class PayslipController {
 	// ── 내부 ────────────────────────────────────────────────
 
 	/** 발송 직전 최종 검증. 여기서 걸러야 오발송이 막힌다. */
-	private void validate(Map<String, Object> head) {
+	private void validate(Map<String, Object> head, boolean lock) {
 		String email = String.valueOf(head.get("email"));
 		if (email == null || email.isBlank() || "null".equals(email) || !email.contains("@")) {
 			throw new IllegalArgumentException("메일주소가 없거나 형식이 올바르지 않습니다");
 		}
-		if (pdfService.toPassword(head.get("birthday")) == null) {
+		// 생년월일은 비밀번호를 걸 때만 필수다. 잠그지 않으면 없어도 발송된다.
+		if (lock && pdfService.toPassword(head.get("birthday")) == null) {
 			throw new IllegalArgumentException("생년월일이 없어 PDF 비밀번호를 만들 수 없습니다");
 		}
 		if (parseLong(head.get("netpay"), 0L) < 0) {

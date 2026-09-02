@@ -38,6 +38,15 @@ public class PayslipViewController {
 		}
 		mav.addObject("defaultReplyTo", replyTo == null ? "" : replyTo.trim());
 
+		// 발송 팝업의 메일 제목 기본 문안에 쓴다. 없으면 화면이 치환어로 대체한다.
+		String spjangnm = "";
+		try {
+			spjangnm = payslipService.getSpjangName(TenantContext.get());
+		} catch (Exception e) {
+			log.warn("[Payslip] 사업장명 조회 실패 — 제목은 치환어로 남긴다", e);
+		}
+		mav.addObject("spjangnm", spjangnm == null ? "" : spjangnm.trim());
+
 		return mav;
 	}
 }

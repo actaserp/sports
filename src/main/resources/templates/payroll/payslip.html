@@ -18,9 +18,9 @@
           --ps-ok:     #1F6B3A;
           --ps-warn:   #8A5A00;
           --ps-paper:  #fff;
-          /* 좌우 패널 높이. 고정하면 낮은 창에서 아래가 잘린다.
-             상단(제목 + 조회줄 + 안내줄)이 대략 300px 를 먹는다. */
-          --ps-h: clamp(360px, calc(100vh - 340px), 900px);
+          /* 좌우 패널 높이. fitHeight() 가 실측값으로 덮어쓴다.
+             아래 값은 JS 가 못 도는 경우의 보루다. */
+          --ps-h: clamp(320px, calc(100vh - 250px), 1200px);
       }
 
       /* ── 조회 조건 ─────────────────────────────────────── */
@@ -73,6 +73,36 @@
           outline: 2px solid var(--ps-value); outline-offset: 1px;
       }
 
+      /* ── 버튼 ────────────────────────────────────────
+         프로젝트 공용 .btn 을 쓰지 않는다. 이 화면에서만 쓰는 모양이다. */
+      .ps-btn {
+          display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+          height: 34px; padding: 0 16px;
+          border: 1px solid var(--ps-frame); border-radius: 2px;
+          background: #fff; color: var(--ps-ink);
+          font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: .5px;
+          cursor: pointer; white-space: nowrap;
+          transition: background .12s, border-color .12s, color .12s;
+      }
+      .ps-btn:hover { background: var(--ps-band); border-color: var(--ps-value); }
+      .ps-btn:active { background: var(--ps-band2); }
+      .ps-btn:focus-visible { outline: 2px solid var(--ps-value); outline-offset: 2px; }
+      .ps-btn[disabled] { opacity: .45; cursor: default; }
+      .ps-btn[disabled]:hover { background: #fff; border-color: var(--ps-frame); }
+
+      /* 조회 — 이 화면의 출발점 */
+      .ps-btn.solid {
+          background: var(--ps-value); border-color: var(--ps-value); color: #fff;
+      }
+      .ps-btn.solid:hover  { background: #1D3A5F; border-color: #1D3A5F; }
+      .ps-btn.solid:active { background: #17304F; }
+
+      /* 메일 발송 — 되돌릴 수 없는 작업이라 나머지와 구분한다 */
+      .ps-btn.accent { border-color: var(--ps-alert); color: var(--ps-alert); }
+      .ps-btn.accent:hover { background: #FBF0EE; border-color: var(--ps-alert); }
+
+      .ps-actions { display: flex; align-items: center; gap: 8px; }
+
       /* ── 안내 줄 ───────────────────────────────────────
          파란 강조 대신 왼쪽 괘선 하나로만 구분한다. */
       .grid-guide-box {
@@ -90,7 +120,13 @@
       /* ── 2분할 ─────────────────────────────────────────
          두 패널 사이 간격을 없애고 괘선 하나를 공유해
          한 장의 서류처럼 보이게 한다. */
-      .ps-body  { display: flex; align-items: stretch; margin-bottom: 14px; }
+      .ps-body  { display: flex; align-items: stretch; margin-bottom: 0; }
+      /* 높이가 바뀔 때 툭 끊기지 않게. 창을 끄는 동안에는 끈다(아래 .ps-resizing). */
+      .ps-left, .ps-right { transition: height .18s ease; }
+      .ps-resizing .ps-left, .ps-resizing .ps-right { transition: none; }
+      @media (prefers-reduced-motion: reduce) {
+          .ps-left, .ps-right { transition: none; }
+      }
       .ps-left  {
           width: 330px; flex: 0 0 330px;
           display: flex; flex-direction: column;
@@ -190,7 +226,17 @@
       /* ── 발송 팝업 ─────────────────────────────────────
          가장 중요한 결정은 '테스트냐 실제냐'다. 그걸 맨 위로 올리고
          나머지 입력을 아래로 내린다. */
-      .ps-send { font-size: 13px; color: var(--ps-ink); text-align: left; }
+      .ps-send {
+          font-size: 13px; color: var(--ps-ink); text-align: left;
+          display: flex; flex-direction: column; height: 100%;
+      }
+      /* 입력이 늘어나도 버튼은 항상 보이게 — 본문만 스크롤한다.
+         max-height 는 부모가 높이를 안 주는 경우의 안전장치다. */
+      .ps-send > section {
+          flex: 1 1 auto; min-height: 0;
+          overflow-y: auto; max-height: 62vh;
+      }
+      .ps-send > .popup-button { flex: 0 0 auto; }
 
       .ps-send .fld { margin-bottom: 14px; }
       .ps-send .fld > label.k {
@@ -203,6 +249,26 @@
           border: 1px solid #C0CAD3; background: #fff;
           font-family: inherit; font-size: 13px; color: var(--ps-ink);
       }
+      .ps-send textarea {
+          width: 100%; box-sizing: border-box; padding: 8px 10px;
+          border: 1px solid #C0CAD3; background: #fff;
+          font-family: inherit; font-size: 13px; line-height: 1.6; color: var(--ps-ink);
+          resize: vertical;
+      }
+      .ps-send textarea:focus-visible {
+          outline: 2px solid var(--ps-value); outline-offset: 1px; border-color: var(--ps-value);
+      }
+      .ps-send .ps-chkline { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+      .ps-send .ps-chkline em { font-style: normal; color: var(--ps-mute); }
+      /* 실제 메일에 붙는 문구를 그대로 보여준다 */
+      .ps-send .ps-lockmsg {
+          display: none;
+          margin-top: 8px; padding: 10px 12px;
+          background: #f4f6f3; border-left: 3px solid #4a6741;
+          font-size: 12.5px; line-height: 1.6; color: var(--ps-label);
+      }
+      .ps-send .ps-lockmsg.on { display: block; }
+      .ps-send .ps-lockmsg b { color: var(--ps-ink); }
       .ps-send input[type=text]::placeholder { color: var(--ps-mute); }
       .ps-send input[type=text]:focus-visible {
           outline: 2px solid var(--ps-value); outline-offset: 1px; border-color: var(--ps-value);
@@ -265,9 +331,27 @@
       .ps-recap b { color: var(--ps-ink); font-weight: 600; }
       .ps-recap .sub { display: block; font-size: 11.5px; color: var(--ps-mute); }
 
+      /* 팝업 버튼 — 본문 버튼과 같은 모양 */
+      .ps-send .popup-button {
+          display: flex; justify-content: flex-end; gap: 8px;
+          padding: 12px 18px; border-top: 1px solid var(--ps-rule); background: #fff;
+      }
+      .ps-send .btn-popup {
+          height: 34px; padding: 0 20px;
+          border: 1px solid var(--ps-frame); border-radius: 2px;
+          background: #fff; color: var(--ps-ink);
+          font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: .5px;
+          cursor: pointer;
+      }
+      .ps-send #btnSendGo {
+          background: var(--ps-value); border-color: var(--ps-value); color: #fff;
+      }
+      .ps-send .btn-popup:hover { filter: brightness(.94); }
+      .ps-send .btn-popup:focus-visible { outline: 2px solid var(--ps-value); outline-offset: 2px; }
+
       /* 실제 발송이면 발송 버튼도 경고색으로 */
-      .btn-popup.danger { background: var(--ps-alert); border-color: var(--ps-alert); }
-      .btn-popup.danger, .btn-popup.danger span { color: #fff; }
+      .ps-send .btn-popup.danger { background: var(--ps-alert); border-color: var(--ps-alert); }
+      .ps-send .btn-popup.danger, .ps-send .btn-popup.danger span { color: #fff; }
 
       /* ── 발송 결과 ─────────────────────────────────────── */
       .ps-result { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -315,16 +399,16 @@
             </dd>
           </dl>
           <dl>
-            <dt><label for="divicd">부서</label></dt>
-            <dd><input id="divicd" name="divicd" class="w-txt" placeholder="부서코드" type="text"/></dd>
+            <dt><label for="divinm">부서</label></dt>
+            <dd><input id="divinm" name="divinm" class="w-txt" placeholder="부서명" type="text"/></dd>
           </dl>
           <dl>
-            <dt><label for="rspcd">직위</label></dt>
-            <dd><input id="rspcd" name="rspcd" class="w-txt" placeholder="직위코드" type="text"/></dd>
+            <dt><label for="rspnm">직위</label></dt>
+            <dd><input id="rspnm" name="rspnm" class="w-txt" placeholder="직위명" type="text"/></dd>
           </dl>
           <dl>
-            <dt><label for="perid">사원</label></dt>
-            <dd><input id="perid" name="perid" class="w-txt" placeholder="사번" type="text"/></dd>
+            <dt><label for="pernm">사원</label></dt>
+            <dd><input id="pernm" name="pernm" class="w-txt" placeholder="성명" type="text"/></dd>
           </dl>
           <dl>
             <dt><label for="rtclafi">재직구분</label></dt>
@@ -337,37 +421,21 @@
           <dl>
             <dt>&nbsp;</dt>
             <dd>
-              <li>
-                <button class="btn btn-delete" id="btnSearch" title="검색" type="button">
-                  <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
-                  검색
-                </button>
-              </li>
+              <button class="ps-btn solid" id="btnSearch" title="검색 (F4)" type="button">
+                <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
+                  <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.7"/>
+                  <path d="M11 11 L14.5 14.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+                검색
+              </button>
             </dd>
           </dl>
         </div>
 
-        <div class="button-wrap">
-          <ul>
-            <li>
-              <a class="btn btn-edit" id="btnPrint" title="명세서 출력">
-                <img alt="출력 아이콘" th:src="@{/images/icon/ico-edit.svg}">
-                명세서 출력
-              </a>
-            </li>
-            <li>
-              <a class="btn btn-excell" id="btnSaveZip" title="명세서 저장">
-                <img alt="저장 아이콘" th:src="@{/images/icon/ico-save.svg}">
-                명세서 저장
-              </a>
-            </li>
-            <li>
-              <a class="btn btn-edit" id="btnMail" title="메일 발송">
-                <img alt="발송 아이콘" th:src="@{/images/icon/ico-save.svg}">
-                메일 발송
-              </a>
-            </li>
-          </ul>
+        <div class="button-wrap ps-actions">
+          <button class="ps-btn" id="btnPrint" type="button">명세서 출력</button>
+          <button class="ps-btn" id="btnSaveZip" type="button">명세서 저장</button>
+          <button class="ps-btn accent" id="btnMail" type="button">메일 발송</button>
         </div>
       </div>
 
@@ -379,6 +447,8 @@
 
       <!-- TB_XA012.emailadres. 비어 있거나 모델에 없으면 '' 가 되어 입력칸이 빈 채로 남는다. -->
       <input type="hidden" id="psDefaultReplyTo" th:value="${defaultReplyTo} ?: ''"/>
+      <!-- TB_XA012.spjangnm. 메일 제목 기본 문안에 쓴다. -->
+      <input type="hidden" id="psSpjangnm" th:value="${spjangnm} ?: ''"/>
 
       <div class="ps-body">
         <div class="ps-left">
@@ -441,6 +511,33 @@
           <label class="k" for="psReplyTo">회신 주소 <span style="font-weight:normal">(선택)</span></label>
           <input type="text" id="psReplyTo" placeholder="담당자 이메일 — 직원이 답장할 주소"/>
           <div class="hint">비우면 본문이 회계부로 연락하도록 안내합니다.</div>
+        </div>
+
+        <div class="fld">
+          <label class="k" for="psSubject">메일 제목</label>
+          <input type="text" id="psSubject"/>
+          <div class="hint">치환어 : {사업장} {제목} {성명} {귀속월} {지급일}</div>
+        </div>
+
+        <div class="fld">
+          <label class="k" for="psBodyText">메일 본문</label>
+          <textarea id="psBodyText" rows="5"></textarea>
+          <div class="hint">사람마다 치환됩니다. 인사말·안내 문구만 쓰면 되고,
+            회사명과 연락 안내는 아래에 자동으로 붙습니다.</div>
+        </div>
+
+        <div class="fld">
+          <label class="ps-chkline">
+            <input type="checkbox" id="psLock"/>
+            <span>첨부 PDF 에 비밀번호 걸기 <em>(생년월일 6자리)</em></span>
+          </label>
+          <!-- 체크하면 이 안내가 메일 본문에 자동으로 붙는다.
+               담당자가 본문에 직접 쓰지 않아도 되고, 체크를 끄면 같이 사라진다. -->
+          <div class="ps-lockmsg" id="psLockMsg">
+            <b>본문에 아래 안내가 함께 나갑니다.</b><br/>
+            첨부된 PDF는 비밀번호로 보호되어 있습니다.<br/>
+            비밀번호는 <b>본인 생년월일 6자리</b>입니다. (1977년 4월 6일 → 770406)
+          </div>
         </div>
 
         <div id="psSendBody"></div>
@@ -512,7 +609,7 @@
      $('#btnSaveZip').on('click', function () { _this.saveZip(); });
      $('#btnMail').on('click', function () { _this.confirmSend(); });
      $('#batch, #mpclafi, #rtclafi').on('change', function () { _this.search(); });
-     $('#divicd, #rspcd, #perid').on('keydown', function (e) { if (e.key === 'Enter') _this.search(); });
+     $('#divinm, #rspnm, #pernm').on('keydown', function (e) { if (e.key === 'Enter') _this.search(); });
 
      $('#chkAll').on('change', function () {
       $('#psGridBody .ps-chk:not(:disabled)').prop('checked', this.checked);
@@ -580,11 +677,13 @@
       paytype:  b.paytype,                       // [7]
       paybasic: String(b.paybasic),              // [8]
       paydate:  String(b.paydate),               // [9]
+      // 부서 · 직위 · 사원은 코드가 아니라 이름으로 보낸다.
+      // 서버는 값이 있을 때만 조건을 붙인다.
       mpclafi:  $('#mpclafi').val(),             // [1]
-      divicd:   $('#divicd').val().trim(),       // [2]
-      rspcd:    $('#rspcd').val().trim(),        // [4]
+      divinm:   $('#divinm').val().trim(),       // [2] 부서명
+      rspnm:    $('#rspnm').val().trim(),        // [4] 직위명
       rtclafi:  $('#rtclafi').val(),             // [6]
-      perid:    $('#perid').val().trim()         // [11]
+      pernm:    $('#pernm').val().trim()         // [11] 성명
      };
     }
     keyOf(perid) {
@@ -595,6 +694,34 @@
     paytypeNm(t) { return t === '002' ? '상여' : (t === '003' ? '급상여' : '급여'); }
     fmtYm(v)  { v = String(v || ''); return v.length < 6 ? v : v.substring(0,4) + '.' + v.substring(4,6); }
     fmtYmd(v) { v = String(v || ''); return v.length < 8 ? v : v.substring(0,4) + '.' + v.substring(4,6) + '.' + v.substring(6,8); }
+    // 메일 문안용 — 2026년 08월 / 2026년 08월 25일
+    ymText(v)  { v = String(v || ''); return v.length < 6 ? v : v.substring(0,4) + '년 ' + v.substring(4,6) + '월'; }
+    ymdText(v) { v = String(v || ''); return v.length < 8 ? v : v.substring(0,4) + '년 ' + v.substring(4,6) + '월 ' + v.substring(6,8) + '일'; }
+
+    /**
+     * 패널 높이를 창에 맞춘다.
+     *
+     * 상단 높이는 화면 구성(제목·조회줄·안내줄)에 따라 달라지고,
+     * 조회 조건이 두 줄로 접히면 또 달라진다. 그래서 상수로 두지 않고
+     * .ps-body 의 실제 위치를 재서 남은 공간을 전부 준다.
+     */
+    fitHeight() {
+     const body = document.querySelector('.ps-body');
+     if (!body) return;
+
+     const top = body.getBoundingClientRect().top;
+
+     // 화면 아래에 고정된 푸터가 있으면 그만큼 비켜준다.
+     let foot = 0;
+     const f = document.querySelector('footer, .footer, .layout-footer, #footer');
+     if (f) {
+      const pos = getComputedStyle(f).position;
+      if (pos === 'fixed' || pos === 'absolute') foot = f.getBoundingClientRect().height;
+     }
+
+     const h = Math.max(320, Math.round(window.innerHeight - top - foot - 12));
+     document.documentElement.style.setProperty('--ps-h', h + 'px');
+    }
 
     // ── 조회 ──────────────────────────────────────────────
     search() {
@@ -714,12 +841,22 @@
      const sel = this.checked();
      if (!sel.length) { Alert.alert('', '저장할 직원을 선택하세요.'); return; }
 
-     let qs = $.param({ paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate, lock: 'Y' });
+     let qs = $.param({ paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate, lock: 'N' });
      sel.forEach(r => { qs += '&perids=' + encodeURIComponent(r.perid); });
 
      // 파일명은 서버의 Content-Disposition 을 따른다.
      // AjaxUtil.downloadFile 은 응답을 거쳐가면서 ZIP 바이너리를 깨뜨린다.
-     this.download(this.url + '/downloadZip?' + qs);
+     const go = () => this.download(this.url + '/downloadZip?' + qs);
+
+     // 1명이면 바로 받는다. 여러 명이면 시간이 걸리고 PDF 마다 비밀번호가 걸리므로 먼저 알린다.
+     if (sel.length > 1) {
+      Alert.confirm('',
+       '직원 ' + sel.length + '명분 명세서를 ZIP 파일 하나로 내려받습니다.\n' +
+       '1명씩 순서대로 만들기 때문에 인원수만큼 시간이 걸립니다.',
+       go);
+     } else {
+      go();
+     }
     }
 
     // ── 메일 발송 ─────────────────────────────────────────
@@ -735,11 +872,13 @@
      if (_this.sendPopup) { _this.sendPopup.close(); _this.sendPopup = null; }
      let $c = $(tmpl('psSendTemplate', {}));
      _this.sendPopup = new PopupDraggable('급여명세서 발송');
-     _this.sendPopup.open({ width: 520, height: 520, $content: $c });
+     _this.sendPopup.open({ width: 520, height: 600, $content: $c });
 
      const redraw = function () {
       const test = $c.find('input[name=psMode]:checked').val() !== 'N';
       $c.find('#psTrTest').toggle(test);
+
+      $c.find('#psLockMsg').toggleClass('on', $c.find('#psLock').is(':checked'));
 
       $c.find('.ps-opt').removeClass('sel');
       $c.find('input[name=psMode]:checked').closest('.ps-opt').addClass('sel');
@@ -766,8 +905,22 @@
       const dft = ($('#psDefaultReplyTo').val() || '').trim();
       if (dft) $c.find('#psReplyTo').val(dft);
 
+      // 기본 문안. 이번 회차의 실제 값으로 채운다. 지우고 다시 써도 된다.
+      // 사업장명이 없으면 치환어로 남겨 서버가 채우게 한다.
+      const spjang = ($('#psSpjangnm').val() || '').trim() || '{사업장}';
+      const docNm  = _this.ymText(c.paybasic) + ' ' + _this.paytypeNm(c.paytype) + '명세서';
+
+      $c.find('#psSubject').val('[' + spjang + '] ' + docNm);
+
+      // 성명만 치환어로 남긴다. 사람마다 달라야 하는 유일한 값이다.
+      $c.find('#psBodyText').val(
+       '안녕하세요, {성명}님.\n' +
+       docNm + '를 첨부해 드립니다.\n' +
+       '지급일은 ' + _this.ymdText(c.paydate) + '입니다.');
+
       redraw();
       $c.find('input[name=psMode]').on('change', redraw);
+      $c.find('#psLock').on('change', redraw);
 
       $c.find('#btnSendCancel').on('click', function () {
        _this.sendPopup.close(); _this.sendPopup = null;
@@ -777,6 +930,9 @@
        const testYn    = $c.find('input[name=psMode]:checked').val();
        const replyTo   = $c.find('#psReplyTo').val().trim();
        const testEmail = $c.find('#psTestEmail').val().trim();
+       const subject   = $c.find('#psSubject').val().trim();
+       const bodyText  = $c.find('#psBodyText').val();
+       const lockYn    = $c.find('#psLock').is(':checked') ? 'Y' : 'N';
 
        if (replyTo && !emailRe.test(replyTo)) {
         Alert.alert('', '회신 주소 이메일 형식이 올바르지 않습니다.'); return;
@@ -784,10 +940,14 @@
        if (testYn === 'Y' && !emailRe.test(testEmail)) {
         Alert.alert('', '테스트 수신 주소를 입력하세요.'); return;
        }
+       if (!subject) {
+        Alert.alert('', '메일 제목을 입력하세요.'); return;
+       }
 
        const go = function () {
         _this.sendPopup.close(); _this.sendPopup = null;
-        _this.doSend(sel, { testYn: testYn, replyTo: replyTo, testEmail: testEmail });
+        _this.doSend(sel, { testYn: testYn, replyTo: replyTo, testEmail: testEmail,
+         subject: subject, body: bodyText, lockYn: lockYn });
        };
        if (testYn === 'N') {
         Alert.confirm('', '직원 ' + sel.length + '명에게 실제로 발송합니다. 진행하시겠습니까?', go);
@@ -806,7 +966,8 @@
      AjaxUtil.postJsonData(_this.url + '/sendMail', {
       paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate,
       perids: sel.map(r => r.perid),
-      testYn: opt.testYn, replyTo: opt.replyTo, testEmail: opt.testEmail
+      testYn: opt.testYn, replyTo: opt.replyTo, testEmail: opt.testEmail,
+      subject: opt.subject, body: opt.body, lockYn: opt.lockYn
      }, function (result) {
       _this.busy(false);
       if (result && result.success) {
@@ -869,10 +1030,31 @@
    $(document).ready(function () {
     page = new PayslipPage();
 
+    // 진입 직후 한 번, 이후 창 크기가 바뀔 때마다 다시 잰다.
+    page.fitHeight();
+
+    // 드래그하는 동안은 프레임마다 따라가고(전환 끔),
+    // 손을 뗀 뒤에야 전환을 되살린다. 두 개를 같이 켜면 끌 때 화면이 밀린다.
+    let raf = null, endTimer = null;
+    window.addEventListener('resize', function () {
+     document.body.classList.add('ps-resizing');
+     if (raf === null) {
+      raf = requestAnimationFrame(function () {
+       raf = null;
+       page.fitHeight();
+      });
+     }
+     clearTimeout(endTimer);
+     endTimer = setTimeout(function () {
+      document.body.classList.remove('ps-resizing');
+     }, 160);
+    });
+
     // 회차 목록을 받은 뒤 최신 회차로 자동 조회
     // (레거시 Toolbar.Post Event ue_Retrieve() 에 대응)
     page.loadBatches(function () {
      page.search();
+     page.fitHeight();
     });
 
     $(document).on('keydown', function (ev) {

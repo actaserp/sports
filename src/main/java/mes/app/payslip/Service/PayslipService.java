@@ -81,7 +81,10 @@ public class PayslipService {
 
 		MapSqlParameterSource p = baseParams(spjangcd, cond);
 
-		String sql = """
+		// 고정 조건까지만 만들어 두고, 선택 조건은 값이 있을 때만 아래에서 덧붙인다.
+		// 빈 조건에 like '%' 를 거는 방식은 인덱스를 못 타고,
+		// NULL 인 행이 조용히 빠지는 문제도 있다.
+		StringBuilder sql = new StringBuilder("""
                 select  A.perid                       as perid
                      ,  substring(A.perid, 2, len(A.perid)) as peridview
                      ,  B.pernm                       as pernm
@@ -132,18 +135,56 @@ public class PayslipService {
                    and  A.paytype  = :paytype
                    and  A.paybasic = :paybasic
                    and  A.paydate  = :paydate
-                   and  B.mpclafi  like :mpclafi
-                   and  B.divicd   like :divicd
-                   and  B.rspcd    like :rspcd
-                   and  B.rtclafi  like :rtclafi
-                   and  substring(B.perid, 2, len(B.perid)) like :peridLike
                    -- 해당 귀속월에 하루라도 재직한 사람 (월중 퇴사자 포함)
                    and  B.entdate <= :paybasic99
                    and  IsNull(B.rtdate, '99999999') >= :paybasic00
-                 order by D.prtorder, A.perid
-                """;
+                """);
 
-		return normalizeAll(sqlRunner.getRows(sql, p));
+		// ── 선택 조건 ──────────────────────────────────────
+		//  부서 · 직위 · 사원은 코드가 아니라 이름으로 찾는다.
+
+		String divinm = get(cond, "divinm", "");
+		if (!divinm.isEmpty()) {
+			p.addValue("divinm", contains(divinm));
+			sql.append("   and  D.divinm like :divinm\n");
+		}
+
+		String rspnm = get(cond, "rspnm", "");
+		if (!rspnm.isEmpty()) {
+			p.addValue("rspnm", contains(rspnm));
+			sql.append("   and  E.rspnm like :rspnm\n");
+		}
+
+		String pernm = get(cond, "pernm", "");
+		if (!pernm.isEmpty()) {
+			p.addValue("pernm", contains(pernm));
+			sql.append("   and  B.pernm like :pernm\n");
+		}
+
+		// 근무형태 · 재직구분은 화면이 코드값을 보내는 셀렉트박스다.
+		String mpclafi = get(cond, "mpclafi", "");
+		if (!mpclafi.isEmpty()) {
+			p.addValue("mpclafi", mpclafi);
+			sql.append("   and  B.mpclafi = :mpclafi\n");
+		}
+
+		String rtclafi = get(cond, "rtclafi", "");
+		if (!rtclafi.isEmpty()) {
+			p.addValue("rtclafi", rtclafi);
+			sql.append("   and  B.rtclafi = :rtclafi\n");
+		}
+
+		// 사번은 화면에서 뺐지만 API 로 들어오면 계속 받아준다.
+		// perid 는 'p003' 처럼 앞 한 자리가 접두어라 substring 과 비교한다.
+		String perid = normalizePerid(get(cond, "perid", ""));
+		if (!perid.isEmpty()) {
+			p.addValue("peridLike", perid + "%");
+			sql.append("   and  substring(B.perid, 2, len(B.perid)) like :peridLike\n");
+		}
+
+		sql.append(" order by D.prtorder, A.perid");
+
+		return normalizeAll(sqlRunner.getRows(sql.toString(), p));
 	}
 
 	// ─────────────────────────────────────────────────────────
@@ -411,15 +452,8 @@ public class PayslipService {
 		p.addValue("paybasic", paybasic);
 		p.addValue("paydate", get(cond, "paydate", ""));
 
-		// 레거시 strCondition[1]~[6] : 비어 있으면 전체
-		p.addValue("mpclafi", like(get(cond, "mpclafi", "")));
-		p.addValue("divicd",  like(get(cond, "divicd", "")));
-		p.addValue("rspcd",   like(get(cond, "rspcd", "")));
-		p.addValue("rtclafi", like(get(cond, "rtclafi", "")));
-		// 사번 검색 : perid 는 'p003' 처럼 앞 한 자리가 접두어라
-		// 레거시와 동일하게 substring(perid, 2, ...) 와 비교한다.
-		// 담당자가 'p003' 을 통째로 입력해도 잡히도록 접두 문자를 떼어낸다.
-		p.addValue("peridLike", normalizePerid(get(cond, "perid", "")) + "%");
+		// 선택 조건(부서명·직위명·성명·근무형태·재직구분·사번)은
+		// getEmployeeList 가 값이 있을 때만 직접 바인딩한다.
 
 		// 재직 판정 경계값
 		p.addValue("paybasic99", paybasic + "99");
@@ -442,6 +476,11 @@ public class PayslipService {
 	}
 
 	/** 빈 값이면 전체(%), 값이 있으면 정확히 그 값 */
+	/** 이름 검색용 부분일치. 앞뒤 공백은 버린다. */
+	private String contains(String v) {
+		return "%" + (v == null ? "" : v.trim()) + "%";
+	}
+
 	private String like(String v) {
 		String s = v == null ? "" : v.trim();
 		return s.isEmpty() ? "%" : s;
@@ -563,5 +602,8 @@ public class PayslipService {
 		result.put("emailadres", row.get("emailadres") == null ? "" : String.valueOf(row.get("emailadres")).trim());
 		return result;
 	}
-
+	/** 발송 팝업의 메일 제목 기본 문안. 없으면 "" 를 돌려준다 — 화면이 치환어로 대체한다. */
+	public String getSpjangName(String spjangcd) {
+		return getBizInfoBySpjangcd(spjangcd).get("spjangnm");
+	}
 }

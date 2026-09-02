@@ -46,7 +46,7 @@
     <script src="https://cdn.grapecity.com/wijmo/5.20202.732/controls/wijmo.chart.hierarchical.min.js"></script>
     <script src="https://cdn.grapecity.com/wijmo/5.20202.732/controls/wijmo.input.min.js"></script>
     <script src="https://cdn.grapecity.com/wijmo/5.20202.732/controls/wijmo.odata.min.js"></script>
-    
+
     <script src="https://cdn.grapecity.com/wijmo/5.20202.732/controls/wijmo.gauge.min.js"></script>
 
     <!-- 그리드 그룹 -->
@@ -168,96 +168,142 @@
 
 </style>
 <body class="animated fadeIn">
-    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-    <script th:src="@{/resource/jquery.min.js}"></script>
-    <script th:src="@{/resource/jquery-validation/1.17.0/jquery.validate.min.js}"></script>
-    <script th:src="@{/resource/jquery-validation/1.17.0/additional-methods.min.js}"></script>
-    <script th:src="@{/resource/filedownload/jquery.fileDownload.js}"></script>
-    <script th:src="@{/resource/ax5ui/ax5ui.all.min.js}"></script>
-    <script th:src="@{/resource/se2/js/HuskyEZCreator.js}"></script>
-    <script th:src="@{/resource/timepicker/jquery.timepicker.min.js}"></script>
-    <script th:src="@{/resource/jquery.multi-select-ak.js}"></script>
-    <script th:src="@{/resource/moment.min.js}"></script>
-    <script th:src="@{/resource/windowContainer/js/jquery.scrollbar.min.js}"></script>
-    <script th:src="@{/resource/windowContainer/js/bootstrap.min.js}"></script>
-    <script th:src="@{/resource/paho-mqtt/mqttws31.min.js}"></script>
-    <script th:src="@{/resource/select2/select2.min.js}"></script>
-    <script th:src="@{/resource/JavaScript-Templates/tmpl.min.js}"></script>
+<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+<script th:src="@{/resource/jquery.min.js}"></script>
+<script th:src="@{/resource/jquery-validation/1.17.0/jquery.validate.min.js}"></script>
+<script th:src="@{/resource/jquery-validation/1.17.0/additional-methods.min.js}"></script>
+<script th:src="@{/resource/filedownload/jquery.fileDownload.js}"></script>
+<script th:src="@{/resource/ax5ui/ax5ui.all.min.js}"></script>
+<script th:src="@{/resource/se2/js/HuskyEZCreator.js}"></script>
+<script th:src="@{/resource/timepicker/jquery.timepicker.min.js}"></script>
+<script th:src="@{/resource/jquery.multi-select-ak.js}"></script>
+<script th:src="@{/resource/moment.min.js}"></script>
+<script th:src="@{/resource/windowContainer/js/jquery.scrollbar.min.js}"></script>
+<script th:src="@{/resource/windowContainer/js/bootstrap.min.js}"></script>
+<script th:src="@{/resource/paho-mqtt/mqttws31.min.js}"></script>
+<script th:src="@{/resource/select2/select2.min.js}"></script>
+<script th:src="@{/resource/JavaScript-Templates/tmpl.min.js}"></script>
 
-    <th:block th:replace="system_js :: system_js"></th:block>
+<th:block th:replace="system_js :: system_js"></th:block>
 
-    <script th:src="@{/js/common.js}"></script>
-    <script th:src="@{/js/yuscript.js}"></script>
-    <script th:src="@{/js/ax5commUtil.js}"></script>
-    <script th:src="@{/js/grid.js}"></script>
-
-
-    <th:block layout:fragment="content"></th:block>
-    <script type="text/javascript">
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/yuscript.js}"></script>
+<script th:src="@{/js/ax5commUtil.js}"></script>
+<script th:src="@{/js/grid.js}"></script>
 
 
-        $(document).ready(function () {
-            yullinAuth.removeWriteButton();
-            
-            var _wintitle = CommonUtil.getParameters('wintitle');
-            if (_wintitle != '') {
-                $('title').text(_wintitle);
-            }
-            authDisableBtn(''); // 버튼권한 처리==>정리대상
-            authDisableTab(''); // TAB권한 처리==>정리대상
-            var searchheight = parseInt($('.autoheight-search').height() === null ? '0' : $('.autoheight-search').height()) + 65;
-            if ($('.autoheight-div') !== null) {
-                $('.autoheight-div').height($(document).height() - searchheight);
-            }
-            if ($('section.popupcontent') !== null) {
-                $('section.popupcontent').height($(window).height() - 130);
-            }
+<th:block layout:fragment="content"></th:block>
+<script type="text/javascript">
 
-            $('#btnHedaerFilter').click(function (e) {
-                $(".table_box.search").toggle(300);
-            });
 
-            $('#btnHeaderCompress').click(function (e) {
-                let $wrap = window.parent.$('.wrap');
+    $(document).ready(function () {
+        yullinAuth.removeWriteButton();
 
-                window.parent.$('.header').toggle();
-                window.parent.$('.page-tabs').toggle();
-                
-                if (window.parent.$('.header').css('display') == 'none') {
-                    $('#iCompress').replaceWith("<i class='fas fa-compress-alt' id='iCompress'></i>");
-                    $wrap.addClass('menu_close');
-                } else {
-                    $('#iCompress').replaceWith("<i class='fas fa-compress' id='iCompress'></i>");
-                    $wrap.removeClass('menu_close');
-                }
-            });
+        var _wintitle = CommonUtil.getParameters('wintitle');
+        if (_wintitle != '') {
+            $('title').text(_wintitle);
+        }
+        authDisableBtn(''); // 버튼권한 처리==>정리대상
+        authDisableTab(''); // TAB권한 처리==>정리대상
+        var searchheight = parseInt($('.autoheight-search').height() === null ? '0' : $('.autoheight-search').height()) + 65;
+        if ($('.autoheight-div') !== null) {
+            $('.autoheight-div').height($(document).height() - searchheight);
+        }
+        if ($('section.popupcontent') !== null) {
+            $('section.popupcontent').height($(window).height() - 130);
+        }
 
+        $('#btnHedaerFilter').click(function (e) {
+            $(".table_box.search").toggle(300);
         });
 
-        // 셀 클릭 이벤트 처리
-        $(document).on('click', '.wj-flexgrid .wj-cell', function() {
+        $('#btnHeaderCompress').click(function (e) {
+            let $wrap = window.parent.$('.wrap');
 
-            var $grid = $(this).closest('.wj-flexgrid');
-            var $row = $(this).closest('.wj-row'); // 클릭된 행
+            window.parent.$('.header').toggle();
+            window.parent.$('.page-tabs').toggle();
 
-            // 그리드 내에 체크박스가 없고, 헤더 셀이 아닐 경우에만 로직 수행
-            if ($grid.find('input[type="checkbox"]').length === 0 && !$(this).hasClass('wj-header')) {
-
-                // 이미 선택된 행이면 선택 해제
-                if ($row.hasClass('selected-row')) {
-                    // 해당 행에서만 .selected-row 클래스 제거
-                    $row.removeClass('selected-row');
-                } else {
-                    // 다른 행들의 선택 상태를 유지하면서 현재 행만 선택
-                    $grid.find('.wj-row').removeClass('selected-row');
-
-                    // 현재 행에만 .selected-row 클래스 추가
-                    $row.addClass('selected-row');
-                }
+            if (window.parent.$('.header').css('display') == 'none') {
+                $('#iCompress').replaceWith("<i class='fas fa-compress-alt' id='iCompress'></i>");
+                $wrap.addClass('menu_close');
+            } else {
+                $('#iCompress').replaceWith("<i class='fas fa-compress' id='iCompress'></i>");
+                $wrap.removeClass('menu_close');
             }
         });
-    </script>    
-    <th:block layout:fragment="scripts"></th:block>
+
+    });
+
+    // 셀 클릭 이벤트 처리
+    $(document).on('click', '.wj-flexgrid .wj-cell', function() {
+
+        var $grid = $(this).closest('.wj-flexgrid');
+        var $row = $(this).closest('.wj-row'); // 클릭된 행
+
+        // 그리드 내에 체크박스가 없고, 헤더 셀이 아닐 경우에만 로직 수행
+        if ($grid.find('input[type="checkbox"]').length === 0 && !$(this).hasClass('wj-header')) {
+
+            // 이미 선택된 행이면 선택 해제
+            if ($row.hasClass('selected-row')) {
+                // 해당 행에서만 .selected-row 클래스 제거
+                $row.removeClass('selected-row');
+            } else {
+                // 다른 행들의 선택 상태를 유지하면서 현재 행만 선택
+                $grid.find('.wj-row').removeClass('selected-row');
+
+                // 현재 행에만 .selected-row 클래스 추가
+                $row.addClass('selected-row');
+            }
+        }
+    });
+
+    /* ═══════════════════════════════════════════════════════════════
+       메뉴+헤더 복원 훅
+       부모(index.html)에서 햄버거로 메뉴와 헤더를 접으면 햄버거 버튼
+       자체가 헤더와 함께 사라진다. 그래서 되돌리는 버튼이 따로 필요한데,
+       탭바 왼쪽 화살표(.roll-nav-left)를 그 역할로 쓴다.
+
+       ★ 접혀 있을 때만 가로챈다.
+         펼쳐진 상태에서는 stopImmediatePropagation 을 하지 않으므로
+         nth-tabs.js 의 원래 «탭 왼쪽으로 밀기» 동작이 그대로 돈다.
+
+       ★ 부모에 LayoutState 가 없으면 아무것도 하지 않는다.
+         구버전 index.html 에서 열려도 안전하다.
+
+       ★ 개별 화면에서 이 동작이 방해가 되면
+         window.DISABLE_GLOBAL_LAYOUT_TOGGLE = true 를 선언하면 꺼진다.
+       ═══════════════════════════════════════════════════════════════ */
+    $(document).ready(function () {
+        if (window.DISABLE_GLOBAL_LAYOUT_TOGGLE) return;
+
+        const pwin = (window.parent && window.parent !== window) ? window.parent : window;
+        if (!pwin.LayoutState) return;
+
+        if (!pwin._headerRestoreHandlerSet) {
+            pwin._headerRestoreHandlerSet = true;
+            pwin.$('.nth-tabs .roll-nav-left').on('click.headerRestore', function (e) {
+
+                if (pwin.LayoutState.get()) {
+                    e.stopImmediatePropagation();
+                    pwin.LayoutState.set(false);   // ★ PC/태블릿 동일하게 메뉴+헤더 복원
+
+                    // ★ 풀스크린 상태였다면 같이 해제 (태블릿 전용 추가 동작)
+                    if (pwin.document.fullscreenElement) {
+                        pwin.document.exitFullscreen().catch(() => {});
+                    }
+
+                    pwin.$('iframe').each(function () {
+                        try {
+                            this.contentWindow.$('#iCompress')
+                            .replaceWith("<i class='fas fa-compress' id='iCompress'></i>");
+                        } catch (err) {}
+                    });
+                }
+            });
+        }
+    });
+
+</script>
+<th:block layout:fragment="scripts"></th:block>
 </body>
 </html>
-

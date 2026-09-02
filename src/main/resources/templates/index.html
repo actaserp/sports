@@ -37,6 +37,19 @@
     </script>
 
     <style>
+        /* ── 태블릿·터치 기기에서 푸터 숨김 ──
+           현장 화면은 세로 공간이 곧 작업 목록이다. 저작권 한 줄에 40~60px 을
+           내주면 품목 카드가 한 장 덜 보인다.
+           마우스가 없는 기기(pointer:coarse)에서만 감춘다 — PC 관리 화면은 그대로다.
+           ★ LayoutState 가 .footer 의 outerHeight() 로 본문 높이를 계산하는데,
+             숨기면 0 이 되어 본문이 그만큼 넓어진다. 계산식은 손댈 필요 없다. */
+        @media (pointer: coarse) {
+            /* 푸터를 감추면 그 자리가 그대로 빈다 — 본문 높이가 푸터를 뺀 값으로
+               계산돼 있기 때문이다. 감추는 것과 «그만큼 늘리는 것»을 같이 해야 한다. */
+            .footer { display: none !important; }
+            .tab-content { height: calc(100% - var(--tabs-h, 0px)) !important; }
+        }
+
         .left {
             cursor: pointer;
         }
@@ -71,6 +84,11 @@
         .menu_area.hidden + .con_area {
             width: 100%;
             left: 0;
+        }
+
+        /* 메뉴를 접으면 상단 헤더도 같이 감춘다 (index.html 동작) */
+        .dashboard-layout-header.header-collapsed {
+            display: none;
         }
 
         /* 부드럽게 나오는 애니메이션 */
@@ -445,9 +463,9 @@
                         </li>
                     </ul>
                     <div class="layout-sidebar-tabcont">
-<!--                        <div style="margin-top: 10px" id="searchkeyword-box">-->
-<!--                            <input type="text" style="width: 90%" id="searchkeyword" name="searchkeyword" />-->
-<!--                        </div>-->
+                        <!--                        <div style="margin-top: 10px" id="searchkeyword-box">-->
+                        <!--                            <input type="text" style="width: 90%" id="searchkeyword" name="searchkeyword" />-->
+                        <!--                        </div>-->
                         <nav class="layout-nav sidebar-tabcont" id="menu">
                             <ul class="dep1">
                             </ul>
@@ -601,7 +619,7 @@
                     } else {
                         // 열기: 다른 중메뉴들 닫기
                         $li.siblings().removeClass('active').find('.dep3').slideUp(300);
-                        
+
                         // 스르륵 펼치기
                         $subUl.slideDown(300, function() {
                             $li.addClass('active');
@@ -688,7 +706,7 @@
                     $subMenu.slideUp(300);
                 } else {
                     $parent.siblings().removeClass('active').find('.dep2').slideUp(300);
-                    
+
                     $parent.addClass('active');
                     $subMenu.slideDown(300, function() {
                         const $dep2Items = $subMenu.find('.dep2-1');
@@ -701,17 +719,224 @@
             });
         });
 
-        $('#navbarBarMenu2 .open_menu').click(function () {
-            $(this).toggleClass('menu_open'); // 메뉴 숨김 토글
+        $(function () {
+            let userToggled = false;
+            let autoHiddenOnce = false;
 
-            $('.menu_area').toggleClass('hidden');
-            const isMenuHidden = $('.menu_area').hasClass('hidden');
+            // ★ 전역 레이아웃 상태 (iframe 자식들도 window.parent.LayoutState로 호출)
+            /* ── iframe 안의 .layout-contents 높이 동기화 ──
+                 메뉴 열림 → 헤더 있음 → 87vh
+                 메뉴 닫힘 → 헤더 없음 → 97vh
+               헤더 높이가 바뀌면 이 두 숫자만 고치면 된다.
+               같은 출처라 contentDocument 로 바로 들어갈 수 있다. */
+            const LC_H_OPEN     = '96vh';   // 메뉴(+헤더) 열림
+            const LC_H_COLLAPSED = '97vh';  // 메뉴(+헤더) 닫힘
 
-            $('.con_area, .tab-content').css({
-                'width': isMenuHidden ? '100%' : 'calc(100% - 250px)', // 메뉴가 닫히면 전체 확장
-                'left': isMenuHidden ? '0' : '250px' // 왼쪽으로 확장
+            /* ★ 태블릿(터치 기기)에서만 적용한다.
+                 PC 는 layout_page.html 의 height:100vh 를 그대로 쓰는 편이 맞다 —
+                 푸터가 보이고 헤더도 안 접히므로 87/97 이 오히려 어긋난다.
+                 CSS 의 @media (pointer: coarse) 와 같은 기준을 쓴다. */
+            function isTouchLayout() {
+                return window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+            }
+
+            function syncLayoutContents(collapsed) {
+                const touch = isTouchLayout();
+                $('.con_area iframe').each(function () {
+                    try {
+                        const doc = this.contentDocument;
+                        if (!doc) return;
+
+                        let h;
+                        if (touch) {
+                            // 태블릿: 헤더 유무에 따라 vh 로 (푸터가 없으므로 화면 기준이 맞다)
+                            h = collapsed ? LC_H_COLLAPSED : LC_H_OPEN;
+                        } else {
+                            /* ★ PC: 푸터가 보이므로 «화면 높이(100vh)» 가 아니라
+                                 «iframe 이 실제로 차지하는 높이» 를 써야 한다.
+                                 .con_area 를 calc(100% - 푸터) 로 줄여 놨는데
+                                 안쪽이 100vh 면 그만큼 넘쳐 푸터에 겹친다.
+                                 실측 픽셀이 가장 정확하다. */
+                            const px = this.clientHeight;
+                            h = px > 0 ? px + 'px' : '';
+                        }
+
+                        $(doc).find('.layout-contents').css('height', h);
+                    } catch (e) {}   // 아직 로드 전이거나 접근 불가
+                });
+            }
+
+            /* ★ 접힘 상태를 «기억하지 않는다».
+                 새로고침하면 항상 기본 상태(메뉴·헤더 펼침)로 시작한다.
+                 감춘 채로 새로고침하면 그 상태가 복원되도록 만들어 봤지만,
+                 서버는 늘 펼쳐진 HTML 을 내려주므로 그려진 뒤에 접는 셈이 되어
+                 헤더·푸터가 한 박자 엉뚱한 자리에 남는 편이 더 나빴다. */
+            window.LayoutState = (function () {
+                let collapsed = false;
+                function apply() {
+                    $('#navbarBarMenu2 .open_menu').toggleClass('menu_open', collapsed);
+                    $('.menu_area').toggleClass('hidden', collapsed);
+                    $('.dashboard-layout-header').toggleClass('header-collapsed', collapsed);
+
+                    // 태블릿에서 푸터를 CSS 로 감추면 outerHeight() 가 0 이 된다(의도된 값)
+                    let footerH = $('.footer').is(':visible') ? ($('.footer').outerHeight() || 0) : 0;
+
+                    /* ★ 푸터는 position:absolute 라 본문과 겹치지 않는다.
+                         높이를 통째로 빼면 그만큼 빈 띠가 남는다.
+                         겹치지 않을 만큼만 남기고 본문을 조금 더 내린다. */
+                    if (footerH > 0) footerH = Math.max(0, footerH - 12);
+                    const tabsH   = $('.nth-tabs .page-tabs').outerHeight() || 0;
+
+                    // ★ 접힘/펼침에서 «가로만» 다르다. 세로 처리는 똑같이 간다.
+                    //   예전에는 펼침 쪽에서 height/position 을 '' 로 원복했는데,
+                    //   그러면 .tab-content 가 CSS 의 position:fixed 로 돌아간다.
+                    //   fixed 는 부모(.con_area)를 무시하고 «뷰포트» 기준이 되어
+                    //   top(약 107px)만큼 화면 밖으로 밀려나고, 그만큼이 하단 여백으로 남았다.
+                    //   («메뉴를 열면 여백이 더 생기던» 정체)
+                    const menuW = collapsed ? 0 : 250;
+
+                    $('.con_area').css({
+                        width: 'calc(100% - ' + menuW + 'px)',
+                        left: menuW + 'px'
+                    });
+
+                    /* ★ .con_area 는 position:absolute 인데 top 속성이 없다.
+                         top 없는 absolute 는 «흐름상의 자리»(헤더 아래, 약 68px)에 놓이는데
+                         height:100% 는 «부모 전체» 높이라 딱 그만큼 아래로 넘친다.
+                         → 푸터가 있든 없든 언제나 헤더 높이만큼 잘렸다.
+
+                         푸터(position:absolute; bottom:0)가 보이면 그 자리도 함께 내준다.
+                         PC 는 푸터가 보이고, 태블릿은 CSS 로 감추므로 footerH=0 이 된다.
+                         한 식으로 양쪽이 다 맞는다.
+
+                         ※ 헤더 높이는 상수로 박지 않는다 — 메뉴 줄바꿈·해상도에 따라
+                           달라지므로 실제 top 을 잰다. */
+                    const conEl = $('.con_area')[0];
+                    if (conEl) {
+                        const conTop = Math.round(conEl.getBoundingClientRect().top);
+                        if (conTop >= 0) {
+                            $('.con_area').css('height',
+                                'calc(100% - ' + (conTop + footerH) + 'px)');
+                        }
+                    }
+
+                    $('.tab-content').css({
+                        width: '100%', left: '0',
+                        position: 'relative',                          // ★ fixed → relative
+                        height: 'calc(100% - ' + tabsH + 'px)'         // ★ con_area 기준 100%에서 탭바만 뺌
+                    });
+                    $('.tab-content .tab-pane').css('height', '100%');
+                    $('.nth-tabs-frame').css('height', '100%');
+
+                    if (!collapsed) {
+                        setTimeout(function () { $(window).trigger('resize'); }, 320);
+                    }
+
+                    // ★ iframe 안의 .layout-contents 높이를 메뉴 상태에 맞춰 넣는다.
+                    //   메뉴를 접으면 상단 헤더도 같이 닫히므로 세로가 그만큼 늘어난다.
+                    //   layout_page.html 의 height:100vh 는 그 차이를 모른다.
+                    syncLayoutContents(collapsed);
+
+                    /* ★ focus 를 주면 브라우저가 그 요소를 보이게 하려고 «자동 스크롤» 한다.
+                         .con_area 는 top:68px 에서 시작하므로 딱 헤더 높이만큼 내려가고,
+                         헤더가 화면 위로 밀려 «숨은 것처럼» 보였다.
+                         (실제로는 display:block, height:68 인데 y:-68 이었다)
+                         preventScroll 로 스크롤 없이 포커스만 준다. */
+                    $('.con_area iframe').each(function () {
+                        try {
+                            this.focus({preventScroll: true});
+                        } catch (e) {
+                            try { $(this.contentWindow).trigger('focus'); } catch (e2) {}
+                        }
+                    });
+
+                    // 이미 밀려 있으면 되돌린다
+                    if (window.pageYOffset !== 0) {
+                        window.scrollTo(0, 0);
+                    }
+                }
+                return {
+                    set(v) { collapsed = !!v; apply(); },
+                    toggle() { this.set(!collapsed); },
+                    get() { return collapsed; },
+                    refresh() { apply(); }      // 상태는 그대로, 치수만 다시 계산
+                };
+            })();
+
+            /* ★ 자동 접기를 «하지 않는다».
+                 예전에는 폭이 1366 이하면 로드할 때마다 메뉴를 접었다.
+                 새로고침하면 userToggled 가 다시 false 이므로 매번 걸리고,
+                 그래서 «펼쳐진 채로 떴다가 곧 접히는» 모습이 되었다.
+                 태블릿 폭은 늘 1366 이하라 100% 걸린다.
+                 첫 화면은 항상 기본(펼침) 상태로 두고, 접는 것은 사용자가 고른다.
+
+               ★ load 도 듣지 않는다. load 는 이미지까지 다 받은 뒤라 늦게 오는데,
+                 그 시점에 레이아웃을 바꾸면 이미 보인 화면이 움직여 깜빡임이 된다. */
+            function adjustMenu() {
+                // 접힘 여부는 건드리지 않고 치수만 다시 맞춘다
+                if (window.LayoutState) window.LayoutState.refresh();
+            }
+            $(window).off('resize.layout').on('resize.layout', adjustMenu);
+
+            /* ★ 탭을 새로 열면 그 iframe 은 방금 만들어진 것이라 위 동기화를 놓친다.
+                 load 는 버블링하지 않아 위임이 안 되므로, 탭 조작 뒤 한 박자 뒤에 맞춘다. */
+            $(document).on('click', '.nth-tabs .page-tabs, .nth-tabs .content-tabs', function () {
+                setTimeout(function () {
+                    syncLayoutContents(window.LayoutState.get());
+                }, 100);
             });
+
+            // 햄버거: 메뉴+헤더 함께 토글 (PC/태블릿 공통, 풀스크린 사용 안 함)
+            $('#navbarBarMenu2 .open_menu').click(function () {
+                userToggled = true;
+                const willCollapse = !$('.menu_area').hasClass('hidden');
+                window.LayoutState.set(willCollapse);
+            });
+
+            /* ★ 초기 1회 동기화.
+                 apply() 는 «토글할 때만» 돈다. 첫 진입에도 iframe 안의
+                 .layout-contents 는 현재 메뉴 상태에 맞아야 하는데,
+                 아무도 불러주지 않아 «햄버거를 한 번 눌러야 맞는» 상태였다.
+                 첫 탭 iframe 이 아직 로드 중이면 .layout-contents 를 못 찾으므로
+                 몇 박자 뒤에 다시 맞춘다. 같은 값을 다시 넣는 것은 무해하다. */
+            (function initLayoutContents() {
+                const sync = function () {
+                    /* ★ 치수(width/left)도 같이 맞춘다.
+                         apply() 는 «토글할 때만» 도는데, 새로고침 직후에는
+                         .con_area 에 width/left 인라인이 없다.
+                         그래서 iframe 이 자기 폭이 250px 좁아진 것을 모르고
+                         원래 폭 기준으로 그려져 오른쪽이 잘려 나갔다. */
+                    if (window.LayoutState.refresh) {
+                        window.LayoutState.refresh();
+                    } else {
+                        window.LayoutState.set(window.LayoutState.get());
+                    }
+
+                    syncLayoutContents(window.LayoutState.get());
+
+                    /* ★ iframe 안쪽에 «크기가 바뀌었다» 고 알린다.
+                         .con_area 폭을 고쳐도 iframe 내부 스크립트(폭 기준 미디어쿼리
+                         계산, 그리드 열 수 등)는 resize 를 받아야 다시 계산한다. */
+                    $('.con_area iframe').each(function () {
+                        try { $(this.contentWindow).trigger('resize'); } catch (e) {}
+                    });
+                };
+
+                sync();
+                setTimeout(sync, 300);
+                setTimeout(sync, 1000);
+
+                // 지금 존재하는 iframe 은 load 시점에도 한 번 맞춘다
+                $('.con_area iframe').on('load.layoutcontents', sync);
+            })();
         });
+
+        window.exitTabletFullscreen = function () {
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+            }
+        };
+
 
         // 북마크 및 default_menu를 한 번에 처리
         $.getJSON(withCtx('/api/system/bookmark'), function (result) {
@@ -1850,8 +2075,8 @@
                 <td class="notif-type">
                     <span class="notif-badge is-${uiType}">
                         ${uiType === 'alarm' ? '알림'
-                            : uiType === 'message' ? '메시지'
-                                : '답장'}
+                : uiType === 'message' ? '메시지'
+                    : '답장'}
                     </span>
                 </td>
                 <td class="notif-msg">
@@ -1926,8 +2151,8 @@
                     ${titleText}
                     · <strong>
                       ${noti.senderUserName
-                        ? `${noti.senderUserName} (${noti.senderUserId})`
-                        : noti.senderUserId}
+            ? `${noti.senderUserName} (${noti.senderUserId})`
+            : noti.senderUserId}
                     </strong>
                 </span>
                 <span class="close-btn">✕</span>
@@ -2253,7 +2478,7 @@
 
         // UI 초기화
         $('#selectedUsers').empty()
-            .html('<div class="user-empty">선택된 사용자가 없습니다</div>');
+        .html('<div class="user-empty">선택된 사용자가 없습니다</div>');
 
         $('.chk-user').prop('checked', false);
 
