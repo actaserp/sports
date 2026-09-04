@@ -82,14 +82,16 @@ public class PayslipController {
 	}
 
 	// ── VIEW : 우측 명세서 미리보기 (HTML 조각) ──────────────
+	//  doctype : 화면에서 고른 문서명. 빈 값이면 급여구분(paytype)을 따른다.
 	@GetMapping(value = "/preview", produces = MediaType.TEXT_HTML_VALUE)
 	public String preview(@RequestParam("paytype") String paytype,
 												@RequestParam("paybasic") String paybasic,
 												@RequestParam("paydate") String paydate,
-												@RequestParam("perid") String perid) {
+												@RequestParam("perid") String perid,
+												@RequestParam(value = "doctype", required = false) String doctype) {
 		try {
 			Map<String, Object> data =
-				payslipService.getPayslip(TenantContext.get(), paytype, paybasic, paydate, perid);
+				payslipService.getPayslip(TenantContext.get(), paytype, paybasic, paydate, perid, doctype);
 			if (data == null) {
 				return "<div class='ps-empty'>해당 귀속월의 급여 자료가 없습니다.</div>";
 			}
@@ -107,10 +109,11 @@ public class PayslipController {
 										@RequestParam("paydate") String paydate,
 										@RequestParam("perid") String perid,
 										@RequestParam(value = "lock", defaultValue = "N") String lock,
+										@RequestParam(value = "doctype", required = false) String doctype,
 										HttpServletResponse response) throws Exception {
 
 		Map<String, Object> data =
-			payslipService.getPayslip(TenantContext.get(), paytype, paybasic, paydate, perid);
+			payslipService.getPayslip(TenantContext.get(), paytype, paybasic, paydate, perid, doctype);
 		if (data == null) {
 			response.sendError(HttpServletResponse.SC_NOT_FOUND, "급여 자료가 없습니다.");
 			return;
@@ -142,13 +145,14 @@ public class PayslipController {
 													@RequestParam("paydate") String paydate,
 													@RequestParam("perids") List<String> perids,
 													@RequestParam(value = "lock", defaultValue = "Y") String lock,
+													@RequestParam(value = "doctype", required = false) String doctype,
 													HttpServletResponse response) throws Exception {
 
 		boolean withPw = !"N".equals(lock);
 
 		response.setContentType("application/zip");
 		response.setHeader("Content-Disposition",
-			"attachment; filename*=UTF-8''" + enc(PayslipService.paytypeName(paytype) + "_" + paybasic + ".zip"));
+			"attachment; filename*=UTF-8''" + enc(PayslipService.docName(doctype, paytype) + "_" + paybasic + ".zip"));
 
 		// 한글 파일명 보존을 위해 UTF-8 로 ZIP 을 만든다
 		String spjangcd = TenantContext.get();
@@ -159,7 +163,7 @@ public class PayslipController {
 			for (String perid : perids) {
 				try {
 					Map<String, Object> data =
-						payslipService.getPayslip(spjangcd, paytype, paybasic, paydate, perid);
+						payslipService.getPayslip(spjangcd, paytype, paybasic, paydate, perid, doctype);
 					if (data == null) continue;
 
 					@SuppressWarnings("unchecked")
@@ -195,6 +199,7 @@ public class PayslipController {
 		String paydate   = str(body.get("paydate"));
 		String replyTo   = str(body.get("replyTo"));
 		String testEmail = str(body.get("testEmail"));
+		String doctype    = str(body.get("doctype"));
 		String subjectTpl = str(body.get("subject"));
 		String bodyTpl    = String.valueOf(body.get("body") == null ? "" : body.get("body"));
 		// 첨부 잠금은 기본이 해제다. 걸려면 화면에서 명시적으로 'Y' 를 보내야 한다.
@@ -236,7 +241,7 @@ public class PayslipController {
 
 			try {
 				Map<String, Object> data =
-					payslipService.getPayslip(spjangcd, paytype, paybasic, paydate, perid);
+					payslipService.getPayslip(spjangcd, paytype, paybasic, paydate, perid, doctype);
 				if (data == null) throw new IllegalStateException("급여 자료 없음");
 
 				@SuppressWarnings("unchecked")

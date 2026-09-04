@@ -151,9 +151,15 @@ public class PayslipPdfService {
 		return in;
 	}
 
+	/**
+	 * 파일명은 제목과 같은 문서명을 쓴다.
+	 * head.docnm 은 PayslipService.getPayslip 이 넣는다. 없으면 급여구분으로 되돌린다.
+	 */
 	public String buildFileName(Map<String, Object> head) {
+		String docnm = str(head.get("docnm"));
+		if (docnm.isEmpty()) docnm = PayslipService.paytypeName(str(head.get("paytype")));
 		return String.format("%s_%s_%s_%s.pdf",
-			PayslipService.paytypeName(str(head.get("paytype"))),
+			docnm,
 			str(head.get("paybasic")),
 			str(head.get("peridview")),
 			str(head.get("pernm")));

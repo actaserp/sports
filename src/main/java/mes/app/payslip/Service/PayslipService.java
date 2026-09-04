@@ -37,6 +37,21 @@ public class PayslipService {
 		return "급여명세서";
 	}
 
+	/** 수당지급명세서 선택값. 화면 select 의 value 와 같아야 한다. */
+	public static final String DOC_ALLOWANCE = "ALW";
+
+	/**
+	 * 출력 문서명.
+	 *
+	 * 화면에서 고른 값이 우선이고, 비어 있으면 급여구분을 따른다.
+	 * 비었을 때 급여명세서로 고정하지 않는 이유는 상여(002) · 급상여(003) 회차의
+	 * 제목이 조용히 바뀌기 때문이다.
+	 */
+	public static String docName(String doctype, String paytype) {
+		if (DOC_ALLOWANCE.equals(doctype)) return "수당지급명세서";
+		return paytypeName(paytype);
+	}
+
 	// ─────────────────────────────────────────────────────────
 	//  조회조건 팝업 : 급여 회차 목록
 	//  레거시는 이 그리드에서 한 행을 골라
@@ -191,7 +206,16 @@ public class PayslipService {
 	//  우측 미리보기 : 명세서 1건
 	// ─────────────────────────────────────────────────────────
 
+	/** doctype 을 넘기지 않는 기존 호출부 호환용. 제목은 급여구분을 따른다. */
 	public Map<String, Object> getPayslip(String spjangcd, String paytype, String paybasic, String paydate, String perid) {
+		return getPayslip(spjangcd, paytype, paybasic, paydate, perid, null);
+	}
+
+	/**
+	 * @param doctype 화면에서 고른 문서 구분. null · 빈 값이면 급여구분(paytype)을 따른다.
+	 */
+	public Map<String, Object> getPayslip(String spjangcd, String paytype, String paybasic,
+																				String paydate, String perid, String doctype) {
 
 		MapSqlParameterSource p = new MapSqlParameterSource();
 		p.addValue("custcd", getCustcdBySpjangcd(spjangcd));
@@ -255,8 +279,11 @@ public class PayslipService {
 		Map<String, Object> head = normalize(sqlRunner.getRow(headSql, p));
 		if (head == null || head.isEmpty()) return null;
 
-		// 헤더 문구: "2026년 08월 급여명세서"
-		head.put("title", formatYm(str(head.get("paybasic"))) + " " + paytypeName(str(head.get("paytype"))));
+		// 헤더 문구: "2026년 08월 급여명세서" / "2026년 08월 수당지급명세서"
+		// docnm 은 PDF 파일명에서도 쓴다. 제목과 파일명이 어긋나지 않게 한곳에서 정한다.
+		String docnm = docName(doctype, str(head.get("paytype")));
+		head.put("docnm", docnm);
+		head.put("title", formatYm(str(head.get("paybasic"))) + " " + docnm);
 
 		// pmtype 'A' 지급 / 'B' 공제
 		List<Map<String, Object>> payItems = new ArrayList<>();
@@ -345,7 +372,14 @@ public class PayslipService {
 		return items;
 	}
 
-	/** TB_PB203 근태 한 행. atdnum** 컬럼을 통째로 들고 온다. */
+	/**
+	 * TB_PB203 근태 한 행. atdnum** 컬럼을 통째로 들고 온다.
+	 *
+	 * 근태가 있는 달과 없는 달이 섞여 있는 것이 정상이므로 0건은 오류가 아니다.
+	 * getRow 는 0건이면 EmptyResultDataAccessException 을 던지고, SqlRunQueryImpl 이
+	 * 던지기 전에 ERROR 로 스택을 통째로 남긴다. 직원을 클릭할 때마다 쌓이므로 getRows 를 쓴다.
+	 * 여기서 null 을 돌려주면 호출부가 workhour 를 비운다.
+	 */
 	private Map<String, Object> getAttendance(MapSqlParameterSource p, String perid) {
 		try {
 			MapSqlParameterSource q = new MapSqlParameterSource();
@@ -354,12 +388,18 @@ public class PayslipService {
 			q.addValue("workym", p.getValue("paybasic"));
 			q.addValue("perid", perid);
 
-			return normalize(sqlRunner.getRow("""
+			List<Map<String, Object>> rows = sqlRunner.getRows("""
 					select * from TB_PB203
 					 where custcd = :custcd and spjangcd = :spjangcd
 					   and workym = :workym and perid = :perid
-					""", q));
+					""", q);
+
+			// 그 달 근태가 없는 것뿐이다. 로그를 남기지 않는다.
+			if (rows == null || rows.isEmpty()) return null;
+
+			return normalize(rows.get(0));
 		} catch (Exception e) {
+			// 여기까지 오면 진짜 오류다 (테이블 부재 · 접속 실패 등)
 			log.warn("[Payslip] 근태 조회 실패 perid={}", perid, e);
 			return null;
 		}

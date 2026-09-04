@@ -103,6 +103,20 @@
 
       .ps-actions { display: flex; align-items: center; gap: 8px; }
 
+      /* 출력 문서명 — 출력·저장·발송 셋에 모두 걸리므로 버튼 바로 왼쪽에 둔다 */
+      .ps-doctype { display: inline-flex; align-items: center; gap: 6px; margin-right: 4px; }
+      .ps-doctype label {
+          font-size: 12px; color: var(--ps-label);
+          white-space: nowrap; letter-spacing: .5px;
+      }
+      .ps-doctype select {
+          height: 34px; width: 142px; padding: 0 10px;
+          border: 1px solid var(--ps-frame); border-radius: 2px;
+          background: #fff; color: var(--ps-ink);
+          font-family: inherit; font-size: 13px;
+      }
+      .ps-doctype select:focus-visible { outline: 2px solid var(--ps-value); outline-offset: 2px; }
+
       /* ── 안내 줄 ───────────────────────────────────────
          파란 강조 대신 왼쪽 괘선 하나로만 구분한다. */
       .grid-guide-box {
@@ -433,6 +447,16 @@
         </div>
 
         <div class="button-wrap ps-actions">
+          <!-- 출력 문서명. 조회 조건이 아니라 출력물 서식이라 버튼 옆에 둔다.
+               바꿔도 재조회하지 않고 미리보기만 다시 그린다.
+               빈 값은 급여회차의 급여구분을 그대로 따른다(급여/상여/급상여명세서). -->
+          <div class="ps-doctype">
+            <label for="doctype">문서명</label>
+            <select id="doctype" name="doctype">
+              <option value="">급여명세서</option>
+              <option value="ALW">수당지급명세서</option>
+            </select>
+          </div>
           <button class="ps-btn" id="btnPrint" type="button">명세서 출력</button>
           <button class="ps-btn" id="btnSaveZip" type="button">명세서 저장</button>
           <button class="ps-btn accent" id="btnMail" type="button">메일 발송</button>
@@ -609,6 +633,10 @@
      $('#btnSaveZip').on('click', function () { _this.saveZip(); });
      $('#btnMail').on('click', function () { _this.confirmSend(); });
      $('#batch, #mpclafi, #rtclafi').on('change', function () { _this.search(); });
+     // 문서명은 조회 조건이 아니다. 목록은 그대로 두고 미리보기만 다시 그린다.
+     $('#doctype').on('change', function () {
+      if (_this.current) _this.loadPreview(_this.current);
+     });
      $('#divinm, #rspnm, #pernm').on('keydown', function (e) { if (e.key === 'Enter') _this.search(); });
 
      $('#chkAll').on('change', function () {
@@ -688,7 +716,16 @@
     }
     keyOf(perid) {
      const c = this.cond();
-     return { paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate, perid: perid };
+     return { paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate,
+      perid: perid, doctype: this.doctype() };
+    }
+
+    /** 화면에서 고른 문서 구분. 빈 문자열이면 서버가 급여구분을 따른다. */
+    doctype() { return $('#doctype').val() || ''; }
+
+    /** 화면 표시용 문서명. 서버의 PayslipService.docName 과 결과가 같아야 한다. */
+    docNm(paytype) {
+     return this.doctype() === 'ALW' ? '수당지급명세서' : this.paytypeNm(paytype) + '명세서';
     }
 
     paytypeNm(t) { return t === '002' ? '상여' : (t === '003' ? '급상여' : '급여'); }
@@ -841,7 +878,8 @@
      const sel = this.checked();
      if (!sel.length) { Alert.alert('', '저장할 직원을 선택하세요.'); return; }
 
-     let qs = $.param({ paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate, lock: 'N' });
+     let qs = $.param({ paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate,
+      lock: 'N', doctype: this.doctype() });
      sel.forEach(r => { qs += '&perids=' + encodeURIComponent(r.perid); });
 
      // 파일명은 서버의 Content-Disposition 을 따른다.
@@ -871,7 +909,7 @@
 
      if (_this.sendPopup) { _this.sendPopup.close(); _this.sendPopup = null; }
      let $c = $(tmpl('psSendTemplate', {}));
-     _this.sendPopup = new PopupDraggable('급여명세서 발송');
+     _this.sendPopup = new PopupDraggable(_this.docNm(c.paytype) + ' 발송');
      _this.sendPopup.open({ width: 520, height: 600, $content: $c });
 
      const redraw = function () {
@@ -890,10 +928,10 @@
         '건이 모두 테스트 수신 주소로만 전송됩니다. 직원에게는 가지 않습니다.</div>';
       } else {
        html = '<div class="ps-warn"><b>실제 발송입니다.</b><br/>직원 <b>' + sel.length +
-        '명</b>에게 각자의 급여명세서가 바로 전송됩니다. 한 번 나간 메일은 회수할 수 없습니다.</div>';
+        '명</b>에게 각자의 ' + _this.docNm(c.paytype) + '가 바로 전송됩니다. 한 번 나간 메일은 회수할 수 없습니다.</div>';
       }
       html += '<div class="ps-recap">' +
-       _this.paytypeNm(c.paytype) + ' · 귀속월 <b>' + _this.fmtYm(c.paybasic) + '</b>' +
+       _this.docNm(c.paytype) + ' · 귀속월 <b>' + _this.fmtYm(c.paybasic) + '</b>' +
        ' · 지급일 <b>' + _this.fmtYmd(c.paydate) + '</b> · 대상 <b>' + sel.length + '명</b>' +
        '<span class="sub">1명씩 개별 발송하므로 인원수만큼 시간이 걸립니다.</span></div>';
       $c.find('#psSendBody').html(html);
@@ -908,7 +946,7 @@
       // 기본 문안. 이번 회차의 실제 값으로 채운다. 지우고 다시 써도 된다.
       // 사업장명이 없으면 치환어로 남겨 서버가 채우게 한다.
       const spjang = ($('#psSpjangnm').val() || '').trim() || '{사업장}';
-      const docNm  = _this.ymText(c.paybasic) + ' ' + _this.paytypeNm(c.paytype) + '명세서';
+      const docNm  = _this.ymText(c.paybasic) + ' ' + _this.docNm(c.paytype);
 
       $c.find('#psSubject').val('[' + spjang + '] ' + docNm);
 
@@ -949,6 +987,16 @@
         _this.doSend(sel, { testYn: testYn, replyTo: replyTo, testEmail: testEmail,
          subject: subject, body: bodyText, lockYn: lockYn });
        };
+
+       // 첨부는 서버가 doctype 으로 만든다. 제목만 다른 이름이면 담당자에게 되묻는다.
+       const other = _this.doctype() === 'ALW' ? '급여명세서' : '수당지급명세서';
+       if (subject.indexOf(other) >= 0 || bodyText.indexOf(other) >= 0) {
+        Alert.confirm('',
+         '첨부되는 문서는 ' + _this.docNm(c.paytype) + '인데\n' +
+         '제목이나 본문에 "' + other + '"라는 말이 들어 있습니다.\n이대로 보낼까요?', go);
+        return;
+       }
+
        if (testYn === 'N') {
         Alert.confirm('', '직원 ' + sel.length + '명에게 실제로 발송합니다. 진행하시겠습니까?', go);
        } else {
@@ -965,6 +1013,7 @@
 
      AjaxUtil.postJsonData(_this.url + '/sendMail', {
       paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate,
+      doctype: _this.doctype(),
       perids: sel.map(r => r.perid),
       testYn: opt.testYn, replyTo: opt.replyTo, testEmail: opt.testEmail,
       subject: opt.subject, body: opt.body, lockYn: opt.lockYn
