@@ -321,7 +321,19 @@
       .doc-page th:not([style*="padding:0"]) { padding: 7px 9px; }
 
       .doc-page td[style*="padding:0"] > div:last-child { height: 56px !important; }
-      .doc-page td[rowspan] { white-space: nowrap; }
+      /* rowspan 이 걸린 칸 중 '과목' · '구분' 같은 라벨은 한 줄로 둔다.
+         다만 관(accnm) · 목(it2nm) 처럼 실제 내용이 들어가는 왼쪽정렬 칸(.l)까지
+         nowrap 이 되면 '수익사업운영비(영리사업)' 처럼 공백 없는 한글이
+         칸 경계를 넘어 옆 칸까지 흘러나간다.
+         한글은 공백에서만 줄바꿈하므로 break-all 을 함께 줘야 글자 단위로 끊긴다.
+         (.lg-table td 에 이미 break-all 이 있지만 아래 규칙이 더 구체적이라 덮인다) */
+      .doc-page td[rowspan]:not(.l) { white-space: nowrap; }
+      .doc-page td[rowspan].l {
+          white-space: normal;
+          word-break: break-all;
+          word-wrap: break-word;      /* PDF 다운로드(openhtmltopdf) 대응 */
+          overflow-wrap: break-word;
+      }
 
       /* ── 인쇄 (반드시 마지막) ──────────────────── */
       @page { size: A4; margin: 0; }   /* 브라우저 기본 여백 제거 */
