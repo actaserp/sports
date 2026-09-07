@@ -22,11 +22,14 @@ public class BusinessInOutService { // 사업별입출현황
 																							 String bsdate, String bseccd, String busicd) {
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		String spjangcd = TenantContext.get();
-		String custcd   = getBizInfoBySpjangcd(spjangcd).get("custcd");
+		Map<String, String> biz = getBizInfoBySpjangcd(spjangcd);
+		String custcd   = biz.get("custcd");
 		String frdate = (start == null ? "" : start.replace("-", ""));
 		String todate = (end   == null ? "" : end.replace("-", ""));
 		param.addValue("spjangcd", spjangcd);
 		param.addValue("custcd",   custcd);
+		// 출력물 머리글(PB gf_spjangnm())
+		param.addValue("spjangnm", biz.get("spjangnm"));
 		param.addValue("frdate",   frdate);
 		param.addValue("todate",   todate);
 		// gf_chk_null → '%'
@@ -142,7 +145,7 @@ public class BusinessInOutService { // 사업별입출현황
 	// tab5 : 세출내역 (tiosec = '2')
 	//   집행:  TB_AA009 + TB_AA010 (Left(acccd,1) = '7')  → amt
 	//   예산:  TB_X0007                                    → price
-	//   그룹:  mssec/acccd/accnm/it1nm/it2nm/businm + bsdate/bseccd/busicd (전표일자/순번 없음)
+	//   그룹:  mssec/acccd/accnm/it1nm/it2nm/businm + bsdate/bseccd/busicd + spdate/spnum
 	// ============================================================
 	public Object searchOutList(String start, String end,
 															String bsdate, String bseccd, String busicd) {
@@ -158,11 +161,12 @@ public class BusinessInOutService { // 사업별입출현황
                Z.businm,
                SUM(Z.amt)   AS amt,
                SUM(Z.price) AS price,
-               MAX(Z.spdate) AS spdate,
-               MAX(Z.spnum)  AS spnum,
                Z.bsdate,
                Z.bseccd,
                Z.busicd,
+               Z.spdate,
+               Z.spnum,
+               :spjangnm AS spjangnm,
                STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
                STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
           FROM (
@@ -197,7 +201,7 @@ public class BusinessInOutService { // 사업별입출현황
                    0 AS amt,
                    a.price,
                    a.bsdate, a.bseccd, a.busicd,
-                   a.spdate, a.spnum
+                   '' AS spdate, '' AS spnum
               FROM TB_X0007 a, TB_AC001 b, tb_x0002 c, tb_x0003 d, tb_x0004 e
              WHERE a.acccd  = b.acccd
                AND a.bsdate = c.bsdate
@@ -215,8 +219,8 @@ public class BusinessInOutService { // 사업별입출현황
                AND a.busicd LIKE :busicd + '%'
           ) Z
          GROUP BY Z.mssec, Z.acccd, Z.accnm, Z.it1nm, Z.it2nm, Z.businm,
-                  Z.bsdate, Z.bseccd, Z.busicd
-         ORDER BY Z.businm, Z.acccd
+                  Z.bsdate, Z.bseccd, Z.busicd, Z.spdate, Z.spnum
+         ORDER BY Z.businm, Z.acccd, Z.spdate, Z.spnum
         """;
 		return sqlRunner.getRows(sql, param);
 	}

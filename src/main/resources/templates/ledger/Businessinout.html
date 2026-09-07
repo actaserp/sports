@@ -48,6 +48,29 @@
       .slip-popup .slip-grid-box { margin: 8px 0; }
       .slip-popup { width: 100%; box-sizing: border-box; padding: 4px; }
       .slip-popup .section { width: 100%; }
+      /* ── 출력 미리보기 팝업 ── */
+      .report-popup { width: 100%; height: 100%; box-sizing: border-box;
+          display: flex; flex-direction: column; padding: 4px; }
+      .report-popup .report-toolbar {
+          display: flex; justify-content: space-between; align-items: center;
+          padding-bottom: 6px; flex: 0 0 auto;
+      }
+      .report-popup .report-toolbar .btn { margin-left: 6px; }
+      .report-popup .report-toolbar .nav-group .btn:first-child { margin-left: 0; }
+      .report-popup .report-toolbar .page-info { margin-left: 14px; font-size: 13px; font-weight: 600; }
+      .report-popup .report-toolbar .orient-sel { margin-left: 10px; height: 30px; font-size: 13px; }
+      .report-popup .report-toolbar .btn[disabled] { opacity: .45; cursor: default; }
+      .report-popup .report-viewport {
+          flex: 1 1 auto; overflow: auto; background: #e9ebef;
+          border: 1px solid #d5d9e0; padding: 8px;
+      }
+      /* 용지는 iframe 으로 그린다. 화면 CSS 가 섞이지 않아 인쇄 결과와 동일하다. */
+      .report-popup .report-scale { margin: 0 auto; }
+      .report-popup #reportFrame {
+          width: 297mm; height: 210mm; border: 0; background: #fff;
+          display: block; transform-origin: top left;
+          box-shadow: 0 1px 4px rgba(0,0,0,.15);
+      }
   </style>
   <div class="layout-contents">
     <div class="page-title-wrap">
@@ -143,10 +166,13 @@
               <dl>
                 <dt>&nbsp;</dt>
                 <dd>
-                  <li>
+                  <li style="display:flex; align-items:center; gap:6px;">
                     <button class="btn btn-delete" id="btnSearch5" title="검색" type="button">
                       <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
                       검색
+                    </button>
+                    <button class="btn btn-delete" id="btnPrint5" title="출력" type="button">
+                      출력
                     </button>
                   </li>
                 </dd>
@@ -155,7 +181,7 @@
           </div>
           <div class="grid-guide-box">※ 사업명 입력 후 엔터로 검색합니다.
             <label class="chk-inline"><input type="checkbox" id="cbxSlip5" checked/> 더블클릭 시 전표 팝업 열기</label>
-            (단축키 조회:F4)
+            (단축키 조회:F4 / 출력:F8)
           </div>
           <div class="grid_box" id="divDetail">
             <div id="theGrid_detail" style="height: 540px;"></div>
@@ -432,6 +458,32 @@
     </div>
   </script>
 
+  <!-- 출력 미리보기 팝업 (d_book23_2_01_print) -->
+  <script id="reportPopupTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup report-popup">
+      <div class="report-toolbar">
+        <span class="nav-group">
+          <button class="btn btn-delete" id="btnRptFirst" type="button">|◀ 처음</button>
+          <button class="btn btn-delete" id="btnRptPrev"  type="button">◀ 이전</button>
+          <button class="btn btn-delete" id="btnRptNext"  type="button">다음 ▶</button>
+          <button class="btn btn-delete" id="btnRptLast"  type="button">맨뒤 ▶|</button>
+          <span class="page-info" id="rptPageInfo">페이지 : 1 (1)</span>
+          <select class="orient-sel" id="rptOrient">
+            <option value="landscape" selected>가로</option>
+            <option value="portrait">세로</option>
+          </select>
+        </span>
+        <span class="act-group">
+          <button class="btn btn-delete" id="btnReportPrint" type="button">인쇄</button>
+          <button class="btn btn-delete" id="btnReportClose" type="button">닫기</button>
+        </span>
+      </div>
+      <div class="report-viewport">
+        <div class="report-scale"><iframe id="reportFrame" scrolling="no"></iframe></div>
+      </div>
+    </div>
+  </script>
+
 </th:block>
 <th:block layout:fragment="scripts">
   <th:block th:replace="common/popup_account :: popup_account" />
@@ -447,6 +499,7 @@
      this.profitGrid = null;    // tab6 - 사업손익집계현황(사업상세)
      this.profitSummaryGrid = null; // tab6 - 사업손익집계현황(사업별현황)
      this.profitLossGrid = null;    // tab7 - 사업손익상세
+     this.reportOrient = 'landscape';   // 출력물 용지 방향 (landscape | portrait)
      this.init();
     }
 
@@ -458,8 +511,8 @@
      _this.summaryGrid.downloadFileName = '세입내역';
      _this.bindSlipDblClick(_this.summaryGrid, '#cbxSlip2');
 
-     // tab5 : 세출내역 (tiosec=2) — 전표일자/순번 컬럼 없음
-     _this.detailGrid = _this.buildBudgetGrid('#theGrid_detail', false);
+     // tab5 : 세출내역 (tiosec=2) — 전표일자/순번 컬럼 있음
+     _this.detailGrid = _this.buildBudgetGrid('#theGrid_detail', true);
      _this.detailGrid.downloadFileName = '세출내역';
      _this.bindSlipDblClick(_this.detailGrid, '#cbxSlip5');
 
@@ -942,6 +995,372 @@
      });
     }
 
+    // ============================================================
+    // 출력 (사업별세출내역 - d_book23_2_01_print)
+    //   PB 인쇄 미리보기와 동일하게 페이지 단위로 끊어서 보여준다.
+    // ============================================================
+
+    // 사업장명 : PB gf_spjangnm() 대응.
+    //  1순위 조회 결과의 spjangnm(서버가 tb_xa012 에서 내려줌), 그 다음 전역/히든값
+    getSpjangnm(rows) {
+     if (rows && rows.length > 0 && rows[0].spjangnm) return rows[0].spjangnm;
+     if (typeof window.gf_spjangnm === 'function') return window.gf_spjangnm() || '';
+     if (window.SPJANGNM) return window.SPJANGNM;
+     const $e = $('#spjangnm, #sessionSpjangnm').first();
+     if ($e.length) return $e.val() || $e.text() || '';
+     return '';
+    }
+
+    fmtDate8(v) {
+     return (v || '').toString().trim().replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+    }
+
+    fmtNum(v) {
+     return (Number(v) || 0).toLocaleString();
+    }
+
+    // 전표일자/순번 : PB mid(spdate,...) + spnum
+    fmtSlipCol(item) {
+     const d = (item.spdate || '').toString().trim();
+     if (!d) return '';
+     const md = d.length >= 8 ? d.substring(4, 6) + '-' + d.substring(6, 8) : d;
+     return item.spnum ? (md + ' / ' + item.spnum) : md;
+    }
+
+    escHtml(s) {
+     return (s == null ? '' : String(s))
+     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // 리포트 CSS (미리보기 팝업 / 인쇄창 공용)
+    reportCss() {
+     const sp = this.reportPageSpec();
+     return [
+      '.rpt-page { font-family: "맑은 고딕","Malgun Gothic",sans-serif; color:#000;',
+      '            height:' + sp.ch + 'mm; box-sizing:border-box; overflow:hidden; }',
+      '.rpt-page h1 { font-size:' + (sp.font + 13) + 'px; letter-spacing:8px; text-align:center;',
+      '                margin:4px 0 12px; font-weight:700; }',
+      '.rpt-page .rpt-info { display:flex; justify-content:space-between; font-size:12px; margin-bottom:2px; }',
+      '.rpt-page .rpt-org { font-size:12px; margin-bottom:6px; }',
+      '.rpt-page .rpt-foot { font-size:12px; margin-top:6px; }',
+      '.rpt-page table { width:100%; border-collapse:collapse; table-layout:fixed; }',
+      '.rpt-page th, .rpt-page td { border:1px solid #000;',
+      '                             padding:' + sp.padV + 'px ' + sp.padH + 'px;',
+      '                             font-size:' + sp.font + 'px;',
+      '                             vertical-align:middle; white-space:normal; line-height:1.35;',
+      '                             overflow-wrap:break-word; word-break:break-all; }',
+      '.rpt-page thead th { text-align:center; font-weight:700; background:#fff; }',
+      '.rpt-page td.c { text-align:center; }',
+      '.rpt-page td.r { text-align:right; }',
+      '.rpt-page tr.sub td, .rpt-page tr.total td { font-weight:700; }',
+      '.rpt-page tr.sub td.lbl, .rpt-page tr.total td.lbl { text-align:center; }',
+      '.rpt-page + .rpt-page { margin-top:16px; }',
+      '@media print {',
+      '  .rpt-page { page-break-after: always; }',
+      '  .rpt-page:last-child { page-break-after: auto; }',
+      '  .rpt-page + .rpt-page { margin-top:0; }',
+      '}'
+     ].join('\n');
+    }
+
+    // 그리드 데이터 → 인쇄용 라인 목록(상세행 / 사업별 계 / 총계)
+    buildReportModel(tabNo) {
+     let _this = this;
+     const grid = (tabNo === 2) ? _this.summaryGrid : _this.detailGrid;
+     const cv = grid ? grid.itemsSource : null;
+     const rows = (cv && cv.items) ? cv.items : [];
+     const r0 = rows.length > 0 ? rows[0] : {};
+
+     const now = new Date();
+     const p2 = n => (n < 10 ? '0' + n : '' + n);
+
+     const meta = {
+      title: (tabNo === 2) ? '사업별세입내역' : '사업별세출내역',
+      frdate: r0.frdate || _this.fmtDate8(($('#searchfrdate' + tabNo).val() || '').replace(/-/g, '')),
+      todate: r0.todate || _this.fmtDate8(($('#searchtodate' + tabNo).val() || '').replace(/-/g, '')),
+      spjangnm: _this.getSpjangnm(rows),
+      outdt: now.getFullYear() + '-' + p2(now.getMonth() + 1) + '-' + p2(now.getDate())
+       + ' ' + p2(now.getHours()) + ':' + p2(now.getMinutes())
+     };
+
+     let lines = [];
+     let gName = null, gPrice = 0, gAmt = 0, gDiff = 0;
+     let tPrice = 0, tAmt = 0, tDiff = 0;
+
+     const pushSub = () => {
+      if (gName === null) return;
+      lines.push({kind: 'sub', price: gPrice, amt: gAmt, diff: gDiff});
+     };
+
+     rows.forEach(r => {
+      const price = Number(r.price) || 0;
+      const amt   = Number(r.amt) || 0;
+      const diff  = (r.c_sum != null) ? Number(r.c_sum) : (price - amt);
+      const name  = r.businm || '';
+      let isFirst = false;
+
+      if (name !== gName) {
+       pushSub();
+       gName = name; gPrice = 0; gAmt = 0; gDiff = 0;
+       isFirst = true;
+      }
+      gPrice += price; gAmt += amt; gDiff += diff;
+      tPrice += price; tAmt += amt; tDiff += diff;
+
+      lines.push({
+       kind: 'detail', isFirst: isFirst, businm: name,
+       slip: _this.fmtSlipCol(r), mssec: r.mssec,
+       accnm: r.accnm, it1nm: r.it1nm, it2nm: r.it2nm,
+       price: price, amt: amt, diff: diff, summy: r.summy
+      });
+     });
+     pushSub();
+     lines.push({kind: 'total', price: tPrice, amt: tAmt, diff: tDiff});
+
+     return {meta: meta, lines: lines, count: rows.length};
+    }
+
+    // 한 줄(tr) HTML. forceName : 페이지 첫 상세행이면 사업명을 다시 찍는다.
+    renderReportLine(line, forceName) {
+     let _this = this;
+     if (line.kind === 'detail') {
+      return '<tr>'
+       + '<td>' + ((line.isFirst || forceName) ? _this.escHtml(line.businm) : '') + '</td>'
+       + '<td class="c">' + _this.escHtml(line.slip) + '</td>'
+       + '<td class="c">' + _this.escHtml(line.mssec) + '</td>'
+       + '<td>' + _this.escHtml(line.accnm) + '</td>'
+       + '<td>' + _this.escHtml(line.it1nm) + '</td>'
+       + '<td>' + _this.escHtml(line.it2nm) + '</td>'
+       + '<td class="r">' + _this.fmtNum(line.price) + '</td>'
+       + '<td class="r">' + _this.fmtNum(line.amt) + '</td>'
+       + '<td class="r">' + _this.fmtNum(line.diff) + '</td>'
+       + '<td>' + _this.escHtml(line.summy) + '</td>'
+       + '</tr>';
+     }
+     const cls = (line.kind === 'sub') ? 'sub' : 'total';
+     const lbl = (line.kind === 'sub') ? '계' : '총계';
+     return '<tr class="' + cls + '"><td></td><td class="lbl" colspan="5">' + lbl + '</td>'
+      + '<td class="r">' + _this.fmtNum(line.price) + '</td>'
+      + '<td class="r">' + _this.fmtNum(line.amt) + '</td>'
+      + '<td class="r">' + _this.fmtNum(line.diff) + '</td><td></td></tr>';
+    }
+
+    // 페이지 1장 HTML (머리글 + 표 + 페이지 바닥글)
+    renderReportPage(meta, pageLines, pageNo, pageCount) {
+     let _this = this;
+     let h = [];
+     h.push('<div class="rpt-page">');
+     h.push('<h1>' + meta.title + '</h1>');
+     h.push('<div class="rpt-info"><span>기준일자 : ' + meta.frdate + ' - ' + meta.todate + '</span>'
+      + '<span>출력일시 : ' + meta.outdt + '</span></div>');
+     h.push('<div class="rpt-org">' + _this.escHtml(meta.spjangnm) + '</div>');
+     // 폭은 % 로 지정한다. px 로 고정하면 용지 폭을 넘어 비고 컬럼이 잘린다.
+     h.push('<table><colgroup>'
+      + _this.reportColWidths().map(w => '<col style="width:' + w + '%">').join('')
+      + '</colgroup>');
+     h.push('<thead><tr>'
+      + '<th>사업명</th><th>전표일자/순번</th><th>재원</th><th>관</th><th>항</th><th>목</th>'
+      + '<th>예산액</th><th>결산액</th><th>차액</th><th>비고</th>'
+      + '</tr></thead><tbody>');
+
+     let firstDetailDone = false;
+     pageLines.forEach(line => {
+      let forceName = false;
+      if (line.kind === 'detail' && !firstDetailDone) { forceName = true; firstDetailDone = true; }
+      h.push(_this.renderReportLine(line, forceName));
+     });
+
+     h.push('</tbody></table>');
+     h.push('<div class="rpt-foot">페이지 : ' + pageNo + ' (' + pageCount + ')</div>');
+     h.push('</div>');
+     return h.join('\n');
+    }
+
+    // 용지 방향별 규격. cw/ch 는 여백 10mm 를 뺀 실제 내용 영역(mm).
+    reportPageSpec() {
+     const portrait = (this.reportOrient === 'portrait');
+     return portrait
+      ? {orient: 'portrait',  w: 210, h: 297, cw: 190, ch: 277, font: 9,  padV: 2, padH: 3}
+      : {orient: 'landscape', w: 297, h: 210, cw: 277, ch: 190, font: 11, padV: 3, padH: 4};
+    }
+
+    // 컬럼 폭(%). 합은 반드시 100. 세로는 폭이 좁아 비고를 줄이고 관/항/목에 배분한다.
+    reportColWidths() {
+     return (this.reportOrient === 'portrait')
+      ? [12, 9, 4, 11, 12, 12, 9, 9, 9, 13]
+      : [13, 8, 4, 11, 11, 11, 8, 8, 8, 18];
+    }
+
+    // 미리보기 iframe / 측정 iframe / 인쇄창이 모두 쓰는 완결된 문서
+    //   screenPad=true 면 화면에서 용지 여백(10mm)을 눈으로 보이게 준다.
+    //   인쇄는 @page margin 이 여백을 잡으므로 padding 을 주지 않는다.
+    reportDocHtml(bodyHtml, title, screenPad) {
+     return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'
+      + this.escHtml(title) + '</title>'
+      + '<style>@page { size: A4 ' + this.reportPageSpec().orient + '; margin: 10mm; }'
+      + ' html, body { margin:0; padding:0; -webkit-print-color-adjust:exact; }'
+      + (screenPad ? ' @media screen { body { padding:10mm; box-sizing:border-box; } }' : '')
+      + '</style>'
+      + '<style>' + this.reportCss() + '</style>'
+      + '</head><body>' + bodyHtml + '</body></html>';
+    }
+
+    // 1mm 가 몇 px 인지 (브라우저/배율에 따라 다르므로 실측)
+    pxPerMm() {
+     if (this._pxmm) return this._pxmm;
+     const d = document.createElement('div');
+     d.style.cssText = 'position:absolute;visibility:hidden;height:100mm;';
+     document.body.appendChild(d);
+     this._pxmm = d.getBoundingClientRect().height / 100;
+     d.parentNode.removeChild(d);
+     return this._pxmm || 3.78;
+    }
+
+    // 페이지 분할 : 줄 수가 아니라 실제 행 높이를 재서 A4 한 장 높이에 맞춘다.
+    //   비고가 길어 두 줄이 되는 행이 있어도 페이지가 넘치지 않는다.
+    paginateByHeight(meta, lines) {
+     let _this = this;
+     const mm = _this.pxPerMm();
+     const sp = _this.reportPageSpec();
+     const PAGE_W = sp.cw, PAGE_H = sp.ch;   // A4 - 여백 10mm
+
+     // 측정은 반드시 iframe 안에서 한다. 화면(앱) CSS 가 섞이면 행 높이가
+     // 실제 인쇄보다 크게 나와 페이지가 불필요하게 늘어난다.
+     const $if = $('<iframe></iframe>')
+     .attr('scrolling', 'no')
+     .css({position: 'absolute', left: '-10000px', top: '0',
+      width: PAGE_W + 'mm', height: '3000px', border: '0'})
+     .appendTo('body');
+
+     const doc = $if[0].contentWindow.document;
+     doc.open();
+     doc.write(_this.reportDocHtml(_this.renderReportPage(meta, lines, 1, 1), 'measure', false)
+      + '<style>.rpt-page { height:auto !important; overflow:visible !important; }</style>');
+     doc.close();
+
+     const $page = $(doc).find('.rpt-page');
+     let headH = 0;
+     $page.children('h1, .rpt-info, .rpt-org').each(function () { headH += $(this).outerHeight(true); });
+     const theadH = $page.find('thead').outerHeight() || 0;
+     const footH  = $page.find('.rpt-foot').outerHeight(true) || 0;
+     const budget = (PAGE_H * mm) - headH - theadH - footH - (2 * mm);
+
+     let pages = [], cur = [], h = 0;
+     $page.find('tbody tr').each(function (i) {
+      const th = this.getBoundingClientRect().height;
+      if (cur.length > 0 && (h + th) > budget) { pages.push(cur); cur = []; h = 0; }
+      cur.push(lines[i]);
+      h += th;
+     });
+     if (cur.length > 0) pages.push(cur);
+     $if.remove();
+
+     if (pages.length === 0) pages = [lines];
+     return pages;
+    }
+
+    // 용지를 팝업 '가로 폭'에만 맞춰 축소한다.
+    //   세로까지 맞추면 글자가 너무 작아지므로, 넘치는 부분은 스크롤로 본다.
+    fitReportScale() {
+     const $vp = $('.report-viewport');
+     const $paper = $('#reportFrame');
+     if (!$vp.length || !$paper.length) return;
+     const mm = this.pxPerMm();
+     const sp = this.reportPageSpec();
+     const pw = sp.w * mm, ph = sp.h * mm;
+     const s = Math.min(($vp.innerWidth() - 24) / pw, 1);
+     $paper.css({width: sp.w + 'mm', height: sp.h + 'mm', transform: 'scale(' + s + ')'});
+     $('.report-scale').css({width: (pw * s) + 'px', height: (ph * s) + 'px'});
+    }
+
+    // 출력 버튼 → 미리보기 팝업
+    openReportPopup(tabNo) {
+     let _this = this;
+     const model = _this.buildReportModel(tabNo);
+     if (model.count === 0) {
+      Alert.alert('', '출력할 자료가 없습니다. 먼저 조회하세요.');
+      return;
+     }
+
+     // 페이지 분할 (행 높이 실측)
+     const pages = _this.paginateByHeight(model.meta, model.lines);
+     _this.reportModel = model;
+     _this.reportPages = pages;
+     _this.reportPageNo = 1;
+
+     if (_this.reportPopup) {
+      _this.reportPopup.close();
+      _this.reportPopup = null;
+     }
+
+     let content = tmpl('reportPopupTemplate', {});
+     _this.reportPopup = new PopupDraggable(model.meta.title);
+     _this.reportPopup.open({width: 1100, height: 650, $content: $(content)});
+
+     _this.showReportPage(1);
+
+     $('#btnRptFirst').on('click', function () { _this.showReportPage(1); });
+     $('#btnRptPrev').on('click',  function () { _this.showReportPage(_this.reportPageNo - 1); });
+     $('#btnRptNext').on('click',  function () { _this.showReportPage(_this.reportPageNo + 1); });
+     $('#btnRptLast').on('click',  function () { _this.showReportPage(_this.reportPages.length); });
+     $('#rptOrient').val(_this.reportOrient).on('change', function () {
+      _this.reportOrient = $(this).val();
+      _this.reportPages = _this.paginateByHeight(model.meta, model.lines);
+      _this.showReportPage(1);
+     });
+     $('#btnReportPrint').on('click', function () { _this.printReport(); });
+     $('#btnReportClose').on('click', function () {
+      if (_this.reportPopup) { _this.reportPopup.close(); _this.reportPopup = null; }
+     });
+    }
+
+    // 미리보기에 해당 페이지만 그린다
+    showReportPage(no) {
+     let _this = this;
+     const pages = _this.reportPages || [];
+     if (pages.length === 0) return;
+     if (no < 1) no = 1;
+     if (no > pages.length) no = pages.length;
+     _this.reportPageNo = no;
+
+     const meta = _this.reportModel.meta;
+     const html = _this.renderReportPage(meta, pages[no - 1], no, pages.length);
+     const fdoc = $('#reportFrame')[0].contentWindow.document;
+     fdoc.open();
+     fdoc.write(_this.reportDocHtml(html, meta.title, true));
+     fdoc.close();
+     $('#rptPageInfo').text('페이지 : ' + no + ' (' + pages.length + ')');
+     _this.fitReportScale();
+     $('.report-viewport').scrollTop(0);
+     $('#btnRptFirst, #btnRptPrev').prop('disabled', no === 1);
+     $('#btnRptNext, #btnRptLast').prop('disabled', no === pages.length);
+
+    }
+
+    // 인쇄 : 전체 페이지를 별도 창에 이어 붙여 출력
+    printReport() {
+     let _this = this;
+     const pages = _this.reportPages || [];
+     if (pages.length === 0) return;
+
+     const meta = _this.reportModel.meta;
+     let body = '';
+     pages.forEach((p, i) => {
+      body += _this.renderReportPage(meta, p, i + 1, pages.length);
+     });
+
+     const w = window.open('', '_blank', 'width=1024,height=768');
+     if (!w) {
+      Alert.alert('', '팝업이 차단되어 인쇄창을 열 수 없습니다. 브라우저 팝업 차단을 해제하세요.');
+      return;
+     }
+     w.document.open();
+     w.document.write(_this.reportDocHtml(body, meta.title, false));
+     w.document.close();
+     w.focus();
+     setTimeout(function () { w.print(); }, 300);
+    }
+
     // tab2 : 세입내역 조회
     searchSummary() {
      let _this = this;
@@ -1326,10 +1745,23 @@
 
     page.searchMainData(2);
 
+    // 세출내역(tab5) : 출력 미리보기
+    $('#btnPrint5').on('click', function () {
+     page.openReportPopup(5);
+    });
+
     $(document).on('keydown', function (ev) {
      if (ev.key === 'F4') {
       ev.preventDefault();
       page.searchMainData(getActiveTabNo());
+     }
+     // F8 : 세입/세출 탭 출력 미리보기
+     if (ev.key === 'F8') {
+      let no = getActiveTabNo();
+      if (no === 2 || no === 5) {
+       ev.preventDefault();
+       page.openReportPopup(no);
+      }
      }
     });
 
@@ -1351,4 +1783,5 @@
     });
    });
   </script>
-</th:block></html>
+</th:block>
+</html>
