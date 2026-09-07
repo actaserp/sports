@@ -40,16 +40,32 @@ public class PayslipService {
 	/** 수당지급명세서 선택값. 화면 select 의 value 와 같아야 한다. */
 	public static final String DOC_ALLOWANCE = "ALW";
 
+	/** 직접입력 문서명의 최대 길이. PDF 파일명에 그대로 들어가므로 길이를 막는다. */
+	private static final int DOCNM_MAX = 30;
+
 	/**
 	 * 출력 문서명.
 	 *
-	 * 화면에서 고른 값이 우선이고, 비어 있으면 급여구분을 따른다.
+	 * 빈 값  → 급여구분(급여 · 상여 · 급상여명세서)
+	 * ALW    → 수당지급명세서
+	 * 그 외  → 화면에서 담당자가 직접 입력한 문자열을 그대로 문서명으로 쓴다.
+	 *
 	 * 비었을 때 급여명세서로 고정하지 않는 이유는 상여(002) · 급상여(003) 회차의
 	 * 제목이 조용히 바뀌기 때문이다.
+	 *
+	 * ※ 직접입력 값은 PDF 파일명 · ZIP 엔트리명 · Content-Disposition 헤더에
+	 *   그대로 들어간다. 화면에서 이미 걸렀더라도 이 API 는 주소창으로도 호출되므로
+	 *   여기서 반드시 다시 거른다. 거르지 않으면 '/' 하나에 ZIP 안에 폴더가 생기고
+	 *   개행 하나에 응답 헤더가 깨진다.
 	 */
 	public static String docName(String doctype, String paytype) {
-		if (DOC_ALLOWANCE.equals(doctype)) return "수당지급명세서";
-		return paytypeName(paytype);
+		String d = doctype == null ? "" : doctype.trim();
+		if (d.isEmpty())             return paytypeName(paytype);
+		if (DOC_ALLOWANCE.equals(d)) return "수당지급명세서";
+
+		String s = d.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "").trim();
+		if (s.length() > DOCNM_MAX) s = s.substring(0, DOCNM_MAX);
+		return s.isEmpty() ? paytypeName(paytype) : s;
 	}
 
 	// ─────────────────────────────────────────────────────────

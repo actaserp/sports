@@ -117,6 +117,15 @@
       }
       .ps-doctype select:focus-visible { outline: 2px solid var(--ps-value); outline-offset: 2px; }
 
+      /* 직접입력 칸. select 에서 '직접입력' 을 고를 때만 보인다. */
+      .ps-doctype input {
+          height: 34px; width: 150px; padding: 0 10px;
+          border: 1px solid var(--ps-frame); border-radius: 2px;
+          background: #fff; color: var(--ps-ink);
+          font-family: inherit; font-size: 13px;
+      }
+      .ps-doctype input:focus-visible { outline: 2px solid var(--ps-value); outline-offset: 2px; }
+
       /* ── 안내 줄 ───────────────────────────────────────
          파란 강조 대신 왼쪽 괘선 하나로만 구분한다. */
       .grid-guide-box {
@@ -449,13 +458,19 @@
         <div class="button-wrap ps-actions">
           <!-- 출력 문서명. 조회 조건이 아니라 출력물 서식이라 버튼 옆에 둔다.
                바꿔도 재조회하지 않고 미리보기만 다시 그린다.
-               빈 값은 급여회차의 급여구분을 그대로 따른다(급여/상여/급상여명세서). -->
+               빈 값은 급여회차의 급여구분을 그대로 따른다(급여/상여/급상여명세서).
+               직접입력은 적은 글자가 그대로 문서명이 되어 제목 · PDF 파일명 ·
+               메일 제목의 {제목} 까지 함께 바뀐다. -->
           <div class="ps-doctype">
             <label for="doctype">문서명</label>
             <select id="doctype" name="doctype">
               <option value="">급여명세서</option>
               <option value="ALW">수당지급명세서</option>
+              <option value="__ETC__">직접입력…</option>
             </select>
+            <!-- 비워 두면 급여구분을 따른다. 파일명에 쓸 수 없는 문자는 cleanDocNm 이 지운다. -->
+            <input type="text" id="doctypeText" maxlength="30"
+                   placeholder="문서명 입력 후 엔터" autocomplete="off" style="display:none"/>
           </div>
           <button class="ps-btn" id="btnPrint" type="button">명세서 출력</button>
           <button class="ps-btn" id="btnSaveZip" type="button">명세서 저장</button>
@@ -628,22 +643,55 @@
 
     bind() {
      let _this = this;
-     $('#btnSearch').on('click', function () { _this.search(); });
-     $('#btnPrint').on('click', function () { _this.printOne(); });
-     $('#btnSaveZip').on('click', function () { _this.saveZip(); });
-     $('#btnMail').on('click', function () { _this.confirmSend(); });
-     $('#batch, #mpclafi, #rtclafi').on('change', function () { _this.search(); });
+     $('#btnSearch').on('click', function () {
+      _this.search();
+     });
+     $('#btnPrint').on('click', function () {
+      _this.printOne();
+     });
+     $('#btnSaveZip').on('click', function () {
+      _this.saveZip();
+     });
+     $('#btnMail').on('click', function () {
+      _this.confirmSend();
+     });
+     $('#batch, #mpclafi, #rtclafi').on('change', function () {
+      _this.search();
+     });
      // 문서명은 조회 조건이 아니다. 목록은 그대로 두고 미리보기만 다시 그린다.
      $('#doctype').on('change', function () {
+      const etc = $(this).val() === '__ETC__';
+      $('#doctypeText').toggle(etc);
+      // 직접입력으로 막 바꾼 시점에는 칸이 비어 있어 다시 그릴 것이 없다.
+      if (etc) {
+       $('#doctypeText').trigger('focus');
+       return;
+      }
       if (_this.current) _this.loadPreview(_this.current);
      });
-     $('#divinm, #rspnm, #pernm').on('keydown', function (e) { if (e.key === 'Enter') _this.search(); });
+     // 글자마다 다시 그리면 미리보기 요청이 쌓인다. 다 쓰고 칸을 빠져나갈 때만 반영한다.
+     $('#doctypeText').on('change', function () {
+      if (_this.current) _this.loadPreview(_this.current);
+     });
+     $('#doctypeText').on('keydown', function (e) {
+      // 조회(F4)와 달리 엔터로 재조회하지 않는다. 입력을 확정만 한다.
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       $(this).trigger('blur');
+      }
+     });
+     $('#divinm, #rspnm, #pernm').on('keydown', function (e) {
+      if (e.key === 'Enter') _this.search();
+     });
 
      $('#chkAll').on('change', function () {
       $('#psGridBody .ps-chk:not(:disabled)').prop('checked', this.checked);
       _this.updateCount();
      });
-     $('#psGridBody').on('change', '.ps-chk', function () { _this.syncChkAll(); _this.updateCount(); });
+     $('#psGridBody').on('change', '.ps-chk', function () {
+      _this.syncChkAll();
+      _this.updateCount();
+     });
      $('#psGridBody').on('click', 'tr', function (e) {
       if ($(e.target).is('input')) return;
       const perid = $(this).data('perid');
@@ -702,38 +750,78 @@
      const b = this.batch();
      if (!b) return null;
      return {
-      paytype:  b.paytype,                       // [7]
+      paytype: b.paytype,                       // [7]
       paybasic: String(b.paybasic),              // [8]
-      paydate:  String(b.paydate),               // [9]
+      paydate: String(b.paydate),               // [9]
       // 부서 · 직위 · 사원은 코드가 아니라 이름으로 보낸다.
       // 서버는 값이 있을 때만 조건을 붙인다.
-      mpclafi:  $('#mpclafi').val(),             // [1]
-      divinm:   $('#divinm').val().trim(),       // [2] 부서명
-      rspnm:    $('#rspnm').val().trim(),        // [4] 직위명
-      rtclafi:  $('#rtclafi').val(),             // [6]
-      pernm:    $('#pernm').val().trim()         // [11] 성명
+      mpclafi: $('#mpclafi').val(),             // [1]
+      divinm: $('#divinm').val().trim(),       // [2] 부서명
+      rspnm: $('#rspnm').val().trim(),        // [4] 직위명
+      rtclafi: $('#rtclafi').val(),             // [6]
+      pernm: $('#pernm').val().trim()         // [11] 성명
      };
     }
+
     keyOf(perid) {
      const c = this.cond();
-     return { paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate,
-      perid: perid, doctype: this.doctype() };
+     return {
+      paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate,
+      perid: perid, doctype: this.doctype()
+     };
     }
 
-    /** 화면에서 고른 문서 구분. 빈 문자열이면 서버가 급여구분을 따른다. */
-    doctype() { return $('#doctype').val() || ''; }
+    /**
+     * 화면에서 고른 문서 구분. 빈 문자열이면 서버가 급여구분을 따른다.
+     * 직접입력이면 입력한 글자 자체가 문서명으로 서버에 넘어간다.
+     */
+    doctype() {
+     const v = $('#doctype').val() || '';
+     if (v !== '__ETC__') return v;
+     return this.cleanDocNm($('#doctypeText').val());
+    }
+
+    /**
+     * 서버 PayslipService.docName 과 같은 규칙.
+     * 문서명은 PDF 파일명과 ZIP 엔트리명에 그대로 들어가므로 경로 문자를 지운다.
+     * 서버도 같은 처리를 한 번 더 한다. 여기 것은 화면 표시를 맞추기 위한 것이다.
+     */
+    cleanDocNm(s) {
+     return String(s || '').replace(/[\\/:*?"<>|\r\n\t]/g, '').trim().substring(0, 30);
+    }
 
     /** 화면 표시용 문서명. 서버의 PayslipService.docName 과 결과가 같아야 한다. */
     docNm(paytype) {
-     return this.doctype() === 'ALW' ? '수당지급명세서' : this.paytypeNm(paytype) + '명세서';
+     const d = this.doctype();
+     if (d === 'ALW') return '수당지급명세서';
+     if (d) return d;
+     return this.paytypeNm(paytype) + '명세서';
     }
 
-    paytypeNm(t) { return t === '002' ? '상여' : (t === '003' ? '급상여' : '급여'); }
-    fmtYm(v)  { v = String(v || ''); return v.length < 6 ? v : v.substring(0,4) + '.' + v.substring(4,6); }
-    fmtYmd(v) { v = String(v || ''); return v.length < 8 ? v : v.substring(0,4) + '.' + v.substring(4,6) + '.' + v.substring(6,8); }
+    paytypeNm(t) {
+     return t === '002' ? '상여' : (t === '003' ? '급상여' : '급여');
+    }
+
+    fmtYm(v) {
+     v = String(v || '');
+     return v.length < 6 ? v : v.substring(0, 4) + '.' + v.substring(4, 6);
+    }
+
+    fmtYmd(v) {
+     v = String(v || '');
+     return v.length < 8 ? v : v.substring(0, 4) + '.' + v.substring(4, 6) + '.' + v.substring(6, 8);
+    }
+
     // 메일 문안용 — 2026년 08월 / 2026년 08월 25일
-    ymText(v)  { v = String(v || ''); return v.length < 6 ? v : v.substring(0,4) + '년 ' + v.substring(4,6) + '월'; }
-    ymdText(v) { v = String(v || ''); return v.length < 8 ? v : v.substring(0,4) + '년 ' + v.substring(4,6) + '월 ' + v.substring(6,8) + '일'; }
+    ymText(v) {
+     v = String(v || '');
+     return v.length < 6 ? v : v.substring(0, 4) + '년 ' + v.substring(4, 6) + '월';
+    }
+
+    ymdText(v) {
+     v = String(v || '');
+     return v.length < 8 ? v : v.substring(0, 4) + '년 ' + v.substring(4, 6) + '월 ' + v.substring(6, 8) + '일';
+    }
 
     /**
      * 패널 높이를 창에 맞춘다.
@@ -764,7 +852,10 @@
     search() {
      let _this = this;
      const c = _this.cond();
-     if (!c) { Alert.alert('', '급여회차를 선택하세요.'); return; }
+     if (!c) {
+      Alert.alert('', '급여회차를 선택하세요.');
+      return;
+     }
 
      _this.busy(true, '조회 중');
      AjaxUtil.getAsyncData(_this.url + '/list', c, function (result) {
@@ -796,11 +887,19 @@
       const noMail = mail.indexOf('@') < 0;
 
       let st, cls;
-      if (noMail)                    { st = '메일없음'; cls = 'noml'; }
-      else if (r.sendstatus === 'S') { st = r.testyn === 'Y' ? '테스트' : '발송완료';
-       cls = r.testyn === 'Y' ? 'test' : 'done'; }
-      else if (r.sendstatus === 'F') { st = '실패';     cls = 'fail'; }
-      else                           { st = '미발송';   cls = 'none'; }
+      if (noMail) {
+       st = '메일없음';
+       cls = 'noml';
+      } else if (r.sendstatus === 'S') {
+       st = r.testyn === 'Y' ? '테스트' : '발송완료';
+       cls = r.testyn === 'Y' ? 'test' : 'done';
+      } else if (r.sendstatus === 'F') {
+       st = '실패';
+       cls = 'fail';
+      } else {
+       st = '미발송';
+       cls = 'none';
+      }
 
       // 레거시 SQL 의 '1' AS prtchk — 조회 직후 전원 체크
       const chk = noMail ? ' disabled' : ' checked';
@@ -845,9 +944,15 @@
      _this.current = perid;
      _this.busy(true, '불러오는 중');
      $.get(_this.url + '/preview', _this.keyOf(perid))
-     .done(function (html) { $('#psPreview').html(html); })
-     .fail(function () { $('#psPreview').html('<div class="ps-empty">명세서를 불러오지 못했습니다.</div>'); })
-     .always(function () { _this.busy(false); });
+     .done(function (html) {
+      $('#psPreview').html(html);
+     })
+     .fail(function () {
+      $('#psPreview').html('<div class="ps-empty">명세서를 불러오지 못했습니다.</div>');
+     })
+     .always(function () {
+      _this.busy(false);
+     });
     }
 
     /** 컨텍스트 경로(/sports) 부착. 전표내역이 쓰는 전역 헬퍼를 그대로 쓴다.
@@ -867,20 +972,36 @@
     }
 
     printOne() {
-     if (!this.cond())  { Alert.alert('', '급여회차를 선택하세요.'); return; }
-     if (!this.current) { Alert.alert('', '직원을 선택하세요.'); return; }
+     if (!this.cond()) {
+      Alert.alert('', '급여회차를 선택하세요.');
+      return;
+     }
+     if (!this.current) {
+      Alert.alert('', '직원을 선택하세요.');
+      return;
+     }
      window.open(this.ctx(this.url + '/print?' + $.param(this.keyOf(this.current))), '_blank');
     }
 
     saveZip() {
      const c = this.cond();
-     if (!c) { Alert.alert('', '급여회차를 선택하세요.'); return; }
+     if (!c) {
+      Alert.alert('', '급여회차를 선택하세요.');
+      return;
+     }
      const sel = this.checked();
-     if (!sel.length) { Alert.alert('', '저장할 직원을 선택하세요.'); return; }
+     if (!sel.length) {
+      Alert.alert('', '저장할 직원을 선택하세요.');
+      return;
+     }
 
-     let qs = $.param({ paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate,
-      lock: 'N', doctype: this.doctype() });
-     sel.forEach(r => { qs += '&perids=' + encodeURIComponent(r.perid); });
+     let qs = $.param({
+      paytype: c.paytype, paybasic: c.paybasic, paydate: c.paydate,
+      lock: 'N', doctype: this.doctype()
+     });
+     sel.forEach(r => {
+      qs += '&perids=' + encodeURIComponent(r.perid);
+     });
 
      // 파일명은 서버의 Content-Disposition 을 따른다.
      // AjaxUtil.downloadFile 은 응답을 거쳐가면서 ZIP 바이너리를 깨뜨린다.
@@ -901,16 +1022,25 @@
     confirmSend() {
      let _this = this;
      const c = _this.cond();
-     if (!c) { Alert.alert('', '급여회차를 선택하세요.'); return; }
+     if (!c) {
+      Alert.alert('', '급여회차를 선택하세요.');
+      return;
+     }
      const sel = _this.checked();
-     if (!sel.length) { Alert.alert('', '발송할 직원을 선택하세요.'); return; }
+     if (!sel.length) {
+      Alert.alert('', '발송할 직원을 선택하세요.');
+      return;
+     }
 
      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-     if (_this.sendPopup) { _this.sendPopup.close(); _this.sendPopup = null; }
+     if (_this.sendPopup) {
+      _this.sendPopup.close();
+      _this.sendPopup = null;
+     }
      let $c = $(tmpl('psSendTemplate', {}));
      _this.sendPopup = new PopupDraggable(_this.docNm(c.paytype) + ' 발송');
-     _this.sendPopup.open({ width: 520, height: 600, $content: $c });
+     _this.sendPopup.open({width: 520, height: 600, $content: $c});
 
      const redraw = function () {
       const test = $c.find('input[name=psMode]:checked').val() !== 'N';
@@ -946,7 +1076,7 @@
       // 기본 문안. 이번 회차의 실제 값으로 채운다. 지우고 다시 써도 된다.
       // 사업장명이 없으면 치환어로 남겨 서버가 채우게 한다.
       const spjang = ($('#psSpjangnm').val() || '').trim() || '{사업장}';
-      const docNm  = _this.ymText(c.paybasic) + ' ' + _this.docNm(c.paytype);
+      const docNm = _this.ymText(c.paybasic) + ' ' + _this.docNm(c.paytype);
 
       $c.find('#psSubject').val('[' + spjang + '] ' + docNm);
 
@@ -961,36 +1091,47 @@
       $c.find('#psLock').on('change', redraw);
 
       $c.find('#btnSendCancel').on('click', function () {
-       _this.sendPopup.close(); _this.sendPopup = null;
+       _this.sendPopup.close();
+       _this.sendPopup = null;
       });
 
       $c.find('#btnSendGo').on('click', function () {
-       const testYn    = $c.find('input[name=psMode]:checked').val();
-       const replyTo   = $c.find('#psReplyTo').val().trim();
+       const testYn = $c.find('input[name=psMode]:checked').val();
+       const replyTo = $c.find('#psReplyTo').val().trim();
        const testEmail = $c.find('#psTestEmail').val().trim();
-       const subject   = $c.find('#psSubject').val().trim();
-       const bodyText  = $c.find('#psBodyText').val();
-       const lockYn    = $c.find('#psLock').is(':checked') ? 'Y' : 'N';
+       const subject = $c.find('#psSubject').val().trim();
+       const bodyText = $c.find('#psBodyText').val();
+       const lockYn = $c.find('#psLock').is(':checked') ? 'Y' : 'N';
 
        if (replyTo && !emailRe.test(replyTo)) {
-        Alert.alert('', '회신 주소 이메일 형식이 올바르지 않습니다.'); return;
+        Alert.alert('', '회신 주소 이메일 형식이 올바르지 않습니다.');
+        return;
        }
        if (testYn === 'Y' && !emailRe.test(testEmail)) {
-        Alert.alert('', '테스트 수신 주소를 입력하세요.'); return;
+        Alert.alert('', '테스트 수신 주소를 입력하세요.');
+        return;
        }
        if (!subject) {
-        Alert.alert('', '메일 제목을 입력하세요.'); return;
+        Alert.alert('', '메일 제목을 입력하세요.');
+        return;
        }
 
        const go = function () {
-        _this.sendPopup.close(); _this.sendPopup = null;
-        _this.doSend(sel, { testYn: testYn, replyTo: replyTo, testEmail: testEmail,
-         subject: subject, body: bodyText, lockYn: lockYn });
+        _this.sendPopup.close();
+        _this.sendPopup = null;
+        _this.doSend(sel, {
+         testYn: testYn, replyTo: replyTo, testEmail: testEmail,
+         subject: subject, body: bodyText, lockYn: lockYn
+        });
        };
 
        // 첨부는 서버가 doctype 으로 만든다. 제목만 다른 이름이면 담당자에게 되묻는다.
-       const other = _this.doctype() === 'ALW' ? '급여명세서' : '수당지급명세서';
-       if (subject.indexOf(other) >= 0 || bodyText.indexOf(other) >= 0) {
+       // 직접입력은 담당자가 이름을 직접 정한 것이라 되묻지 않는다.
+       const dt = _this.doctype();
+       const other = dt === '' ? '수당지급명세서'
+        : dt === 'ALW' ? '급여명세서'
+         : '';
+       if (other && (subject.indexOf(other) >= 0 || bodyText.indexOf(other) >= 0)) {
         Alert.confirm('',
          '첨부되는 문서는 ' + _this.docNm(c.paytype) + '인데\n' +
          '제목이나 본문에 "' + other + '"라는 말이 들어 있습니다.\n이대로 보낼까요?', go);
@@ -1042,15 +1183,19 @@
      });
      html += '</tbody></table>';
 
-     if (_this.resultPopup) { _this.resultPopup.close(); _this.resultPopup = null; }
+     if (_this.resultPopup) {
+      _this.resultPopup.close();
+      _this.resultPopup = null;
+     }
      let $c = $(tmpl('psResultTemplate', {}));
      _this.resultPopup = new PopupDraggable('발송 결과');
-     _this.resultPopup.open({ width: 600, height: 460, $content: $c });
+     _this.resultPopup.open({width: 600, height: 460, $content: $c});
 
      setTimeout(function () {
       $c.find('#psResultBody').html(html);
       $c.find('#btnResultClose').on('click', function () {
-       _this.resultPopup.close(); _this.resultPopup = null;
+       _this.resultPopup.close();
+       _this.resultPopup = null;
       });
      }, 0);
     }
