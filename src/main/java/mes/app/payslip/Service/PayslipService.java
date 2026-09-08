@@ -1,6 +1,7 @@
 package mes.app.payslip.Service;
 
 import lombok.extern.slf4j.Slf4j;
+import mes.app.common.TenantContext;
 import mes.domain.services.SqlRunner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -80,7 +81,8 @@ public class PayslipService {
 		MapSqlParameterSource p = new MapSqlParameterSource();
 		p.addValue("custcd", getCustcdBySpjangcd(spjangcd));
 		p.addValue("spjangcd", spjangcd);
-
+		log.info("[Payslip] dbKey={} spjangcd={} custcd={}",
+			TenantContext.getDbKey(), spjangcd, getCustcdBySpjangcd(spjangcd));
 		return normalizeAll(sqlRunner.getRows("""
 				select top 36
 				       A.paytype                as paytype
