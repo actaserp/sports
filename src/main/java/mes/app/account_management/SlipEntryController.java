@@ -202,8 +202,6 @@ public class SlipEntryController {	//전표등록
 		return result;
 	}
 
-
-
 	@PostMapping("/changeSpdate")
 	public AjaxResult changeSpdate(@RequestBody Map<String, Object> payload) {
 		AjaxResult result = new AjaxResult();
@@ -218,7 +216,5 @@ public class SlipEntryController {	//전표등록
 		}
 		return result;
 	}
-
-
 
 }

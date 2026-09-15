@@ -429,15 +429,6 @@ public class SlipEntryService {
           AND spnum    = :oldSpnum
         """, param);
 
-		// ── 첨부파일 키 이동 ── 'AJ' 접두어가 붙는다.
-		// TB_AA010PDF(결재 PDF 원본)는 PowerBuilder 쪽에서 적재하는 테이블이라
-		// 이 테넌트 DB 에는 없다. 건드리지 않는다.
-		sqlRunner.execute("""
-        UPDATE TB_AA010ATCH
-           SET spdate = 'AJ' + :newSpdate + :newSpnum + :spjangcd
-        WHERE spdate = 'AJ' + :oldSpdate + :oldSpnum + :spjangcd
-        """, param);
-
 		Map<String, Object> result = new HashMap<>();
 		result.put("spdate",     newSpdate);
 		result.put("spnum",      newSpnum);

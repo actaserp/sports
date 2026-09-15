@@ -97,7 +97,7 @@ public class SlipStatusController {  //전표입력현황
 						long amt = slip.get("amt") != null ? ((Number) slip.get("amt")).longValue() : 0L;
 						slip.put("amtKorean", toKoreanAmount(amt));
 					});
-				break;
+					break;
 
 				case "4":
 					// 결의양식2(상단) - 결재란 상단, 한글금액
@@ -107,7 +107,7 @@ public class SlipStatusController {  //전표입력현황
 						long amt = slip.get("amt") != null ? ((Number) slip.get("amt")).longValue() : 0L;
 						slip.put("amtKorean", toKoreanAmount(amt));
 					});
-				break;
+					break;
 
 				case "5":
 					rows = slipStatusService.printGyeolui3(keys);
@@ -116,7 +116,7 @@ public class SlipStatusController {  //전표입력현황
 						long amt = slip.get("amt") != null ? ((Number) slip.get("amt")).longValue() : 0L;
 						slip.put("amtKorean", toKoreanAmount(amt));
 					});
-				break;
+					break;
 
 				case "6":
 					// 결의양식3(대체)
@@ -331,6 +331,7 @@ public class SlipStatusController {  //전표입력현황
 			groupMap.computeIfAbsent(key, k -> {
 				Map<String, Object> slip = new LinkedHashMap<>();
 				slip.put("spdate", row.get("spdate"));
+				slip.put("regdate", row.get("regdate"));
 				slip.put("spnum", row.get("spnum"));
 				slip.put("tiosec", row.get("tiosec"));
 				slip.put("subject", row.get("subject"));
@@ -593,20 +594,20 @@ public class SlipStatusController {  //전표입력현황
 		Map<String, Object> settle = slipStatusService.getSettleInfo();
 		if (settle != null) {
 			List<String> dbList = java.util.Arrays.asList("settle1","settle2","settle3","settle4","settle5")
-				.stream()
-				.map(k -> settle.get(k))
-				.filter(v -> v != null && !v.toString().trim().isEmpty())
-				.map(Object::toString)
-				.collect(Collectors.toList());
+															.stream()
+															.map(k -> settle.get(k))
+															.filter(v -> v != null && !v.toString().trim().isEmpty())
+															.map(Object::toString)
+															.collect(Collectors.toList());
 			if (!dbList.isEmpty()) return dbList;
 		}
 
 		// 2순위: URL 파라미터
 		if (approversParam != null && !approversParam.trim().isEmpty()) {
 			List<String> paramList = java.util.Arrays.stream(approversParam.split(","))
-				.map(String::trim)
-				.filter(s -> !s.isEmpty())
-				.collect(Collectors.toList());
+																 .map(String::trim)
+																 .filter(s -> !s.isEmpty())
+																 .collect(Collectors.toList());
 			if (!paramList.isEmpty()) return paramList;
 		}
 

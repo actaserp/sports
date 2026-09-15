@@ -395,7 +395,14 @@
 
           <!-- 일자 -->
           <div class="lg-meta" th:text="'전 표 일 자 : ' + ${slip.spdate}"></div>
-          <div class="lg-meta">작 성 일 자 :&#160;&#160;&#160;&#160;&#160;&#160;년&#160;&#160;&#160;&#160;월&#160;&#160;&#160;&#160;일</div>
+          <div class="lg-meta"
+               th:with="rd=${slip.regdate == null ? '' : #strings.trim(slip.regdate)}">
+            <span th:if="${#strings.length(rd) >= 8}"
+                  th:text="'작 성 일 자 : ' + ${#strings.substring(rd,0,4)} + '&#160;년&#160;'
+                                          + ${#strings.substring(rd,4,6)} + '&#160;월&#160;'
+                                          + ${#strings.substring(rd,6,8)} + '&#160;일'"></span>
+            <span th:unless="${#strings.length(rd) >= 8}">작 성 일 자 :&#160;&#160;&#160;&#160;&#160;&#160;년&#160;&#160;&#160;&#160;월&#160;&#160;&#160;&#160;일</span>
+          </div>
 
           <div class="lg-clear"></div>
 
