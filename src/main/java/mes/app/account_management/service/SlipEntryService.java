@@ -334,6 +334,117 @@ public class SlipEntryService {
 		return result;
 	}
 
+	/* ============================================================
+	 * SlipEntryService.java — changeSpnum 바로 아래에 추가
+	 * ============================================================ */
+	/**
+	 * 전표일자를 변경한다.
+	 *
+	 * spdate + spnum 이 복합 PK 라 saveSlip 의 UPDATE 로는 바꿀 수 없다.
+	 * (거기서는 spdate 가 SET 이 아니라 WHERE 에 있다.)
+	 *
+	 * 전표번호는 generateSpnum 기준으로 "월 단위" 유니크이므로
+	 *   - 같은 달 안에서 옮기면  → 번호 그대로
+	 *   - 다른 달로 옮기면      → 그 달 기준으로 재채번
+	 *
+	 * @return { spdate, spnum, renumbered }
+	 */
+	@Transactional
+	public Map<String, Object> changeSpdate(Map<String, Object> payload) {
+
+		String spjangcd = TenantContext.get();
+		Map<String, String> bizInfo = getBizInfoBySpjangcd(spjangcd);
+		String custcd = bizInfo.get("custcd");
+
+		String oldSpdate = getString(payload, "spdate").replace("-", "");
+		String spnum     = getString(payload, "spnum");
+		String newSpdate = getString(payload, "newSpdate").replace("-", "");
+
+		if (isBlank(spnum))                          throw new IllegalArgumentException("변경할 전표번호가 없습니다.");
+		if (oldSpdate.length() != 8)                 throw new IllegalArgumentException("전표일자 형식이 올바르지 않습니다.");
+		if (newSpdate.length() != 8)                 throw new IllegalArgumentException("새 전표일자 형식이 올바르지 않습니다.");
+		if (oldSpdate.equals(newSpdate))             throw new IllegalArgumentException("현재 전표일자와 동일합니다.");
+
+		// ── 마감 체크: 원본 월과 대상 월 양쪽 모두 ──
+		checkMagam(custcd, spjangcd, oldSpdate);
+		checkMagam(custcd, spjangcd, newSpdate);
+
+		MapSqlParameterSource param = new MapSqlParameterSource()
+																		.addValue("custcd",    custcd)
+																		.addValue("spjangcd",  spjangcd)
+																		.addValue("oldSpdate", oldSpdate)
+																		.addValue("newSpdate", newSpdate)
+																		.addValue("oldSpnum",  spnum)
+																		.addValue("now",       LocalDateTime.now());
+
+		// ── 원본 전표 + 결재 상태 확인 ──
+		Map<String, Object> head = sqlRunner.getRow("""
+        SELECT appgubun
+        FROM TB_AA009 WITH (NOLOCK)
+        WHERE custcd   = :custcd
+          AND spjangcd = :spjangcd
+          AND spdate   = :oldSpdate
+          AND spnum    = :oldSpnum
+        """, param);
+
+		if (head == null) {
+			throw new IllegalArgumentException("변경할 전표를 찾을 수 없습니다.");
+		}
+
+		// appnum 에 spdate + spnum + spjangcd 가 그대로 박히고 외부 결재 서버도 같은 키를 쓴다.
+		// 일자를 바꾸면 결재 건과 전표의 연결이 끊어지므로 상신 전 또는 반려(131) 만 허용한다.
+		// appgubun : 001 결재상신 / 101 결재 / 111 결재중 / 121 참조 / 131 반려 / 301 전결
+		String appgubun = head.get("appgubun") == null ? "" : String.valueOf(head.get("appgubun")).trim();
+		if (!isBlank(appgubun) && !"131".equals(appgubun)) {
+			throw new IllegalStateException("결재가 진행 중인 전표는 일자를 변경할 수 없습니다. 결재를 취소한 뒤 변경하세요.");
+		}
+
+		// ── 대상 일자에서 쓸 전표번호 결정 ──
+		// 번호는 월 단위 유니크라, 같은 달 안의 이동이면 충돌이 생길 수 없다.
+		boolean sameMonth = oldSpdate.substring(0, 6).equals(newSpdate.substring(0, 6));
+		String newSpnum = sameMonth ? spnum : generateSpnum(custcd, spjangcd, newSpdate);
+		param.addValue("newSpnum", newSpnum);
+
+		// ── 헤더 이동 ──
+		sqlRunner.execute("""
+        UPDATE TB_AA009
+           SET spdate    = :newSpdate,
+               spnum     = :newSpnum,
+               inputdate = :now
+        WHERE custcd   = :custcd
+          AND spjangcd = :spjangcd
+          AND spdate   = :oldSpdate
+          AND spnum    = :oldSpnum
+        """, param);
+
+		// ── 분개라인 이동 ──
+		sqlRunner.execute("""
+        UPDATE TB_AA010
+           SET spdate    = :newSpdate,
+               spnum     = :newSpnum,
+               inputdate = :now
+        WHERE custcd   = :custcd
+          AND spjangcd = :spjangcd
+          AND spdate   = :oldSpdate
+          AND spnum    = :oldSpnum
+        """, param);
+
+		// ── 첨부파일 키 이동 ── 'AJ' 접두어가 붙는다.
+		// TB_AA010PDF(결재 PDF 원본)는 PowerBuilder 쪽에서 적재하는 테이블이라
+		// 이 테넌트 DB 에는 없다. 건드리지 않는다.
+		sqlRunner.execute("""
+        UPDATE TB_AA010ATCH
+           SET spdate = 'AJ' + :newSpdate + :newSpnum + :spjangcd
+        WHERE spdate = 'AJ' + :oldSpdate + :oldSpnum + :spjangcd
+        """, param);
+
+		Map<String, Object> result = new HashMap<>();
+		result.put("spdate",     newSpdate);
+		result.put("spnum",      newSpnum);
+		result.put("renumbered", !sameMonth);
+		return result;
+	}
+
 	private String getString(Map<String, Object> item, String key) {
 		Object value = item.get(key);
 		return value == null ? "" : value.toString().trim();

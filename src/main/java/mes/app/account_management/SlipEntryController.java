@@ -202,4 +202,23 @@ public class SlipEntryController {	//전표등록
 		return result;
 	}
 
+
+
+	@PostMapping("/changeSpdate")
+	public AjaxResult changeSpdate(@RequestBody Map<String, Object> payload) {
+		AjaxResult result = new AjaxResult();
+		try {
+			// 변경 후의 실제 키(spdate, spnum)를 돌려준다. 달을 넘기면 재채번된다.
+			result.data = slipEntryService.changeSpdate(payload);
+			result.success = true;
+		} catch (Exception e) {
+			log.error("전표일자 변경 오류", e);
+			result.success = false;
+			result.message = e.getMessage();
+		}
+		return result;
+	}
+
+
+
 }

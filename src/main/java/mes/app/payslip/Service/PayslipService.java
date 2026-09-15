@@ -81,8 +81,8 @@ public class PayslipService {
 		MapSqlParameterSource p = new MapSqlParameterSource();
 		p.addValue("custcd", getCustcdBySpjangcd(spjangcd));
 		p.addValue("spjangcd", spjangcd);
-		log.info("[Payslip] dbKey={} spjangcd={} custcd={}",
-			TenantContext.getDbKey(), spjangcd, getCustcdBySpjangcd(spjangcd));
+//		log.info("[Payslip] dbKey={} spjangcd={} custcd={}",
+//			TenantContext.getDbKey(), spjangcd, getCustcdBySpjangcd(spjangcd));
 		return normalizeAll(sqlRunner.getRows("""
 				select top 36
 				       A.paytype                as paytype
