@@ -381,6 +381,10 @@
      // 그룹 푸터 : 계좌(레벨1)=계좌소계, 관(레벨0)=계정소계
      _this.detailMasterGrid.formatItem.addHandler(function (s, e) {
       if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+       // 셀 재사용으로 소계 스타일이 일반 행에 남는 것을 막는다.
+       e.cell.style.color = '';
+       e.cell.style.fontWeight = '';
+
        const row = s.rows[e.row];
        if (row instanceof wijmo.grid.GroupRow && row.dataItem == null) {
         const gr = row;
@@ -592,6 +596,11 @@
     applyMonthSubtotalStyle(grid) {
      grid.formatItem.addHandler(function (s, e) {
       if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+       // FlexGrid 는 셀 DOM 을 재사용한다. 소계 행에 준 스타일이 일반 행에 남지 않도록
+       // 조건 판정 전에 항상 원래 상태로 되돌린다.
+       e.cell.style.color = '';
+       e.cell.style.fontWeight = '';
+
        const item = s.rows[e.row].dataItem;
        if (!item) return;
        const yy = String(item.yymmdd || '');
