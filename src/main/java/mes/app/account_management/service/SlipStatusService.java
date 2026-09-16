@@ -21,7 +21,7 @@ public class SlipStatusService {
 	@Autowired
 	SqlRunner sqlRunner;
 
-	public List<Map<String, Object>> getSlipList(String start, String end, String mssec, String sbuject,
+	public List<Map<String, Object>> getSlipList(String start, String end, String mssec, String tiosec, String sbuject,
 																							 String remark, String amtFrom, String amtTo) {
 		String spjangcd = TenantContext.get();
 
@@ -107,6 +107,12 @@ public class SlipStatusService {
 		if (mssec != null && !mssec.trim().isEmpty()) {
 			sql += " AND B.mssec LIKE :as_spoccu ";
 			sqlParam.addValue("as_spoccu", mssec.trim());
+		}
+
+		// 구분(입출구분) 조건 — 1 세입 / 2 세출 / 3 대체
+		if (tiosec != null && !tiosec.trim().isEmpty()) {
+			sql += " AND A.tiosec = :as_tiosec ";
+			sqlParam.addValue("as_tiosec", tiosec.trim());
 		}
 
 		// 제목 조건

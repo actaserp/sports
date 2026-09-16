@@ -467,45 +467,56 @@ public class SlipEntryService {
 		param.addValue("custcd", custcd);
 		param.addValue("spjangcd", spjangcd);
 
+		// 항(tb_x0003) · 목(tb_x0004) 은 tiosec(세입/세출) 별로 코드 체계가 따로다.
+		// tiosec 은 라인(tb_aa010)이 아니라 헤더(tb_aa009)에 있으므로 헤더를 조인해 끌어온다.
 		String sql = """
 			SELECT
-			    a.spnum,
-			    a.spseq,
-			    a.acccd,
-			    a.accnm,
-			    a.drcr,
-			    a.it1cd,
-			    b.it1nm,
-			    a.it2cd,
-			    c.it2nm,
-			    a.summy,
-			    a.dramt,
-			    a.cramt,
-			    a.bankcd,
-			    bank.accnum,
-			    bank.banknm ,
-			    a.mssec,
-			    d.mssecnm,
-			    a.cltcd,
-					e.cltnm,
-					a.cardnum ,
-					card.cardnm
+					a.spnum,
+					a.spseq,
+					a.acccd,
+					a.accnm,
+					a.drcr,
+					a.it1cd,
+					b.it1nm,
+					a.it2cd,
+					c.it2nm,
+					a.summy,
+					a.dramt,
+					a.cramt,
+					a.bankcd,
+					bank.accnum,
+					bank.banknm ,
+					a.mssec,
+					d.mssecnm,
+					a.cltcd,
+				e.cltnm,
+				a.cardnum ,
+				card.cardnm
 			FROM tb_aa010 a
+			INNER JOIN tb_aa009 h
+					ON  a.custcd   = h.custcd
+					AND a.spjangcd = h.spjangcd
+					AND a.spdate   = h.spdate
+					AND a.spnum    = h.spnum
 			LEFT JOIN (
-				SELECT custcd, it1cd, MAX(it1nm) AS it1nm
+				SELECT custcd, tiosec, it1cd, MAX(it1nm) AS it1nm
 				FROM tb_x0003
 				WHERE useyn = '1'
-				GROUP BY custcd, it1cd
-		) b ON a.custcd = b.custcd AND RIGHT(a.it1cd, 3) = b.it1cd
+				GROUP BY custcd, tiosec, it1cd
+			) b ON a.custcd = b.custcd
+				AND b.tiosec = h.tiosec
+				AND RIGHT(a.it1cd, 3) = b.it1cd
 			LEFT JOIN (
-			    SELECT custcd, it2cd, MAX(it2nm) AS it2nm
-			    FROM tb_x0004
-			    WHERE useyn = '1'
-			    GROUP BY custcd, it2cd
-			) c ON a.custcd = c.custcd AND a.it2cd = c.it2cd
+					SELECT custcd, tiosec, it2cd, MAX(it2nm) AS it2nm
+					FROM tb_x0004
+					WHERE useyn = '1'
+					GROUP BY custcd, tiosec, it2cd
+			) c ON a.custcd = c.custcd
+				AND c.tiosec = h.tiosec
+				AND a.it2cd = c.it2cd
 			LEFT JOIN tb_aa040 bank
-			    ON a.custcd = bank.custcd
-			    AND a.bankcd = CONCAT(bank.bank, bank.bankcd)
+					ON a.custcd = bank.custcd
+					AND a.bankcd = CONCAT(bank.bank, bank.bankcd)
 			left join tb_x0005 d on a.custcd = d.custcd and a.mssec = d.mssec
 			left join tb_xclient e on a.custcd = e.custcd and a.cltcd = e.cltcd
 			left join tb_iz010 card on a.spjangcd = card.spjangcd and a.cardnum =card.cardnum

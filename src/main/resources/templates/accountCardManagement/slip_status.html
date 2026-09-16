@@ -194,6 +194,10 @@
           flex-wrap: wrap;
           row-gap: 12px;
       }
+      .search-wrap #search_tiosec {
+          width: 110px;
+          min-width: 0;
+      }
       .search-wrap #search_sbuject,
       .search-wrap #search_remark {
           width: 180px;
@@ -258,6 +262,22 @@
                 </dt>
                 <dd>
                   <select class="form-control2" id="mssec" name="mssec">
+                  </select>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt>
+                  <label>
+                    구분
+                  </label>
+                </dt>
+                <dd>
+                  <select id="search_tiosec" name="search_tiosec">
+                    <option value="">전체</option>
+                    <option value="1">세입</option>
+                    <option value="2">세출</option>
+                    <option value="3">대체</option>
                   </select>
                 </dd>
               </dl>
@@ -996,6 +1016,7 @@
       'start': start,
       'end': end,
       mssec: $('#mssec').val(),
+      tiosec: $('#search_tiosec').val(),
       sbuject: $('#search_sbuject').val(),
       remark: $('#search_remark').val(),
       amtFrom: cleanAmt($('#search_amtfr').val()),
@@ -1819,7 +1840,7 @@
 
      AjaxUtil.getAsyncData(
       _this.entry_url + '/findIt2nm',
-      {it2nm: it2nm,tiosec: tiosec},
+      {it2nm: it2nm, tiosec: tiosec},
       function (res) {
        let list = res.data || [];
        if (!list || list.length === 0) {
@@ -1900,7 +1921,7 @@
      }
      AjaxUtil.getAsyncData(
       _this.entry_url + '/mssec', {},
-      function(res) {
+      function (res) {
        const list = res.data || [];
        if (list.length === 0) {
         Alert.alert('', '재원 목록이 없습니다.');
@@ -1914,11 +1935,14 @@
 
     showMssecPopup(dataList, $row) {             // $detailRow → $row
      let _this = this;
-     if (_this.mssecPopup) { _this.mssecPopup.close(); _this.mssecPopup = null; }
+     if (_this.mssecPopup) {
+      _this.mssecPopup.close();
+      _this.mssecPopup = null;
+     }
 
      let content = tmpl('mssecTemplate', {});
      _this.mssecPopup = new PopupDraggable('재원 조회');
-     _this.mssecPopup.open({ width: 400, height: 350, $content: $(content) });
+     _this.mssecPopup.open({width: 400, height: 350, $content: $(content)});
 
      _this.mssecGrid = new wijmo.grid.FlexGrid('#MssecGrid', {
       isReadOnly: true,
@@ -1926,23 +1950,26 @@
       headersVisibility: wijmo.grid.HeadersVisibility.Column,
       autoGenerateColumns: false,
       columns: [
-       { binding: 'value', header: '코드', width: 100, align: 'center' },
-       { binding: 'text',  header: '재원명', width: '*', align: 'left' }
+       {binding: 'value', header: '코드', width: 100, align: 'center'},
+       {binding: 'text', header: '재원명', width: '*', align: 'left'}
       ],
       itemsSource: new wijmo.collections.CollectionView(dataList)
      });
      _this.mssecGrid.keyActionEnter = wijmo.grid.KeyAction.None;
 
-     const selectCurrent = function() {
+     const selectCurrent = function () {
       let sel = _this.mssecGrid.selection;
       if (!sel || sel.row < 0) return;
       let selectedItem = _this.mssecGrid.rows[sel.row].dataItem;
       _this.applyMssecData(selectedItem, $row);   // $detailRow → $row
-      if (_this.mssecPopup) { _this.mssecPopup.close(); _this.mssecPopup = null; }
+      if (_this.mssecPopup) {
+       _this.mssecPopup.close();
+       _this.mssecPopup = null;
+      }
       _this.mssecGrid = null;
      };
 
-     setTimeout(function() {
+     setTimeout(function () {
       if (_this.mssecGrid && _this.mssecGrid.rows.length > 0) {
        _this.mssecGrid.select(0, 0);
        _this.mssecGrid.focus();
@@ -1950,14 +1977,18 @@
      }, 50);
 
      _this.mssecGrid.hostElement.addEventListener('dblclick', selectCurrent);
-     _this.mssecGrid.hostElement.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); selectCurrent(); }
+     _this.mssecGrid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectCurrent();
+      }
      });
     }
 
     applyMssecData(selectedItem, $row) {         // $detailRow → $row, 포커스도 수정
      $row.find('input[name^="msseccd"]').val(selectedItem.value || '');
-     $row.find('input[name^="mssecnm"]').val(selectedItem.text  || '');
+     $row.find('input[name^="mssecnm"]').val(selectedItem.text || '');
 
      // 재원 선택 후 → 차/대변금액으로 포커스 (readonly가 아닌 쪽)
      setTimeout(() => {
@@ -2036,11 +2067,11 @@
      $(`tr[data-detail-idx="${idx}"]`).toggleClass('is-credit-detail', isCredit);
      // ──────────────────────────────────────────
      if (val === '1') {
-      $dramt.prop('readonly', false).css({ background: '', color: '', paddingRight: '30px' });
-      $cramt.prop('readonly', true).val('').css({ background: '#f5f5f5', color: '#aaa', paddingRight: '30px' });
+      $dramt.prop('readonly', false).css({background: '', color: '', paddingRight: '30px'});
+      $cramt.prop('readonly', true).val('').css({background: '#f5f5f5', color: '#aaa', paddingRight: '30px'});
      } else {
-      $cramt.prop('readonly', false).css({ background: '', color: '', paddingRight: '30px' });
-      $dramt.prop('readonly', true).val('').css({ background: '#f5f5f5', color: '#aaa', paddingRight: '30px' });
+      $cramt.prop('readonly', false).css({background: '', color: '', paddingRight: '30px'});
+      $dramt.prop('readonly', true).val('').css({background: '#f5f5f5', color: '#aaa', paddingRight: '30px'});
      }
     }
 
@@ -2097,7 +2128,7 @@
       const currentIdx = focusOrder.indexOf(currentSelector);
 
       // 팝업 필드는 팝업에서 선택 후 포커스 이동하므로 여기서 처리 안 함
-      const popupFields = ['input[name^="accnm"]', 'input[name^="it1nm"]', 'input[name^="it2nm"]','input[name^="mssecnm"]',];
+      const popupFields = ['input[name^="accnm"]', 'input[name^="it1nm"]', 'input[name^="it2nm"]', 'input[name^="mssecnm"]',];
       if (popupFields.includes(currentSelector)) return;
 
       // 다음 칸으로 이동 (readonly인 금액 칸은 건너뜀)
@@ -2121,7 +2152,7 @@
 
       // 마지막 활성 금액 칸(dramt 또는 cramt)에서 엔터
       // → 상세행(토글)이 열려있으면 거래처로, 아니면 다음행으로
-      const lineIdx   = $row.attr('data-line-idx');
+      const lineIdx = $row.attr('data-line-idx');
       const $detailRow = $(`tr[data-detail-idx="${lineIdx}"]`);
       const isDetailOpen = $detailRow.length && $detailRow.is(':visible');
 
@@ -2147,11 +2178,11 @@
     // 직전 행 → 대상 행으로 항/목/재원 복사 (대상이 비어 있을 때만)
     copyItemFields($from, $to) {
      const copyPairs = [
-      { disp: 'it1nm',   code: 'it1cd' },
-      { disp: 'it2nm',   code: 'it2cd' },
-      { disp: 'mssecnm', code: 'msseccd' },
+      {disp: 'it1nm', code: 'it1cd'},
+      {disp: 'it2nm', code: 'it2cd'},
+      {disp: 'mssecnm', code: 'msseccd'},
      ];
-     copyPairs.forEach(({ disp, code }) => {
+     copyPairs.forEach(({disp, code}) => {
       const $toDisp = $to.find(`input[name^="${disp}"]`);
       if (($toDisp.val() || '').trim() !== '') return;   // 이미 값 있으면 건너뜀
       $toDisp.val($from.find(`input[name^="${disp}"]`).val() || '');
@@ -2179,19 +2210,19 @@
      let _this = this;
 
      // ── 1. 헤더 데이터 수집 ──
-     const spdate   = $('#spdate').val();
-     const spnum    = $('#spnum').val();
-     const tiosec   = $('#tiosec').val();
-     const busipur  = $('#busipur').val();
-     const spoccu   = $('#spoccu').val();
-     const cashyn   = $('#cashyn').is(':checked') ? '1' : '0';
-     const subject  = $('#subject').val();
-     const remark   = $('#remark').val();
-     const busicd   = $('#busicd').val();
+     const spdate = $('#spdate').val();
+     const spnum = $('#spnum').val();
+     const tiosec = $('#tiosec').val();
+     const busipur = $('#busipur').val();
+     const spoccu = $('#spoccu').val();
+     const cashyn = $('#cashyn').is(':checked') ? '1' : '0';
+     const subject = $('#subject').val();
+     const remark = $('#remark').val();
+     const busicd = $('#busicd').val();
      const businame = $('#businame').val();
-     const bsdate   = $('#bsdate').val();
-     const bseccd   = $('#bseccd').val();
-     const readate  = $('#readate').val();
+     const bsdate = $('#bsdate').val();
+     const bseccd = $('#bseccd').val();
+     const readate = $('#readate').val();
 
      // ── 2. 헤더 유효성 검사 ──
      if (!spdate) {
@@ -2220,29 +2251,29 @@
      let lineValid = true;
 
      $('#slipLineTbody tr[data-line-idx]').each(function (i) {
-      const $row   = $(this);
+      const $row = $(this);
       const lineIdx = $row.attr('data-line-idx');
       const $detailRow = $(`tr[data-detail-idx="${lineIdx}"]`);
 
       const spseq = $row.find('input[name^="spseq"]').val();
-      const acccd  = $row.find('input[name^="acccd"]').val();
-      const accnm  = $row.find('input[name^="accnm"]').val();
-      const drcr   = $row.find('select[name^="drcr"]').val();
-      const it1cd  = $row.find('input[name^="it1cd"]').val();
-      const it1nm  = $row.find('input[name^="it1nm"]').val();
-      const it2cd  = $row.find('input[name^="it2cd"]').val();
-      const it2nm  = $row.find('input[name^="it2nm"]').val();
-      const summy  = $row.find('input[name^="summy"]').val();
+      const acccd = $row.find('input[name^="acccd"]').val();
+      const accnm = $row.find('input[name^="accnm"]').val();
+      const drcr = $row.find('select[name^="drcr"]').val();
+      const it1cd = $row.find('input[name^="it1cd"]').val();
+      const it1nm = $row.find('input[name^="it1nm"]').val();
+      const it2cd = $row.find('input[name^="it2cd"]').val();
+      const it2nm = $row.find('input[name^="it2nm"]').val();
+      const summy = $row.find('input[name^="summy"]').val();
       const msseccd = $row.find('input[name^="msseccd"]').val();
       const mssecnm = $row.find('input[name^="mssecnm"]').val();
-      const dramt  = parseFloat($row.find('input[name^="dramt"]').val().replace(/,/g, '')) || 0;
-      const cramt  = parseFloat($row.find('input[name^="cramt"]').val().replace(/,/g, '')) || 0;
+      const dramt = parseFloat($row.find('input[name^="dramt"]').val().replace(/,/g, '')) || 0;
+      const cramt = parseFloat($row.find('input[name^="cramt"]').val().replace(/,/g, '')) || 0;
 
       // ── 상세행 (코드/번호 기준) ──
-      const cltcd   = $detailRow.find('input[name^="cltcd"]').val()  || '';   // 거래처: 코드
+      const cltcd = $detailRow.find('input[name^="cltcd"]').val() || '';   // 거래처: 코드
       const cardnum = $detailRow.find('input[name^="cardnm"]').val() || '';   // 카드: 번호
-      const bankcd  = $detailRow.find('input[name^="bankcd"]').val() || '';   // 계좌: 코드
-      const acnflag = $row.find('input[name^="acnflag"]').val()      || '';   // ★추가: 계좌 필수 여부
+      const bankcd = $detailRow.find('input[name^="bankcd"]').val() || '';   // 계좌: 코드
+      const acnflag = $row.find('input[name^="acnflag"]').val() || '';   // ★추가: 계좌 필수 여부
 
 
       // ── 빈 행 스킵: 관명도 없고 금액도 0이면 입력 안 한 행 ──
@@ -2265,7 +2296,7 @@
       }
 
       // ── ★추가: 상세행 검증/정리 ──
-      const isDetailOpen  = $detailRow.length && $detailRow.is(':visible');
+      const isDetailOpen = $detailRow.length && $detailRow.is(':visible');
       const isDetailEmpty = !cltcd && !cardnum && !bankcd;
 
       // 1) 계좌 필수 계정인데 계좌가 비었으면 → 저장 막기
@@ -2282,9 +2313,11 @@
        $detailRow[0].style.display = 'none';
       }
 
-      lines.push({ spseq, acccd, accnm, drcr, it1cd, it1nm, it2cd, it2nm,
+      lines.push({
+       spseq, acccd, accnm, drcr, it1cd, it1nm, it2cd, it2nm,
        summy, dramt, cramt, msseccd, mssecnm, lineSeq: i + 1,
-       cltcd, cardnum, bankcd });
+       cltcd, cardnum, bankcd
+      });
      });
 
      if (!lineValid) return;
@@ -2339,7 +2372,7 @@
      let _this = this;
 
      const spdate = $('#spdate').val();
-     const spnum  = $('#spnum').val();
+     const spnum = $('#spnum').val();
 
      // console.log('1. DeleteSlip 진입', spdate, spnum);
 
@@ -2354,7 +2387,7 @@
      Alert.confirm('', '선택한 전표를 삭제하시겠습니까?', function () {
       // console.log('3. confirm 확인 클릭');
 
-      const payload = { spdate, spnum };
+      const payload = {spdate, spnum};
       const url = _this.entry_url + '/delete';
       // console.log('4. 요청 직전', url, payload);
 
@@ -2380,7 +2413,7 @@
      let _this = this;
 
      const spdate = $('#spdate').val();   // 원본 일자
-     const spnum  = $('#spnum').val();    // 원본 번호
+     const spnum = $('#spnum').val();    // 원본 번호
 
      if (!spnum) {
       Alert.alert('', '복사할 전표가 없습니다. 먼저 전표를 선택하세요.');
@@ -2396,7 +2429,7 @@
      let content = tmpl('copyDateTemplate', {});
      let $content = $(content);
      _this.copyPopup = new PopupDraggable('전표 복사');
-     _this.copyPopup.open({ width: 360, height: 200, $content });
+     _this.copyPopup.open({width: 360, height: 200, $content});
 
      setTimeout(() => {
       // 기본값: 원본 일자
@@ -2411,7 +2444,7 @@
         return;
        }
 
-       const payload = { spdate, spnum, newSpdate };
+       const payload = {spdate, spnum, newSpdate};
        const url = _this.entry_url + '/copy';
 
        AjaxUtil.postJsonData(url, payload, function (result) {
@@ -2443,7 +2476,7 @@
      let _this = this;
 
      const spdate = $('#spdate').val();   // 원본 일자
-     const spnum  = $('#spnum').val();    // 원본 번호
+     const spnum = $('#spnum').val();    // 원본 번호
 
      if (!spnum) {
       Alert.alert('', '변경할 전표가 없습니다. 먼저 전표를 선택하세요.');
@@ -2459,7 +2492,7 @@
      let content = tmpl('spdateChangeTemplate', {});
      let $content = $(content);
      _this.spdatePopup = new PopupDraggable('전표일자변경');
-     _this.spdatePopup.open({ width: 380, height: 240, $content });
+     _this.spdatePopup.open({width: 380, height: 240, $content});
 
      setTimeout(() => {
       // 기본값: 현재 전표일자
@@ -2480,8 +2513,8 @@
 
        // tb_aa009.spdate 는 char(8) 이므로 하이픈 제거 후 전송
        const payload = {
-        spdate:    (spdate    || '').replace(/-/g, ''),
-        spnum:     spnum,
+        spdate: (spdate || '').replace(/-/g, ''),
+        spnum: spnum,
         newSpdate: (newSpdate || '').replace(/-/g, '')
        };
        const url = _this.entry_url + '/changeSpdate';
@@ -2493,8 +2526,8 @@
 
          // 서버가 재채번했을 수 있으므로 응답값을 신뢰한다
          const resSpdate = result.data?.spdate || payload.newSpdate;
-         const resSpnum  = result.data?.spnum  || spnum;
-         const shown     = resSpdate.length === 8
+         const resSpnum = result.data?.spnum || spnum;
+         const shown = resSpdate.length === 8
           ? resSpdate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')
           : resSpdate;
 
@@ -2518,7 +2551,10 @@
 
       $content.find('#btnSpdateConfirm').on('click', doChange);
       $content.find('#chgNewSpdate').on('keydown', function (e) {
-       if (e.key === 'Enter') { e.preventDefault(); doChange(); }
+       if (e.key === 'Enter') {
+        e.preventDefault();
+        doChange();
+       }
       });
 
       // 닫기
@@ -2537,7 +2573,7 @@
      let _this = this;
 
      const spdate = $('#spdate').val();
-     const spnum  = $('#spnum').val();
+     const spnum = $('#spnum').val();
      const spdateFmt = (spdate || '').replace(/-/g, '');
      if (!spnum) {
       Alert.alert('', '변경할 전표가 없습니다. 먼저 전표를 선택하세요.');
@@ -2547,7 +2583,7 @@
      // 빈 전표번호 목록 조회 (spdate 무관, 전체 기준)
      AjaxUtil.getAsyncData(
       _this.entry_url + '/availableSpnums',
-      { spdate: spdateFmt },
+      {spdate: spdateFmt},
       function (res) {
        const list = res.data || [];
        if (list.length === 0) {
@@ -2569,7 +2605,7 @@
 
      let content = tmpl('spnumChangeTemplate', {});
      _this.spnumPopup = new PopupDraggable('전표번호 변경');
-     _this.spnumPopup.open({ width: 400, height: 420, $content: $(content) });
+     _this.spnumPopup.open({width: 400, height: 420, $content: $(content)});
 
      _this.spnumGrid = new wijmo.grid.FlexGrid('#SpnumGrid', {
       isReadOnly: true,
@@ -2577,7 +2613,7 @@
       headersVisibility: wijmo.grid.HeadersVisibility.Column,
       autoGenerateColumns: false,
       columns: [
-       { binding: 'spnum', header: '사용 가능한 전표번호', width: '*', align: 'center' }
+       {binding: 'spnum', header: '사용 가능한 전표번호', width: '*', align: 'center'}
       ],
       itemsSource: new wijmo.collections.CollectionView(dataList)
      });
@@ -2590,7 +2626,7 @@
       const newSpnum = item.spnum;
 
       // 헤더 + 분개라인 동시 변경 요청
-      const payload = { spdate, spnum: oldSpnum, newSpnum };
+      const payload = {spdate, spnum: oldSpnum, newSpnum};
       const url = _this.entry_url + '/changeSpnum';
 
       AjaxUtil.postJsonData(url, payload, function (result) {
@@ -2672,7 +2708,10 @@
 
     // 검색 조건 입력 중 Enter 로 조회
     $('#search_sbuject, #search_remark, #search_amtfr, #search_amtto').on('keydown', function (e) {
-     if (e.key === 'Enter') { e.preventDefault(); page.searchMainData(); }
+     if (e.key === 'Enter') {
+      e.preventDefault();
+      page.searchMainData();
+     }
     });
 
     $('#btnSearch').on('click', function () {
@@ -2691,7 +2730,7 @@
     // 전표 등록 탭 — 현재 전표 출력
     $('#btnSlipPrint2').on('click', function () {
      const spdate = $('#spdate').val();
-     const spnum  = $('#spnum').val();
+     const spnum = $('#spnum').val();
 
      if (!spnum) {
       Alert.alert('', '저장된 전표가 없습니다. 전표를 조회하거나 저장한 뒤 출력하세요.');
@@ -2758,7 +2797,7 @@
      }
     });
     //재원
-    $('#slipLineTbody').on('keydown', 'input[name^="mssecnm"]', function(e) {
+    $('#slipLineTbody').on('keydown', 'input[name^="mssecnm"]', function (e) {
      if (e.key !== 'Enter') return;
      e.preventDefault();
      let $row = $(this).closest('tr');
@@ -2798,9 +2837,18 @@
     $(document).on('keydown', function (e) {
      // 전표 등록 탭이 활성일 때만 동작시키려면 조건 추가 가능
      switch (e.key) {
-      case 'F4':  e.preventDefault(); page.searchMainData(); break;
-      case 'F6':  e.preventDefault(); page.saveSlip();       break;
-      case 'F7':  e.preventDefault(); page.DeleteSlip();      break;
+      case 'F4':
+       e.preventDefault();
+       page.searchMainData();
+       break;
+      case 'F6':
+       e.preventDefault();
+       page.saveSlip();
+       break;
+      case 'F7':
+       e.preventDefault();
+       page.DeleteSlip();
+       break;
       case 'Insert':
        e.preventDefault();
        page.resetForm();
