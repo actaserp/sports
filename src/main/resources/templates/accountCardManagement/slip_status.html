@@ -188,6 +188,24 @@
       #slipLineTbody input[name^="cramt"][readonly] {
           color: #c4c4c4 !important;
       }
+
+      /* ── 검색 영역: 조건이 늘어 한 줄을 넘치므로 줄바꿈 허용 + 폭 축소 ── */
+      .search-wrap {
+          flex-wrap: wrap;
+          row-gap: 12px;
+      }
+      .search-wrap #search_sbuject,
+      .search-wrap #search_remark {
+          width: 180px;
+          min-width: 0;
+      }
+      .search-wrap #search_amtfr,
+      .search-wrap #search_amtto {
+          width: 120px;
+          min-width: 0;
+          /* 우측 지우기(x) 아이콘과 숫자가 겹치지 않도록 자리를 비워둔다 */
+          padding-right: 26px;
+      }
   </style>
   <div class="layout-contents">
     <div class="page-title-wrap">
@@ -252,6 +270,34 @@
                 </dt>
                 <dd>
                   <input id="search_sbuject" name="search_sbuject" placeholder="제목을 입력하세요" type="text"/>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt>
+                  <label>
+                    비고
+                  </label>
+                </dt>
+                <dd>
+                  <input id="search_remark" name="search_remark" placeholder="비고를 입력하세요" type="text"/>
+                </dd>
+              </dl>
+
+              <dl>
+                <dt>
+                  <label>
+                    금액구간
+                  </label>
+                </dt>
+                <dd>
+                  <div class="srch-box">
+                    <input id="search_amtfr" name="search_amtfr" placeholder="최소"
+                           type="text" style="text-align:right;"/>
+                    <span class="slow_sign">~</span>
+                    <input id="search_amtto" name="search_amtto" placeholder="최대"
+                           type="text" style="text-align:right;"/>
+                  </div>
                 </dd>
               </dl>
 
@@ -943,11 +989,17 @@
      let start = $('#searchfrdate').val();
      let end = $('#searchtodate').val();
 
+     // 콤마·부호를 제거해 숫자 문자열만 넘긴다. 빈 값이면 조건에서 빠진다.
+     const cleanAmt = v => (v == null ? '' : String(v)).replace(/[^0-9.\-]/g, '').trim();
+
      let data = {
       'start': start,
       'end': end,
       mssec: $('#mssec').val(),
       sbuject: $('#search_sbuject').val(),
+      remark: $('#search_remark').val(),
+      amtFrom: cleanAmt($('#search_amtfr').val()),
+      amtTo: cleanAmt($('#search_amtto').val()),
      };
      let fnsuccess = function (result) {
       if (result != null && result.success) {
@@ -1942,8 +1994,12 @@
     }
 
     formatNumberInput(val, target) {
-     let cleaned = val.replace(/[^0-9]/g, '').replace(/,/g, '');
+     const raw = (val == null ? '' : String(val));
+     // 맨 앞의 '-' 하나만 부호로 인정한다. '-' 만 친 상태도 유지해야 이어서 입력할 수 있다.
+     const negative = raw.trim().charAt(0) === '-';
+     let cleaned = raw.replace(/[^0-9]/g, '');
      let formatted = cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+     if (negative) formatted = '-' + formatted;
      $(target).val(formatted);
     }
 
@@ -2609,6 +2665,16 @@
      }
     });
 
+    // 금액구간 입력칸: 천단위 콤마 + 마이너스 허용
+    $('#search_amtfr, #search_amtto').on('keyup', function () {
+     page.formatNumberInput($(this).val(), this);
+    });
+
+    // 검색 조건 입력 중 Enter 로 조회
+    $('#search_sbuject, #search_remark, #search_amtfr, #search_amtto').on('keydown', function (e) {
+     if (e.key === 'Enter') { e.preventDefault(); page.searchMainData(); }
+    });
+
     $('#btnSearch').on('click', function () {
      page.searchMainData();
     });
@@ -2733,14 +2799,8 @@
      // 전표 등록 탭이 활성일 때만 동작시키려면 조건 추가 가능
      switch (e.key) {
       case 'F4':  e.preventDefault(); page.searchMainData(); break;
-      case 'F6':
-       e.preventDefault();
-       page.saveSlip();
-       break;
-      case 'F7':
-       e.preventDefault();
-       page.DeleteSlip();
-       break;
+      case 'F6':  e.preventDefault(); page.saveSlip();       break;
+      case 'F7':  e.preventDefault(); page.DeleteSlip();      break;
       case 'Insert':
        e.preventDefault();
        page.resetForm();

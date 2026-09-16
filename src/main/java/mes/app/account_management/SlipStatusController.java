@@ -49,9 +49,13 @@ public class SlipStatusController {  //전표입력현황
 	public AjaxResult getSlipList(@RequestParam("start") String start,
 																@RequestParam("end") String end,
 																@RequestParam(value = "mssec", required = false) String mssec,
-																@RequestParam(value = "sbuject", required = false) String sbuject) {
+																@RequestParam(value = "sbuject", required = false) String sbuject,
+																@RequestParam(value = "remark", required = false) String remark,
+																@RequestParam(value = "amtFrom", required = false) String amtFrom,
+																@RequestParam(value = "amtTo", required = false) String amtTo) {
 
-		List<Map<String, Object>> items = this.slipStatusService.getSlipList(start, end, mssec, sbuject);
+		List<Map<String, Object>> items = this.slipStatusService.getSlipList(
+			start, end, mssec, sbuject, remark, amtFrom, amtTo);
 
 		AjaxResult result = new AjaxResult();
 		result.data = items;

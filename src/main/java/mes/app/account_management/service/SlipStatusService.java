@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -19,7 +21,8 @@ public class SlipStatusService {
 	@Autowired
 	SqlRunner sqlRunner;
 
-	public List<Map<String, Object>> getSlipList(String start, String end, String mssec, String sbuject) {
+	public List<Map<String, Object>> getSlipList(String start, String end, String mssec, String sbuject,
+																							 String remark, String amtFrom, String amtTo) {
 		String spjangcd = TenantContext.get();
 
 		Map<String, String> bizInfo = getBizInfoBySpjangcd(spjangcd);
@@ -112,6 +115,12 @@ public class SlipStatusService {
 			sqlParam.addValue("as_subject", sbuject.trim());
 		}
 
+		// 비고 조건
+		if (remark != null && !remark.trim().isEmpty()) {
+			sql += " AND isnull(A.remark, '') LIKE '%' + :as_remark + '%' ";
+			sqlParam.addValue("as_remark", remark.trim());
+		}
+
 		sql += """
          GROUP BY A.custcd, A.spjangcd, A.spdate, A.spnum, A.tiosec,
 						A.cashyn, A.busipur, A.spoccu, A.remark, A.taxdate,
@@ -120,8 +129,42 @@ public class SlipStatusService {
 						A.busicd_cnt, A.fixflag
         """;
 
+		// 금액 구간 조건
+		// 화면에 보이는 금액은 전표 단위 합계(amt)라 WHERE 가 아니라 HAVING 으로 걸어야 한다.
+		// SELECT 의 amt 와 같은 식을 그대로 쓴다.
+		String amtExpr = "ISNULL(SUM(B.dramt), SUM(B.cramt))";
+		List<String> having = new ArrayList<>();
+
+		BigDecimal from = toAmount(amtFrom);
+		BigDecimal to   = toAmount(amtTo);
+
+		if (from != null) {
+			having.add(amtExpr + " >= :as_amtfr");
+			sqlParam.addValue("as_amtfr", from);
+		}
+		if (to != null) {
+			having.add(amtExpr + " <= :as_amtto");
+			sqlParam.addValue("as_amtto", to);
+		}
+		if (!having.isEmpty()) {
+			sql += " HAVING " + String.join(" AND ", having) + " ";
+		}
+
 //		log.info("전표입력 현황 read sql: {}, param: {}", sql, sqlParam.getValues());
 		return sqlRunner.getRows(sql, sqlParam);
+	}
+
+	/** 검색용 금액 문자열을 숫자로 바꾼다. 비었거나 숫자가 아니면 조건에서 제외되도록 null 을 준다. */
+	private BigDecimal toAmount(String v) {
+		if (v == null) return null;
+		String cleaned = v.replace(",", "").trim();
+		if (cleaned.isEmpty() || "-".equals(cleaned)) return null;
+		try {
+			return new BigDecimal(cleaned);
+		} catch (NumberFormatException e) {
+			log.warn("금액 검색 조건이 숫자가 아닙니다: {}", v);
+			return null;
+		}
 	}
 
 	private Map<String, String> getBizInfoBySpjangcd(String spjangcd) {
