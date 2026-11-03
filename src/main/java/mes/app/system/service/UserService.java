@@ -258,6 +258,7 @@ public class UserService {
 				from tb_ja001 a
 				INNER JOIN tb_jc002 b ON a.divicd = b.divicd and a.spjangcd = b.spjangcd and a.custcd = b.custcd
 				where a.spjangcd = :spjangcd
+				and a.rtclafi = '001'   -- [수정] 재직자만 (ApprovalService.getKcperid 와 동일 기준)
 				and a.perid like concat('%', :code, '%') AND a.pernm like concat('%',:name,'%')
       """;
 
