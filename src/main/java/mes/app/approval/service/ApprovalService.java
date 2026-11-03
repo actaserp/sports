@@ -40,7 +40,7 @@ public class ApprovalService {
 
         // 2. personCode로 기존 쿼리 실행
         MapSqlParameterSource dicParam = new MapSqlParameterSource();
-        dicParam.addValue("perid", personCode); // ✅ personid → personCode 로 교체
+        dicParam.addValue("perid", personCode);
 
         String sql = """
           SELECT
@@ -163,7 +163,7 @@ public class ApprovalService {
         return gubunnm;
     }
 
-    // username으로 cltcd, cltnm, saupnum, custcd 가지고 오기
+    // username으로 사원코드, 사원이름 가져오기
     public Map<String, Object> getUserInfo(String username) {
         MapSqlParameterSource dicParam = new MapSqlParameterSource();
 
@@ -183,34 +183,38 @@ public class ApprovalService {
      * 결재라인 삭제
      * - TB_E064 해당 행 삭제
      * - 삭제 후 해당 063 키에 064 데이터가 없으면 TB_E063도 함께 삭제
+     * - 사업장(spjangcd) 조건 포함
      */
     public void deleteApprovalLine(Map<String, String> params) {
 
-        String perid   = params.get("perid");
-        String papercd = params.get("papercd");
-        String no      = params.get("no");
-        String kcperid = params.get("kcperid");
+        String spjangcd = params.get("spjangcd");
+        String perid    = params.get("perid");
+        String papercd  = params.get("papercd");
+        String no       = params.get("no");
+        String kcperid  = params.get("kcperid");
 
         // 1. TB_E064 삭제
         MapSqlParameterSource paramSource = new MapSqlParameterSource();
-        paramSource.addValue("perid",   perid);
-        paramSource.addValue("papercd", papercd);
-        paramSource.addValue("no",      no);
-        paramSource.addValue("kcperid", kcperid);
+        paramSource.addValue("spjangcd", spjangcd);
+        paramSource.addValue("perid",    perid);
+        paramSource.addValue("papercd",  papercd);
+        paramSource.addValue("no",       no);
+        paramSource.addValue("kcperid",  kcperid);
 
         String deleteSql = """
         DELETE FROM TB_E064
-        WHERE perid   = :perid
-          AND papercd = :papercd
-          AND no      = :no
-          AND kcperid = :kcperid
+        WHERE spjangcd = :spjangcd
+          AND perid    = :perid
+          AND papercd  = :papercd
+          AND no       = :no
+          AND kcperid  = :kcperid
         """;
 
         try {
             this.sqlRunner.execute(deleteSql, paramSource);
-           // log.info("[TB_E064 삭제] perid={}, papercd={}, no={}, kcperid={}", perid, papercd, no, kcperid);
         } catch (Exception e) {
-            log.error("[TB_E064 삭제 실패] perid={}, papercd={}, no={}, kcperid={}", perid, papercd, no, kcperid, e);
+            log.error("[TB_E064 삭제 실패] spjangcd={}, perid={}, papercd={}, no={}, kcperid={}",
+              spjangcd, perid, papercd, no, kcperid, e);
             throw e;
         }
 
@@ -218,9 +222,9 @@ public class ApprovalService {
         String countSql = """
         SELECT COUNT(*) AS cnt
         FROM TB_E064
-        WHERE perid   = :perid
-          AND papercd = :papercd
-          AND no      = :no
+        WHERE spjangcd = :spjangcd
+          AND perid    = :perid
+          AND papercd  = :papercd
         """;
 
         List<Map<String, Object>> countResult = this.sqlRunner.getRows(countSql, paramSource);
@@ -229,15 +233,15 @@ public class ApprovalService {
         if (remaining == 0) {
             String deleteHeadSql = """
             DELETE FROM TB_E063
-            WHERE perid   = :perid
-              AND papercd = :papercd
+            WHERE spjangcd = :spjangcd
+              AND perid    = :perid
+              AND papercd  = :papercd
             """;
 
             try {
                 this.sqlRunner.execute(deleteHeadSql, paramSource);
-               // log.info("[TB_E063 삭제] perid={}, papercd={}", perid, papercd);
             } catch (Exception e) {
-                log.error("[TB_E063 삭제 실패] perid={}, papercd={}", perid, papercd, e);
+                log.error("[TB_E063 삭제 실패] spjangcd={}, perid={}, papercd={}", spjangcd, perid, papercd, e);
                 throw e;
             }
         }
@@ -257,7 +261,7 @@ public class ApprovalService {
         FROM TB_E064 e
         LEFT JOIN tb_ja001 a 
             ON a.spjangcd = e.spjangcd 
-            AND a.perid = 'p' + e.perid
+            AND a.perid = 'p' + e.kcperid
         LEFT JOIN sys_code s 
             ON e.gubun = s."Code" 
             AND s."CodeType" = 'Payment'
@@ -305,7 +309,6 @@ public class ApprovalService {
         }
 
         if (personCode == null) {
-            //log.error("[결재라인 저장 실패] personCode 조회 불가 - personid={}, spjangcd={}", personid, spjangcd);
             throw new IllegalArgumentException("사번 정보를 찾을 수 없습니다. personid=" + personid);
         }
 
@@ -329,15 +332,13 @@ public class ApprovalService {
             throw new IllegalArgumentException("결재자 사번 정보를 찾을 수 없습니다. kcpersonid=" + kcpersonid);
         }
 
-        //log.info("[사번 조회 완료] personCode={}, kcperid={}", personCode, kcperid);
-
         // 3. 파라미터 구성
         MapSqlParameterSource paramSource = new MapSqlParameterSource();
         paramSource.addValue("spjangcd", spjangcd);
         paramSource.addValue("custcd",   custcd);
         paramSource.addValue("papercd",  papercd);
-        paramSource.addValue("perid",    personCode);  // personid → 사번
-        paramSource.addValue("kcperid",  kcperid);     // kcpersonid → 사번
+        paramSource.addValue("perid",    personCode);
+        paramSource.addValue("kcperid",  kcperid);
         paramSource.addValue("gubun",    params.get("gubun"));
         paramSource.addValue("seq",      params.get("seq"));
         paramSource.addValue("no",       params.get("no"));
@@ -394,7 +395,6 @@ public class ApprovalService {
      */
     public String getNextNo(String spjangcd, Integer personid, String papercd) {
 
-        // personid → personCode 변환
         MapSqlParameterSource personParam = new MapSqlParameterSource();
         personParam.addValue("pid",      personid);
         personParam.addValue("spjangcd", spjangcd);
@@ -466,7 +466,7 @@ public class ApprovalService {
 
         result.put("saupnum", saupnum == null ? "" : String.valueOf(saupnum).trim());
         result.put("custcd", custcd == null ? "" : String.valueOf(custcd).trim());
-        result.put("spjangnm", custcd == null ? "" : String.valueOf(spjangnm).trim());
+        result.put("spjangnm", spjangnm == null ? "" : String.valueOf(spjangnm).trim());
 
         return result;
     }

@@ -42,6 +42,19 @@ public class ApprovalController {   //결재라인등록
 
     @Autowired
     Settings settings;
+
+    /**
+     * 등록사원 결정
+     * - 화면에서 선택한 사원(person.id)이 있으면 그 사원
+     * - 없으면 로그인 사용자
+     */
+    private Integer resolvePersonid(String paramPersonid, User user) {
+        if (paramPersonid != null && !paramPersonid.isBlank()) {
+            return Integer.valueOf(paramPersonid.trim());
+        }
+        return user.getPersonid();
+    }
+
     // 결재라인등록 그리드 read
     @GetMapping("/read")
     public AjaxResult getList(@RequestParam Map<String, String> params,
@@ -51,7 +64,7 @@ public class ApprovalController {   //결재라인등록
         User user = (User) auth.getPrincipal();
         String papercd = params.get("papercd");
         String spjangcd = TenantContext.get();
-        Integer personid = user.getPersonid(); // ✅ auth에서 직접 추출
+        Integer personid = resolvePersonid(params.get("personid"), user);
         String comcd = params.get("comcd");
 
         List<Map<String, Object>> items =
@@ -64,10 +77,7 @@ public class ApprovalController {   //결재라인등록
     // 결재라인 사원 그리드 read
     @GetMapping("/readPapercd")
     public AjaxResult getListPapercd(@RequestParam Map<String, String> params
-            , Authentication auth) {
-        User user = (User) auth.getPrincipal();
-        String username = user.getUsername();
-//        Map<String, Object> userInfo = requestService.getUserInfo(username);
+      , Authentication auth) {
         String papercd = params.get("papercd");
         String spjangcd = params.get("spjangcd");
 
@@ -88,13 +98,20 @@ public class ApprovalController {   //결재라인등록
         return result;
     }
 
-    // 유저정보 불러와 input태그 value
+    // 로그인 사용자 정보 (등록사원 기본 선택용)
     @GetMapping("/getUserInfo")
     public AjaxResult getUserInfo(Authentication auth){
         User user = (User) auth.getPrincipal();
-        String username = user.getUsername();
+
+        Map<String, Object> info = new HashMap<>();
+        Map<String, Object> row = approvalService.getUserInfo(user.getUsername());
+        if (row != null) {
+            info.putAll(row);
+        }
+        info.put("personid", user.getPersonid());
+
         AjaxResult result = new AjaxResult();
-        result.data = approvalService.getUserInfo(username);
+        result.data = info;
         return result;
     }
 
@@ -114,8 +131,11 @@ public class ApprovalController {   //결재라인등록
                                  Authentication auth) {
         AjaxResult result = new AjaxResult();
 
+        Map<String, String> deleteParams = new HashMap<>(params);
+        deleteParams.put("spjangcd", TenantContext.get());
+
         try {
-            approvalService.deleteApprovalLine(params);
+            approvalService.deleteApprovalLine(deleteParams);
             result.success = true;
             result.message = "삭제하였습니다.";
         } catch (Exception e) {
@@ -130,7 +150,6 @@ public class ApprovalController {   //결재라인등록
     public AjaxResult deleteHead(@RequestParam Map<String, String> params,
                                  Authentication auth) {
         AjaxResult result = new AjaxResult();
-        User user = (User)auth.getPrincipal();
         // 063table PK - spjangcd,personid,papercd
         TB_E063_PK e063PK = new TB_E063_PK();
         e063PK.setPapercd(params.get("papercd"));
@@ -159,7 +178,7 @@ public class ApprovalController {   //결재라인등록
 
         User user = (User) auth.getPrincipal();
         String spjangcd = TenantContext.get();
-        Integer personid = user.getPersonid();
+        Integer personid = resolvePersonid(params.get("personid"), user);
 
         // custcd 조회
         Map<String, String> bizInfo = approvalService.getBizInfoBySpjangcd(spjangcd);
@@ -171,15 +190,13 @@ public class ApprovalController {   //결재라인등록
         String kcpersonid = params.get("kcpersonid");
         String no         = params.get("no");
 
-        //log.info("[결재라인 저장] spjangcd={}, custcd={}, personid={}, papercd={}, kcpersonid={}", spjangcd, custcd, personid, papercd, kcpersonid);
-
         if (no == null || no.isEmpty()) {
             no = approvalService.getNextNo(spjangcd, personid, papercd);
         }
 
         Map<String, Object> saveParams = new HashMap<>();
         saveParams.put("spjangcd",   spjangcd);
-        saveParams.put("custcd",     custcd);   // custcd 추가
+        saveParams.put("custcd",     custcd);
         saveParams.put("personid",   personid);
         saveParams.put("papercd",    papercd);
         saveParams.put("gubun",      gubun);
@@ -207,7 +224,7 @@ public class ApprovalController {   //결재라인등록
                                 Authentication auth) {
         AjaxResult result = new AjaxResult();
         try {
-            String spjangcd = TenantContext.get(); // 세션에서 spjangcd 가져오기
+            String spjangcd = TenantContext.get();
             Map<String, Object> detail = approvalService.getCheckPaymentDetail(no, papercd, perid, spjangcd);
             result.success = true;
             result.data = detail;
@@ -220,4 +237,3 @@ public class ApprovalController {   //결재라인등록
 
 
 }
-

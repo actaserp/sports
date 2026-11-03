@@ -15,7 +15,7 @@ import mes.domain.services.SqlRunner;
 
 @Service
 public class UserService {
-	
+
 	@Autowired
 	@Qualifier("mainSqlRunner")
 	SqlRunner mainSqlRunner;   // Main DB 전용 (auth_user, user_profile, user_group 등)
@@ -26,15 +26,15 @@ public class UserService {
 
 	// 사용자 리스트 조회
 	public List<Map<String, Object>> getUserList(boolean superUser, Integer group, String keyword, String username, Integer departId, String spjangcd){
-		
+
 		MapSqlParameterSource dicParam = new MapSqlParameterSource();
-        dicParam.addValue("group", group);
-        dicParam.addValue("keyword", keyword);
-        dicParam.addValue("username", username);
-        dicParam.addValue("departId", departId);
+		dicParam.addValue("group", group);
+		dicParam.addValue("keyword", keyword);
+		dicParam.addValue("username", username);
+		dicParam.addValue("departId", departId);
 		dicParam.addValue("spjangcd", spjangcd);
-        
-        String sql = """
+
+		String sql = """
 			select au.id
 			  , au.first_name
               , up."Name"
@@ -51,12 +51,10 @@ public class UserService {
               , to_char(au.date_joined ,'yyyy-mm-dd hh24:mi') as date_joined
               , au.spjangcd as spjangcd
               , au.personid as personid
-              , p."Code" as personcode
             from auth_user au
             left join user_profile up on up."User_id" = au.id and up.spjangcd = au.db_key
             left join user_group ug on ug.id = up."UserGroup_id" and ug.spjangcd = up.spjangcd
             left join factory f on f.id = up."Factory_id" and f.spjangcd = up.spjangcd
-            left join person p on p.id = au.personid
             where is_superuser = false
 		    """;
 
@@ -64,27 +62,75 @@ public class UserService {
 			sql += "  AND au.db_key = :spjangcd ";
 			sql += "  AND ug.\"Code\" <> 'dev' ";
 		}
-        
-        if (group!=null){            	
-            sql+= " and ug.\"id\" = :group ";
-        }
-        
-        if (StringUtils.isEmpty(keyword)==false) {
-        	sql += " and up.\"Name\" like concat('%%', :keyword, '%%') ";
-        }
-        
-        if (StringUtils.isEmpty(username)==false) {
-        	sql += " and au.\"username\" = :username ";
-        }
-        if (departId != null) {
-        	sql += " and up.\"Depart_id\" = :departId ";
-        }
-        
-        sql += "order by ug.\"Name\", up.\"Name\"";
-        
-        List<Map<String, Object>> items = this.mainSqlRunner.getRows(sql, dicParam);
 
-        return items;
+		if (group!=null){
+			sql+= " and ug.\"id\" = :group ";
+		}
+
+		if (StringUtils.isEmpty(keyword)==false) {
+			sql += " and up.\"Name\" like concat('%%', :keyword, '%%') ";
+		}
+
+		if (StringUtils.isEmpty(username)==false) {
+			sql += " and au.\"username\" = :username ";
+		}
+		if (departId != null) {
+			sql += " and up.\"Depart_id\" = :departId ";
+		}
+
+		sql += "order by ug.\"Name\", up.\"Name\"";
+
+		List<Map<String, Object>> items = this.mainSqlRunner.getRows(sql, dicParam);
+
+		// [수정] 사번은 테넌트 DB person 에 있다. 마스터 person 조인을 빼고
+		//        personid 목록으로 테넌트 DB 를 한 번 더 조회해 붙인다 (DB 가 달라 SQL 조인 불가).
+		attachPersonCode(items);
+
+		return items;
+	}
+
+	private void attachPersonCode(List<Map<String, Object>> items) {
+		if (items == null || items.isEmpty()) return;
+
+		List<Integer> ids = new java.util.ArrayList<>();
+		for (Map<String, Object> row : items) {
+			Object pid = row.get("personid");
+			if (pid != null) ids.add(Integer.valueOf(pid.toString()));
+		}
+		if (ids.isEmpty()) return;
+
+		MapSqlParameterSource p = new MapSqlParameterSource();
+		p.addValue("ids", ids);
+		p.addValue("spjangcd", TenantContext.get());
+
+		// [수정] 부서명도 함께 조회. tb_jc002 는 PK 가 (custcd, spjangcd, divicd, times) 라
+		//        같은 divicd 가 여러 행일 수 있어 OUTER APPLY TOP 1 로 한 건만 가져온다.
+		String personSql = """
+			SELECT p.id, p.[Code], jc.divinm AS dept_name
+			  FROM person p
+			  OUTER APPLY (
+			        SELECT TOP 1 j.divinm
+			          FROM tb_jc002 j
+			         WHERE j.divicd = p.Depart_id
+			           AND j.spjangcd = p.spjangcd
+			         ORDER BY j.times DESC
+			  ) jc
+			 WHERE p.id IN (:ids)
+			   AND p.spjangcd = :spjangcd
+			""";
+		List<Map<String, Object>> persons = this.tenantSqlRunner.getRows(personSql, p);
+		if (persons == null) return;
+
+		Map<Integer, Map<String, Object>> byId = new HashMap<>();
+		for (Map<String, Object> per : persons) {
+			byId.put(((Number) per.get("id")).intValue(), per);
+		}
+		for (Map<String, Object> row : items) {
+			Object pid = row.get("personid");
+			Map<String, Object> per = pid == null ? null : byId.get(Integer.valueOf(pid.toString()));
+			row.put("personcode", per == null ? null : per.get("Code"));
+			row.put("dept_name",  per == null ? null : per.get("dept_name"));
+		}
 	}
 
 	// 사용자 상세정보 조회
@@ -174,14 +220,14 @@ public class UserService {
 
 		return item;
 	}
-	
+
 	// 사용자 그룹 조회
 	public List<Map<String, Object>> getUserGrpList(Integer id) {
 		String spjangcd = TenantContext.getDbKey();
 		MapSqlParameterSource dicParam = new MapSqlParameterSource();
-        dicParam.addValue("id", id);
+		dicParam.addValue("id", id);
 		dicParam.addValue("spjangcd", spjangcd);
-        String sql = """
+		String sql = """
         		select ug.id as grp_id
 	            , ug."Name" as grp_name
 	            ,rd."Char1" as grp_check
@@ -192,9 +238,9 @@ public class UserService {
 	            where coalesce(ug."Code",'') <> 'dev'
 	            and ug.spjangcd = :spjangcd
         		""";
-        
-        List<Map<String, Object>> items = this.mainSqlRunner.getRows(sql, dicParam);
-        return items;
+
+		List<Map<String, Object>> items = this.mainSqlRunner.getRows(sql, dicParam);
+		return items;
 	}
 
 	public List<Map<String, Object>> getPSearchitem(String code, String name, String spjangcd) {

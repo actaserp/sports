@@ -35,16 +35,16 @@ import mes.domain.services.SqlRunner;
 @RestController
 @RequestMapping("/api/system/user")
 public class UserController {
-	
+
 	@Autowired
 	private UserService userService;
-	
+
 	@Autowired
 	UserRepository userRepository;
-	
+
 	@Autowired
 	RelationDataRepository relationDataRepository;
-	
+
 	@Autowired
 	@Qualifier("mainSqlRunner")
 	SqlRunner sqlRunner;
@@ -52,64 +52,64 @@ public class UserController {
 	@Autowired
 	SqlRunner tenantSqlRunner;	// 테넌트 DB 전용
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
 
 
 	// 사용자 리스트 조회
 	@GetMapping("/read")
 	public AjaxResult getUserList(
-			@RequestParam(value="group", required=false) Integer group,
-			@RequestParam(value="keyword", required=false) String keyword,
-			@RequestParam(value="depart_id", required=false) Integer departId,
-			@RequestParam(value="username", required=false) String username,
-			HttpServletRequest request,
-			Authentication auth) {
-		
+		@RequestParam(value="group", required=false) Integer group,
+		@RequestParam(value="keyword", required=false) String keyword,
+		@RequestParam(value="depart_id", required=false) Integer departId,
+		@RequestParam(value="username", required=false) String username,
+		HttpServletRequest request,
+		Authentication auth) {
+
 		AjaxResult result = new AjaxResult();
-		
+
 		User user = (User)auth.getPrincipal();
 		boolean superUser = user.getSuperUser();
 		String spjangcd = TenantContext.getDbKey();
-		
+
 		if (!superUser) {
 			superUser = user.getUserProfile().getUserGroup().getCode().equals("dev");
 		}
-		
+
 		List<Map<String, Object>> items = this.userService.getUserList(superUser, group, keyword, username, departId,spjangcd);
-		
+
 		result.data = items;
 		return result;
 	}
-	
+
 	// 사용자 상세정보 조회
 	@GetMapping("/detail")
 	public AjaxResult getUserDetail(
-			@RequestParam(value="id") Integer id,
-			HttpServletRequest request) {
-		
+		@RequestParam(value="id") Integer id,
+		HttpServletRequest request) {
+
 		Map<String, Object> item = this.userService.getUserDetail(id);
 		AjaxResult result = new AjaxResult();
 		result.data = item;
 		return result;
 	}
-	
+
 	// 사용자 그룹 조회
 	@GetMapping("/user_grp_list")
 	public AjaxResult getUserGrpList(
-			@RequestParam(value="id") Integer id,
-			HttpServletRequest request) {
-		
+		@RequestParam(value="id") Integer id,
+		HttpServletRequest request) {
+
 		List<Map<String, Object>> items = this.userService.getUserGrpList(id);
 		AjaxResult result = new AjaxResult();
 		result.data = items;
 		return result;
 	}
-	
+
 	@GetMapping("/getXusersList")
 	public AjaxResult getXusersList(
-			@RequestParam(value="perid", required = false, defaultValue = "") String perid,
-			@RequestParam(value="pernm", required = false, defaultValue = "") String pernm
+		@RequestParam(value="perid", required = false, defaultValue = "") String perid,
+		@RequestParam(value="pernm", required = false, defaultValue = "") String pernm
 	) {
 		AjaxResult result = new AjaxResult();
 		result.data = this.userService.getXusersList(perid, pernm);
@@ -281,6 +281,49 @@ public class UserController {
 					user.setPersonid(existPersonId);
 					this.userRepository.save(user);
 				} else {
+					// [수정] 새 코드로 찾은 person 이 없을 때 바로 INSERT 하면
+					//        UQ_person_Name 제약(이름 중복)으로 실패한다.
+					//        ① 이 사용자에 이미 연결된 person ② 같은 이름의 person 순으로 찾아
+					//        있으면 그 person 의 Code 를 갱신하고, 없을 때만 INSERT 한다.
+					Integer targetPersonId = user.getPersonid();
+
+					if (targetPersonId == null) {
+						MapSqlParameterSource nameParam = new MapSqlParameterSource();
+						nameParam.addValue("Name", Name);
+						nameParam.addValue("spjangcd", spjangcd);
+						Map<String, Object> sameName = this.tenantSqlRunner.getRow(
+							"SELECT id FROM person WHERE [Name] = :Name AND spjangcd = :spjangcd", nameParam);
+						if (sameName != null) {
+							targetPersonId = ((Number) sameName.get("id")).intValue();
+						}
+					}
+
+					if (targetPersonId != null) {
+						String personUpdateSql = """
+							UPDATE person SET
+							       [Code] = :Code
+							     , [Name] = :Name
+							     , [Depart_id] = COALESCE(NULLIF(:Depart_id, ''), [Depart_id])  -- [수정] 빈 값이면 기존 부서 유지
+							     , _modified = SYSDATETIMEOFFSET()
+							     , _modifier_id = :modifier_id
+							 WHERE id = :id
+							   AND spjangcd = :spjangcd
+						""";
+						MapSqlParameterSource upParam = new MapSqlParameterSource();
+						upParam.addValue("Code", person_code);
+						upParam.addValue("Name", Name);
+						upParam.addValue("Depart_id", Depart_id);
+						upParam.addValue("modifier_id", loginUser.getId());
+						upParam.addValue("id", targetPersonId);
+						upParam.addValue("spjangcd", spjangcd);
+						this.tenantSqlRunner.execute(personUpdateSql, upParam);
+
+						user.setPersonid(targetPersonId);
+						this.userRepository.save(user);
+						result.data = user;
+						return result;
+					}
+
 					// person INSERT
 					String personInsertSql = """
                     INSERT INTO person
@@ -319,7 +362,7 @@ public class UserController {
 		result.data = user;
 		return result;
 	}
-	
+
 	// user 삭제
 	@PostMapping("/delete")
 	public AjaxResult deleteUser(@RequestParam("id") int id) {
@@ -327,85 +370,85 @@ public class UserController {
 		AjaxResult result = new AjaxResult();
 		return result;
 	}
-	
+
 	// user 패스워드 셋팅
 	@PostMapping("/passSetting")
 	@Transactional
 	public AjaxResult userPassSetting(
-			@RequestParam(value="id", required = false) Integer id,
-			@RequestParam(value="pass1", required = false) String loginPwd,
-    		@RequestParam(value="pass2", required = false) String loginPwd2,  		
-    		Authentication auth
-			) {
-		
+		@RequestParam(value="id", required = false) Integer id,
+		@RequestParam(value="pass1", required = false) String loginPwd,
+		@RequestParam(value="pass2", required = false) String loginPwd2,
+		Authentication auth
+	) {
+
 		User user = null;
-        AjaxResult result = new AjaxResult();
-        
-        if (StringUtils.hasText(loginPwd)==false | StringUtils.hasText(loginPwd2)==false) {
-        	result.success=false;
-        	result.message="The verification password is incorrect.";
-        	return result;
-        }
-        
-        if(loginPwd.equals(loginPwd2)==false) {        	
-        	result.success=false;
-        	result.message="The verification password is incorrect.";
-        	return result;
-        }
-        
-        user = this.userRepository.getUserById(id);
-        user.setPassword(Pbkdf2Sha256.encode(loginPwd));        
-        this.userRepository.save(user);
+		AjaxResult result = new AjaxResult();
+
+		if (StringUtils.hasText(loginPwd)==false | StringUtils.hasText(loginPwd2)==false) {
+			result.success=false;
+			result.message="The verification password is incorrect.";
+			return result;
+		}
+
+		if(loginPwd.equals(loginPwd2)==false) {
+			result.success=false;
+			result.message="The verification password is incorrect.";
+			return result;
+		}
+
+		user = this.userRepository.getUserById(id);
+		user.setPassword(Pbkdf2Sha256.encode(loginPwd));
+		this.userRepository.save(user);
 
 		return result;
 	}
-	
+
 	@PostMapping("/save_user_grp")
 	@Transactional
 	public AjaxResult saveUserGrp(
-			@RequestParam(value="id") Integer id,
-			@RequestBody MultiValueMap<String,Object> Q,   		
-    		Authentication auth
-			) {
-		
+		@RequestParam(value="id") Integer id,
+		@RequestBody MultiValueMap<String,Object> Q,
+		Authentication auth
+	) {
+
 		User user = (User)auth.getPrincipal();;
-		
-        AjaxResult result = new AjaxResult();
-        
-        List<Map<String, Object>> items = CommonUtil.loadJsonListMap(Q.getFirst("Q").toString());
-        
-        List<RelationData> rdList = this.relationDataRepository.findByDataPk1AndTableName1AndTableName2(id,"auth_user", "user_group");
-        
-        // 등록된 그룹 삭제
-        for (int i = 0; i < rdList.size(); i++) {
-        	this.relationDataRepository.deleteById(rdList.get(i).getId());
-        }
-        
-        this.relationDataRepository.flush();
-        for (int i = 0; i< items.size(); i++) {
-        	
-        	String check = "";
-        	
-        	if (items.get(i).get("grp_check") != null) {
-        		check = items.get(i).get("grp_check").toString();
-        	}
-        	
-        	if (check.equals("Y")) {
-        		RelationData rd = new RelationData();
-        		rd.setDataPk1(id);
-        		rd.setTableName1("auth_user");
-        		rd.setDataPk2(Integer.parseInt(items.get(i).get("grp_id").toString()));
-        		rd.setTableName2("user_group");
-        		rd.setRelationName("auth_user-user_group");
-        		rd.setChar1("Y");
-        		rd.set_audit(user);
-        		
-        		this.relationDataRepository.save(rd);
-        	}
-        }
-        
-        
-        return result;
+
+		AjaxResult result = new AjaxResult();
+
+		List<Map<String, Object>> items = CommonUtil.loadJsonListMap(Q.getFirst("Q").toString());
+
+		List<RelationData> rdList = this.relationDataRepository.findByDataPk1AndTableName1AndTableName2(id,"auth_user", "user_group");
+
+		// 등록된 그룹 삭제
+		for (int i = 0; i < rdList.size(); i++) {
+			this.relationDataRepository.deleteById(rdList.get(i).getId());
+		}
+
+		this.relationDataRepository.flush();
+		for (int i = 0; i< items.size(); i++) {
+
+			String check = "";
+
+			if (items.get(i).get("grp_check") != null) {
+				check = items.get(i).get("grp_check").toString();
+			}
+
+			if (check.equals("Y")) {
+				RelationData rd = new RelationData();
+				rd.setDataPk1(id);
+				rd.setTableName1("auth_user");
+				rd.setDataPk2(Integer.parseInt(items.get(i).get("grp_id").toString()));
+				rd.setTableName2("user_group");
+				rd.setRelationName("auth_user-user_group");
+				rd.setChar1("Y");
+				rd.set_audit(user);
+
+				this.relationDataRepository.save(rd);
+			}
+		}
+
+
+		return result;
 	}
 
 
@@ -419,8 +462,8 @@ public class UserController {
 
 	@GetMapping("/getPerson")
 	public AjaxResult getAccSearchList(
-			@RequestParam(value="searchCode", required=false) String code,
-			@RequestParam(value="searchName", required=false) String name
+		@RequestParam(value="searchCode", required=false) String code,
+		@RequestParam(value="searchName", required=false) String name
 	) {
 
 		AjaxResult result = new AjaxResult();
@@ -429,10 +472,5 @@ public class UserController {
 		result.data = items;
 		return result;
 	}
-
-
-
-
-
 
 }

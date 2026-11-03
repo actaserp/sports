@@ -103,7 +103,7 @@
             <div class="tab-wrap" style="flex: 0 0 60%; min-width: 0;">
                 <ul class="tab-links">
                     <li><a href="#tab_basic">기본정보</a></li>
-                   <!-- <li><a href="#tab_user_grp">사용자 그룹</a></li>-->
+                    <!-- <li><a href="#tab_user_grp">사용자 그룹</a></li>-->
                 </ul>
                 <div>
                     <section class="tab-item" id="tab_basic" style="border-top-left-radius: 0;">
@@ -167,12 +167,12 @@
                                             <i class="fas fa-cog"></i> 패스워드 설정
                                         </button>
                                     </li>
-<!--                                    <li>-->
-<!--                                        <button type="button" class="btn-delete btn-default" id="btnSearchComp"-->
-<!--                                                style="height: 36px; width:115px;">-->
-<!--                                            거래처 검색-->
-<!--                                        </button>-->
-<!--                                    </li>-->
+                                    <!--                                    <li>-->
+                                    <!--                                        <button type="button" class="btn-delete btn-default" id="btnSearchComp"-->
+                                    <!--                                                style="height: 36px; width:115px;">-->
+                                    <!--                                            거래처 검색-->
+                                    <!--                                        </button>-->
+                                    <!--                                    </li>-->
                                 </ul>
                             </div>
                             <div class="table-wrap" style=" overflow-x: auto;">
@@ -180,6 +180,15 @@
                                     <table class="write-table"
                                            style="width: 100%; border-collapse: collapse; table-layout: fixed;">
                                         <caption style="text-align: left; margin-bottom: 8px;">상세테이블</caption>
+                                        <!-- [수정] 제목 칸은 좁게, 입력 칸은 넓게 (입력값 잘림 방지) -->
+                                        <colgroup>
+                                            <col style="width: 11%;">
+                                            <col style="width: 22%;">
+                                            <col style="width: 11%;">
+                                            <col style="width: 22%;">
+                                            <col style="width: 11%;">
+                                            <col style="width: 23%;">
+                                        </colgroup>
                                         <input type="hidden" id="id" name="id"/>
                                         <tbody>
                                         <tr>
@@ -247,12 +256,12 @@
                                             <td>
                                                 <select style="width: 100%;" id="Depart_id" name="Depart_id"></select>
                                             </td>
-<!--                                            <th>-->
-<!--                                                <label for="Factory_id">소속 공장</label>-->
-<!--                                            </th>-->
-<!--                                            <td>-->
-<!--                                                <select style="width: 100%;" id="Factory_id" name="Factory_id"></select>-->
-<!--                                            </td>-->
+                                            <!--                                            <th>-->
+                                            <!--                                                <label for="Factory_id">소속 공장</label>-->
+                                            <!--                                            </th>-->
+                                            <!--                                            <td>-->
+                                            <!--                                                <select style="width: 100%;" id="Factory_id" name="Factory_id"></select>-->
+                                            <!--                                            </td>-->
                                         </tr>
                                         <tr>
                                             <th>
@@ -755,6 +764,8 @@
                 id: item.id,
                 login_id: item.login_id,
                 personid: item.personid,
+                personcode: item.personcode,   // [수정] 그리드 '사번' 컬럼 binding 누락 보완
+                spjangcd: item.spjangcd,
                 first_name: item.first_name,
                 group_name: item.group_name,
                 email: item.email,
@@ -812,7 +823,8 @@
 
             let fnSuccess = function (res) {
                 if (res.success) {
-                    Alert.alert('', '저장되었습니다. 최초 비밀번호는 1234 입니다.');
+                    // [수정] 서버가 경고 메시지(Person 연동 실패 등)를 주면 그대로 표시
+                    Alert.alert('', res.message || '저장되었습니다. 최초 비밀번호는 1234 입니다.');
                     searchDataBind();
                 } else if (!res.success) {
                     Alert.alert('', res.message);
@@ -1142,7 +1154,10 @@
 
             $content.find('#btnAccountSave').click(() => {
                 if (selectedItem) {
-                    $('#personid').val(selectedItem.id);
+                    // [수정] 사번 코드 세팅 누락 보완. 팝업 결과에 id 가 없으므로 personid 는 비워
+                    //        서버가 person_code 로 person 을 찾거나 생성하도록 한다.
+                    $('#person_code').val(selectedItem.code);
+                    $('#personid').val('');
                     $('#Depart_id').val(selectedItem.dept_id);
                     $('#personname').val(selectedItem.name);
                     popContainer.close();
@@ -1159,7 +1174,7 @@
                 const selectedItem = items[0];
                 console.log('person info : ', selectedItem);
                 $('#person_code').val(selectedItem.code);
-                $('#personid').val(selectedItem.id);
+                $('#personid').val('');   // [수정] selectedItem.id 는 항상 undefined → 명시적으로 비움
                 $('#Depart_id').val(selectedItem.dept_id);
                 $('#personname').val(selectedItem.name);
                 popContainer.close();
@@ -1298,7 +1313,7 @@
             let $content = $(content);
 
             let popContainer = new PopupDraggable('거래처조회');
-            popContainer.open({ width: 800, height: 500, $content });
+            popContainer.open({width: 800, height: 500, $content});
 
             let $searchName = $content.find('#searchName');
             let $searchCode = $content.find('#searchCode');
@@ -1339,10 +1354,10 @@
                 autoGenerateColumns: false,
                 showMarquee: true,
                 columns: [
-                    { binding: 'Code', header: '업체코드', width: 100, align: 'center' },
-                    { binding: 'BusinessNumber', header: '사업자번호', width: 150, align: 'center' },
-                    { binding: 'Name', header: '거래처명', width: '*', align: 'center' },
-                    { binding: 'OurManager', header: '담당자명', width: 150, align: 'center' },
+                    {binding: 'Code', header: '업체코드', width: 100, align: 'center'},
+                    {binding: 'BusinessNumber', header: '사업자번호', width: 150, align: 'center'},
+                    {binding: 'Name', header: '거래처명', width: '*', align: 'center'},
+                    {binding: 'OurManager', header: '담당자명', width: 150, align: 'center'},
                 ],
                 isReadOnly: true,
                 itemsSource: null
