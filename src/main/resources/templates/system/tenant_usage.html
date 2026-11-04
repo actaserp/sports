@@ -1,0 +1,982 @@
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
+  <style>
+      /* 팔레트는 급여명세서 화면과 같은 잉크·괘선 계열 */
+      :root {
+          --us-ink:   #1B2430;
+          --us-label: #45566A;
+          --us-mute:  #8A99A8;
+          --us-rule:  #CBD3DB;
+          --us-line:  #E7EBEF;
+          --us-frame: #8A99A8;
+          --us-band:  #EDF1F4;
+          --us-band2: #DCE3E9;
+          --us-value: #24466F;
+          --us-ok:    #1F6B3A;
+          --us-warn:  #8A5A00;
+          --us-alert: #9E2A20;
+          --us-paper: #fff;
+      }
+
+      /* ── 조회 조건 : 한 줄 ─────────────────────────────── */
+      .us-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+      .us-top .search-wrap.us-search {
+          flex: 1 1 auto; min-width: 0;
+          display: flex; align-items: center; gap: 0; flex-wrap: wrap;
+      }
+      .us-top .search-wrap.us-search > dl {
+          display: flex; align-items: center; gap: 6px; margin: 0 14px 0 0;
+      }
+      .us-top .search-wrap.us-search > dl > dt,
+      .us-top .search-wrap.us-search > dl > dd { margin: 0; padding: 0; }
+      .us-top .search-wrap.us-search > dl > dt label {
+          white-space: nowrap; font-size: 12.5px; color: var(--us-label);
+      }
+      .us-search input[type=month],
+      .us-search select { height: 34px; padding: 0 10px; }
+      .us-search input[type=month] { width: 138px; }
+      .us-search select { width: 230px; }
+      .us-search .tilde { color: var(--us-mute); margin: 0 2px; }
+      .us-search input:focus-visible, .us-search select:focus-visible {
+          outline: 2px solid var(--us-value); outline-offset: 1px;
+      }
+      .us-chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+          font-size: 12.5px; color: var(--us-label); white-space: nowrap;
+          user-select: none; -webkit-user-select: none; }
+
+      /* 기간 바로가기 */
+      .us-quick-wrap { display: inline-flex; gap: 4px; margin-right: 14px; }
+      .us-quick {
+          height: 28px; padding: 0 10px;
+          border: 1px solid var(--us-rule); border-radius: 2px;
+          background: #fff; color: var(--us-label);
+          font-family: inherit; font-size: 12px; cursor: pointer;
+      }
+      .us-quick:hover { border-color: var(--us-value); color: var(--us-value); }
+      .us-quick:focus-visible { outline: 2px solid var(--us-value); outline-offset: 1px; }
+
+      .us-btn {
+          display: inline-flex; align-items: center; gap: 6px;
+          height: 34px; padding: 0 16px;
+          border: 1px solid var(--us-value); border-radius: 2px;
+          background: var(--us-value); color: #fff;
+          font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: .5px;
+          cursor: pointer; white-space: nowrap;
+      }
+      .us-btn:hover  { background: #1D3A5F; border-color: #1D3A5F; }
+      .us-btn:active { background: #17304F; }
+      .us-btn:focus-visible { outline: 2px solid var(--us-value); outline-offset: 2px; }
+
+      /* ── 안내 줄 ───────────────────────────────────────── */
+      .grid-guide-box {
+          background: var(--us-band);
+          border: 1px solid var(--us-rule); border-left: 3px solid var(--us-frame);
+          padding: 8px 12px; margin-bottom: 8px;
+          font-size: 12.5px; line-height: 1.6; color: var(--us-label);
+      }
+      .grid-guide-box b { color: var(--us-ink); }
+
+      .us-progress { display: none; align-items: center; gap: 7px; margin-left: 10px;
+          color: var(--us-value); font-weight: 600; font-size: 12.5px; }
+      .us-progress.on { display: inline-flex; }
+      .us-spin { width: 13px; height: 13px; border-radius: 50%;
+          border: 2px solid var(--us-rule); border-top-color: var(--us-value);
+          animation: us-spin .8s linear infinite; }
+      @keyframes us-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .us-spin { animation: none; } }
+
+      /* ── 패널 공통 ─────────────────────────────────────── */
+      .us-panel { background: var(--us-paper); border: 1px solid var(--us-frame); }
+      .us-panel-hd {
+          /* 높이를 고정한다. 한쪽에만 체크박스가 있어도 좌우 패널의 표가 같은 줄에서 시작한다. */
+          height: 34px; box-sizing: border-box;
+          padding: 0 10px; background: var(--us-band2);
+          border-bottom: 1px solid var(--us-frame);
+          display: flex; justify-content: space-between; align-items: center; gap: 12px;
+          font-size: 12.5px; letter-spacing: .5px; color: var(--us-ink);
+      }
+      .us-panel-hd .cnt { color: var(--us-label); font-size: 12px; letter-spacing: 0; }
+      .us-empty { padding: 50px 20px; text-align: center; color: var(--us-mute);
+          font-size: 13px; line-height: 1.9; }
+
+      /* 공용 CSS 의 th · td · .num 등이 끼어들지 않게
+         클래스는 전부 us- 접두어를 쓰고 선택자를 .us-panel 아래로 묶는다. */
+      .us-panel table.us-grid { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+      .us-panel table.us-grid th {
+          position: sticky; top: 0; z-index: 2;
+          height: 34px; padding: 0 10px;
+          background: var(--us-band); border-bottom: 1px solid var(--us-frame);
+          font-size: 12px; font-weight: 600; color: var(--us-label);
+          letter-spacing: .5px; white-space: nowrap; text-align: center;
+      }
+      .us-panel table.us-grid td {
+          height: 38px; padding: 4px 10px;
+          border-bottom: 1px solid var(--us-line);
+          color: var(--us-ink); text-align: center; vertical-align: middle;
+          font-size: 12.5px; background: transparent;
+      }
+      .us-panel table.us-grid td.us-l { text-align: left; }
+      .us-panel table.us-grid td.us-n {
+          text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap;
+      }
+      .us-panel table.us-grid td.us-n b { font-weight: 700; color: var(--us-value); }
+      .us-panel table.us-grid td.us-dt { color: var(--us-label); white-space: nowrap; font-size: 12px; }
+      .us-panel table.us-grid tr.us-dim td,
+      .us-panel table.us-grid tr.us-dim td b { color: var(--us-mute); font-weight: normal; }
+
+      /* ── 요약 표 : 사업장 × 월 ─────────────────────────── */
+      /* 세로는 페이지가 스크롤한다. 표 안에 스크롤을 또 두면 행이 가려진다. */
+      .us-sum-scroll { overflow-x: auto; }
+      #usSumTable tbody tr { cursor: pointer; }
+      #usSumTable tbody tr:hover { background: #F5F8FA; }
+      #usSumTable tbody tr.on { background: var(--us-band); }
+      #usSumTable tbody tr.on td.us-site { box-shadow: inset 3px 0 0 var(--us-value); }
+
+      /* 사업장 열은 가로 스크롤해도 남는다 */
+      #usSumTable .us-site {
+          position: sticky; left: 0; z-index: 1;
+          background: inherit; text-align: left; min-width: 190px;
+      }
+      #usSumTable thead .us-site { z-index: 3; background: var(--us-band); }
+      #usSumTable tbody td.us-site { background: var(--us-paper); }
+      #usSumTable tbody tr:hover td.us-site { background: #F5F8FA; }
+      #usSumTable tbody tr.on td.us-site { background: var(--us-band); }
+
+      .us-key { font-weight: 700; font-size: 13px; color: var(--us-ink); margin-right: 6px; }
+      .us-sitenm { color: var(--us-ink); font-size: 12.5px; font-weight: 600; }
+      #usSumTable .us-site { min-width: 240px; white-space: nowrap; }
+      .us-siteinfo { display: block; font-size: 11px; color: var(--us-mute); margin-top: 2px; }
+
+      /* 월 칸 : 폭을 고정하고 가운데 정렬한다. 넓은 칸에 오른쪽 정렬하면 숫자가 흩어져 보인다. */
+      #usSumTable th.us-mon, #usSumTable td.us-c { width: 104px; min-width: 104px; }
+      .us-panel table.us-grid td.us-c { text-align: center; line-height: 1.3; padding: 6px 8px; }
+      td.us-c .us-big { display: block; font-size: 15px; font-weight: 700; color: var(--us-value);
+          font-variant-numeric: tabular-nums; }
+      td.us-c .us-big.zero { color: var(--us-warn); }
+      td.us-c .us-sub { display: block; margin-top: 2px; font-size: 11px; color: var(--us-label);
+          white-space: nowrap; font-variant-numeric: tabular-nums; }
+      .us-panel table.us-grid td.us-c.us-none { color: var(--us-rule); }
+      .us-panel table.us-grid td.us-total,
+      .us-panel table.us-grid th.us-total { border-left: 2px solid var(--us-rule); background: #FAFBFC; }
+      #usSumTable tfoot td {
+          background: var(--us-band); border-top: 2px solid var(--us-frame); font-weight: 600;
+      }
+      #usSumTable tfoot td.us-site { background: var(--us-band); }
+
+      /* 상태 : 점 하나가 상태를 나른다 */
+      .us-st { font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+      .us-st::before { content: ''; display: inline-block; width: 6px; height: 6px;
+          border-radius: 50%; margin-right: 5px; vertical-align: 1px;
+          background: currentColor; }
+      .us-st.ok   { color: var(--us-ok); }
+      .us-st.warn { color: var(--us-warn); }
+      .us-st.none { color: var(--us-mute); font-weight: normal; }
+
+      /* ── 상세 : 계정별 / 메뉴별 ───────────────────────── */
+      /* 아래쪽 여백은 화면 하단에 고정된 푸터 높이만큼 JS 가 다시 잡는다(fitFooter). */
+      /* scroll-margin : 자동 스크롤로 내려왔을 때 제목이 화면 끝에 딱 붙지 않게 */
+      .us-detail { margin-top: 12px; display: none; scroll-margin-top: 16px; }
+      .us-foot-space { height: 56px; }
+
+      /* ── 페이지 이동 ───────────────────────────────────── */
+      .us-pager {
+          display: flex; align-items: center; gap: 12px;
+          height: 42px; padding: 0 10px;
+          border-top: 1px solid var(--us-rule); background: var(--us-paper);
+          font-size: 12px; color: var(--us-label);
+      }
+      .us-pager.off { display: none; }
+      .us-pager-info { flex: 1 1 0; font-variant-numeric: tabular-nums; }
+      .us-pager-btns { display: inline-flex; gap: 3px; }
+      .us-pager-size { flex: 1 1 0; display: flex; justify-content: flex-end; }
+      .us-pg {
+          min-width: 30px; height: 28px; padding: 0 8px;
+          border: 1px solid var(--us-rule); border-radius: 2px;
+          background: #fff; color: var(--us-label);
+          font-family: inherit; font-size: 12px; cursor: pointer;
+          font-variant-numeric: tabular-nums;
+      }
+      .us-pg:hover:not([disabled]) { border-color: var(--us-value); color: var(--us-value); }
+      .us-pg.on { background: var(--us-value); border-color: var(--us-value); color: #fff; font-weight: 600; cursor: default; }
+      .us-pg[disabled] { opacity: .4; cursor: default; }
+      .us-pg:focus-visible { outline: 2px solid var(--us-value); outline-offset: 1px; }
+      .us-pager-size select {
+          height: 28px; padding: 0 8px; font-size: 12px;
+          border: 1px solid var(--us-rule); border-radius: 2px; background: #fff; color: var(--us-ink);
+      }
+      /* 머리줄 안 체크박스는 공용 CSS 가 크게 다시 그리므로 크기를 묶는다 */
+      .us-panel-hd .us-chk input[type=checkbox] { width: 14px; height: 14px; margin: 0; flex: 0 0 14px; }
+      .us-panel-hd > span { display: inline-flex; align-items: center; }
+      .us-detail.on { display: block; }
+      .us-detail-title { font-size: 13.5px; font-weight: 700; color: var(--us-ink);
+          margin: 0 0 6px; }
+      .us-detail-title span { font-weight: normal; color: var(--us-label); font-size: 12.5px; margin-left: 8px; }
+      .us-split { display: flex; align-items: stretch; }
+      .us-split > .us-panel { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+      .us-split > .us-panel + .us-panel { border-left: none; }
+      /* 상세 표도 세로 스크롤을 두지 않는다. 페이지가 내려가며 끝까지 보인다. */
+      .us-split .us-scroll { overflow-x: auto; }
+      .us-panel table.us-grid tbody tr:nth-child(even) td { background: #FAFBFC; }
+      #usSumTable tbody tr:nth-child(even) td.us-site { background: #FAFBFC; }
+
+      .us-tag { display: inline-block; margin-left: 6px; padding: 0 5px;
+          font-size: 10.5px; line-height: 16px; border-radius: 2px;
+          border: 1px solid var(--us-rule); color: var(--us-label); background: #fff; }
+      .us-tag.alert { border-color: #E0BDB8; color: var(--us-alert); background: #FBF0EE; }
+      .us-tag.sys   { color: var(--us-mute); }
+      .us-code { font-family: Consolas, 'D2Coding', monospace; font-size: 12px; color: var(--us-ink); }
+      .us-name { font-weight: 600; }
+      .us-id   { display: block; font-size: 11px; color: var(--us-mute); margin-top: 1px; }
+      .us-id.us-code { font-size: 11px; color: var(--us-mute); }
+
+      /* 활용률 막대 */
+      /* 공용 CSS 가 i · b 태그를 아이콘처럼 다시 그리므로 전용 span 만 쓴다 */
+      .us-panel-hd .cnt { display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; }
+      .us-rate { display: inline-flex; align-items: center; gap: 6px; }
+      .us-rate-bar { position: relative; display: inline-block; flex: 0 0 80px;
+          width: 80px; height: 6px; overflow: hidden; border-radius: 1px;
+          background: var(--us-line); }
+      .us-rate-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--us-value); }
+      .us-rate-pct { min-width: 32px; text-align: right; font-variant-numeric: tabular-nums; }
+  </style>
+
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>사업장 사용량</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>시스템관리</li>
+        <li>사업장 사용량</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <div class="section-top us-top">
+        <div class="search-wrap us-search">
+          <dl>
+            <dt><label for="fromYm">기간</label></dt>
+            <dd>
+              <input type="month" id="fromYm" class="form-control2"/>
+              <span class="tilde">~</span>
+              <input type="month" id="toYm" class="form-control2" aria-label="종료월"/>
+            </dd>
+          </dl>
+          <div class="us-quick-wrap">
+            <button type="button" class="us-quick" data-from="0"  data-to="0">이번 달</button>
+            <button type="button" class="us-quick" data-from="1"  data-to="1">지난 달</button>
+            <button type="button" class="us-quick" data-from="5"  data-to="0">최근 6개월</button>
+            <button type="button" class="us-quick" data-from="11" data-to="0">최근 12개월</button>
+          </div>
+          <dl>
+            <dt><label for="dbKey">사업장</label></dt>
+            <dd>
+              <select id="dbKey" class="form-control2">
+                <option value="">불러오는 중…</option>
+              </select>
+            </dd>
+          </dl>
+          <dl>
+            <dd>
+              <label class="us-chk">
+                <input type="checkbox" id="exAdmin" checked/> 관리자(admin·superuser) 제외
+              </label>
+              <label class="us-chk" style="margin-left:12px" title="사업장 개설 때 만든 …_admin 계정">
+                <input type="checkbox" id="exDev" checked/> 개발자 계정(…_admin) 제외
+              </label>
+            </dd>
+          </dl>
+          <dl>
+            <dd>
+              <button class="us-btn" id="btnSearch" title="검색 (F4)" type="button">
+                <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
+                  <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.7"/>
+                  <path d="M11 11 L14.5 14.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+                검색
+              </button>
+            </dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="grid-guide-box">
+        ※ 칸의 큰 숫자는 <b>업무 메뉴 접속 수</b>입니다. 사용자·그룹·권한 같은 설정 메뉴는 뺀 값이고,
+        아래 작은 글씨는 설정 메뉴를 포함한 전체 접속 수와 로그인 수입니다.
+        사업장 행을 누르면 아래에 계정별 · 메뉴별 사용이 나옵니다. (단축키 조회:F4)
+        <span class="us-progress" id="usProgress"><span class="us-spin"></span><span id="usProgressText">처리 중</span></span>
+      </div>
+
+      <!-- 요약 : 사업장 × 월 -->
+      <div class="us-panel">
+        <div class="us-panel-hd">
+          <span>월별 사용량</span>
+          <span class="cnt" id="usSumCnt"></span>
+        </div>
+        <div class="us-sum-scroll">
+          <table class="us-grid" id="usSumTable">
+            <thead id="usSumHead"></thead>
+            <tbody id="usSumBody">
+            <tr><td class="us-empty">기간을 고르고 검색하세요.</td></tr>
+            </tbody>
+            <tfoot id="usSumFoot"></tfoot>
+          </table>
+        </div>
+        <!-- 페이지 이동. 합계 행은 페이지와 관계없이 조회된 사업장 전체의 합이다. -->
+        <div class="us-pager" id="usPager">
+          <span class="us-pager-info" id="usPagerInfo"></span>
+          <span class="us-pager-btns" id="usPagerBtns"></span>
+          <label class="us-pager-size">
+            <select id="usPageSize" aria-label="페이지당 사업장 수">
+              <option value="10">10개씩</option>
+              <option value="20">20개씩</option>
+              <option value="50">50개씩</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <!-- 상세 : 선택한 사업장 -->
+      <div class="us-detail" id="usDetail">
+        <h3 class="us-detail-title" id="usDetailTitle"></h3>
+        <div class="us-split">
+          <div class="us-panel">
+            <div class="us-panel-hd">
+              <span>계정별</span>
+              <span class="cnt" id="usUserCnt"></span>
+            </div>
+            <div class="us-scroll">
+              <table class="us-grid">
+                <thead>
+                <tr>
+                  <th>계 정</th>
+                  <th style="width:60px">로그인</th>
+                  <th style="width:70px">전체 접속</th>
+                  <th style="width:70px">업무 접속</th>
+                  <th style="width:130px">최근 사용</th>
+                </tr>
+                </thead>
+                <tbody id="usUserBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="us-panel">
+            <div class="us-panel-hd">
+              <span>메뉴별
+                <label class="us-chk" style="margin-left:12px">
+                  <input type="checkbox" id="hideUnused"/> 미사용 숨기기
+                </label>
+              </span>
+              <span class="cnt" id="usMenuCnt"></span>
+            </div>
+            <div class="us-scroll">
+              <table class="us-grid">
+                <thead>
+                <tr>
+                  <th>메 뉴</th>
+                  <th style="width:56px">구 분</th>
+                  <th style="width:60px">접 속</th>
+                  <th style="width:56px">사용자</th>
+                  <th style="width:130px">최근 사용</th>
+                </tr>
+                </thead>
+                <tbody id="usMenuBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 하단 고정 푸터에 마지막 줄이 덮이지 않게 자리를 비운다. 높이는 fitFooter 가 잡는다. -->
+      <div class="us-foot-space" id="usFootSpace"></div>
+    </div>
+  </div>
+</th:block>
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   class UsagePage {
+    constructor() {
+     this.url = '/api/usage';
+     this.sites = [];
+     this.siteMap = {};
+     this.rows = [];
+     this.menus = [];
+     this.current = null;
+     this.pending = 0;
+     // 페이징 : 서버는 한 번에 다 주고 화면에서 나눈다.
+     // 사업장 수 × 월 수 만큼의 집계라 수백 곳이 되어도 응답이 작다.
+     this.list = [];
+     this.monthList = [];
+     this.page = 1;
+     this.pageSize = 10;
+     try {
+      const saved = Number(localStorage.getItem('usage.pageSize'));
+      if ([10, 20, 50].indexOf(saved) >= 0) this.pageSize = saved;
+     } catch (e) { /* 저장소를 못 쓰면 기본값 */ }
+     $('#usPageSize').val(String(this.pageSize));
+     this.initPeriod();
+     this.bind();
+    }
+
+    // 기본 기간 : 최근 6개월 (이번 달 포함)
+    initPeriod() {
+     $('#fromYm').val(this.shift(5));
+     $('#toYm').val(this.shift(0));
+    }
+
+    bind() {
+     let _this = this;
+     $('#btnSearch').on('click', function () {
+      _this.search();
+     });
+     $('#dbKey, #exAdmin, #exDev').on('change', function () {
+      _this.search();
+     });
+     $('#fromYm, #toYm').on('keydown', function (e) {
+      if (e.key === 'Enter') _this.search();
+     });
+     $('.us-quick').on('click', function () {
+      $('#fromYm').val(_this.shift(Number($(this).data('from'))));
+      $('#toYm').val(_this.shift(Number($(this).data('to'))));
+      _this.search();
+     });
+     // data() 는 '12' 같은 값을 숫자로 바꾸므로 attr() 로 읽는다
+     $('#usSumBody').on('click', 'tr[data-key]', function () {
+      _this.loadDetail($(this).attr('data-key'), true);
+     });
+     $('#hideUnused').on('change', function () {
+      _this.renderMenus();
+     });
+     $('#usPagerBtns').on('click', '.us-pg[data-p]', function () {
+      _this.goPage(Number($(this).attr('data-p')));
+     });
+     $('#usPageSize').on('change', function () {
+      _this.pageSize = Number($(this).val()) || 10;
+      try { localStorage.setItem('usage.pageSize', String(_this.pageSize)); } catch (e) { /* 무시 */ }
+      _this.page = 1;
+      _this.renderPage();
+     });
+    }
+
+    // ── 날짜 ──────────────────────────────────────────────
+    ym(y, m) {
+     return y + '-' + String(m).padStart(2, '0');
+    }
+
+    /** n 개월 전의 'YYYY-MM' */
+    shift(n) {
+     const d = new Date();
+     const x = new Date(d.getFullYear(), d.getMonth() - n, 1);
+     return this.ym(x.getFullYear(), x.getMonth() + 1);
+    }
+
+    /** from ~ to 사이의 월 목록 (양끝 포함) */
+    months(from, to) {
+     const out = [];
+     let y = Number(from.substring(0, 4)), m = Number(from.substring(5, 7));
+     while (out.length <= 24) {
+      const s = this.ym(y, m);
+      out.push(s);
+      if (s >= to) break;
+      if (++m > 12) {
+       m = 1;
+       y++;
+      }
+     }
+     return out;
+    }
+
+    monLabel(ym) {
+     return ym.replace('-', '.');
+    }
+
+    // ── 조회 조건 ─────────────────────────────────────────
+    cond() {
+     const from = $('#fromYm').val(), to = $('#toYm').val();
+     const re = /^\d{4}-\d{2}$/;
+     if (!re.test(from || '') || !re.test(to || '')) {
+      Alert.alert('', '기간을 YYYY-MM 형식으로 입력하세요.');
+      return null;
+     }
+     if (from > to) {
+      Alert.alert('', '시작월이 종료월보다 늦습니다.');
+      return null;
+     }
+     if (this.months(from, to).length > 24) {
+      Alert.alert('', '기간은 최대 24개월까지 조회할 수 있습니다.');
+      return null;
+     }
+     return {
+      from: from, to: to,
+      dbKey: $('#dbKey').val() || '',
+      exAdmin: $('#exAdmin').is(':checked') ? 'Y' : 'N',
+      exDev: $('#exDev').is(':checked') ? 'Y' : 'N'
+     };
+    }
+
+    // ── 사업장 목록 ───────────────────────────────────────
+    loadSites(after) {
+     let _this = this;
+     AjaxUtil.getAsyncData(_this.url + '/sites', {}, function (result) {
+      const $s = $('#dbKey').empty().append('<option value="">전 체</option>');
+      if (!result || !result.success) {
+       // 목록이 없어도 집계는 볼 수 있다. 알리고 조회는 계속한다.
+       Alert.alert('', '사업장 목록을 불러오지 못했습니다.\n' + ((result && result.message) || ''));
+       if (after) after();
+       return;
+      }
+      _this.sites = result.data || [];
+      _this.siteMap = {};
+      _this.sites.forEach(function (s) {
+       _this.siteMap[s.db_key] = s;
+       $s.append('<option value="' + _this.esc(s.db_key) + '">' +
+        _this.esc(s.db_key + (s.spjangnm ? '  ' + s.spjangnm : '')) + '</option>');
+      });
+      if (after) after();
+     });
+    }
+
+    // ── 요약 조회 ─────────────────────────────────────────
+    search() {
+     let _this = this;
+     const c = _this.cond();
+     if (!c) return;
+
+     _this.busy(true, '조회 중');
+     AjaxUtil.getAsyncData(_this.url + '/summary', c, function (result) {
+      _this.busy(false);
+      if (!result || !result.success) {
+       Alert.alert('', (result && result.message) || '조회에 실패했습니다.');
+       return;
+      }
+      _this.rows = result.data || [];
+      _this.renderSummary(c);
+
+      // 사업장을 골라 조회했으면 상세까지 바로 연다. 보던 사업장이 있으면 다시 읽는다.
+      const key = c.dbKey || _this.current;
+      if (key) _this.loadDetail(key);
+      else _this.clearDetail();
+     });
+    }
+
+    renderSummary(c) {
+     let _this = this;
+     const months = _this.months(c.from, c.to);
+
+     // db_key → ym → 행
+     const by = {};
+     _this.rows.forEach(function (r) {
+      (by[r.db_key] = by[r.db_key] || {})[r.ym] = r;
+     });
+
+     // 기록이 없는 사업장도 '미사용' 으로 보여야 하므로 사업장 목록이 기준이다
+     let keys = _this.sites.map(s => s.db_key);
+     Object.keys(by).forEach(function (k) {
+      if (keys.indexOf(k) < 0) keys.push(k);
+     });
+     if (c.dbKey) keys = keys.filter(k => k === c.dbKey);
+
+     const zero = () => ({login_cnt: 0, menu_cnt: 0, work_cnt: 0});
+     const add = function (t, r) {
+      t.login_cnt += Number(r.login_cnt) || 0;
+      t.menu_cnt += Number(r.menu_cnt) || 0;
+      t.work_cnt += Number(r.work_cnt) || 0;
+     };
+
+     const list = keys.map(function (k) {
+      const m = by[k] || {};
+      const t = zero();
+      months.forEach(ym => {
+       if (m[ym]) add(t, m[ym]);
+      });
+      return {key: k, m: m, t: t};
+     });
+     // 많이 쓰는 사업장이 위로
+     list.sort((a, b) => (b.t.work_cnt - a.t.work_cnt) || (b.t.menu_cnt - a.t.menu_cnt) ||
+      String(a.key).localeCompare(String(b.key)));
+
+     // 머리
+     let h = '<tr><th class="us-site">사업장</th><th style="width:72px">상 태</th>' +
+      '<th style="width:64px">허용 메뉴</th>';
+     months.forEach(ym => h += '<th class="us-mon">' + _this.monLabel(ym) + '</th>');
+     h += '<th class="us-mon us-total">합 계</th></tr>';
+     $('#usSumHead').html(h);
+
+     // 합계·상태 건수는 페이지가 아니라 조회된 사업장 전체로 낸다
+     const cnt = {ok: 0, warn: 0, none: 0};
+     const monTotal = {};
+     months.forEach(ym => monTotal[ym] = zero());
+     const all = zero();
+     list.forEach(function (it) {
+      it.st = _this.status(it.t);
+      cnt[it.st[1]]++;
+      months.forEach(ym => {
+       if (it.m[ym]) add(monTotal[ym], it.m[ym]);
+      });
+      add(all, it.t);
+     });
+
+     _this.list = list;
+     _this.monthList = months;
+
+     if (!list.length) {
+      $('#usSumBody').html('<tr><td colspan="' + (months.length + 4) +
+       '" class="us-empty">사업장이 없습니다.</td></tr>');
+      $('#usSumFoot').empty();
+      $('#usSumCnt').text('');
+      $('#usPager').addClass('off');
+      return;
+     }
+
+     let f = '<tr><td class="us-site">' + (list.length > _this.pageSize ? '전체 합계' : '합 계') +
+      '</td><td></td><td></td>';
+     months.forEach(ym => f += _this.cell(monTotal[ym]));
+     f += _this.cell(all, 'us-total') + '</tr>';
+     $('#usSumFoot').html(list.length > 1 ? f : '');
+
+     $('#usSumCnt').text('사업장 ' + list.length + '곳 · 사용중 ' + cnt.ok +
+      ' · 설정만 ' + cnt.warn + ' · 미사용 ' + cnt.none);
+
+     // 새로 조회하면 첫 페이지로. 보던 사업장이 있으면 그 사업장이 있는 페이지로 간다.
+     const at = _this.current ? list.findIndex(it => it.key === _this.current) : -1;
+     _this.page = at >= 0 ? Math.floor(at / _this.pageSize) + 1 : 1;
+     _this.renderPage();
+    }
+
+    /** 현재 페이지의 사업장 행만 그린다 */
+    renderPage() {
+     let _this = this;
+     const list = _this.list, months = _this.monthList;
+     const pages = Math.max(1, Math.ceil(list.length / _this.pageSize));
+     _this.page = Math.min(Math.max(1, _this.page), pages);
+     const start = (_this.page - 1) * _this.pageSize;
+     const slice = list.slice(start, start + _this.pageSize);
+
+     const $b = $('#usSumBody').empty();
+     slice.forEach(function (it) {
+      const s = _this.siteMap[it.key] || {};
+      let tr = '<tr data-key="' + _this.esc(it.key) + '"' +
+       (it.key === _this.current ? ' class="on"' : '') + '>' +
+       '<td class="us-site"><span class="us-key">' + _this.esc(it.key) + '</span>' +
+       '<span class="us-sitenm">' + _this.esc(s.spjangnm || '') + '</span>' +
+       '<span class="us-siteinfo">계정 ' + _this.num(_this.userCnt(s)) + '개</span></td>' +
+       '<td><span class="us-st ' + it.st[1] + '">' + it.st[0] + '</span></td>' +
+       '<td class="us-n" style="text-align:center">' + _this.num(s.allowed_cnt || 0) + '</td>';
+      months.forEach(ym => tr += _this.cell(it.m[ym]));
+      tr += _this.cell(it.t, 'us-total') + '</tr>';
+      $b.append(tr);
+     });
+
+     _this.renderPager(pages, start, slice.length);
+    }
+
+    renderPager(pages, start, shown) {
+     const total = this.list.length;
+     // 한 페이지에 다 들어가면 페이지 줄을 숨긴다. 단 페이지 크기는 바꿀 수 있게 10개 초과일 때만 감춘다.
+     $('#usPager').toggleClass('off', total <= 10);
+     $('#usPagerInfo').text(total ? (start + 1) + '–' + (start + shown) + ' / 전체 ' + total + '곳' : '');
+
+     const p = this.page;
+     // 현재 페이지 앞뒤 2쪽만 번호로 보여준다
+     const from = Math.max(1, p - 2), to = Math.min(pages, p + 2);
+     const btn = (label, target, extra, title) =>
+      '<button type="button" class="us-pg' + (extra || '') + '"' +
+      (target ? ' data-p="' + target + '"' : ' disabled') +
+      (title ? ' title="' + title + '" aria-label="' + title + '"' : '') + '>' + label + '</button>';
+
+     let h = btn('«', p > 1 ? 1 : 0, '', '처음') + btn('‹', p > 1 ? p - 1 : 0, '', '이전');
+     for (let i = from; i <= to; i++) {
+      h += i === p
+       ? '<button type="button" class="us-pg on" aria-current="page">' + i + '</button>'
+       : btn(String(i), i);
+     }
+     h += btn('›', p < pages ? p + 1 : 0, '', '다음') + btn('»', p < pages ? pages : 0, '', '마지막');
+     $('#usPagerBtns').html(h);
+    }
+
+    /** 사업장 계정 수. 개발자 계정 제외를 끄면 그 수까지 더한다. */
+    userCnt(s) {
+     const n = Number(s.user_cnt) || 0;
+     return $('#exDev').is(':checked') ? n : n + (Number(s.dev_cnt) || 0);
+    }
+
+    goPage(p) {
+     this.page = p;
+     this.renderPage();
+    }
+
+    /** 월 칸 하나. r 이 없거나 전부 0 이면 '–' */
+    cell(r, cls) {
+     const c = cls ? ' ' + cls : '';
+     if (!r || ((Number(r.menu_cnt) || 0) === 0 && (Number(r.login_cnt) || 0) === 0)) {
+      return '<td class="us-c us-none' + c + '">–</td>';
+     }
+     // 접속은 있는데 업무 0 이면 '설정만' 한 달이다. 색으로 구분한다.
+     const zero = (Number(r.work_cnt) || 0) === 0 ? ' zero' : '';
+     return '<td class="us-c' + c + '"><div class="us-big' + zero + '">' + this.num(r.work_cnt) + '</div>' +
+      '<div class="us-sub">전체 ' + this.num(r.menu_cnt) + ' · 로그인 ' + this.num(r.login_cnt) + '</div></td>';
+    }
+
+    /** 기간 합계로 판정한다 */
+    status(t) {
+     if (t.menu_cnt === 0 && t.login_cnt === 0) return ['미사용', 'none'];
+     if (t.work_cnt === 0) return ['설정만', 'warn'];
+     return ['사용중', 'ok'];
+    }
+
+    // ── 상세 ──────────────────────────────────────────────
+    /**
+     * @param scroll true 면 상세 영역으로 화면을 내린다.
+     *               행을 직접 눌렀을 때만 쓴다. 재조회 때 화면이 튀면 안 된다.
+     */
+    loadDetail(key, scroll) {
+     let _this = this;
+     const c = _this.cond();
+     if (!c || !key) return;
+
+     _this.current = key;
+     $('#usSumBody tr').removeClass('on').filter(function () {
+      return $(this).attr('data-key') === key;
+     }).addClass('on');
+
+     const s = _this.siteMap[key] || {};
+     $('#usDetailTitle').html(_this.esc(key) + ' ' + _this.esc(s.spjangnm || '') +
+      '<span>' + _this.monLabel(c.from) + ' ~ ' + _this.monLabel(c.to) + '</span>');
+     $('#usDetail').addClass('on');
+     $('#usUserBody').html('<tr><td colspan="5" class="us-empty">불러오는 중…</td></tr>');
+     $('#usMenuBody').html('<tr><td colspan="5" class="us-empty">불러오는 중…</td></tr>');
+     $('#usUserCnt, #usMenuCnt').text('');
+
+     const q = {from: c.from, to: c.to, dbKey: key, exAdmin: c.exAdmin, exDev: c.exDev};
+
+     _this.busy(true, '상세 조회 중');
+     _this.pending = 2;
+     // 두 표를 다 그린 뒤에 한 번만 내린다
+     const done = function () {
+      if (--_this.pending > 0) return;
+      _this.busy(false);
+      if (scroll && key === _this.current) _this.scrollToDetail();
+     };
+
+     // 표를 먼저 그리고 done() 을 부른다. 순서가 바뀌면 다 그려지기 전에 스크롤이 시작된다.
+     AjaxUtil.getAsyncData(_this.url + '/users', q, function (result) {
+      if (key === _this.current) {   // 그 사이 다른 사업장을 눌렀으면 그리지 않는다
+       if (!result || !result.success) {
+        $('#usUserBody').html('<tr><td colspan="5" class="us-empty">' +
+         _this.esc((result && result.message) || '조회 실패') + '</td></tr>');
+       } else {
+        _this.renderUsers(result.data || []);
+       }
+      }
+      done();
+     });
+
+     AjaxUtil.getAsyncData(_this.url + '/menus', q, function (result) {
+      if (key === _this.current) {
+       if (!result || !result.success) {
+        $('#usMenuBody').html('<tr><td colspan="5" class="us-empty">' +
+         _this.esc((result && result.message) || '조회 실패') + '</td></tr>');
+       } else {
+        _this.menus = result.data || [];
+        _this.renderMenus();
+       }
+      }
+      done();
+     });
+    }
+
+    /**
+     * 상세 제목이 화면 위쪽에 오게 내린다.
+     *
+     * 상세 표가 다 그려진 뒤에 부른다. 그리는 도중에 내리면 목적지 아래 내용이 늘어나면서
+     * 브라우저가 스크롤을 다시 계산해 끊긴다.
+     * scrollIntoView(smooth) 대신 실제 스크롤 상자를 찾아 직접 움직인다.
+     * 레이아웃이 window 가 아니라 안쪽 div 에서 스크롤되는 경우가 있고,
+     * 공용 CSS 의 scroll-behavior: smooth 와 겹치면 한 번 더 감속되어 버벅인다.
+     */
+    scrollToDetail() {
+     const el = document.getElementById('usDetail');
+     if (!el) return;
+
+     const sc = this.scrollParent(el);
+     const isDoc = sc === document.scrollingElement || sc === document.documentElement || sc === document.body;
+     const cur = isDoc ? (window.pageYOffset || document.documentElement.scrollTop) : sc.scrollTop;
+     const base = isDoc ? 0 : sc.getBoundingClientRect().top;
+     const target = Math.max(0, Math.round(el.getBoundingClientRect().top - base + cur - 16));
+     if (Math.abs(target - cur) < 4) return;
+
+     let reduced = false;
+     try {
+      reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+     } catch (e) { /* 구형 브라우저 */ }
+
+     const box = isDoc ? document.documentElement : sc;
+     const $box = isDoc ? $('html, body') : $(sc);
+     const prev = box.style.scrollBehavior;
+     box.style.scrollBehavior = 'auto';   // 공용 smooth 와 겹치지 않게 잠시 끈다
+     if (isDoc) document.body.style.scrollBehavior = 'auto';
+
+     const restore = function () {
+      box.style.scrollBehavior = prev;
+      if (isDoc) document.body.style.scrollBehavior = '';
+      $box.off('.usScroll');
+     };
+
+     if (reduced) {
+      $box.scrollTop(target);
+      restore();
+      return;
+     }
+
+     // 사용자가 휠·터치로 직접 움직이면 바로 멈춘다
+     $box.off('.usScroll').on('wheel.usScroll touchstart.usScroll keydown.usScroll', function () {
+      $box.stop(true);
+      restore();
+     });
+     let done = false;
+     $box.stop(true).animate({scrollTop: target}, 280, 'swing', function () {
+      if (done) return;    // 'html, body' 는 완료 콜백이 두 번 온다
+      done = true;
+      restore();
+     });
+    }
+
+    /** el 을 실제로 스크롤하는 가장 가까운 조상. 없으면 문서. */
+    scrollParent(el) {
+     let p = el.parentElement;
+     while (p && p !== document.body && p !== document.documentElement) {
+      const oy = getComputedStyle(p).overflowY;
+      if ((oy === 'auto' || oy === 'scroll' || oy === 'overlay') && p.scrollHeight > p.clientHeight + 1) return p;
+      p = p.parentElement;
+     }
+     return document.scrollingElement || document.documentElement;
+    }
+
+    clearDetail() {
+     this.current = null;
+     $('#usDetail').removeClass('on');
+    }
+
+    renderUsers(list) {
+     let _this = this;
+     const $b = $('#usUserBody').empty();
+     if (!list.length) {
+      $b.append('<tr><td colspan="5" class="us-empty">계정이 없습니다.</td></tr>');
+      $('#usUserCnt').text('');
+      return;
+     }
+     let used = 0;
+     list.forEach(function (r) {
+      const any = (Number(r.menu_cnt) || 0) + (Number(r.login_cnt) || 0) > 0;
+      if (any) used++;
+      const inactive = r.is_active === false || r.is_active === 'false';
+      $b.append(
+       '<tr' + (any ? '' : ' class="us-dim"') + '>' +
+       '<td class="us-l"><span class="us-name">' + _this.esc(r.usernm || r.username) + '</span>' +
+       (inactive ? '<span class="us-tag alert">비활성</span>' : '') +
+       '<span class="us-id">' + _this.esc(r.username) + '</span></td>' +
+       '<td class="us-n">' + _this.num(r.login_cnt) + '</td>' +
+       '<td class="us-n">' + _this.num(r.menu_cnt) + '</td>' +
+       '<td class="us-n"><b>' + _this.num(r.work_cnt) + '</b></td>' +
+       '<td class="us-dt">' + _this.esc(r.last_at || '–') + '</td>' +
+       '</tr>');
+     });
+     $('#usUserCnt').text('계정 ' + list.length + '개 중 사용 ' + used + '개');
+    }
+
+    renderMenus() {
+     let _this = this;
+     const list = _this.menus || [];
+     const hide = $('#hideUnused').is(':checked');
+     const $b = $('#usMenuBody').empty();
+
+     const allowed = list.filter(r => r.allowed === true || r.allowed === 'true');
+     const usedAllowed = allowed.filter(r => Number(r.cnt) > 0).length;
+     const rate = allowed.length ? Math.round(usedAllowed * 100 / allowed.length) : 0;
+     $('#usMenuCnt').html('<span>허용 ' + allowed.length + ' · 사용 ' + usedAllowed + '</span>' +
+      '<span class="us-rate" title="허용 메뉴 중 기간 내 한 번이라도 쓴 비율">' +
+      '<span class="us-rate-bar"><span class="us-rate-fill" style="width:' + rate + '%"></span></span>' +
+      '<span class="us-rate-pct">' + rate + '%</span></span>');
+
+     const shown = hide ? list.filter(r => Number(r.cnt) > 0) : list;
+     if (!shown.length) {
+      $b.append('<tr><td colspan="5" class="us-empty">' +
+       (list.length ? '기간 중 사용한 메뉴가 없습니다.' : '허용된 메뉴가 없습니다.') + '</td></tr>');
+      return;
+     }
+
+     shown.forEach(function (r) {
+      const isAllowed = r.allowed === true || r.allowed === 'true';
+      const isSys = r.is_sys === true || r.is_sys === 'true';
+      const n = Number(r.cnt) || 0;
+      $b.append(
+       '<tr' + (n ? '' : ' class="us-dim"') + '>' +
+       // 메뉴명이 있으면 이름을 굵게, 코드는 그 아래 작게. 없으면 코드만 보인다.
+       '<td class="us-l">' +
+       (r.menu_nm
+        ? '<span class="us-name">' + _this.esc(r.menu_nm) + '</span>'
+        : '<span class="us-code">' + _this.esc(r.menu_code || '(없음)') + '</span>') +
+       (isAllowed ? '' : '<span class="us-tag alert" title="tenant_menu 에 없는 메뉴입니다">허용외</span>') +
+       (r.menu_nm ? '<span class="us-id us-code">' + _this.esc(r.menu_code) + '</span>' : '') +
+       '</td>' +
+       '<td>' + (isSys ? '<span class="us-tag sys">설정</span>' : '업무') + '</td>' +
+       '<td class="us-n">' + _this.num(n) + '</td>' +
+       '<td class="us-n">' + _this.num(r.users) + '</td>' +
+       '<td class="us-dt">' + _this.esc(r.last_at || '–') + '</td>' +
+       '</tr>');
+     });
+    }
+
+    // ── 공통 ──────────────────────────────────────────────
+    busy(on, text) {
+     $('#usProgress').toggleClass('on', !!on);
+     if (text) $('#usProgressText').text(text);
+     $('#btnSearch').prop('disabled', !!on).css('opacity', on ? .5 : '');
+    }
+
+    num(v) {
+     const n = Number(v);
+     return isNaN(n) ? '0' : n.toLocaleString();
+    }
+
+    esc(s) {
+     return String(s == null ? '' : s)
+     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+   }
+
+   let page;
+   $(document).ready(function () {
+    page = new UsagePage();
+    // 사업장 목록을 받은 뒤 기본 기간으로 자동 조회
+    // 하단 고정 푸터가 마지막 줄을 덮지 않게 그 높이만큼 비워 둔다
+    const fitFooter = function () {
+     const f = document.querySelector('footer, .footer, .layout-footer, #footer');
+     if (!f) return;
+     const pos = getComputedStyle(f).position;
+     if (pos === 'fixed' || pos === 'absolute' || pos === 'sticky') {
+      // 상세가 닫혀 있어도 요약 표의 합계 행이 덮이지 않게 맨 아래 빈 칸 높이를 잡는다
+      document.getElementById('usFootSpace').style.height =
+       Math.round(f.getBoundingClientRect().height + 24) + 'px';
+     }
+    };
+    fitFooter();
+    window.addEventListener('resize', fitFooter);
+
+    page.loadSites(function () {
+     page.search();
+    });
+
+    $(document).on('keydown', function (ev) {
+     if (ev.key === 'F4') {
+      ev.preventDefault();
+      page.search();
+     }
+    });
+   });
+  </script>
+</th:block>
+</html>
