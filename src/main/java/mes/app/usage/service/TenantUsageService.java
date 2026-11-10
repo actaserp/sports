@@ -46,7 +46,9 @@ public class TenantUsageService {
 		"wm_user", "wm_user_group", "wm_user_group_menu", "wm_workplace",
 		"wm_login_log", "wm_menu_log", "wm_system_log",
 		"wm_code", "wm_preferences", "wm_company", "wm_company_management",
-		"wm_api_service"
+		"wm_api_service",
+		// CustomerCurrentService.batchApprove 가 개설 때 기본으로 넣는 메뉴 중 나머지
+		"wm_amount_used", "wm_storyboard_config", "wm_prop_master"
 	);
 
 	/**
@@ -89,39 +91,108 @@ public class TenantUsageService {
 				 order by k.db_key
 				""", new MapSqlParameterSource("devLike", DEV_ACCOUNT_LIKE));
 
-		// 사업장명은 따로 붙인다. 이름 조회가 실패해도 목록·허용메뉴·계정 수는 그대로 나가야 한다.
-		Map<String, String> names = getSiteNames();
+		// 사업장명 · 계약 정보는 따로 붙인다. 조회가 실패해도 목록·허용메뉴·계정 수는 그대로 나가야 한다.
+		Map<String, Map<String, String>> info = getSiteInfo();
 		for (Map<String, Object> s : sites) {
-			s.put("spjangnm", names.getOrDefault(String.valueOf(s.get("db_key")), ""));
+			Map<String, String> i = info.getOrDefault(String.valueOf(s.get("db_key")), Map.of());
+			s.put("spjangnm", i.getOrDefault("spjangnm", ""));
+			s.put("plan", i.getOrDefault("plan", ""));
+			s.put("state", i.getOrDefault("state", ""));
+			s.put("join_at", ymd(i.get("subscriptiondate")));
+			s.put("exp_at", ymd(i.get("expirationdate")));
 		}
 		return sites;
 	}
 
 	/**
-	 * db_key → 사업장명. 실패하면 빈 맵.
+	 * db_key → 사업장 정보 (spjangnm, plan, state, subscriptiondate, expirationdate). 실패하면 빈 맵.
 	 *
 	 * 마스터 tb_xa012 에는 db_key 컬럼이 없다. 다른 마스터 테이블처럼
 	 * spjangcd 컬럼에 db_key 값(4Z, ZZ …)이 들어 있으므로 그 컬럼으로 잇는다.
-	 * 혹시 한 코드에 여러 행이면 이름을 합쳐 1행으로 만든다.
+	 *
+	 * 계약 정보는 고객사현황(CustomerCurrentService)과 같은 곳에서 읽는다.
+	 *   subscriptiondate : 가입일 (YYYYMMDD)
+	 *   state            : 'O' 승인 / '중지'
+	 *   expirationdate   : 중지하면 그날, 승인하면 비운다 (YYYYMMDD)
+	 *   bill_plans.name  : 요금제 (Premium, Standard …)
+	 * 요금제 조인이 실패하면 이름만이라도 읽는다.
 	 */
-	private Map<String, String> getSiteNames() {
+	private Map<String, Map<String, String>> getSiteInfo() {
+		Map<String, Map<String, String>> out = new java.util.HashMap<>();
+		List<Map<String, Object>> rows;
+		try {
+			rows = sqlRunner.getRows("""
+					select trim(x.spjangcd)   as db_key
+					     , trim(x.spjangnm)   as spjangnm
+					     , trim(x.state)      as state
+					     , trim(x.subscriptiondate) as subscriptiondate
+					     , trim(x.expirationdate)   as expirationdate
+					     , b.name             as plan
+					  from tb_xa012 x
+					  left join bill_plans b on b.id = x.bill_plans_id
+					 where x.spjangcd is not null
+					""", new MapSqlParameterSource());
+		} catch (Exception e) {
+			log.warn("[Usage] 계약 정보 조회 실패 — 사업장명만 읽습니다: {}", e.getMessage());
+			try {
+				rows = sqlRunner.getRows("""
+						select trim(spjangcd) as db_key, trim(spjangnm) as spjangnm
+						  from tb_xa012 where spjangcd is not null
+						""", new MapSqlParameterSource());
+			} catch (Exception e2) {
+				log.warn("[Usage] 사업장명 조회 실패 — 이름 없이 표시합니다: {}", e2.getMessage());
+				return out;
+			}
+		}
+		for (Map<String, Object> r : rows) {
+			Object k = r.get("db_key");
+			if (k == null) continue;
+			Map<String, String> m = new java.util.HashMap<>();
+			for (String c : List.of("spjangnm", "state", "subscriptiondate", "expirationdate", "plan")) {
+				Object v = r.get(c);
+				m.put(c, v == null ? "" : String.valueOf(v).trim());
+			}
+			// 한 코드에 여러 행이면 이름만 합친다
+			Map<String, String> prev = out.get(String.valueOf(k).trim());
+			if (prev != null && !prev.get("spjangnm").equals(m.get("spjangnm"))) {
+				m.put("spjangnm", prev.get("spjangnm") + ", " + m.get("spjangnm"));
+			}
+			out.put(String.valueOf(k).trim(), m);
+		}
+		return out;
+	}
+
+	/**
+	 * 승인일. batchApprove 는 승인 날짜를 따로 남기지 않는다.
+	 * 승인할 때 그 사업장의 user_group(마스터 그룹)을 처음 만들므로, 그 생성 시각을 승인일로 본다.
+	 * 실패하면 빈 맵 — 화면은 가입일을 기준으로 대신 센다.
+	 */
+	private Map<String, String> getApprovedAt() {
 		Map<String, String> out = new java.util.HashMap<>();
 		try {
 			List<Map<String, Object>> rows = sqlRunner.getRows("""
-					select trim(spjangcd)                                as db_key
-					     , string_agg(distinct trim(spjangnm), ', ')     as spjangnm
-					  from tb_xa012
+					select trim(spjangcd) as db_key
+					     , to_char(min(_created) at time zone 'Asia/Seoul', 'YYYY-MM-DD') as approved_at
+					  from user_group
 					 where spjangcd is not null
 					 group by trim(spjangcd)
 					""", new MapSqlParameterSource());
 			for (Map<String, Object> r : rows) {
-				Object k = r.get("db_key"), v = r.get("spjangnm");
-				if (k != null) out.put(String.valueOf(k).trim(), v == null ? "" : String.valueOf(v).trim());
+				if (r.get("db_key") != null && r.get("approved_at") != null) {
+					out.put(String.valueOf(r.get("db_key")), String.valueOf(r.get("approved_at")));
+				}
 			}
 		} catch (Exception e) {
-			log.warn("[Usage] 사업장명 조회 실패 — 이름 없이 표시합니다: {}", e.getMessage());
+			log.warn("[Usage] 승인일 조회 실패 — 가입일 기준으로 표시합니다: {}", e.getMessage());
 		}
 		return out;
+	}
+
+	/** 'YYYYMMDD' → 'YYYY-MM-DD'. 형식이 다르면 그대로, 비었으면 "" */
+	private static String ymd(String v) {
+		if (v == null) return "";
+		String t = v.trim();
+		return t.matches("\\d{8}") ? t.substring(0, 4) + "-" + t.substring(4, 6) + "-" + t.substring(6) : t;
 	}
 
 	// ─────────────────────────────────────────────────────────
@@ -265,14 +336,102 @@ public class TenantUsageService {
 				     , coalesce(mu.c, 0)                                             as menu_cnt
 				     , coalesce(mu.w, 0)                                             as work_cnt
 				     , to_char(greatest(lg.d, mu.d) at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') as last_at
+				     -- 아래 두 값은 조회 기간과 관계없는 전체 기간 기준이다
+				     , to_char(u.date_joined at time zone 'Asia/Seoul', 'YYYY-MM-DD')               as joined_at
+				     , to_char(fa.first_at   at time zone 'Asia/Seoul', 'YYYY-MM-DD')               as first_at
 				  from auth_user u
 				  left join lg on lg.uid = u.id
 				  left join mu on mu.uid = u.id
+				  -- 계정이 처음 쓴 날 : 로그인과 메뉴 접속 중 이른 쪽 (least 는 null 을 건너뛴다)
+				  left join lateral (
+				    select least(
+				             ( select min(x._created) from login_log x
+				                where x."User_id" = u.id and x."Type" = 'login' ),
+				             ( select min(y._created) from menu_use_log y
+				                where y."User_id" = u.id ) ) as first_at
+				  ) fa on true
 				 where u.db_key = :dbKey
 				   and (:exAdmin = 'N' or (u.username <> 'admin' and u.is_superuser = false))
 				   and (:exDev   = 'N' or u.username not like :devLike escape '\\')
 				 order by menu_cnt desc, login_cnt desc, u.username
 				""", p);
+	}
+
+	// ─────────────────────────────────────────────────────────
+	//  도입 이력 : 사업장별 등록 → 첫 로그인 → 첫 사용 → 첫 업무 사용 → 마지막 사용
+	//
+	//  조회 기간과 관계없이 전체 기간에서 찾는다.
+	//  등록일은 그 사업장에서 처음 만든 계정의 생성일이다. 개설 승인(batchApprove) 때
+	//  개발자 계정이 먼저 만들어지므로 사실상 개설일이 된다. 그래서 등록일만은 필터를 걸지 않는다.
+	//  나머지는 관리자 · 개발자 계정 제외 설정을 따른다 — 실무자가 언제 처음 썼는지를 본다.
+	// ─────────────────────────────────────────────────────────
+	public List<Map<String, Object>> getLifecycle(boolean exAdmin, boolean exDev) {
+		MapSqlParameterSource p = new MapSqlParameterSource();
+		p.addValue("exAdmin", exAdmin ? "Y" : "N");
+		p.addValue("exDev", exDev ? "Y" : "N");
+		p.addValue("devLike", DEV_ACCOUNT_LIKE);
+		p.addValue("sysMenus", SYSTEM_MENUS);
+
+		List<Map<String, Object>> rows = sqlRunner.getRows("""
+				with reg as (
+				    select db_key, min(date_joined) as reg_at
+				      from auth_user
+				     where db_key is not null
+				     group by db_key
+				), f as (
+				    select u.id, u.db_key
+				      from auth_user u
+				     where u.db_key is not null
+				       and (:exAdmin = 'N' or (u.username <> 'admin' and u.is_superuser = false))
+				       and (:exDev   = 'N' or u.username not like :devLike escape '\\')
+				), lg as (
+				    select f.db_key, min(l._created) as first_login
+				      from login_log l
+				      join f on f.id = l."User_id"
+				     where l."Type" = 'login'
+				     group by f.db_key
+				), mu as (
+				    select f.db_key
+				         , min(m._created)                                                as first_use
+				         , min(m._created) filter (where m."MenuCode" not in (:sysMenus)) as first_work
+				         , max(m._created)                                                as last_use
+				      from menu_use_log m
+				      join f on f.id = m."User_id"
+				     group by f.db_key
+				)
+				select reg.db_key                                                               as db_key
+				     , to_char(reg.reg_at     at time zone 'Asia/Seoul', 'YYYY-MM-DD')          as reg_at
+				     , to_char(lg.first_login at time zone 'Asia/Seoul', 'YYYY-MM-DD')          as first_login
+				     , to_char(mu.first_use   at time zone 'Asia/Seoul', 'YYYY-MM-DD')          as first_use
+				     , to_char(mu.first_work  at time zone 'Asia/Seoul', 'YYYY-MM-DD')          as first_work
+				     , to_char(mu.last_use    at time zone 'Asia/Seoul', 'YYYY-MM-DD')          as last_use
+				     -- 등록부터 첫 업무 사용까지 걸린 날 / 마지막 사용 후 지난 날
+				     , cast(mu.first_work at time zone 'Asia/Seoul' as date)
+				       - cast(reg.reg_at  at time zone 'Asia/Seoul' as date)                    as days_to_work
+				     , cast(now()       at time zone 'Asia/Seoul' as date)
+				       - cast(mu.last_use at time zone 'Asia/Seoul' as date)                    as days_idle
+				  from reg
+				  left join lg on lg.db_key = reg.db_key
+				  left join mu on mu.db_key = reg.db_key
+				 order by reg.db_key
+				""", p);
+
+		// 가입일 · 승인일 · 요금제 · 상태를 붙인다. 날 수 계산(승인 후 N일)은 화면이 한다.
+		Map<String, Map<String, String>> info = getSiteInfo();
+		Map<String, String> approved = getApprovedAt();
+		List<Map<String, Object>> out = new java.util.ArrayList<>(rows.size());
+		for (Map<String, Object> r : rows) {
+			Map<String, Object> m = new java.util.LinkedHashMap<>(r);
+			String k = String.valueOf(r.get("db_key")).trim();
+			Map<String, String> i = info.getOrDefault(k, Map.of());
+			m.put("join_at", ymd(i.get("subscriptiondate")));
+			m.put("approved_at", approved.getOrDefault(k, ""));
+			m.put("plan", i.getOrDefault("plan", ""));
+			m.put("state", i.getOrDefault("state", ""));
+			m.put("exp_at", ymd(i.get("expirationdate")));
+			out.add(m);
+		}
+		return out;
 	}
 
 	// ─────────────────────────────────────────────────────────

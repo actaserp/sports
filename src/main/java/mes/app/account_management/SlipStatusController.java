@@ -158,7 +158,7 @@ public class SlipStatusController {  //전표입력현황
 					break;
 			}
 
-			// ── 결재란: DB(settle1~5) 우선, 없으면 URL파라미터, 없으면 기본값 ──
+			// ── 결재란: 화면 직접 입력(URL 파라미터) 우선, 없으면 DB(settle1~5), 없으면 기본값 ──
 			List<String> approverList = resolveApproverList(approvers);
 
 			// Thymeleaf 렌더링
@@ -594,26 +594,33 @@ public class SlipStatusController {  //전표입력현황
 						 .collect(Collectors.joining("\n"));
 	}
 
+	/**
+	 * 결재란 직급 목록.
+	 *  1순위: 출력 팝업에서 직접 입력한 값(approvers, 쉼표 구분) — 입력한 개수만큼 칸이 생긴다
+	 *  2순위: tb_xenv.settle1~5
+	 *  3순위: 기본값
+	 * (이전에는 DB 가 1순위라 settle 값이 있으면 화면 입력이 무시되었다)
+	 */
 	private List<String> resolveApproverList(String approversParam) {
-		// 1순위: DB(settle1~5)
-		Map<String, Object> settle = slipStatusService.getSettleInfo();
-		if (settle != null) {
-			List<String> dbList = java.util.Arrays.asList("settle1","settle2","settle3","settle4","settle5")
-															.stream()
-															.map(k -> settle.get(k))
-															.filter(v -> v != null && !v.toString().trim().isEmpty())
-															.map(Object::toString)
-															.collect(Collectors.toList());
-			if (!dbList.isEmpty()) return dbList;
-		}
-
-		// 2순위: URL 파라미터
+		// 1순위: 화면 직접 입력
 		if (approversParam != null && !approversParam.trim().isEmpty()) {
 			List<String> paramList = java.util.Arrays.stream(approversParam.split(","))
 																 .map(String::trim)
 																 .filter(s -> !s.isEmpty())
 																 .collect(Collectors.toList());
 			if (!paramList.isEmpty()) return paramList;
+		}
+
+		// 2순위: DB(settle1~5)
+		Map<String, Object> settle = slipStatusService.getSettleInfo();
+		if (settle != null) {
+			List<String> dbList = java.util.Arrays.asList("settle1","settle2","settle3","settle4","settle5")
+															.stream()
+															.map(k -> settle.get(k))
+															.filter(v -> v != null && !v.toString().trim().isEmpty())
+															.map(v -> v.toString().trim())
+															.collect(Collectors.toList());
+			if (!dbList.isEmpty()) return dbList;
 		}
 
 		// 3순위: 기본값

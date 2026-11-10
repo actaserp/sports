@@ -2,7 +2,10 @@ package mes.app.usage;
 
 import lombok.extern.slf4j.Slf4j;
 import mes.app.usage.service.TenantUsageService;
+import mes.app.common.TenantContext;
+import mes.domain.entity.User;
 import mes.domain.model.AjaxResult;
+import org.springframework.security.core.Authentication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,7 +31,8 @@ public class TenantUsageController {
 
 	// ── 사업장 목록 ─────────────────────────────────────────
 	@GetMapping("/sites")
-	public AjaxResult sites() {
+	public AjaxResult sites(Authentication auth) {
+		if (!internal(auth)) return denied();
 		return run("사업장 목록", () -> usageService.getSites());
 	}
 
@@ -38,7 +42,9 @@ public class TenantUsageController {
 														@RequestParam("to") String to,
 														@RequestParam(value = "dbKey", required = false) String dbKey,
 														@RequestParam(value = "exAdmin", defaultValue = "Y") String exAdmin,
-														@RequestParam(value = "exDev", defaultValue = "Y") String exDev) {
+														@RequestParam(value = "exDev", defaultValue = "Y") String exDev,
+														Authentication auth) {
+		if (!internal(auth)) return denied();
 		return run("월별 사용량", () -> usageService.getMonthly(from, to, dbKey, !"N".equals(exAdmin), !"N".equals(exDev)));
 	}
 
@@ -48,7 +54,9 @@ public class TenantUsageController {
 													@RequestParam("to") String to,
 													@RequestParam("dbKey") String dbKey,
 													@RequestParam(value = "exAdmin", defaultValue = "Y") String exAdmin,
-													@RequestParam(value = "exDev", defaultValue = "Y") String exDev) {
+													@RequestParam(value = "exDev", defaultValue = "Y") String exDev,
+													Authentication auth) {
+		if (!internal(auth)) return denied();
 		return run("메뉴별 사용량", () -> usageService.getMenus(from, to, dbKey, !"N".equals(exAdmin), !"N".equals(exDev)));
 	}
 
@@ -58,8 +66,39 @@ public class TenantUsageController {
 													@RequestParam("to") String to,
 													@RequestParam("dbKey") String dbKey,
 													@RequestParam(value = "exAdmin", defaultValue = "Y") String exAdmin,
-													@RequestParam(value = "exDev", defaultValue = "Y") String exDev) {
+													@RequestParam(value = "exDev", defaultValue = "Y") String exDev,
+													Authentication auth) {
+		if (!internal(auth)) return denied();
 		return run("계정별 사용량", () -> usageService.getUsers(from, to, dbKey, !"N".equals(exAdmin), !"N".equals(exDev)));
+	}
+
+	// ── 도입 이력 : 등록일 · 첫 사용 · 첫 업무 사용 · 마지막 사용 (기간 무관) ──
+	@GetMapping("/lifecycle")
+	public AjaxResult lifecycle(@RequestParam(value = "exAdmin", defaultValue = "Y") String exAdmin,
+															@RequestParam(value = "exDev", defaultValue = "Y") String exDev,
+															Authentication auth) {
+		if (!internal(auth)) return denied();
+		return run("도입 이력", () -> usageService.getLifecycle(!"N".equals(exAdmin), !"N".equals(exDev)));
+	}
+
+	// ── 권한 ────────────────────────────────────────────────
+	//  메뉴 권한은 화면만 가린다. 이 API 는 전 사업장 사용량을 돌려주므로 서버에서도 막는다.
+	//  내부 사업장(ZZ) 계정이나 superuser 만 통과한다.
+
+	private boolean internal(Authentication auth) {
+		try {
+			User u = (User) auth.getPrincipal();
+			return Boolean.TRUE.equals(u.getSuperUser()) || "ZZ".equals(TenantContext.getDbKey());
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	private AjaxResult denied() {
+		AjaxResult r = new AjaxResult();
+		r.success = false;
+		r.message = "권한이 없습니다.";
+		return r;
 	}
 
 	// ── 내부 ────────────────────────────────────────────────

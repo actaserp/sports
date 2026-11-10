@@ -1,0 +1,533 @@
+<!--
+  고객사 활동 이력 공용 조각.
+  고객사현황(선택한 고객사 한 곳)과 고객사 활동 이력(전체) 화면이 함께 쓴다.
+
+  쓰는 쪽 :
+    <th:block th:replace="common/customer_activity_box :: customer_activity_box"></th:block>
+    const box = new CustomerActivityBox({ mount: '#caMount', showSite: true });
+    box.load({ site: '4Z', from: '2026-01-01', ... });
+
+  고객사 파라미터 이름은 site(조회) · site_cd(저장)다. spjangcd 로 보내면
+  SpjangSecurityInterceptor 가 세션 사업장과 다르다고 막는다.
+
+  유형 · 상태 코드는 서버 CustomerActivityService.TYPES · STATUSES 와 같아야 한다.
+-->
+<th:block th:fragment="customer_activity_box">
+  <style>
+      :root {
+          --ca-ink:   #1B2430;
+          --ca-label: #45566A;
+          --ca-mute:  #8A99A8;
+          --ca-rule:  #CBD3DB;
+          --ca-line:  #E7EBEF;
+          --ca-frame: #8A99A8;
+          --ca-band:  #EDF1F4;
+          --ca-band2: #DCE3E9;
+          --ca-value: #24466F;
+          --ca-ok:    #1F6B3A;
+          --ca-warn:  #8A5A00;
+          --ca-alert: #9E2A20;
+          /* 유형 표식 색 : 채도를 낮춘 네 가지. 글자색과 함께 쓰므로 색만으로 구분하지 않는다. */
+          --ca-t-edu:   #2F6B5E;
+          --ca-t-req:   #24466F;
+          --ca-t-sales: #6B4E8A;
+          --ca-t-issue: #9E2A20;
+      }
+
+      /* 공용 CSS 의 th · td · .num · i · b 등과 겹치지 않게 전부 ca- 접두어로 묶는다 */
+      .ca-box { background: #fff; border: 1px solid var(--ca-frame); }
+      .ca-box table.ca-grid { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+      .ca-box table.ca-grid th {
+          height: 34px; padding: 0 10px; text-align: center; white-space: nowrap;
+          background: var(--ca-band); border-bottom: 1px solid var(--ca-frame);
+          font-size: 12px; font-weight: 600; color: var(--ca-label); letter-spacing: .5px;
+      }
+      .ca-box table.ca-grid td {
+          padding: 7px 10px; vertical-align: middle; text-align: center;
+          border-bottom: 1px solid var(--ca-line); color: var(--ca-ink); font-size: 12.5px;
+          background: transparent;
+      }
+      .ca-box table.ca-grid tbody tr { cursor: pointer; }
+      .ca-box table.ca-grid tbody tr:hover td { background: #F5F8FA; }
+      .ca-box table.ca-grid td.ca-l { text-align: left; }
+      .ca-box table.ca-grid td.ca-dt { white-space: nowrap; color: var(--ca-label); font-variant-numeric: tabular-nums; }
+      .ca-box .ca-empty { padding: 40px 20px; text-align: center; color: var(--ca-mute); font-size: 13px; line-height: 1.8; cursor: default; }
+
+      .ca-title { font-weight: 600; color: var(--ca-ink); }
+      .ca-sum { display: block; margin-top: 2px; font-size: 11.5px; color: var(--ca-mute);
+          max-width: 520px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .ca-site { font-weight: 600; white-space: nowrap; }
+      .ca-site small { display: block; font-weight: normal; font-size: 11px; color: var(--ca-mute); }
+
+      /* 유형 : 왼쪽 막대 + 글자 */
+      .ca-type { display: inline-block; padding: 1px 7px 1px 6px; font-size: 11.5px; font-weight: 600;
+          border-left: 3px solid currentColor; background: #F6F8FA; white-space: nowrap; }
+      .ca-type.EDU   { color: var(--ca-t-edu); }
+      .ca-type.REQ   { color: var(--ca-t-req); }
+      .ca-type.SALES { color: var(--ca-t-sales); }
+      .ca-type.ISSUE { color: var(--ca-t-issue); }
+
+      /* 상태 : 점 + 글자 */
+      .ca-st { font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+      .ca-st::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+          margin-right: 5px; vertical-align: 1px; background: currentColor; }
+      .ca-st.OPEN { color: var(--ca-alert); }
+      .ca-st.PROG { color: var(--ca-warn); }
+      .ca-st.DONE { color: var(--ca-ok); font-weight: normal; }
+      .ca-due { display: block; font-size: 11px; color: var(--ca-mute); margin-top: 1px; }
+      .ca-due.over { color: var(--ca-alert); font-weight: 600; }
+
+      .ca-auto { display: inline-block; margin-left: 6px; padding: 0 5px; font-size: 10.5px; line-height: 16px;
+          border: 1px solid var(--ca-rule); border-radius: 2px; color: var(--ca-mute); background: #fff;
+          vertical-align: 1px; }
+
+      /* 페이지 이동 */
+      .ca-pager { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px;
+          border-top: 1px solid var(--ca-rule); font-size: 12px; color: var(--ca-label); }
+      .ca-pager.off { display: none; }
+      .ca-pager .info { flex: 1 1 0; font-variant-numeric: tabular-nums; }
+      .ca-pager .btns { display: inline-flex; gap: 3px; }
+      .ca-pager .sp { flex: 1 1 0; }
+      .ca-pg { min-width: 28px; height: 26px; padding: 0 7px; border: 1px solid var(--ca-rule); border-radius: 2px;
+          background: #fff; color: var(--ca-label); font-family: inherit; font-size: 12px; cursor: pointer; }
+      .ca-pg:hover:not([disabled]) { border-color: var(--ca-value); color: var(--ca-value); }
+      .ca-pg.on { background: var(--ca-value); border-color: var(--ca-value); color: #fff; font-weight: 600; cursor: default; }
+      .ca-pg[disabled] { opacity: .4; cursor: default; }
+
+      /* 버튼 (두 화면 공용) */
+      .ca-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+          height: 34px; padding: 0 14px; border: 1px solid var(--ca-frame); border-radius: 2px;
+          background: #fff; color: var(--ca-ink); font-family: inherit; font-size: 13px; font-weight: 600;
+          letter-spacing: .5px; cursor: pointer; white-space: nowrap; }
+      .ca-btn:hover { background: var(--ca-band); border-color: var(--ca-value); }
+      .ca-btn.solid { background: var(--ca-value); border-color: var(--ca-value); color: #fff; }
+      .ca-btn.solid:hover { background: #1D3A5F; border-color: #1D3A5F; }
+      .ca-btn.danger { border-color: var(--ca-alert); color: var(--ca-alert); }
+      .ca-btn.danger:hover { background: #FBF0EE; }
+      .ca-btn[disabled] { opacity: .45; cursor: default; }
+      .ca-btn:focus-visible, .ca-pg:focus-visible { outline: 2px solid var(--ca-value); outline-offset: 2px; }
+
+      /* 유형 필터 칩 (두 화면 공용) */
+      .ca-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+      .ca-chip { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px;
+          border: 1px solid var(--ca-rule); border-radius: 14px; background: #fff; color: var(--ca-label);
+          font-family: inherit; font-size: 12px; cursor: pointer; user-select: none; }
+      .ca-chip .n { font-size: 11px; color: var(--ca-mute); font-variant-numeric: tabular-nums; }
+      .ca-chip[aria-pressed="true"] { border-color: var(--ca-value); background: var(--ca-band); color: var(--ca-ink); font-weight: 600; }
+      .ca-chip:focus-visible { outline: 2px solid var(--ca-value); outline-offset: 1px; }
+
+      /* ── 등록 · 수정 팝업 ──────────────────────────────── */
+      .ca-edit { display: flex; flex-direction: column; height: 100%; font-size: 13px; color: var(--ca-ink); text-align: left; }
+      .ca-edit > section { flex: 1 1 auto; min-height: 0; overflow-y: auto; max-height: 64vh; padding: 16px 18px; }
+      .ca-edit .row2 { display: flex; gap: 10px; }
+      .ca-edit .row2 > .fld { flex: 1 1 0; min-width: 0; }
+      .ca-edit .fld { margin-bottom: 12px; }
+      .ca-edit .fld > label.k { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 600; color: var(--ca-label); }
+      .ca-edit .fld > label.k em { font-style: normal; color: var(--ca-alert); margin-left: 2px; }
+      .ca-edit input[type=text], .ca-edit input[type=date], .ca-edit select, .ca-edit textarea {
+          width: 100%; box-sizing: border-box; border: 1px solid #C0CAD3; background: #fff;
+          font-family: inherit; font-size: 13px; color: var(--ca-ink);
+      }
+      .ca-edit input[type=text], .ca-edit input[type=date], .ca-edit select { height: 34px; padding: 0 10px; }
+      .ca-edit textarea { padding: 8px 10px; line-height: 1.6; resize: vertical; }
+      .ca-edit input:focus-visible, .ca-edit select:focus-visible, .ca-edit textarea:focus-visible {
+          outline: 2px solid var(--ca-value); outline-offset: 1px; border-color: var(--ca-value);
+      }
+      .ca-edit input:disabled, .ca-edit select:disabled { background: var(--ca-band); color: var(--ca-label); }
+      .ca-edit .hint { margin-top: 4px; font-size: 11.5px; color: var(--ca-mute); }
+      /* 유형 · 상태 선택 : 누르기 쉬운 버튼 묶음 */
+      .ca-seg { display: flex; gap: 6px; flex-wrap: wrap; }
+      .ca-seg button { flex: 1 1 0; min-width: 72px; height: 34px; border: 1px solid #C0CAD3; background: #fff;
+          color: var(--ca-label); font-family: inherit; font-size: 12.5px; cursor: pointer; border-radius: 2px; }
+      .ca-seg button[aria-pressed="true"] { border-color: var(--ca-value); background: var(--ca-band);
+          color: var(--ca-ink); font-weight: 700; }
+      .ca-seg button:disabled { opacity: .55; cursor: default; }
+      .ca-seg button:focus-visible { outline: 2px solid var(--ca-value); outline-offset: 1px; }
+      .ca-edit .ca-autonote { margin: 0 0 12px; padding: 8px 12px; font-size: 12px; line-height: 1.6;
+          background: var(--ca-band); border-left: 3px solid var(--ca-frame); color: var(--ca-label); }
+      .ca-edit .popup-button { display: flex; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--ca-rule); background: #fff; }
+      .ca-edit .popup-button .sp { flex: 1 1 auto; }
+  </style>
+
+  <!-- 등록 · 수정 팝업 -->
+  <script id="caEditTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup ca-edit">
+      <section>
+        <div class="ca-autonote" data-f="autonote" style="display:none">
+          승인 · 중지 때 자동으로 남은 이력입니다. 고객사와 유형은 바꿀 수 없고, 지울 수 없습니다.
+        </div>
+        <div class="fld" data-f="sitewrap">
+          <label class="k" for="caSite">고객사<em>*</em></label>
+          <select id="caSite"></select>
+        </div>
+        <div class="fld">
+          <label class="k">유형<em>*</em></label>
+          <div class="ca-seg" data-f="type" role="group" aria-label="유형"></div>
+        </div>
+        <div class="row2">
+          <div class="fld">
+            <label class="k" for="caDate" data-f="datelabel">날짜<em>*</em></label>
+            <input type="date" id="caDate"/>
+          </div>
+          <div class="fld">
+            <label class="k" for="caManager">우리 담당자</label>
+            <input type="text" id="caManager" maxlength="50" placeholder="비우면 저장한 사람"/>
+          </div>
+        </div>
+        <div class="fld">
+          <label class="k" for="caTitle">제목<em>*</em></label>
+          <input type="text" id="caTitle" maxlength="200"/>
+        </div>
+        <div class="fld">
+          <label class="k" for="caAttendee" data-f="attlabel">상대 담당자</label>
+          <input type="text" id="caAttendee" maxlength="200"/>
+        </div>
+        <div class="fld">
+          <label class="k" for="caContent">내용</label>
+          <textarea id="caContent" rows="5"></textarea>
+        </div>
+        <div class="fld">
+          <label class="k">처리 상태</label>
+          <div class="ca-seg" data-f="status" role="group" aria-label="처리 상태"></div>
+        </div>
+        <div class="row2">
+          <div class="fld">
+            <label class="k" for="caDue">처리 기한</label>
+            <input type="date" id="caDue"/>
+          </div>
+          <div class="fld">
+            <label class="k" for="caDone">완료일</label>
+            <input type="date" id="caDone"/>
+            <div class="hint">완료로 저장할 때 비어 있으면 오늘로 채웁니다.</div>
+          </div>
+        </div>
+      </section>
+      <div class="popup-button">
+        <button type="button" class="ca-btn danger" data-f="del">삭제</button>
+        <span class="sp"></span>
+        <button type="button" class="ca-btn solid" data-f="save">저장</button>
+        <button type="button" class="ca-btn" data-f="close">닫기</button>
+      </div>
+    </div>
+  </script>
+
+  <script type="text/javascript">
+   (function () {
+    const TYPES = [
+     {v: 'EDU', t: '교육', date: '교육일', att: '참석자', title: '예: 결재 · 전표 입력 교육'},
+     {v: 'REQ', t: '요청·문의', date: '요청 받은 날', att: '요청자', title: '예: 급여명세서 문구 변경 요청'},
+     {v: 'SALES', t: '계약·영업', date: '날짜', att: '상대 담당자', title: '예: 요금제 변경 상담'},
+     {v: 'ISSUE', t: '장애·오류', date: '접수일', att: '신고자', title: '예: 전표 저장 시 오류'}
+    ];
+    const STATUSES = [{v: 'OPEN', t: '접수'}, {v: 'PROG', t: '진행'}, {v: 'DONE', t: '완료'}];
+    // 새로 등록할 때 기본 상태. 교육 · 계약은 이미 한 일을 적는 경우가 많고, 요청 · 장애는 처리할 일이다.
+    const DEFAULT_STATUS = {EDU: 'DONE', SALES: 'DONE', REQ: 'OPEN', ISSUE: 'OPEN'};
+
+    const esc = s => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const today = () => {
+     const d = new Date();
+     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    };
+
+    class CustomerActivityBox {
+     /**
+      * @param opt.mount     목록을 그릴 자리 (선택자)
+      * @param opt.showSite  고객사 열 · 고객사 선택을 보여줄지 (전체 화면 true, 고객사현황 false)
+      * @param opt.pageSize  페이지당 건수 (기본 15)
+      * @param opt.onChange  저장 · 삭제 뒤 부른다 (목록 건수 갱신 등)
+      */
+     constructor(opt) {
+      this.url = '/api/system/customer_activity';
+      this.$m = $(opt.mount);
+      this.showSite = !!opt.showSite;
+      this.pageSize = opt.pageSize || 15;
+      this.onChange = opt.onChange || function () {};
+      this.rows = [];
+      this.page = 1;
+      this.params = {};
+      this.sites = null;      // 고객사 선택지 (처음 팝업을 열 때 받는다)
+      this.fixedSite = '';    // 고객사현황에서 고른 고객사
+      this.popup = null;
+      this.$m.html('<div class="ca-box"><table class="ca-grid"><thead></thead><tbody></tbody></table>' +
+       '<div class="ca-pager off"><span class="info"></span><span class="btns"></span><span class="sp"></span></div></div>');
+      this.$m.find('thead').html('<tr>' + (this.showSite ? '<th style="width:150px">고객사</th>' : '') +
+       '<th style="width:96px">날짜</th><th style="width:96px">유형</th><th>제목 · 내용</th>' +
+       '<th style="width:130px">참석 · 요청자</th><th style="width:90px">담당자</th>' +
+       '<th style="width:104px">상태</th></tr>');
+      this.empty('조회 조건을 고르세요.');
+
+      const _this = this;
+      this.$m.on('click', 'tbody tr[data-i]', function () {
+       _this.openEditor(_this.rows[Number($(this).attr('data-i'))]);
+      });
+      this.$m.on('click', '.ca-pg[data-p]', function () {
+       _this.page = Number($(this).attr('data-p'));
+       _this.render();
+      });
+     }
+
+     static get TYPES() { return TYPES; }
+     static get STATUSES() { return STATUSES; }
+     static typeName(v) { const t = TYPES.find(x => x.v === v); return t ? t.t : v; }
+
+     cols() { return this.showSite ? 7 : 6; }
+
+     empty(msg) {
+      this.$m.find('tbody').html('<tr><td colspan="' + this.cols() + '" class="ca-empty">' + msg + '</td></tr>');
+      this.$m.find('.ca-pager').addClass('off');
+     }
+
+     /** 고객사현황에서 고객사를 고르면 부른다. 등록 팝업의 고객사가 이 값으로 고정된다. */
+     setSite(spjangcd) {
+      this.fixedSite = spjangcd || '';
+     }
+
+     /**
+      * 서버에서 읽어 그린다.
+      * @param params { site, from, to, types, status, keyword }
+      * @param cb     (rows, message) 받은 뒤 부른다 — 쓰는 쪽이 건수 요약을 그릴 때
+      */
+     load(params, cb) {
+      const _this = this;
+      this.params = params || {};
+      this.cb = cb || null;
+      // 고객사나 조건을 빠르게 바꾸면 앞 요청의 응답이 늦게 올 수 있다. 마지막 요청의 응답만 그린다.
+      const seq = this.seq = (this.seq || 0) + 1;
+      this.$m.find('tbody').html('<tr><td colspan="' + this.cols() + '" class="ca-empty">불러오는 중…</td></tr>');
+      AjaxUtil.getAsyncData(this.url + '/list', this.params, function (r) {
+       if (seq !== _this.seq) return;
+       if (!r || !r.success) {
+        _this.rows = [];
+        _this.empty(esc((r && r.message) || '이력을 불러오지 못했습니다.'));
+        if (_this.cb) _this.cb([], (r && r.message) || '');
+        return;
+       }
+       _this.rows = r.data || [];
+       _this.page = 1;
+       _this.render();
+       if (_this.cb) _this.cb(_this.rows, r.message || '');
+      });
+     }
+
+     reload() {
+      this.load(this.params, this.cb);
+     }
+
+     render() {
+      const rows = this.rows;
+      if (!rows.length) {
+       this.empty('이력이 없습니다.' + (this.fixedSite || this.showSite ? '<br/>[이력 등록]으로 교육일 · 요청 받은 날 등을 남겨 보세요.' : ''));
+       return;
+      }
+      const pages = Math.max(1, Math.ceil(rows.length / this.pageSize));
+      this.page = Math.min(Math.max(1, this.page), pages);
+      const start = (this.page - 1) * this.pageSize;
+      const slice = rows.slice(start, start + this.pageSize);
+
+      let h = '';
+      slice.forEach((r, j) => {
+       const i = start + j;
+       const sum = String(r.content || '').replace(/\s+/g, ' ').trim();
+       const over = r.overdue === true || r.overdue === 'true';
+       let due = '';
+       if (r.status !== 'DONE' && r.due_date) {
+        due = '<span class="ca-due' + (over ? ' over' : '') + '">' + (over ? '지연 · ' : '기한 ') + esc(r.due_date) + '</span>';
+       } else if (r.status === 'DONE' && r.done_date && r.done_date !== r.act_date) {
+        due = '<span class="ca-due">' + esc(r.done_date) + ' 완료</span>';
+       }
+       h += '<tr data-i="' + i + '" tabindex="0">' +
+        (this.showSite ? '<td class="ca-l"><span class="ca-site">' + esc(r.spjangnm || r.spjangcd) +
+         '<small>' + esc(r.spjangcd) + '</small></span></td>' : '') +
+        '<td class="ca-dt">' + esc(r.act_date) + '</td>' +
+        '<td><span class="ca-type ' + esc(r.act_type) + '">' + esc(CustomerActivityBox.typeName(r.act_type)) + '</span></td>' +
+        '<td class="ca-l"><span class="ca-title">' + esc(r.title) + '</span>' +
+        (r.auto_yn === 'Y' ? '<span class="ca-auto" title="승인 · 중지 버튼이 남긴 이력">자동</span>' : '') +
+        (sum ? '<span class="ca-sum" title="' + esc(sum) + '">' + esc(sum) + '</span>' : '') + '</td>' +
+        '<td class="ca-l">' + esc(r.attendee || '') + '</td>' +
+        '<td>' + esc(r.manager || '') + '</td>' +
+        '<td><span class="ca-st ' + esc(r.status) + '">' + esc((STATUSES.find(s => s.v === r.status) || {}).t || r.status) +
+        '</span>' + due + '</td>' +
+        '</tr>';
+      });
+      this.$m.find('tbody').html(h);
+      this.renderPager(pages, start, slice.length);
+     }
+
+     renderPager(pages, start, shown) {
+      const $p = this.$m.find('.ca-pager');
+      const total = this.rows.length;
+      $p.toggleClass('off', total <= this.pageSize);
+      $p.find('.info').text((start + 1) + '–' + (start + shown) + ' / 전체 ' + total + '건');
+      const p = this.page, from = Math.max(1, p - 2), to = Math.min(pages, p + 2);
+      const b = (l, t, title) => '<button type="button" class="ca-pg"' + (t ? ' data-p="' + t + '"' : ' disabled') +
+       (title ? ' title="' + title + '" aria-label="' + title + '"' : '') + '>' + l + '</button>';
+      let h = b('«', p > 1 ? 1 : 0, '처음') + b('‹', p > 1 ? p - 1 : 0, '이전');
+      for (let i = from; i <= to; i++) {
+       h += i === p ? '<button type="button" class="ca-pg on" aria-current="page">' + i + '</button>' : b(String(i), i);
+      }
+      h += b('›', p < pages ? p + 1 : 0, '다음') + b('»', p < pages ? pages : 0, '마지막');
+      $p.find('.btns').html(h);
+     }
+
+     // ── 등록 · 수정 ─────────────────────────────────────
+     /** @param row 고칠 행. 없으면 새로 등록 */
+     openEditor(row) {
+      const _this = this;
+      if (!row && !this.showSite && !this.fixedSite) {
+       Alert.alert('', '먼저 위 목록에서 고객사를 선택하세요.');
+       return;
+      }
+      if (this.showSite && !this.sites) {
+       AjaxUtil.getAsyncData(this.url + '/sites', {}, function (r) {
+        _this.sites = (r && r.success && r.data) || [];
+        _this.openEditor(row);
+       });
+       return;
+      }
+
+      if (this.popup) {
+       this.popup.close();
+       this.popup = null;
+      }
+      const $c = $(tmpl('caEditTemplate', {}));
+      this.popup = new PopupDraggable(row ? '이력 수정' : '이력 등록');
+      this.popup.open({width: 560, height: 680, $content: $c});
+
+      setTimeout(function () {
+       const auto = !!row && row.auto_yn === 'Y';
+       const st = {
+        type: row ? row.act_type : 'EDU',
+        status: row ? row.status : DEFAULT_STATUS.EDU,
+        statusTouched: !!row
+       };
+
+       // 고객사
+       const site = row ? row.spjangcd : _this.fixedSite;
+       if (_this.showSite) {
+        const $s = $c.find('#caSite').empty().append('<option value="">고객사 선택</option>');
+        (_this.sites || []).forEach(s => $s.append('<option value="' + esc(s.spjangcd) + '">' +
+         esc((s.spjangnm || s.spjangcd) + ' (' + s.spjangcd + ')' + (s.state === '중지' ? ' · 중지' : '')) + '</option>'));
+        $s.val(site || '');
+        $s.prop('disabled', auto);
+       } else {
+        $c.find('[data-f=sitewrap]').hide();
+       }
+       $c.find('[data-f=autonote]').toggle(auto);
+
+       // 유형 · 상태 버튼
+       const seg = function ($w, list, cur) {
+        $w.html(list.map(x => '<button type="button" data-v="' + x.v + '" aria-pressed="' + (x.v === cur) + '">' +
+         esc(x.t) + '</button>').join(''));
+       };
+       const relabel = function () {
+        const t = TYPES.find(x => x.v === st.type) || TYPES[0];
+        $c.find('[data-f=datelabel]').html(esc(t.date) + '<em>*</em>');
+        $c.find('[data-f=attlabel]').text(t.att);
+        $c.find('#caTitle').attr('placeholder', t.title);
+       };
+       seg($c.find('[data-f=type]'), TYPES, st.type);
+       seg($c.find('[data-f=status]'), STATUSES, st.status);
+       if (auto) $c.find('[data-f=type] button').prop('disabled', true);
+       relabel();
+
+       $c.find('[data-f=type]').on('click', 'button', function () {
+        st.type = $(this).attr('data-v');
+        $c.find('[data-f=type] button').attr('aria-pressed', 'false');
+        $(this).attr('aria-pressed', 'true');
+        // 새로 등록하는 중이고 상태를 아직 안 만졌으면 유형에 맞는 기본 상태로
+        if (!st.statusTouched) {
+         st.status = DEFAULT_STATUS[st.type] || 'DONE';
+         $c.find('[data-f=status] button').each(function () {
+          $(this).attr('aria-pressed', String($(this).attr('data-v') === st.status));
+         });
+        }
+        relabel();
+       });
+       $c.find('[data-f=status]').on('click', 'button', function () {
+        st.status = $(this).attr('data-v');
+        st.statusTouched = true;
+        $c.find('[data-f=status] button').attr('aria-pressed', 'false');
+        $(this).attr('aria-pressed', 'true');
+       });
+
+       // 값 채우기
+       $c.find('#caDate').val(row ? row.act_date : today());
+       $c.find('#caTitle').val(row ? row.title : '');
+       $c.find('#caAttendee').val(row ? (row.attendee || '') : '');
+       $c.find('#caManager').val(row ? (row.manager || '') : '');
+       $c.find('#caContent').val(row ? (row.content || '') : '');
+       $c.find('#caDue').val(row ? (row.due_date || '') : '');
+       $c.find('#caDone').val(row ? (row.done_date || '') : '');
+
+       $c.find('[data-f=del]').toggle(!!row && !auto);
+       // 자동 행은 제목도 잠근다 (승인 · 재승인 · 중지 기록이 그대로 남아야 한다)
+       $c.find('#caTitle').prop('disabled', auto);
+       $c.find('[data-f=close]').on('click', () => _this.closeEditor());
+       $c.find('#caTitle').trigger('focus');
+
+       $c.find('[data-f=save]').on('click', function () {
+        const data = {
+         id: row ? row.id : null,
+         site_cd: _this.showSite ? $c.find('#caSite').val() : site,
+         act_type: st.type,
+         act_date: $c.find('#caDate').val(),
+         title: $c.find('#caTitle').val().trim(),
+         attendee: $c.find('#caAttendee').val().trim(),
+         manager: $c.find('#caManager').val().trim(),
+         content: $c.find('#caContent').val(),
+         status: st.status,
+         due_date: $c.find('#caDue').val(),
+         done_date: $c.find('#caDone').val()
+        };
+        if (!data.site_cd) { Alert.alert('', '고객사를 선택하세요.'); return; }
+        if (!data.act_date) { Alert.alert('', '날짜를 입력하세요.'); return; }
+        if (!data.title) { Alert.alert('', '제목을 입력하세요.'); $c.find('#caTitle').trigger('focus'); return; }
+        if (data.due_date && data.due_date < data.act_date) {
+         Alert.alert('', '처리 기한이 날짜보다 앞설 수 없습니다.');
+         return;
+        }
+        // 두 번 눌러 두 건이 생기지 않게 잠근다. 서버 오류로 응답이 안 와도 잠긴 채로 남지 않게 풀어 둔다.
+        const $btn = $(this).prop('disabled', true);
+        const unlock = setTimeout(() => $btn.prop('disabled', false), 15000);
+        AjaxUtil.postJsonData(_this.url + '/save', data, function (r) {
+         clearTimeout(unlock);
+         $btn.prop('disabled', false);
+         if (!r || !r.success) {
+          Alert.alert('', (r && r.message) || '저장하지 못했습니다.');
+          return;
+         }
+         _this.closeEditor();
+         _this.reload();
+         _this.onChange();
+        });
+       });
+
+       $c.find('[data-f=del]').on('click', function () {
+        Alert.confirm('', '이 이력을 삭제할까요?\n삭제하면 되돌릴 수 없습니다.', function () {
+         AjaxUtil.postJsonData(_this.url + '/delete', {id: row.id}, function (r) {
+          if (!r || !r.success) {
+           Alert.alert('', (r && r.message) || '삭제하지 못했습니다.');
+           return;
+          }
+          _this.closeEditor();
+          _this.reload();
+          _this.onChange();
+         });
+        });
+       });
+      }, 0);
+     }
+
+     closeEditor() {
+      if (this.popup) {
+       this.popup.close();
+       this.popup = null;
+      }
+     }
+    }
+
+    window.CustomerActivityBox = CustomerActivityBox;
+   })();
+  </script>
+</th:block>

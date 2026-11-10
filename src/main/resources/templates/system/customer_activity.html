@@ -1,0 +1,225 @@
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
+  <style>
+      .cav-top { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+      .cav-top .search-wrap.cav-search { flex: 1 1 auto; min-width: 0; display: flex; align-items: center;
+          gap: 0; flex-wrap: wrap; }
+      .cav-top .search-wrap.cav-search > dl { display: flex; align-items: center; gap: 6px; margin: 0 14px 6px 0; }
+      .cav-top .search-wrap.cav-search > dl > dt,
+      .cav-top .search-wrap.cav-search > dl > dd { margin: 0; padding: 0; }
+      .cav-top .search-wrap.cav-search > dl > dt label { white-space: nowrap; font-size: 12.5px; color: #45566A; }
+      .cav-search input[type=date], .cav-search input[type=text], .cav-search select { height: 34px; padding: 0 10px; }
+      .cav-search input[type=date] { width: 140px; }
+      .cav-search select { width: 200px; }
+      .cav-search select.narrow { width: 110px; }
+      .cav-search input[type=text] { width: 180px; }
+      .cav-search .tilde { color: #8A99A8; margin: 0 2px; }
+      .cav-quick { display: inline-flex; gap: 4px; margin: 0 14px 6px 0; }
+      .cav-quick button { height: 28px; padding: 0 10px; border: 1px solid #CBD3DB; border-radius: 2px;
+          background: #fff; color: #45566A; font-family: inherit; font-size: 12px; cursor: pointer; }
+      .cav-quick button:hover { border-color: #24466F; color: #24466F; }
+      .cav-actions { display: flex; gap: 8px; margin-bottom: 6px; }
+
+      .grid-guide-box { background: #EDF1F4; border: 1px solid #CBD3DB; border-left: 3px solid #8A99A8;
+          padding: 8px 12px; margin: 8px 0; font-size: 12.5px; line-height: 1.6; color: #45566A; }
+      .grid-guide-box b { color: #1B2430; }
+
+      /* 요약 칩 : 유형별 건수 · 미완료 · 지연. 칩을 누르면 그 조건으로 거른다. */
+      .cav-sum { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 8px; }
+      .cav-sum .stat { font-size: 12.5px; color: #45566A; }
+      .cav-sum .stat b { color: #1B2430; font-variant-numeric: tabular-nums; }
+      .cav-sum .stat.alert b { color: #9E2A20; }
+      .cav-sum .stat.warn b { color: #8A5A00; }
+      .cav-msg { font-size: 12px; color: #8A5A00; }
+      .cav-foot-space { height: 56px; }
+  </style>
+
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>고객사 활동 이력</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>시스템관리</li>
+        <li>고객사 활동 이력</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <div class="section-top cav-top">
+        <div class="search-wrap cav-search">
+          <dl>
+            <dt><label for="cavFrom">기간</label></dt>
+            <dd>
+              <input type="date" id="cavFrom"/>
+              <span class="tilde">~</span>
+              <input type="date" id="cavTo" aria-label="종료일"/>
+            </dd>
+          </dl>
+          <div class="cav-quick">
+            <button type="button" data-m="1">1개월</button>
+            <button type="button" data-m="3">3개월</button>
+            <button type="button" data-m="12">1년</button>
+            <button type="button" data-m="0">전체</button>
+          </div>
+          <dl>
+            <dt><label for="cavSite">고객사</label></dt>
+            <dd><select id="cavSite"><option value="">전체</option></select></dd>
+          </dl>
+          <dl>
+            <dt><label for="cavStatus">상태</label></dt>
+            <dd>
+              <select id="cavStatus" class="narrow">
+                <option value="">전체</option>
+                <option value="UNDONE">미완료</option>
+                <option value="OPEN">접수</option>
+                <option value="PROG">진행</option>
+                <option value="DONE">완료</option>
+              </select>
+            </dd>
+          </dl>
+          <dl>
+            <dt><label for="cavKeyword">검색어</label></dt>
+            <dd><input type="text" id="cavKeyword" placeholder="제목 · 내용 · 참석자 · 담당자"/></dd>
+          </dl>
+          <dl>
+            <dt><span>유형</span></dt>
+            <dd><span class="ca-chips" id="cavTypes" role="group" aria-label="유형"></span></dd>
+          </dl>
+        </div>
+        <div class="cav-actions">
+          <button type="button" class="ca-btn solid" id="cavSearch" title="검색 (F4)">검색</button>
+          <button type="button" class="ca-btn" id="cavNew">+ 이력 등록</button>
+        </div>
+      </div>
+
+      <div class="grid-guide-box">
+        ※ 고객사별 <b>교육 · 요청·문의 · 계약·영업 · 장애·오류</b> 이력입니다. 미완료(접수 · 진행) 건이 위에, 그 안에서는 기한이 급한 순으로 나옵니다.
+        행을 누르면 고칠 수 있습니다. <b>자동</b> 표시는 고객사현황의 승인 · 중지 버튼이 남긴 이력입니다. (단축키 조회:F4)
+      </div>
+
+      <div class="cav-sum" id="cavSum"></div>
+      <div id="cavMount"></div>
+      <div class="cav-foot-space" id="cavFootSpace"></div>
+    </div>
+  </div>
+</th:block>
+<th:block layout:fragment="scripts">
+  <th:block th:replace="common/customer_activity_box :: customer_activity_box"></th:block>
+  <script type="text/javascript">
+   const pad = n => String(n).padStart(2, '0');
+   const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+   .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+   let box;
+   let types = [];
+
+   /** n 개월 전부터 오늘까지. 0 이면 기간 조건 없음 */
+   function setPeriod(n) {
+    if (!n) {
+     $('#cavFrom').val('');
+     $('#cavTo').val('');
+     return;
+    }
+    const t = new Date();
+    const f = new Date(t.getFullYear(), t.getMonth() - n, t.getDate());
+    $('#cavFrom').val(ymd(f));
+    $('#cavTo').val(ymd(t));
+   }
+
+   function search() {
+    const f = $('#cavFrom').val(), t = $('#cavTo').val();
+    if (f && t && f > t) {
+     Alert.alert('', '시작일이 종료일보다 늦습니다.');
+     return;
+    }
+    box.load({
+     site: $('#cavSite').val() || '',   // spjangcd 로 보내면 보안 인터셉터가 막는다
+     from: f, to: t,
+     types: types.join(','),
+     status: $('#cavStatus').val() || '',
+     keyword: $('#cavKeyword').val().trim()
+    }, renderSummary);
+   }
+
+   /** 조회된 건 기준 요약. 유형 칩 옆 숫자도 여기서 채운다. */
+   function renderSummary(rows, message) {
+    const by = {};
+    rows.forEach(r => by[r.act_type] = (by[r.act_type] || 0) + 1);
+    $('#cavTypes .ca-chip').each(function () {
+     const v = $(this).attr('data-v');
+     $(this).find('.n').text(types.length && types.indexOf(v) < 0 ? '' : (by[v] || 0));
+    });
+    const open = rows.filter(r => r.status !== 'DONE').length;
+    const over = rows.filter(r => r.overdue === true || r.overdue === 'true').length;
+    const sites = new Set(rows.map(r => r.spjangcd)).size;
+    $('#cavSum').html(
+     '<span class="stat">조회 <b>' + rows.length + '</b>건 · 고객사 <b>' + sites + '</b>곳</span>' +
+     '<span class="stat warn">미완료 <b>' + open + '</b></span>' +
+     '<span class="stat alert" title="처리 기한이 지났는데 완료되지 않은 건">기한 지남 <b>' + over + '</b></span>' +
+     (message ? '<span class="cav-msg">' + esc(message) + '</span>' : ''));
+   }
+
+   $(document).ready(function () {
+    box = new CustomerActivityBox({mount: '#cavMount', showSite: true, pageSize: 20});
+
+    $('#cavTypes').html(CustomerActivityBox.TYPES.map(t =>
+     '<button type="button" class="ca-chip" data-v="' + t.v + '" aria-pressed="false">' +
+     esc(t.t) + ' <span class="n"></span></button>').join(''));
+    $('#cavTypes').on('click', '.ca-chip', function () {
+     const v = $(this).attr('data-v');
+     const on = $(this).attr('aria-pressed') !== 'true';
+     $(this).attr('aria-pressed', String(on));
+     types = on ? types.concat([v]) : types.filter(x => x !== v);
+     search();
+    });
+
+    $('.cav-quick').on('click', 'button', function () {
+     setPeriod(Number($(this).attr('data-m')));
+     search();
+    });
+    $('#cavSearch').on('click', search);
+    $('#cavSite, #cavStatus').on('change', search);
+    $('#cavKeyword').on('keydown', e => { if (e.key === 'Enter') search(); });
+    $(document).on('keydown', ev => { if (ev.key === 'F4') { ev.preventDefault(); search(); } });
+    $('#cavNew').on('click', () => {
+     // 고객사를 골라 둔 상태면 그 고객사로 등록 팝업을 연다
+     box.setSite($('#cavSite').val() || '');
+     box.openEditor(null);
+    });
+
+    // 하단 고정 푸터가 마지막 줄을 덮지 않게
+    const fitFooter = function () {
+     const f = document.querySelector('footer, .footer, .layout-footer, #footer');
+     if (!f) return;
+     const pos = getComputedStyle(f).position;
+     if (pos === 'fixed' || pos === 'absolute' || pos === 'sticky') {
+      document.getElementById('cavFootSpace').style.height = Math.round(f.getBoundingClientRect().height + 24) + 'px';
+     }
+    };
+    fitFooter();
+    window.addEventListener('resize', fitFooter);
+
+    // 고객사 선택지. 고객사현황의 '전체 이력 보기' 로 오면 ?site= 로 그 고객사를 골라 둔다.
+    const want = new URLSearchParams(location.search).get('site') || '';
+    AjaxUtil.getAsyncData('/api/system/customer_activity/sites', {}, function (r) {
+     const list = (r && r.success && r.data) || [];
+     box.sites = list;   // 등록 팝업이 다시 받지 않게 넘겨 둔다
+     const $s = $('#cavSite');
+     list.forEach(s => $s.append('<option value="' + esc(s.spjangcd) + '">' +
+      esc((s.spjangnm || s.spjangcd) + ' (' + s.spjangcd + ')' + (s.state === '중지' ? ' · 중지' : '')) + '</option>'));
+     if (want && list.some(s => s.spjangcd === want)) {
+      $s.val(want);
+      setPeriod(0);         // 특정 고객사로 들어오면 전체 기간을 본다
+     } else {
+      setPeriod(3);
+     }
+     search();
+    });
+   });
+  </script>
+</th:block>
+</html>

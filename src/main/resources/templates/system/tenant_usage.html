@@ -172,10 +172,65 @@
       .us-st.warn { color: var(--us-warn); }
       .us-st.none { color: var(--us-mute); font-weight: normal; }
 
+      /* ── 도입 이력 ─────────────────────────────────────── */
+      td.us-life-c { text-align: left; line-height: 1.35; white-space: nowrap; }
+      .us-life-reg { display: block; font-size: 12px; color: var(--us-ink); font-variant-numeric: tabular-nums; }
+      .us-life-sub { display: block; font-size: 11px; color: var(--us-label); margin-top: 2px; }
+      .us-life-sub.warn { color: var(--us-warn); font-weight: 600; }
+      .us-life-sub.mute { color: var(--us-mute); }
+
+      /* 상세 머리의 단계 표시 : 등록 → 첫 로그인 → 첫 사용 → 첫 업무 → 마지막 사용 */
+      .us-life { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0;
+          margin: 0 0 10px; border: 1px solid var(--us-rule); background: var(--us-paper); }
+      .us-life:empty { display: none; }
+      .us-step { flex: 1 1 0; min-width: 130px; padding: 8px 12px; position: relative; }
+      .us-step + .us-step { border-left: 1px solid var(--us-line); }
+      .us-step .k { display: block; font-size: 11px; color: var(--us-label); letter-spacing: .5px; }
+      .us-step .v { display: block; margin-top: 2px; font-size: 13.5px; font-weight: 700; color: var(--us-ink);
+          font-variant-numeric: tabular-nums; }
+      .us-step .d { display: block; margin-top: 1px; font-size: 11px; color: var(--us-mute); }
+      .us-step.none .v { color: var(--us-mute); font-weight: normal; }
+      .us-step.warn .d { color: var(--us-warn); font-weight: 600; }
+      .us-life-note { flex: 0 0 100%; padding: 5px 12px; font-size: 11px; color: var(--us-mute);
+          border-top: 1px solid var(--us-line); background: #FAFBFC; }
+
       /* ── 상세 : 계정별 / 메뉴별 ───────────────────────── */
       /* 아래쪽 여백은 화면 하단에 고정된 푸터 높이만큼 JS 가 다시 잡는다(fitFooter). */
       /* scroll-margin : 자동 스크롤로 내려왔을 때 제목이 화면 끝에 딱 붙지 않게 */
-      .us-detail { margin-top: 12px; display: none; scroll-margin-top: 16px; }
+      /* ── 상세 모달 ─────────────────────────────────────── */
+      .us-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px; }
+      .us-modal[hidden] { display: none; }
+      .us-modal-back { position: absolute; inset: 0; background: rgba(27, 36, 48, .45); }
+      .us-modal-box { position: relative; display: flex; flex-direction: column;
+          width: min(1280px, 100%); max-height: calc(100vh - 48px);
+          background: var(--us-paper); border: 1px solid var(--us-frame);
+          box-shadow: 0 12px 40px rgba(27, 36, 48, .28); outline: none; }
+      .us-modal-hd { flex: 0 0 auto; display: flex; align-items: center; gap: 12px;
+          padding: 12px 16px; border-bottom: 1px solid var(--us-rule); background: var(--us-band); }
+      .us-modal-hd .us-detail-title { margin: 0; flex: 1 1 auto; font-size: 15px; }
+      /* 공용 button 스타일보다 앞서도록 선택자를 길게 잡는다 */
+      .us-modal .us-modal-hd button.us-modal-x {
+          flex: 0 0 auto; display: inline-flex !important; align-items: center; justify-content: center; gap: 6px;
+          width: auto; min-width: 72px; height: 32px; padding: 0 12px; margin: 0;
+          border: 1px solid var(--us-frame); border-radius: 2px;
+          background: #fff; color: var(--us-ink); opacity: 1; visibility: visible;
+          font-family: inherit; font-size: 12.5px; font-weight: 600; line-height: 1; text-indent: 0;
+          cursor: pointer; white-space: nowrap; }
+      .us-modal .us-modal-hd button.us-modal-x .us-x-mark { font-size: 13px; line-height: 1; color: inherit; }
+      .us-modal .us-modal-hd button.us-modal-x:hover { background: var(--us-band2); border-color: var(--us-value); }
+      .us-modal .us-modal-hd button.us-modal-x:focus-visible { outline: 2px solid var(--us-value); outline-offset: 1px; }
+      /* 창 안에서만 스크롤한다. 표 머리는 창 맨 위에 붙어 따라온다. */
+      .us-modal-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 14px 16px 18px; }
+      .us-modal-body .us-life { margin-bottom: 12px; }
+      .us-modal-body .us-split .us-scroll { overflow: visible; }
+      body.us-modal-open { overflow: hidden; }
+      @media (max-width: 900px) {
+          .us-modal { padding: 0; }
+          .us-modal-box { max-height: 100vh; height: 100vh; }
+          .us-split { flex-direction: column; }
+          .us-split > .us-panel + .us-panel { border-left: 1px solid var(--us-frame); border-top: none; }
+      }
+      .us-detail { display: block; }
       .us-foot-space { height: 56px; }
 
       /* ── 페이지 이동 ───────────────────────────────────── */
@@ -207,7 +262,6 @@
       /* 머리줄 안 체크박스는 공용 CSS 가 크게 다시 그리므로 크기를 묶는다 */
       .us-panel-hd .us-chk input[type=checkbox] { width: 14px; height: 14px; margin: 0; flex: 0 0 14px; }
       .us-panel-hd > span { display: inline-flex; align-items: center; }
-      .us-detail.on { display: block; }
       .us-detail-title { font-size: 13.5px; font-weight: 700; color: var(--us-ink);
           margin: 0 0 6px; }
       .us-detail-title span { font-weight: normal; color: var(--us-label); font-size: 12.5px; margin-left: 8px; }
@@ -303,9 +357,8 @@
       </div>
 
       <div class="grid-guide-box">
-        ※ 칸의 큰 숫자는 <b>업무 메뉴 접속 수</b>입니다. 사용자·그룹·권한 같은 설정 메뉴는 뺀 값이고,
-        아래 작은 글씨는 설정 메뉴를 포함한 전체 접속 수와 로그인 수입니다.
-        사업장 행을 누르면 아래에 계정별 · 메뉴별 사용이 나옵니다. (단축키 조회:F4)
+        ※ 월별 숫자는 <b>업무 메뉴 접속 수</b>입니다(설정 메뉴 제외). 칸에 마우스를 올리면 전체 접속 · 로그인 수가 보입니다.
+        사업장 행을 누르면 <b>상세 창</b>에서 도입 이력 · 계정별 · 메뉴별 사용을 볼 수 있습니다. (단축키 조회:F4)
         <span class="us-progress" id="usProgress"><span class="us-spin"></span><span id="usProgressText">처리 중</span></span>
       </div>
 
@@ -338,52 +391,66 @@
         </div>
       </div>
 
-      <!-- 상세 : 선택한 사업장 -->
-      <div class="us-detail" id="usDetail">
-        <h3 class="us-detail-title" id="usDetailTitle"></h3>
-        <div class="us-split">
-          <div class="us-panel">
-            <div class="us-panel-hd">
-              <span>계정별</span>
-              <span class="cnt" id="usUserCnt"></span>
-            </div>
-            <div class="us-scroll">
-              <table class="us-grid">
-                <thead>
-                <tr>
-                  <th>계 정</th>
-                  <th style="width:60px">로그인</th>
-                  <th style="width:70px">전체 접속</th>
-                  <th style="width:70px">업무 접속</th>
-                  <th style="width:130px">최근 사용</th>
-                </tr>
-                </thead>
-                <tbody id="usUserBody"></tbody>
-              </table>
-            </div>
+      <!-- 상세 : 선택한 사업장. 행을 누르면 모달로 연다. -->
+      <div class="us-modal" id="usModal" hidden>
+        <div class="us-modal-back" data-close></div>
+        <div class="us-modal-box" role="dialog" aria-modal="true" aria-labelledby="usDetailTitle" tabindex="-1">
+          <div class="us-modal-hd">
+            <h3 class="us-detail-title" id="usDetailTitle"></h3>
+            <span class="us-progress" id="usModalProgress"><span class="us-spin"></span>불러오는 중</span>
+            <!-- 그림(svg) 대신 글자로 쓴다. 공용 CSS 가 button 안의 svg · 색을 덮어써 X 가 안 보였다. -->
+            <button type="button" class="us-modal-x" data-close title="닫기 (Esc)"><span class="us-x-mark" aria-hidden="true">✕</span>닫기</button>
           </div>
-          <div class="us-panel">
-            <div class="us-panel-hd">
+          <div class="us-modal-body" id="usDetail">
+            <!-- 도입 이력. 조회 기간과 관계없는 전체 기간 기준이다. -->
+            <div class="us-life" id="usLife"></div>
+            <div class="us-split">
+              <div class="us-panel">
+                <div class="us-panel-hd">
+                  <span>계정별</span>
+                  <span class="cnt" id="usUserCnt"></span>
+                </div>
+                <div class="us-scroll">
+                  <table class="us-grid">
+                    <thead>
+                    <tr>
+                      <th>계 정</th>
+                      <th style="width:86px" title="계정을 만든 날">등록일</th>
+                      <th style="width:86px" title="전체 기간에서 처음 로그인하거나 화면을 연 날">첫 사용</th>
+                      <th style="width:60px">로그인</th>
+                      <th style="width:70px">전체 접속</th>
+                      <th style="width:70px">업무 접속</th>
+                      <th style="width:130px">최근 사용</th>
+                    </tr>
+                    </thead>
+                    <tbody id="usUserBody"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="us-panel">
+                <div class="us-panel-hd">
               <span>메뉴별
                 <label class="us-chk" style="margin-left:12px">
-                  <input type="checkbox" id="hideUnused"/> 미사용 숨기기
+                  <input type="checkbox" id="hideUnused" checked/> 미사용 숨기기
                 </label>
               </span>
-              <span class="cnt" id="usMenuCnt"></span>
-            </div>
-            <div class="us-scroll">
-              <table class="us-grid">
-                <thead>
-                <tr>
-                  <th>메 뉴</th>
-                  <th style="width:56px">구 분</th>
-                  <th style="width:60px">접 속</th>
-                  <th style="width:56px">사용자</th>
-                  <th style="width:130px">최근 사용</th>
-                </tr>
-                </thead>
-                <tbody id="usMenuBody"></tbody>
-              </table>
+                  <span class="cnt" id="usMenuCnt"></span>
+                </div>
+                <div class="us-scroll">
+                  <table class="us-grid">
+                    <thead>
+                    <tr>
+                      <th>메 뉴</th>
+                      <th style="width:56px">구 분</th>
+                      <th style="width:60px">접 속</th>
+                      <th style="width:56px">사용자</th>
+                      <th style="width:130px">최근 사용</th>
+                    </tr>
+                    </thead>
+                    <tbody id="usMenuBody"></tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -408,6 +475,7 @@
      // 페이징 : 서버는 한 번에 다 주고 화면에서 나눈다.
      // 사업장 수 × 월 수 만큼의 집계라 수백 곳이 되어도 응답이 작다.
      this.list = [];
+     this.lifeMap = {};
      this.monthList = [];
      this.page = 1;
      this.pageSize = 10;
@@ -431,8 +499,18 @@
      $('#btnSearch').on('click', function () {
       _this.search();
      });
-     $('#dbKey, #exAdmin, #exDev').on('change', function () {
+     $('#exAdmin, #exDev').on('change', function () {
       _this.search();
+     });
+     // 사업장 드롭다운은 목록을 거르지 않는다. 행을 누른 것과 같이 그 사업장을 골라 상세를 연다.
+     // '전 체' 는 선택을 푼다. 목록은 항상 모든 사업장이 보인다.
+     $('#dbKey').on('change', function () {
+      const key = $(this).val() || '';
+      if (!key) {
+       _this.clearDetail();
+       return;
+      }
+      _this.selectSite(key);
      });
      $('#fromYm, #toYm').on('keydown', function (e) {
       if (e.key === 'Enter') _this.search();
@@ -445,6 +523,26 @@
      // data() 는 '12' 같은 값을 숫자로 바꾸므로 attr() 로 읽는다
      $('#usSumBody').on('click', 'tr[data-key]', function () {
       _this.loadDetail($(this).attr('data-key'), true);
+     });
+     // 키보드로도 연다 (행은 tabindex 로 포커스를 받는다)
+     $('#usSumBody').on('keydown', 'tr[data-key]', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+       e.preventDefault();
+       _this.loadDetail($(this).attr('data-key'), true);
+      }
+     });
+     // 모달 닫기 : X · 바깥 · Esc
+     $('#usModal').on('click', '[data-close]', function () {
+      _this.clearDetail();
+     });
+     $(document).on('keydown.usModal', function (e) {
+      if (!_this.isModalOpen()) return;
+      if (e.key === 'Escape') {
+       e.preventDefault();
+       _this.clearDetail();
+      } else if (e.key === 'Tab') {
+       _this.trapFocus(e);
+      }
      });
      $('#hideUnused').on('change', function () {
       _this.renderMenus();
@@ -545,20 +643,31 @@
      if (!c) return;
 
      _this.busy(true, '조회 중');
-     AjaxUtil.getAsyncData(_this.url + '/summary', c, function (result) {
+     // 요약은 항상 전 사업장. 드롭다운 선택은 상세에만 쓴다.
+     const q = {from: c.from, to: c.to, exAdmin: c.exAdmin, exDev: c.exDev};
+     AjaxUtil.getAsyncData(_this.url + '/summary', q, function (result) {
       _this.busy(false);
       if (!result || !result.success) {
        Alert.alert('', (result && result.message) || '조회에 실패했습니다.');
        return;
       }
       _this.rows = result.data || [];
-      _this.renderSummary(c);
-
-      // 사업장을 골라 조회했으면 상세까지 바로 연다. 보던 사업장이 있으면 다시 읽는다.
-      const key = c.dbKey || _this.current;
-      if (key) _this.loadDetail(key);
-      else _this.clearDetail();
+      // 도입 이력은 기간과 무관하지만 계정 제외 설정을 따르므로 검색할 때마다 다시 받는다.
+      // 실패해도 사용량 표는 그린다.
+      AjaxUtil.getAsyncData(_this.url + '/lifecycle', {exAdmin: c.exAdmin, exDev: c.exDev}, function (lr) {
+       _this.lifeMap = {};
+       ((lr && lr.success && lr.data) || []).forEach(r => _this.lifeMap[r.db_key] = r);
+       _this.afterSummary(c);
+      });
      });
+    }
+
+    /** 요약 · 도입 이력을 다 받은 뒤 */
+    afterSummary(c) {
+     this.renderSummary(c);
+     // 보던 사업장이 있으면 그 상세를 새 기간으로 다시 읽는다. 화면은 움직이지 않는다.
+     if (this.current) this.loadDetail(this.current);
+     else this.clearDetail();
     }
 
     renderSummary(c) {
@@ -576,7 +685,6 @@
      Object.keys(by).forEach(function (k) {
       if (keys.indexOf(k) < 0) keys.push(k);
      });
-     if (c.dbKey) keys = keys.filter(k => k === c.dbKey);
 
      const zero = () => ({login_cnt: 0, menu_cnt: 0, work_cnt: 0});
      const add = function (t, r) {
@@ -599,6 +707,7 @@
 
      // 머리
      let h = '<tr><th class="us-site">사업장</th><th style="width:72px">상 태</th>' +
+      '<th style="width:104px" title="고객사현황의 가입일자">가입일</th>' +
       '<th style="width:64px">허용 메뉴</th>';
      months.forEach(ym => h += '<th class="us-mon">' + _this.monLabel(ym) + '</th>');
      h += '<th class="us-mon us-total">합 계</th></tr>';
@@ -622,7 +731,7 @@
      _this.monthList = months;
 
      if (!list.length) {
-      $('#usSumBody').html('<tr><td colspan="' + (months.length + 4) +
+      $('#usSumBody').html('<tr><td colspan="' + (months.length + 5) +
        '" class="us-empty">사업장이 없습니다.</td></tr>');
       $('#usSumFoot').empty();
       $('#usSumCnt').text('');
@@ -631,7 +740,7 @@
      }
 
      let f = '<tr><td class="us-site">' + (list.length > _this.pageSize ? '전체 합계' : '합 계') +
-      '</td><td></td><td></td>';
+      '</td><td></td><td></td><td></td>';
      months.forEach(ym => f += _this.cell(monTotal[ym]));
      f += _this.cell(all, 'us-total') + '</tr>';
      $('#usSumFoot').html(list.length > 1 ? f : '');
@@ -657,12 +766,16 @@
      const $b = $('#usSumBody').empty();
      slice.forEach(function (it) {
       const s = _this.siteMap[it.key] || {};
-      let tr = '<tr data-key="' + _this.esc(it.key) + '"' +
+      let tr = '<tr tabindex="0" data-key="' + _this.esc(it.key) + '"' +
        (it.key === _this.current ? ' class="on"' : '') + '>' +
        '<td class="us-site"><span class="us-key">' + _this.esc(it.key) + '</span>' +
        '<span class="us-sitenm">' + _this.esc(s.spjangnm || '') + '</span>' +
-       '<span class="us-siteinfo">계정 ' + _this.num(_this.userCnt(s)) + '개</span></td>' +
+       '<span class="us-siteinfo">계정 ' + _this.num(_this.userCnt(s)) + '개' +
+       (_this.isStopped(s) ? ' <span class="us-tag alert" title="' +
+        _this.esc('계약 중지' + (s.exp_at ? ' · ' + s.exp_at : '')) + '">중지</span>' : '') +
+       '</span></td>' +
        '<td><span class="us-st ' + it.st[1] + '">' + it.st[0] + '</span></td>' +
+       _this.lifeCell(_this.lifeMap[it.key]) +
        '<td class="us-n" style="text-align:center">' + _this.num(s.allowed_cnt || 0) + '</td>';
       months.forEach(ym => tr += _this.cell(it.m[ym]));
       tr += _this.cell(it.t, 'us-total') + '</tr>';
@@ -696,6 +809,113 @@
      $('#usPagerBtns').html(h);
     }
 
+    /** 계약이 중지된 사업장인가 (tb_xa012.state) */
+    isStopped(s) {
+     return !!s && String(s.state || '').trim() === '중지';
+    }
+
+    /** 날 수를 셀 기준일. 승인일이 있으면 승인일, 없으면 가입일, 그것도 없으면 첫 계정 생성일 */
+    lifeBase(l) {
+     return l.approved_at || l.join_at || l.reg_at || '';
+    }
+
+    lifeBaseLabel(l) {
+     return l.approved_at ? '승인' : (l.join_at ? '가입' : '등록');
+    }
+
+    /** 요약 표의 '가입일' 칸. 승인 · 첫 업무 등은 상세 창의 단계 표시에서 본다. */
+    lifeCell(l) {
+     const join = l ? (l.join_at || l.reg_at) : '';
+     return '<td class="us-dt"' + (l ? ' title="' + this.lifeTitle(l) + '"' : '') + '>' +
+      (join ? this.esc(join) : '<span class="us-life-sub mute">–</span>') + '</td>';
+    }
+
+    /** (예전 표시) 가입일 + 첫 업무 두 줄. 지금은 쓰지 않는다. */
+    lifeCellDetail(l) {
+     const head = l ? (l.join_at || l.reg_at) : '';
+     if (!head) return '<td class="us-life-c"><span class="us-life-sub mute">–</span></td>';
+     const base = this.lifeBase(l);
+     let sub;
+     if (l.first_work) {
+      const d = this.daysBetween(base, l.first_work);
+      sub = '<span class="us-life-sub">첫 업무 ' + (d === null ? this.esc(l.first_work)
+       : (d > 0 ? this.lifeBaseLabel(l) + ' +' + d + '일' : this.lifeBaseLabel(l) + ' 당일')) + '</span>';
+     } else if (l.first_use) {
+      sub = '<span class="us-life-sub warn">업무 사용 전</span>';
+     } else if (l.approved_at || l.state === 'O') {
+      sub = '<span class="us-life-sub warn">승인 후 사용 전</span>';
+     } else {
+      sub = '<span class="us-life-sub warn">사용 전</span>';
+     }
+     return '<td class="us-life-c" title="' + this.lifeTitle(l) + '">' +
+      '<span class="us-life-reg">' + this.esc(head) + (l.join_at ? ' 가입' : ' 등록') + '</span>' + sub + '</td>';
+    }
+
+    lifeTitle(l) {
+     return this.esc('가입 ' + (l.join_at || '–') + ' · 승인 ' + (l.approved_at || '–') +
+      ' · 첫 로그인 ' + (l.first_login || '–') + ' · 첫 사용 ' + (l.first_use || '–') +
+      ' · 첫 업무 ' + (l.first_work || '–') + ' · 마지막 ' + (l.last_use || '–'));
+    }
+
+    /** reg 와 d 사이 날 수. 둘 중 하나라도 없으면 null */
+    daysBetween(a, b) {
+     if (!a || !b) return null;
+     const t = s => Date.UTC(+s.substring(0, 4), +s.substring(5, 7) - 1, +s.substring(8, 10));
+     return Math.round((t(b) - t(a)) / 86400000);
+    }
+
+    /** 상세 머리의 단계 표시 : 가입 → 승인 → 첫 로그인 → 첫 사용 → 첫 업무 사용 → 마지막 사용 */
+    renderLife(key) {
+     const l = this.lifeMap[key];
+     if (!l || !(l.join_at || l.reg_at)) {
+      $('#usLife').empty();
+      return;
+     }
+     const _this = this;
+     const base = _this.lifeBase(l), baseNm = _this.lifeBaseLabel(l);
+     // 가입 · 승인 칸은 서로의 간격을, 이후 칸은 기준일(승인) 후 날 수를 보여준다
+     const step = function (label, val, from, fromNm, emptyText, cls) {
+      if (!val) {
+       return '<div class="us-step none' + (cls ? ' ' + cls : '') + '"><span class="k">' + label + '</span>' +
+        '<span class="v">' + (emptyText || '–') + '</span></div>';
+      }
+      const d = from ? _this.daysBetween(from, val) : null;
+      return '<div class="us-step"><span class="k">' + label + '</span>' +
+       '<span class="v">' + _this.esc(val) + '</span>' +
+       (d !== null ? '<span class="d">' + fromNm + ' 후 ' + (d > 0 ? d + '일' : '당일') + '</span>' : '') + '</div>';
+     };
+
+     const idle = Number(l.days_idle);
+     const last = l.last_use
+      ? '<div class="us-step' + (idle >= 30 ? ' warn' : '') + '"><span class="k">마지막 사용</span>' +
+      '<span class="v">' + _this.esc(l.last_use) + '</span>' +
+      '<span class="d">' + (idle > 0 ? idle + '일 전' : '오늘') + '</span></div>'
+      : step('마지막 사용', null);
+
+     const firstWork = l.first_work
+      ? step('첫 업무 사용', l.first_work, base, baseNm)
+      : '<div class="us-step none warn"><span class="k">첫 업무 사용</span><span class="v">아직 없음</span>' +
+      '<span class="d">' + (l.first_use ? '설정 메뉴만 사용' : '사용 기록 없음') + '</span></div>';
+
+     // 계약 칸 : 요금제와 상태
+     const stopped = l.state === '중지';
+     const contract = '<div class="us-step' + (stopped ? ' warn' : '') + '"><span class="k">계약</span>' +
+      '<span class="v">' + _this.esc(l.plan || '–') + '</span>' +
+      '<span class="d">' + (stopped ? '중지' + (l.exp_at ? ' · ' + _this.esc(l.exp_at) : '')
+       : (l.state === 'O' ? '승인됨' : _this.esc(l.state || '승인 전'))) + '</span></div>';
+
+     $('#usLife').html(
+      contract +
+      step('가입', l.join_at || l.reg_at) +
+      step('승인', l.approved_at, l.join_at, '가입', l.state === 'O' ? '날짜 없음' : '승인 전') +
+      step('첫 로그인', l.first_login, base, baseNm) +
+      step('첫 사용', l.first_use, base, baseNm) +
+      firstWork +
+      last +
+      '<div class="us-life-note">전체 기간 기준 · 가입일은 고객사현황의 가입일자, 승인일은 승인 때 만든 사용자그룹의 생성일 · ' +
+      '로그인 · 사용은 관리자/개발자 계정 제외 설정을 따릅니다</div>');
+    }
+
     /** 사업장 계정 수. 개발자 계정 제외를 끄면 그 수까지 더한다. */
     userCnt(s) {
      const n = Number(s.user_cnt) || 0;
@@ -715,8 +935,9 @@
      }
      // 접속은 있는데 업무 0 이면 '설정만' 한 달이다. 색으로 구분한다.
      const zero = (Number(r.work_cnt) || 0) === 0 ? ' zero' : '';
-     return '<td class="us-c' + c + '"><div class="us-big' + zero + '">' + this.num(r.work_cnt) + '</div>' +
-      '<div class="us-sub">전체 ' + this.num(r.menu_cnt) + ' · 로그인 ' + this.num(r.login_cnt) + '</div></td>';
+     // 전체 접속 · 로그인 수는 칸에 마우스를 올리면 보인다 (자세한 건 상세 창에서)
+     const tip = '업무 ' + this.num(r.work_cnt) + ' · 전체 접속 ' + this.num(r.menu_cnt) + ' · 로그인 ' + this.num(r.login_cnt);
+     return '<td class="us-c' + c + '" title="' + tip + '"><span class="us-big' + zero + '">' + this.num(r.work_cnt) + '</span></td>';
     }
 
     /** 기간 합계로 판정한다 */
@@ -728,15 +949,17 @@
 
     // ── 상세 ──────────────────────────────────────────────
     /**
-     * @param scroll true 면 상세 영역으로 화면을 내린다.
-     *               행을 직접 눌렀을 때만 쓴다. 재조회 때 화면이 튀면 안 된다.
+     * 선택한 사업장의 상세를 모달에 그린다.
+     * @param open true 면 모달을 연다 (행 · 드롭다운으로 고를 때).
+     *             재조회로 다시 읽을 때는 이미 열려 있는 모달 내용만 바꾼다.
      */
-    loadDetail(key, scroll) {
+    loadDetail(key, open) {
      let _this = this;
      const c = _this.cond();
      if (!c || !key) return;
 
      _this.current = key;
+     $('#dbKey').val(key);   // 행을 눌러 고른 경우에도 드롭다운이 같은 사업장을 가리키게
      $('#usSumBody tr').removeClass('on').filter(function () {
       return $(this).attr('data-key') === key;
      }).addClass('on');
@@ -744,27 +967,25 @@
      const s = _this.siteMap[key] || {};
      $('#usDetailTitle').html(_this.esc(key) + ' ' + _this.esc(s.spjangnm || '') +
       '<span>' + _this.monLabel(c.from) + ' ~ ' + _this.monLabel(c.to) + '</span>');
-     $('#usDetail').addClass('on');
-     $('#usUserBody').html('<tr><td colspan="5" class="us-empty">불러오는 중…</td></tr>');
+     if (open) _this.openModal();
+     _this.renderLife(key);
+     $('#usUserBody').html('<tr><td colspan="7" class="us-empty">불러오는 중…</td></tr>');
      $('#usMenuBody').html('<tr><td colspan="5" class="us-empty">불러오는 중…</td></tr>');
      $('#usUserCnt, #usMenuCnt').text('');
 
      const q = {from: c.from, to: c.to, dbKey: key, exAdmin: c.exAdmin, exDev: c.exDev};
 
-     _this.busy(true, '상세 조회 중');
+     $('#usModalProgress').addClass('on');
      _this.pending = 2;
-     // 두 표를 다 그린 뒤에 한 번만 내린다
      const done = function () {
       if (--_this.pending > 0) return;
-      _this.busy(false);
-      if (scroll && key === _this.current) _this.scrollToDetail();
+      $('#usModalProgress').removeClass('on');
      };
 
-     // 표를 먼저 그리고 done() 을 부른다. 순서가 바뀌면 다 그려지기 전에 스크롤이 시작된다.
      AjaxUtil.getAsyncData(_this.url + '/users', q, function (result) {
       if (key === _this.current) {   // 그 사이 다른 사업장을 눌렀으면 그리지 않는다
        if (!result || !result.success) {
-        $('#usUserBody').html('<tr><td colspan="5" class="us-empty">' +
+        $('#usUserBody').html('<tr><td colspan="7" class="us-empty">' +
          _this.esc((result && result.message) || '조회 실패') + '</td></tr>');
        } else {
         _this.renderUsers(result.data || []);
@@ -787,83 +1008,76 @@
      });
     }
 
-    /**
-     * 상세 제목이 화면 위쪽에 오게 내린다.
-     *
-     * 상세 표가 다 그려진 뒤에 부른다. 그리는 도중에 내리면 목적지 아래 내용이 늘어나면서
-     * 브라우저가 스크롤을 다시 계산해 끊긴다.
-     * scrollIntoView(smooth) 대신 실제 스크롤 상자를 찾아 직접 움직인다.
-     * 레이아웃이 window 가 아니라 안쪽 div 에서 스크롤되는 경우가 있고,
-     * 공용 CSS 의 scroll-behavior: smooth 와 겹치면 한 번 더 감속되어 버벅인다.
-     */
-    scrollToDetail() {
-     const el = document.getElementById('usDetail');
-     if (!el) return;
-
-     const sc = this.scrollParent(el);
-     const isDoc = sc === document.scrollingElement || sc === document.documentElement || sc === document.body;
-     const cur = isDoc ? (window.pageYOffset || document.documentElement.scrollTop) : sc.scrollTop;
-     const base = isDoc ? 0 : sc.getBoundingClientRect().top;
-     const target = Math.max(0, Math.round(el.getBoundingClientRect().top - base + cur - 16));
-     if (Math.abs(target - cur) < 4) return;
-
-     let reduced = false;
-     try {
-      reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-     } catch (e) { /* 구형 브라우저 */ }
-
-     const box = isDoc ? document.documentElement : sc;
-     const $box = isDoc ? $('html, body') : $(sc);
-     const prev = box.style.scrollBehavior;
-     box.style.scrollBehavior = 'auto';   // 공용 smooth 와 겹치지 않게 잠시 끈다
-     if (isDoc) document.body.style.scrollBehavior = 'auto';
-
-     const restore = function () {
-      box.style.scrollBehavior = prev;
-      if (isDoc) document.body.style.scrollBehavior = '';
-      $box.off('.usScroll');
-     };
-
-     if (reduced) {
-      $box.scrollTop(target);
-      restore();
-      return;
-     }
-
-     // 사용자가 휠·터치로 직접 움직이면 바로 멈춘다
-     $box.off('.usScroll').on('wheel.usScroll touchstart.usScroll keydown.usScroll', function () {
-      $box.stop(true);
-      restore();
-     });
-     let done = false;
-     $box.stop(true).animate({scrollTop: target}, 280, 'swing', function () {
-      if (done) return;    // 'html, body' 는 완료 콜백이 두 번 온다
-      done = true;
-      restore();
-     });
+    // ── 모달 ──────────────────────────────────────────────
+    isModalOpen() {
+     return !$('#usModal').prop('hidden');
     }
 
-    /** el 을 실제로 스크롤하는 가장 가까운 조상. 없으면 문서. */
-    scrollParent(el) {
-     let p = el.parentElement;
-     while (p && p !== document.body && p !== document.documentElement) {
-      const oy = getComputedStyle(p).overflowY;
-      if ((oy === 'auto' || oy === 'scroll' || oy === 'overlay') && p.scrollHeight > p.clientHeight + 1) return p;
-      p = p.parentElement;
-     }
-     return document.scrollingElement || document.documentElement;
+    openModal() {
+     if (this.isModalOpen()) return;
+     this.lastFocus = document.activeElement;   // 닫으면 누른 행으로 돌아간다
+     $('#usModal').prop('hidden', false);
+     $('body').addClass('us-modal-open');         // 뒤 페이지가 같이 스크롤되지 않게
+     $('#usModal .us-modal-body').scrollTop(0);
+     $('#usModal .us-modal-x').trigger('focus');
     }
 
+    closeModal() {
+     if (!this.isModalOpen()) return;
+     $('#usModal').prop('hidden', true);
+     $('body').removeClass('us-modal-open');
+     // 닫은 뒤 포커스를 원래 자리로. 그 행이 재조회로 다시 그려졌으면 같은 사업장 행을 찾는다.
+     let el = this.lastFocus;
+     if (!el || !document.body.contains(el)) {
+      const key = el && el.getAttribute ? el.getAttribute('data-key') : null;
+      el = key ? $('#usSumBody tr').filter(function () { return $(this).attr('data-key') === key; })[0] : null;
+     }
+     if (el && el.focus) el.focus();
+     this.lastFocus = null;
+    }
+
+    /** 모달이 열려 있는 동안 Tab 이 모달 밖으로 나가지 않게 한다 */
+    trapFocus(e) {
+     const f = $('#usModal .us-modal-box').find('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+     .filter(':visible').not(':disabled').get();
+     if (!f.length) return;
+     const first = f[0], last = f[f.length - 1];
+     if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+     } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+     } else if (!$.contains($('#usModal')[0], document.activeElement)) {
+      e.preventDefault();
+      first.focus();
+     }
+    }
+
+    /** 드롭다운으로 사업장을 고를 때. 그 사업장이 있는 페이지로 가서 행을 강조하고 상세를 연다. */
+    selectSite(key) {
+     const at = this.list.findIndex(it => it.key === key);
+     if (at >= 0) {
+      this.page = Math.floor(at / this.pageSize) + 1;
+      this.current = key;
+      this.renderPage();
+     }
+     this.loadDetail(key, true);
+    }
+
+    /** 선택을 풀고 모달을 닫는다 (X · 바깥 · Esc · 드롭다운 '전 체') */
     clearDetail() {
      this.current = null;
-     $('#usDetail').removeClass('on');
+     $('#dbKey').val('');
+     $('#usSumBody tr.on').removeClass('on');
+     this.closeModal();
     }
 
     renderUsers(list) {
      let _this = this;
      const $b = $('#usUserBody').empty();
      if (!list.length) {
-      $b.append('<tr><td colspan="5" class="us-empty">계정이 없습니다.</td></tr>');
+      $b.append('<tr><td colspan="7" class="us-empty">계정이 없습니다.</td></tr>');
       $('#usUserCnt').text('');
       return;
      }
@@ -877,6 +1091,8 @@
        '<td class="us-l"><span class="us-name">' + _this.esc(r.usernm || r.username) + '</span>' +
        (inactive ? '<span class="us-tag alert">비활성</span>' : '') +
        '<span class="us-id">' + _this.esc(r.username) + '</span></td>' +
+       '<td class="us-dt">' + _this.esc(r.joined_at || '–') + '</td>' +
+       '<td class="us-dt">' + (r.first_at ? _this.esc(r.first_at) : '<span class="us-life-sub warn">사용 전</span>') + '</td>' +
        '<td class="us-n">' + _this.num(r.login_cnt) + '</td>' +
        '<td class="us-n">' + _this.num(r.menu_cnt) + '</td>' +
        '<td class="us-n"><b>' + _this.num(r.work_cnt) + '</b></td>' +

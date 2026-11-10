@@ -38,6 +38,19 @@
       #tab2 table td textarea {
           font-size: 100% !important;
       }
+      /* ── 산출내역 여러 줄 입력 (자동 높이, 최대 약 4줄) ── */
+      #slipLineTbody textarea.summy-area {
+          width: 100%;
+          min-height: 2.17em;
+          max-height: 6.5em;
+          line-height: 1.4;
+          padding: 4px 6px;
+          resize: none;
+          overflow-y: hidden;
+          box-sizing: border-box;
+          vertical-align: middle;
+          font-family: inherit;
+      }
       /* ── 전표번호 변경 버튼 축소 ── */
       #tab2 table .btn.in_btn {
           font-size: 92% !important;     /* ≈ 11px */
@@ -405,7 +418,7 @@
                 </li>
               </ul>
               <div class="grid-guide-box" style="margin-bottom:0;">
-                ※ 단축키  조회: F4 / 신규: Insert / 저장: F6 / 삭제: F7
+                ※ 단축키  조회: F4 / 신규: Insert / 저장: F6 / 삭제: F7 / 산출내역 줄바꿈: Shift+Enter
               </div>
             </div>
             <form id="CategoryForm" style="display:flex; align-items:flex-start; gap:0;">
@@ -634,7 +647,10 @@
                       <input name="it2cd" type="hidden"/>
                       <input class="btn-it2-search" name="it2nm" placeholder="목" style="width:100%;" type="text"/>
                     </td>
-                    <td><input name="summy" placeholder="산출내역" style="width:100%;" type="text"/></td>
+                    <td>
+                      <!-- 산출내역: 여러 줄 입력 (Shift+Enter 줄바꿈, Enter 다음 칸) -->
+                      <textarea class="summy-area" name="summy" placeholder="산출내역 (Shift+Enter 줄바꿈)" rows="1"></textarea>
+                    </td>
                     <td>
                       <input name="msseccd" type="hidden"/>
                       <input class="btn-mssec-search" name="mssecnm"
@@ -685,8 +701,9 @@
                color:var(--color-text-secondary); flex-shrink:0;">카드</span>
                             <input name="cardcd" type="hidden"/>
                             <!-- ★추가: 카드명 표시칸 (읽기전용) -->
-                            <input name="cardnmdisp" placeholder="카드명" type="text" readonly
-                                   style="flex:0 0 90px; min-width:0; width:90px !important; height:32px;
+                            <input name="cardnmdisp" placeholder="카드명" type="text" readonly tabindex="-1"
+                                   class="disp-autofit"
+                                   style="flex:0 0 auto; min-width:90px; max-width:260px; width:90px; height:32px;
                 padding:0 8px; font-size:12px; color:var(--color-text-secondary);
                 background:#f5f5f5;
                 border:1px solid var(--color-border-tertiary, #ccc);
@@ -706,8 +723,9 @@
                color:var(--color-text-secondary); flex-shrink:0;">계좌</span>
                             <input name="bankcd" type="hidden"/>
                             <!-- ★추가: 은행명 표시칸 (읽기전용, 핸들러가 자동 채움) -->
-                            <input name="banknmdisp" placeholder="은행" type="text" readonly
-                                   style="flex:0 0 90px; min-width:0; width:90px !important; height:32px;
+                            <input name="banknmdisp" placeholder="은행" type="text" readonly tabindex="-1"
+                                   class="disp-autofit"
+                                   style="flex:0 0 auto; min-width:90px; max-width:260px; width:90px; height:32px;
                 padding:0 8px; font-size:12px; color:var(--color-text-secondary);
                 background:#f5f5f5;
                 border:1px solid var(--color-border-tertiary, #ccc);
@@ -987,6 +1005,7 @@
       if ($rows.length <= 2) {
        $targetRow.find('input[type="text"]:not([readonly])').val('');
        $targetRow.find('input[type="hidden"]').val('');
+       $targetRow.find('textarea').val('').css('height', '');
        $targetRow.find('input[name="dramt"]').val('0');
        $targetRow.find('input[name="cramt"]').val('0');
       } else {
@@ -1119,8 +1138,14 @@
                     <option value="7">전표(산출내역):하단결재</option>
                 </select>
                 <input id="spApprovers" type="text" value=""
-                    placeholder="직급 직접 입력 (비워두면 설정값 사용)"
-                    style="padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:12px;width:200px;"/>
+                    placeholder="예) 담당,팀장,사무국장 (비우면 설정값)"
+                    title="결재란 직급을 쉼표(,)로 구분해 순서대로 입력하세요. Enter로 바로 반영됩니다."
+                    style="padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:12px;width:260px;"/>
+                <button id="spApproversClear" type="button" title="설정값으로 되돌리기"
+                    style="padding:6px 8px;background:#fff;color:#6b7280;border:1px solid #ddd;
+                           border-radius:4px;font-size:12px;cursor:pointer;">
+                    초기화
+                </button>
                 <button id="spRefreshBtn"
                     style="padding:6px 10px;background:#6b7280;color:#fff;
                            border:none;border-radius:4px;font-size:13px;cursor:pointer;">
@@ -1159,10 +1184,29 @@
      if (savedPrintType) {
       document.getElementById('spPrintType').value = savedPrintType;
      }
+     const savedApprovers = sessionStorage.getItem('slip_print_approvers');
+     if (savedApprovers) {
+      document.getElementById('spApprovers').value = savedApprovers;
+     }
+
+     // 직급 입력값 정리: " 담당 ,, 팀장 " → "담당,팀장"
+     const getApprovers = function () {
+      const v = (document.getElementById('spApprovers').value || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => s !== '')
+      .join(',');
+      if (v) {
+       sessionStorage.setItem('slip_print_approvers', v);
+      } else {
+       sessionStorage.removeItem('slip_print_approvers');
+      }
+      return v;
+     };
 
      // ── iframe에 PDF URL 세팅 ──
      function renderPreview(printType) {
-      const approvers = document.getElementById('spApprovers').value;
+      const approvers = getApprovers();
       const url = `${_this.url}/print?printType=${printType}&keys=${encodeURIComponent(keys)}&approvers=${encodeURIComponent(approvers)}`;
       document.getElementById('spIframe').src = withCtx(url);
      }
@@ -1178,13 +1222,27 @@
       renderPreview(document.getElementById('spPrintType').value);
      });
 
+     // 직급 입력 후 Enter → 즉시 반영
+     document.getElementById('spApprovers').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       renderPreview(document.getElementById('spPrintType').value);
+      }
+     });
+
+     // 초기화 → 비워서 설정값으로 출력
+     document.getElementById('spApproversClear').addEventListener('click', function () {
+      document.getElementById('spApprovers').value = '';
+      renderPreview(document.getElementById('spPrintType').value);
+     });
+
      document.getElementById('spCloseBtn').addEventListener('click', function () {
       overlay.remove();
      });
 
      document.getElementById('spDownloadBtn').addEventListener('click', function () {
       const printType = document.getElementById('spPrintType').value;
-      const approvers = document.getElementById('spApprovers').value;
+      const approvers = getApprovers();
       const url = withCtx(`${_this.url}/print/pdf?printType=${printType}&keys=${encodeURIComponent(keys)}&approvers=${encodeURIComponent(approvers)}`);
 
       // 링크 클릭으로 다운로드
@@ -1216,6 +1274,42 @@
      const d = (v == null ? '' : String(v)).replace(/[^0-9]/g, '');
      if (d.length < 8) return '';
      return d.substring(0, 4) + '-' + d.substring(4, 6) + '-' + d.substring(6, 8);
+    }
+
+    // 카드명·은행명 표시칸 폭을 글자 길이에 맞춘다 (90px ~ 260px).
+    // 260px 를 넘는 긴 이름은 마우스를 올리면 전체가 보이도록 title 에도 넣는다.
+    fitDispWidth(el) {
+     if (!el) return;
+     const text = el.value || '';
+     el.title = text;
+     if (!text) { el.style.width = '90px'; return; }
+
+     if (!this._measureCtx) {
+      this._measureCtx = document.createElement('canvas').getContext('2d');
+     }
+     const cs = getComputedStyle(el);
+     this._measureCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+     const textW = this._measureCtx.measureText(text).width;
+     const extra = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0)
+      + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0) + 6;
+     el.style.width = Math.min(Math.max(Math.ceil(textW + extra), 90), 260) + 'px';
+    }
+
+    // 상세행의 카드명·은행명 표시칸을 한 번에 맞춘다
+    fitDetailDisp($detailRow) {
+     const _this = this;
+     $detailRow.find('input.disp-autofit').each(function () {
+      _this.fitDispWidth(this);
+     });
+    }
+
+    // 산출내역 textarea 높이를 내용에 맞춘다 (max-height 넘으면 스크롤)
+    autoGrowSummy(el) {
+     if (!el) return;
+     el.style.height = 'auto';
+     const max = parseFloat(getComputedStyle(el).maxHeight) || 9999;
+     el.style.height = Math.min(el.scrollHeight + 2, max) + 'px';
+     el.style.overflowY = el.scrollHeight > max ? 'auto' : 'hidden';
     }
 
     bindToTab2Form(item) {
@@ -1296,7 +1390,7 @@
         $row.find('input[name^="it1nm"]').val(line.it1nm || '');
         $row.find('input[name^="it2cd"]').val(line.it2cd || '');
         $row.find('input[name^="it2nm"]').val(line.it2nm || '');
-        $row.find('input[name^="summy"]').val(line.summy || '');
+        $row.find('textarea[name^="summy"]').val(line.summy || '');
         $row.find('input[name^="msseccd"]').val(line.mssec || line.msseccd || '');
         $row.find('input[name^="mssecnm"]').val(line.mssecnm || '');
 
@@ -1326,7 +1420,13 @@
          $detailRow.find('input[name^="banknm"]').val(line.accnum || '');
          $detailRow.find('input[name^="bankcd"]').val(line.bankcd || '');
          $detailRow.find('input[name^="banknmdisp"]').val(line.banknm || '');
+         _this.fitDetailDisp($detailRow);
         }
+       });
+
+       // ── 산출내역 높이 맞춤 (행이 화면에 붙은 뒤 계산해야 정확) ──
+       $('#slipLineTbody textarea[name^="summy"]').each(function () {
+        _this.autoGrowSummy(this);
        });
 
        // ── 전체 바인딩 완료 후 합계 갱신 ──
@@ -1353,7 +1453,7 @@
      $detailRow.attr('data-detail-idx', idx);
 
      // name에 index 부여
-     $newRow.find('input, select').each(function () {
+     $newRow.find('input, select, textarea').each(function () {
       const baseName = $(this).attr('name');
       if (baseName) $(this).attr('name', `${baseName}_${idx}`);
      });
@@ -1365,6 +1465,7 @@
      $newRow.find('select[name^="drcr"]').val(drcrVal);
      $newRow.find('input[type="text"]:not([readonly])').val('');
      $newRow.find('input[type="hidden"]').val('');
+     $newRow.find('textarea').val('');
      $newRow.find('input[name^="dramt"]').val('0');
      $newRow.find('input[name^="cramt"]').val('0');
 
@@ -1412,6 +1513,7 @@
       if (cltEmpty && cardEmpty && bankEmpty) {
        $detailRow.find('input[type="hidden"]').val('');
        $detailRow.find('input[name^="cardnmdisp"], input[name^="banknmdisp"]').val('');
+       _this.fitDetailDisp($detailRow);
        $detailRow[0].style.display = 'none';
       }
      };
@@ -1490,6 +1592,7 @@
         $cardHidden.val(item.cardid || '');
         $cardNmDisp.val(item.cardnm || item.cardName || '');
        }
+       _this.fitDispWidth($cardNmDisp[0]);
        _this.focusAfterCard($detailRow, idx);
       }
      });
@@ -1498,6 +1601,7 @@
       if ($cardInput.val().trim() === '') {
        $cardHidden.val('');
        $cardNmDisp.val('');
+       _this.fitDispWidth($cardNmDisp[0]);
       }
       closeDetailIfEmpty();
      });
@@ -1519,6 +1623,8 @@
       bankidSelector:  `#${bankHiddenId}`,
       minLength: 0,
       onSelect: function() {
+       // 은행명은 AccountInputHandler 가 채우므로, 채워진 뒤에 폭을 맞춘다
+       _this.fitDispWidth($bankNmDisp[0]);
        _this.focusNextAfterDetail($detailRow);
       }
      });
@@ -1528,6 +1634,7 @@
       if ($bankInput.val().trim() === '') {
        $bankHidden.val('');
        $bankNmDisp.val('');
+       _this.fitDispWidth($bankNmDisp[0]);
       }
       closeDetailIfEmpty();
      });
@@ -1909,7 +2016,7 @@
      $row.find('input[name^="it2nm"]').val(item.it2nm || '');
      $row.find('input[name^="mokcd"]').val(item.it2cd || '');
      // 팝업 선택 후 → 산출내역으로 포커스
-     setTimeout(() => $row.find('input[name^="summy"]').focus().select(), 50);
+     setTimeout(() => $row.find('textarea[name^="summy"]').focus().select(), 50);
     }
 
     // 재원 조회
@@ -2104,20 +2211,27 @@
       $(this).val(raw === '0' ? '' : raw);
      });
 
+     // 산출내역: 입력할 때마다 높이 조절
+     $('#slipLineTbody').on('input', 'textarea[name^="summy"]', function () {
+      _this.autoGrowSummy(this);
+     });
+
      // ── 엔터키 포커스 이동 ──
      const focusOrder = [
       'input[name^="accnm"]',       // 관명(계정) - 엔터 시 팝업 열림
       'select[name^="drcr"]',       // 차대
       'input[name^="it1nm"]',       // 항 - 엔터 시 팝업 열림
       'input[name^="it2nm"]',       // 목 - 엔터 시 팝업 열림
-      'input[name^="summy"]',       // 산출내역
+      'textarea[name^="summy"]',    // 산출내역 (Shift+Enter 는 줄바꿈)
       'input[name^="mssecnm"]',     // 재원
       'input[name^="dramt"]',       // 차변금액
       'input[name^="cramt"]',       // 대변금액
      ];
 
-     $('#slipLineTbody').on('keydown', 'input, select', function (e) {
+     $('#slipLineTbody').on('keydown', 'input, select, textarea', function (e) {
       if (e.key !== 'Enter') return;
+      // 산출내역에서 Shift+Enter 는 줄바꿈으로 둔다
+      if ($(this).is('textarea') && e.shiftKey) return;
       e.preventDefault();
 
       const $current = $(this);
@@ -2136,7 +2250,7 @@
        const $next = $row.find(focusOrder[currentIdx + 1]);
        if ($next.length && !$next.prop('readonly')) {
         $next.focus();
-        if ($next.is('input')) $next.select();
+        if ($next.is('input, textarea')) $next.select();
         return;
        }
        // readonly면 그 다음 칸도 확인
@@ -2144,7 +2258,7 @@
         const $nextNext = $row.find(focusOrder[currentIdx + 2]);
         if ($nextNext.length && !$nextNext.prop('readonly')) {
          $nextNext.focus();
-         if ($nextNext.is('input')) $nextNext.select();
+         if ($nextNext.is('input, textarea')) $nextNext.select();
          return;
         }
        }
@@ -2263,7 +2377,7 @@
       const it1nm = $row.find('input[name^="it1nm"]').val();
       const it2cd = $row.find('input[name^="it2cd"]').val();
       const it2nm = $row.find('input[name^="it2nm"]').val();
-      const summy = $row.find('input[name^="summy"]').val();
+      const summy = $row.find('textarea[name^="summy"]').val();
       const msseccd = $row.find('input[name^="msseccd"]').val();
       const mssecnm = $row.find('input[name^="mssecnm"]').val();
       const dramt = parseFloat($row.find('input[name^="dramt"]').val().replace(/,/g, '')) || 0;
