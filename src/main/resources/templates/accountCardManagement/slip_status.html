@@ -1,113 +1,40 @@
 <html layout:decorate="~{layout_page}">
 <th:block layout:fragment="content">
   <style>
-      /* ── tab2 테이블 셀 크기 약 25% 축소 ──
-         font-size : % (부모 대비 상대값)
-         height/padding/width : em (현재 font-size 기준 상대값)
-         ※ th/td의 height는 CSS % 미지원 → em 사용
-      ── */
+      /* ── tab2 헤더 테이블 셀 크기 ── */
       #tab2 table th,
       #tab2 table td {
-          font-size: 90% !important;     /* 부모 font-size 대비 80% (약 20% 축소) */
-          height: 2em !important;        /* 80%×15px≈12px → 3×12px=36px */
+          font-size: 90% !important;
+          height: 2em !important;
       }
       #tab2 table.view-table th,
       #tab2 table.view-table td {
-          padding: 0.25em 0.67em !important;  /* ≈ 3px 8px */
-      }
-      #tab2 table.write-table th {
-          padding: 0.58em 1.25em !important;  /* ≈ 7px 15px */
-      }
-      #tab2 table.write-table td {
-          padding: 0.33em 0.75em !important;  /* ≈ 4px 9px */
+          padding: 0.25em 0.67em !important;
       }
       #tab2 table td input[type="text"],
       #tab2 table td input[type="date"] {
-          font-size: 100% !important;    /* td의 80%를 그대로 상속 */
-          height: 2.17em !important;     /* ≈ 26px */
+          font-size: 100% !important;
+          height: 2.17em !important;
           line-height: 2.17em !important;
       }
       #tab2 table td select {
           font-size: 100% !important;
-          height: 2.17em !important;     /* ≈ 26px */
-          line-height: normal !important;  /* 추가 */
-          padding: 0 0.5em !important;     /* 추가: 좌우 여백 + 상하 0으로 중앙 정렬 */
-          vertical-align: middle !important; /* 추가 */
-          box-sizing: border-box !important; /* 추가 */
+          height: 2.17em !important;
+          line-height: normal !important;
+          padding: 0 0.5em !important;
+          vertical-align: middle !important;
+          box-sizing: border-box !important;
       }
       #tab2 table td textarea {
           font-size: 100% !important;
       }
-      /* ── 산출내역 여러 줄 입력 (자동 높이, 최대 약 4줄) ── */
-      #slipLineTbody textarea.summy-area {
-          width: 100%;
-          min-height: 2.17em;
-          max-height: 6.5em;
-          line-height: 1.4;
-          padding: 4px 6px;
-          resize: none;
-          overflow-y: hidden;
-          box-sizing: border-box;
-          vertical-align: middle;
-          font-family: inherit;
-      }
       /* ── 전표번호 변경 버튼 축소 ── */
       #tab2 table .btn.in_btn {
-          font-size: 92% !important;     /* ≈ 11px */
+          font-size: 92% !important;
           padding: 0.18em 0.67em !important;
-          height: 2em !important;        /* ≈ 22~24px */
+          height: 2em !important;
           line-height: 2em !important;
           white-space: nowrap;
-      }
-
-      /* ── 분개 라인 행 추가(+) 버튼 축소 ── */
-      #addSlipLine {
-          width: 2em !important;         /* ≈ 24px */
-          height: 2em !important;
-      }
-      #addSlipLine img {
-          width: 0.83em !important;      /* ≈ 10px */
-          height: 0.83em !important;
-      }
-
-      /* ── 분개 라인 행 삭제(휴지통) 버튼 축소 ── */
-      #slipLineTbody .btn.in_btn.del {
-          width: 2em !important;         /* ≈ 24px */
-          height: 2em !important;
-      }
-      #slipLineTbody .btn.in_btn.del img {
-          width: 0.83em !important;      /* ≈ 10px */
-          height: 0.83em !important;
-          margin-left: 0.42em !important; /* ≈ 5px */
-      }
-      /* ── 행 추가/삭제 버튼 컬럼 정렬 ── */
-      #slipLineTable thead th:last-child,
-      #slipLineTable tbody td:last-child {
-          width: 2.5em !important;
-          min-width: 2.5em !important;
-          text-align: center !important;
-          padding: 0 !important;
-          vertical-align: middle !important;
-      }
-
-      /* ── 행 추가(+) 버튼 ── */
-      #addSlipLine {
-          display: flex !important;
-          justify-content: center !important;
-          align-items: center !important;
-          width: 2em !important;
-          height: 2em !important;
-          margin: 0 auto !important;
-      }
-
-      /* ── 행 삭제(휴지통) 버튼 ── */
-      #slipLineTbody .btn.in_btn.del {
-          display: flex !important;
-          justify-content: center !important;
-          align-items: center !important;
-          width: 2em !important;
-          height: 2em !important;
-          margin: 0 auto !important;
       }
 
       .grid-guide-box {
@@ -120,89 +47,144 @@
       }
 
       /* ============================================================
-         분개 라인 카드 그룹핑
-         - 기존 테이블/JS 구조 유지, 시각 스타일만 추가
-         - 메인행(tr[data-line-idx]) + 상세행(tr[data-detail-idx])
-           한 쌍을 하나의 '카드'처럼 보이게 함
+         분개 라인 — 목록(읽기 전용) + 하단 입력 영역
          ============================================================ */
-      /* 행 쌍 사이 세로 간격 */
+      .line-toolbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin: 8px 0 4px;
+          gap: 8px;
+      }
+      .line-toolbar ul { display: flex; gap: 5px; margin: 0; padding: 0; list-style: none; }
+      .line-toolbar .hint { font-size: 12px; color: #666; }
+
+      .line-list-wrap {
+          max-height: 320px;
+          overflow: auto;
+          border: 1px solid #dee2e6;
+          outline: none;
+      }
+      .line-list-wrap:focus { border-color: #378ADD; }
+
       #slipLineTable {
-          border-collapse: separate !important;
-          border-spacing: 0 8px !important;
+          width: 100%;
+          border-collapse: collapse;
+          table-layout: fixed;
       }
-      #slipLineTable thead th {
-          border-bottom: 1px solid #dee2e6 !important;
+      #slipLineTable th {
+          position: sticky;
+          top: 0;
+          z-index: 1;
+          background: #f1f3f5;
+          font-weight: 600;
+          text-align: center;
+          border-bottom: 1px solid #ced4da;
+          padding: 4px 6px !important;
       }
-      /* ── 메인행: 카드 윗부분 ── */
-      #slipLineTbody tr[data-line-idx] > td {
-          border-top: 1px solid #e5e7eb !important;
-          border-bottom: none !important;
-          background: #ffffff !important;
+      #slipLineTable td {
+          padding: 3px 6px !important;
+          border-bottom: 1px solid #eef0f2;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          cursor: pointer;
       }
-      #slipLineTbody tr[data-line-idx] > td:first-child {
-          border-left: 3px solid #378ADD !important;   /* 기본 파랑(차변) */
-          border-top-left-radius: 8px !important;
+      #slipLineTable td.r { text-align: right; }
+      #slipLineTable td.c { text-align: center; }
+      #slipLineTable td.zero { color: #c4c4c4; }
+      #slipLineTable td.warn { color: #dc3545; }
+      #slipLineTable tr.dr td:first-child { border-left: 3px solid #378ADD; }
+      #slipLineTable tr.cr td:first-child { border-left: 3px solid #D85A30; }
+      #slipLineTable tr.dr td.drcr { color: #185FA5; }
+      #slipLineTable tr.cr td.drcr { color: #993C1D; }
+      #slipLineTable tbody tr:hover td { background: #f8f9fa; }
+      #slipLineTable tbody tr.sel td { background: #e7f1fb !important; }
+
+      .line-panel {
+          border: 1px solid #ced4da;
+          border-left: 4px solid #378ADD;
+          padding: 8px 10px 10px;
+          margin-top: 6px;
+          background: #fbfcfd;
       }
-      #slipLineTbody tr[data-line-idx] > td:last-child {
-          border-right: 1px solid #e5e7eb !important;
-          border-top-right-radius: 8px !important;
+      .line-panel.is-credit { border-left-color: #D85A30; }
+      .line-panel .lp-head {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 6px;
+          font-weight: 600;
       }
-      #slipLineTbody tr[data-line-idx] > td:not(:first-child):not(:last-child) {
-          border-left: none !important;
-          border-right: none !important;
+      .line-panel .lp-head .hint { font-weight: 400; font-size: 12px; color: #666; }
+
+      .lp-grid {
+          display: grid;
+          grid-template-columns: repeat(8, minmax(0, 1fr));
+          gap: 6px 10px;
       }
-      /* 대변행이면 색 바 주황 (applyDrcrRule에서 클래스 토글) */
-      #slipLineTbody tr.is-credit[data-line-idx] > td:first-child {
-          border-left-color: #D85A30 !important;
+      .lp-field { min-width: 0; display: flex; flex-direction: column; }
+      .lp-field > label {
+          display: block;
+          font-size: 12px;
+          color: #555;
+          margin-bottom: 2px;
+          white-space: nowrap;
+      }
+      .lp-field > label.req { color: #dc3545; }
+      .lp-field input[type="text"],
+      .lp-field select {
+          width: 100% !important;
+          height: 30px !important;
+          box-sizing: border-box !important;
+          padding: 0 8px;
+      }
+      .lp-field input[readonly] { background: #f5f5f5; color: #888; }
+      .lp-field textarea {
+          width: 100% !important;
+          /* flex-basis 를 auto 로 둬야 손으로 끌어 바꾼 높이가 유지된다 (1 이면 무시됨) */
+          flex: 1 1 auto;
+          min-height: 66px;
+          max-height: 300px;
+          resize: vertical !important;
+          box-sizing: border-box;
+          padding: 4px 8px;
+          line-height: 1.4;
+          font-family: inherit;
+          font-size: inherit;
+      }
+      .lp-pair { display: flex; gap: 4px; }
+      .lp-pair input.code { flex: 0 0 64px; width: 64px !important; }
+      .lp-pair input.main { flex: 1; min-width: 0; }
+      .lp-pair input.disp { flex: 0 0 auto; min-width: 90px; max-width: 220px; }
+      .lp-amt { text-align: right; }
+      .span2 { grid-column: span 2; }
+      .span4 { grid-column: span 4; }
+      .row2  { grid-row: span 2; }
+
+      /* ── 화면 높이 고정 해제 (이 화면만) ──
+         layout_page 는 .layout-contents 를 100vh 로 고정하고, 탭 영역(.tab-wrap / .tab-contents / section)이
+         그 안에서 flex 로 줄어들게 한다. 전표 등록 탭은 내용이 길어 아래가 잘리므로
+         이 화면에서는 높이를 내용만큼 늘리고 페이지 전체가 스크롤되게 한다.
+         전표 목록 탭의 그리드는 높이(540px)가 고정이라 영향이 없다. */
+      /* layout.css 의 .layout-contents { padding: 20px 30px 30px } 하단 30px 가 회색 여백으로 남는다 */
+      .layout-contents {
+          height: auto !important;
+          min-height: 100vh;
+          padding-bottom: 8px !important;
+      }
+      .layout-contents .tab-wrap,
+      .layout-contents .tab-wrap > div,
+      .layout-contents .tab-contents,
+      .layout-contents section.tab-item {
+          flex: 0 0 auto !important;
+          height: auto !important;
+          max-height: none !important;
+          min-height: 0;
+          overflow: visible !important;
       }
 
-      /* ── 상세행: 카드 아랫부분 ── */
-      #slipLineTbody tr[data-detail-idx] > td {
-          border-top: none !important;
-          border-bottom: 1px solid #e5e7eb !important;
-          border-left: 3px solid #378ADD !important;
-          border-right: 1px solid #e5e7eb !important;
-          border-bottom-left-radius: 8px !important;
-          border-bottom-right-radius: 8px !important;
-          background: #f8f9fa !important;              /* 옅은 회색 = 종속 정보 */
-          padding: 0 !important;                       /* ★추가: td 자체 패딩 제거 */
-      }
-      #slipLineTbody tr.is-credit-detail[data-detail-idx] > td {
-          border-left-color: #D85A30 !important;
-      }
-
-      /* ★추가: 상세행 안쪽 div — 메인행 첫 칸과 좌측 들여쓰기 통일 + 인라인 배경/테두리 무력화 */
-      #slipLineTbody tr[data-detail-idx] > td > div {
-          padding-left: 0.75em !important;
-          background: transparent !important;
-          border-top: none !important;
-      }
-      /* ★추가: 옛 들여쓰기 가이드 라인(첫 자식 div) 숨김 */
-      #slipLineTbody tr[data-detail-idx] > td > div > div:first-child {
-          display: none !important;
-      }
-
-      /* 상세행이 숨겨진 카드는 메인행 하단도 마감 */
-      #slipLineTbody tr[data-line-idx]:has(+ tr[data-detail-idx][style*="display: none"]) > td,
-      #slipLineTbody tr[data-line-idx]:has(+ tr[data-detail-idx][style*="display:none"]) > td {
-          border-bottom: 1px solid #e5e7eb !important;
-      }
-      #slipLineTbody tr[data-line-idx]:has(+ tr[data-detail-idx][style*="display: none"]) > td:first-child,
-      #slipLineTbody tr[data-line-idx]:has(+ tr[data-detail-idx][style*="display:none"]) > td:first-child {
-          border-bottom-left-radius: 8px !important;
-      }
-      #slipLineTbody tr[data-line-idx]:has(+ tr[data-detail-idx][style*="display: none"]) > td:last-child,
-      #slipLineTbody tr[data-line-idx]:has(+ tr[data-detail-idx][style*="display:none"]) > td:last-child {
-          border-bottom-right-radius: 8px !important;
-      }
-
-      /* readonly 금액칸 0 흐리게 (기존 회색 + 글자색 보강) */
-      #slipLineTbody input[name^="dramt"][readonly],
-      #slipLineTbody input[name^="cramt"][readonly] {
-          color: #c4c4c4 !important;
-      }
-
-      /* ── 검색 영역: 조건이 늘어 한 줄을 넘치므로 줄바꿈 허용 + 폭 축소 ── */
+      /* ── 검색 영역 ── */
       .search-wrap {
           flex-wrap: wrap;
           row-gap: 12px;
@@ -220,7 +202,6 @@
       .search-wrap #search_amtto {
           width: 120px;
           min-width: 0;
-          /* 우측 지우기(x) 아이콘과 숫자가 겹치지 않도록 자리를 비워둔다 */
           padding-right: 26px;
       }
   </style>
@@ -339,7 +320,6 @@
                 <dd>
                   <li>
                     <button class="btn btn-delete" id="btnSearch" title="검색" type="button">
-                      <!--                                        class 쓰이는 곳 찾고 없으면 클래스명 수정하기-->
                       <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
                       검색
                     </button>
@@ -368,18 +348,12 @@
         </section>
 
         <!--전표 등록-->
-        <section class="tab-item" id="tab2" style="padding:0 15px !important;">
+        <section class="tab-item" id="tab2" style="padding:0 15px 16px !important;">
           <div class="section">
             <div class="title-wrap">
             </div>
             <div class="button-wrap" style="border-top:none; display:flex; flex-direction:row; align-items:center; justify-content:space-between;">
               <ul style="display:flex; gap:5px;">
-                <!--<li id="li_btnFileUpload" style="display:none;">
-                  <a class="btn btn-excell" id="btnFileUpload" title="첨부파일">
-                    <img alt="등록 아이콘" th:src="@{/images/icon/ico-plus.svg}">
-                    첨부파일
-                  </a>
-                </li>-->
                 <li>
                   <a class="btn btn-excell" id="Newbtn" title="신규등록">
                     <img alt="등록 아이콘" th:src="@{/images/icon/ico-plus.svg}">
@@ -418,7 +392,7 @@
                 </li>
               </ul>
               <div class="grid-guide-box" style="margin-bottom:0;">
-                ※ 단축키  조회: F4 / 신규: Insert / 저장: F6 / 삭제: F7 / 산출내역 줄바꿈: Shift+Enter
+                ※ 단축키  조회: F4 / 신규: Insert / 저장: F6 / 삭제: F7
               </div>
             </div>
             <form id="CategoryForm" style="display:flex; align-items:flex-start; gap:0;">
@@ -426,21 +400,20 @@
                 <table class="view-table" id="selectedData">
                   <caption>전표 등록 테이블</caption>
                   <colgroup>
-                    <col style="width:6%">   <!-- th1 -->
-                    <col style="width:13%">  <!-- td1 -->
-                    <col style="width:6%">   <!-- th2 -->
-                    <col style="width:13%">  <!-- td2 -->
-                    <col style="width:6%">   <!-- th3 -->
-                    <col style="width:13%">  <!-- td3 -->
-                    <col style="width:4%">   <!-- th4: 현금 (좁게) -->
-                    <col style="width:4%">   <!-- td4: 현금 체크박스 (좁게) -->
-                    <col style="width:6%">   <!-- th5 -->
-                    <col style="width:13%">  <!-- td5 -->
-                    <col style="width:6%">   <!-- th6 -->
-                    <col style="width:10%">  <!-- td6 -->
+                    <col style="width:6%">
+                    <col style="width:13%">
+                    <col style="width:6%">
+                    <col style="width:13%">
+                    <col style="width:6%">
+                    <col style="width:13%">
+                    <col style="width:4%">
+                    <col style="width:4%">
+                    <col style="width:6%">
+                    <col style="width:13%">
+                    <col style="width:6%">
+                    <col style="width:10%">
                   </colgroup>
 
-                  <!-- Row 1: 전표일자 / 전표번호 / 입출구분 / 현금 / 빈칸 / 빈칸 -->
                   <tr>
                     <th><label for="spdate">전표일자</label></th>
                     <td><input class="wp100" id="spdate" name="spdate" type="date"/></td>
@@ -462,7 +435,6 @@
                       </select>
                     </td>
 
-                    <!-- 현금: th/td 모두 좁게 -->
                     <th style="text-align:center; padding:0 2px;"><label for="cashyn">현금</label></th>
                     <td style="text-align:center; padding:0 2px;">
                       <input id="cashyn" name="cashyn" type="checkbox"/>
@@ -492,7 +464,6 @@
                       </select>
                     </td>
                   </tr>
-                  <!-- Row 2-1: 작성일자 / 최종수정일 -->
                   <tr>
                     <th><label for="readate">작성일자</label></th>
                     <td><input class="wp100" id="readate" name="readate" type="date"/></td>
@@ -503,7 +474,6 @@
                     <td colspan="8"></td>
                   </tr>
 
-                  <!-- Row 3: 제목 -->
                   <tr>
                     <th><label for="subject">제목</label></th>
                     <td colspan="11">
@@ -511,41 +481,37 @@
                     </td>
                   </tr>
 
-                  <!-- Row 4: 사업명 -->
                   <tr>
                     <th><label for="busicd">사업명</label></th>
-                    <td colspan="10" style="overflow:visible;">  <!-- hidden → visible -->
+                    <td colspan="10" style="overflow:visible;">
                       <div style="display:flex; gap:10px; align-items:center; width:100%;">
                         <input id="bsdate" name="bsdate" type="hidden"/>
                         <input id="bseccd" name="bseccd" type="hidden"/>
                         <input id="busicd" name="busicd" placeholder="사업코드" readonly
-                               style="width:90px !important; flex-shrink:0;" type="text"/>  <!-- 120px → 80px -->
+                               style="width:90px !important; flex-shrink:0;" type="text"/>
                         <input id="businame" name="businame" placeholder="사업명"
-                               style="flex:1; min-width:0;  width: 600px !important;" type="text"/>  <!-- min-width:0 추가 -->
+                               style="flex:1; min-width:0;  width: 600px !important;" type="text"/>
                       </div>
                     </td>
                   </tr>
 
-                  <!-- Row 5: 비고 + 합계 테이블 -->
                   <tr>
                     <th><label for="remark">비고</label></th>
                     <td colspan="11" style="padding:0 !important;">
                       <div style="display:flex; align-items:stretch; gap:0;">
 
-                        <!-- 비고 textarea (좌측 70%) -->
                         <textarea class="wp100" id="remark" name="remark"
                                   placeholder="비고"
-                                  style="flex:0 0 70%; height:200px; resize:none;
+                                  style="flex:0 0 70%; height:120px; resize:none;
                        border:none; border-right:1px solid #dee2e6;
                        padding:6px 8px; font-size:inherit;
                        box-sizing:border-box;"></textarea>
 
-                        <!-- 합계 테이블 (우측 30%) -->
                         <div style="flex:0 0 30%; border-left:1px solid #dee2e6;">
                           <table class="view-table" style="width:100%; margin:0; height:100%; table-layout:fixed;">
                             <colgroup>
-                              <col style="width:40%">  <!-- 차변/대변/차액 라벨 -->
-                              <col style="width:60%">  <!-- 금액 -->
+                              <col style="width:40%">
+                              <col style="width:60%">
                             </colgroup>
                             <tbody>
                             <tr>
@@ -586,168 +552,134 @@
                 </table>
               </div>
             </form>
-            <!-- ── 분개 라인 ── -->
-            <div style="margin-top:6px;">
 
-              <!-- 분개 라인 테이블 -->
-              <div class="table-wrap">
-                <table class="write-table" id="slipLineTable">
-                  <caption style="display:none">분개 라인</caption>
-                  <colgroup>
-                    <col style="width:16%">
-                    <col style="width:7%">
-                    <col style="width:9%">
-                    <col style="width:9%">
-                    <col style="width:24%">
-                    <col style="width:9%">
-                    <col style="width:10%">
-                    <col style="width:10%">
-                    <col style="width:5%">
-                  </colgroup>
-                  <thead>
-                  <tr>
-                    <th>관명(계정)</th>
-                    <th>차대</th>
-                    <th>항</th>
-                    <th>목</th>
-                    <th>산출내역</th>
-                    <th>재원</th>
-                    <th>차변금액</th>
-                    <th>대변금액</th>
-                    <th>
-                      <a class="btn in_btn plus" id="addSlipLine"
-                         style="width:30px; height:35px;" title="행 추가">
-                        <img alt="추가 아이콘" style="width:12px; height:12px; margin-left:5px;"
-                             th:src="@{/images/icon/ico-plus.svg}"/>
-                      </a>
-                    </th>
-                  </tr>
-                  </thead>
-                  <tbody id="slipLineTbody">
-                  <tr class="slip-line-template" style="display:none;">
-                    <input name="spseq" type="hidden"/>
-                    <td>
-                      <div style="display:flex; gap:4px;">
-                        <input name="acccd" placeholder="코드" readonly style="width:70px;" type="text" tabindex="-1"/>
-                        <input name="acnflag" placeholder="계좌필여부" type="hidden"/>
-                        <input name="accnm" placeholder="관명(계정)" style="flex:1; width:150px !important;" type="text" />
-                      </div>
-                    </td>
-                    <td>
-                      <select name="drcr" style="width:100%;">
-                        <option value="1">차변</option>
-                        <option value="2">대변</option>
-                      </select>
-                    </td>
-                    <td>
-                      <input name="it1cd" type="hidden"/>
-                      <input class="btn-it1-search" name="it1nm" placeholder="항" style="width:100%;" type="text"/>
-                    </td>
-                    <td>
-                      <input name="it2cd" type="hidden"/>
-                      <input class="btn-it2-search" name="it2nm" placeholder="목" style="width:100%;" type="text"/>
-                    </td>
-                    <td>
-                      <!-- 산출내역: 여러 줄 입력 (Shift+Enter 줄바꿈, Enter 다음 칸) -->
-                      <textarea class="summy-area" name="summy" placeholder="산출내역 (Shift+Enter 줄바꿈)" rows="1"></textarea>
-                    </td>
-                    <td>
-                      <input name="msseccd" type="hidden"/>
-                      <input class="btn-mssec-search" name="mssecnm"
-                             placeholder="재원" style="width:100%;" type="text"/>
-                    </td>
-                    <td><input name="dramt" placeholder="차변금액" style="width:100%; text-align:right;" type="text" value="0"/></td>
-                    <td><input name="cramt" placeholder="대변금액" style="width:100%; text-align:right;" type="text" value="0"/></td>
-                    <td class="al_c item_border">
-                      <a class="btn in_btn del"
-                         style="display:flex; justify-content:center; align-items:center; width:35px; height:35px; margin:0 auto;"
-                         title="행 삭제">
-                        <img alt="삭제 아이콘" style="width:12px; height:12px; margin-left:7px;"
-                             th:src="@{/images/icon/ico-delete.svg}"/>
-                      </a>
-                    </td>
-                  </tr>
+            <!-- ── 분개 라인 : 목록 ── -->
+            <div class="line-toolbar">
+              <ul>
+                <li>
+                  <a class="btn btn-excell" id="addSlipLine" title="행 추가">
+                    <img alt="추가 아이콘" th:src="@{/images/icon/ico-plus.svg}">
+                    행 추가
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-delete" id="delSlipLine" title="선택 행 삭제">
+                    <img alt="삭제 아이콘" th:src="@{/images/icon/ico-delete.svg}">
+                    행 삭제
+                  </a>
+                </li>
+              </ul>
+              <span class="hint">행을 클릭하면 아래에서 수정합니다. 목록에서 ↑↓ 로 행 이동, Enter 로 입력 시작</span>
+            </div>
 
-                  <tr class="slip-line-template slip-detail-template" style="display:none;">
-                    <td colspan="9" style="padding:0; border-top:none;">
-                      <div style="display:flex; align-items:stretch;
-                background:var(--color-background-secondary);
-                border-top:0.5px dashed var(--color-border-secondary);">
+            <div class="line-list-wrap" id="lineListWrap" tabindex="0">
+              <table id="slipLineTable">
+                <caption style="display:none">분개 라인</caption>
+                <colgroup>
+                  <col style="width:5%">
+                  <col style="width:11%">
+                  <col style="width:5%">
+                  <col style="width:12%">
+                  <col style="width:10%">
+                  <col style="width:21%">
+                  <col style="width:6%">
+                  <col style="width:9%">
+                  <col style="width:9%">
+                  <col style="width:12%">
+                </colgroup>
+                <thead>
+                <tr>
+                  <th>코드</th>
+                  <th>관명(계정)</th>
+                  <th>차대</th>
+                  <th>항</th>
+                  <th>목</th>
+                  <th>산출내역</th>
+                  <th>재원</th>
+                  <th>차변금액</th>
+                  <th>대변금액</th>
+                  <th>거래처·카드·계좌</th>
+                </tr>
+                </thead>
+                <tbody id="slipLineTbody"></tbody>
+              </table>
+            </div>
 
-                        <!-- 들여쓰기 가이드 라인 -->
-                        <div style="width:14px; flex-shrink:0;
-                  border-left:2px solid var(--color-border-secondary);
-                  margin-left:14px;"></div>
+            <!-- ── 분개 라인 : 선택 행 입력 영역 ── -->
+            <div class="line-panel" id="linePanel">
+              <div class="lp-head">
+                <span id="lpTitle">1행 입력</span>
+                <span class="hint">Enter 다음 칸 · 산출내역 줄바꿈 Shift+Enter · 거래처·카드·계좌는 비어 있으면 Enter 로 건너뛰고, F2 로 전체 목록 조회</span>
+              </div>
+              <div class="lp-grid">
+                <div class="lp-field span2">
+                  <label for="pnl_accnm">관명(계정)</label>
+                  <div class="lp-pair">
+                    <input class="code" id="pnl_acccd" placeholder="코드" readonly tabindex="-1" type="text"/>
+                    <input class="main" id="pnl_accnm" placeholder="관명 입력 후 Enter" type="text"/>
+                    <input id="pnl_acnflag" type="hidden"/>
+                  </div>
+                </div>
+                <div class="lp-field">
+                  <label for="pnl_drcr">차대</label>
+                  <select id="pnl_drcr">
+                    <option value="1">차변</option>
+                    <option value="2">대변</option>
+                  </select>
+                </div>
+                <div class="lp-field">
+                  <label for="pnl_it1nm">항</label>
+                  <input id="pnl_it1cd" type="hidden"/>
+                  <input id="pnl_it1nm" placeholder="항" type="text"/>
+                </div>
+                <div class="lp-field">
+                  <label for="pnl_it2nm">목</label>
+                  <input id="pnl_it2cd" type="hidden"/>
+                  <input id="pnl_it2nm" placeholder="목" type="text"/>
+                </div>
+                <div class="lp-field">
+                  <label for="pnl_mssecnm">재원</label>
+                  <input id="pnl_msseccd" type="hidden"/>
+                  <input id="pnl_mssecnm" placeholder="재원" type="text"/>
+                </div>
+                <div class="lp-field">
+                  <label for="pnl_dramt">차변금액</label>
+                  <input class="lp-amt" id="pnl_dramt" placeholder="0" type="text"/>
+                </div>
+                <div class="lp-field">
+                  <label for="pnl_cramt">대변금액</label>
+                  <input class="lp-amt" id="pnl_cramt" placeholder="0" type="text"/>
+                </div>
 
-                        <div style="display:flex; align-items:center; flex:1; gap:8px; padding:8px 10px;">
-
-                          <!-- 거래처 -->
-                          <div style="display:flex; align-items:center; flex:1; min-width:0; gap:6px;">
-          <span style="font-size:11px; font-weight:500; white-space:nowrap;
-                       color:var(--color-text-secondary); flex-shrink:0;">거래처</span>
-                            <input name="cltcd"  type="hidden"/>
-                            <input name="cltflag" type="hidden"/>
-                            <input name="cltnm" placeholder="거래처" type="text" class="btn-clt-search"
-                                   style="flex:1; min-width:0; width:100% !important; height:32px;
-                        padding:0 8px; font-size:12px;
-                        background:var(--color-background-primary, #fff);
-                        border:1px solid var(--color-border-tertiary, #ccc);
-                        border-radius:4px;"/>
-                          </div>
-
-                          <!-- 카드 -->
-                          <div style="display:flex; align-items:center; flex:1; min-width:0; gap:6px;">
-  <span style="font-size:11px; font-weight:500; white-space:nowrap;
-               color:var(--color-text-secondary); flex-shrink:0;">카드</span>
-                            <input name="cardcd" type="hidden"/>
-                            <!-- ★추가: 카드명 표시칸 (읽기전용) -->
-                            <input name="cardnmdisp" placeholder="카드명" type="text" readonly tabindex="-1"
-                                   class="disp-autofit"
-                                   style="flex:0 0 auto; min-width:90px; max-width:260px; width:90px; height:32px;
-                padding:0 8px; font-size:12px; color:var(--color-text-secondary);
-                background:#f5f5f5;
-                border:1px solid var(--color-border-tertiary, #ccc);
-                border-radius:4px;"/>
-                            <!-- 기존 카드번호 칸 -->
-                            <input name="cardnm" placeholder="카드" type="text" class="btn-card-search"
-                                   style="flex:1; min-width:0; width:100% !important; height:32px;
-                padding:0 8px; font-size:12px;
-                background:var(--color-background-primary, #fff);
-                border:1px solid var(--color-border-tertiary, #ccc);
-                border-radius:4px;"/>
-                          </div>
-
-                          <!-- 계좌 -->
-                          <div style="display:flex; align-items:center; flex:1; min-width:0; gap:6px;">
-  <span class="bank-label" style="font-size:11px; font-weight:500; white-space:nowrap;
-               color:var(--color-text-secondary); flex-shrink:0;">계좌</span>
-                            <input name="bankcd" type="hidden"/>
-                            <!-- ★추가: 은행명 표시칸 (읽기전용, 핸들러가 자동 채움) -->
-                            <input name="banknmdisp" placeholder="은행" type="text" readonly tabindex="-1"
-                                   class="disp-autofit"
-                                   style="flex:0 0 auto; min-width:90px; max-width:260px; width:90px; height:32px;
-                padding:0 8px; font-size:12px; color:var(--color-text-secondary);
-                background:#f5f5f5;
-                border:1px solid var(--color-border-tertiary, #ccc);
-                border-radius:4px;"/>
-                            <!-- 기존 계좌번호 칸 -->
-                            <input name="banknm" placeholder="계좌" type="text" class="btn-bank-search"
-                                   style="flex:1; min-width:0; width:100% !important; height:32px;
-                padding:0 8px; font-size:12px;
-                background:var(--color-background-primary, #fff);
-                border:1px solid var(--color-border-tertiary, #ccc);
-                border-radius:4px;"/>
-                          </div>
-
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-
-                  </tbody>
-                </table>
+                <div class="lp-field span4 row2">
+                  <label for="pnl_summy">산출내역</label>
+                  <textarea id="pnl_summy" placeholder="산출내역 (Shift+Enter 줄바꿈)" rows="3"></textarea>
+                </div>
+                <div class="lp-field span4">
+                  <label for="pnl_cltnm">거래처</label>
+                  <input id="pnl_cltcd" type="hidden"/>
+                  <input id="pnl_cltflag" type="hidden"/>
+                  <input id="pnl_cltnm" placeholder="거래처명 입력 후 Enter" type="text"/>
+                </div>
+                <div class="lp-field span2">
+                  <label for="pnl_cardnum">카드</label>
+                  <div class="lp-pair">
+                    <input id="pnl_cardcd" type="hidden"/>
+                    <input class="disp" id="pnl_cardnmdisp" placeholder="카드명" readonly tabindex="-1" type="text"/>
+                    <input class="main" id="pnl_cardnum" placeholder="카드번호" type="text"/>
+                  </div>
+                </div>
+                <div class="lp-field span2">
+                  <label for="pnl_banknum" id="lblBank">계좌</label>
+                  <div class="lp-pair">
+                    <input id="pnl_bankcd" type="hidden"/>
+                    <input class="disp" id="pnl_banknmdisp" placeholder="은행" readonly tabindex="-1" type="text"/>
+                    <input class="main" id="pnl_banknum" placeholder="계좌번호" type="text"/>
+                  </div>
+                </div>
               </div>
             </div>
+
           </div>
         </section>
       </div>
@@ -875,6 +807,34 @@
   <th:block th:replace="common/popup_card :: popup_card" />
   <script th:src="@{/js/cycle/CardInputHandler.js}"></script>
   <script type="text/javascript">
+   // 분개 라인 한 건의 필드 ↔ 하단 입력칸 id
+   const LINE_FIELD_IDS = {
+    acccd:   'pnl_acccd',
+    accnm:   'pnl_accnm',
+    acnflag: 'pnl_acnflag',
+    drcr:    'pnl_drcr',
+    it1cd:   'pnl_it1cd',
+    it1nm:   'pnl_it1nm',
+    it2cd:   'pnl_it2cd',
+    it2nm:   'pnl_it2nm',
+    msseccd: 'pnl_msseccd',
+    mssecnm: 'pnl_mssecnm',
+    summy:   'pnl_summy',
+    cltcd:   'pnl_cltcd',
+    cltflag: 'pnl_cltflag',
+    cltnm:   'pnl_cltnm',
+    cardcd:  'pnl_cardcd',
+    cardnum: 'pnl_cardnum',
+    cardnm:  'pnl_cardnmdisp',
+    bankcd:  'pnl_bankcd',
+    accnum:  'pnl_banknum',
+    banknm:  'pnl_banknmdisp',
+   };
+
+   const escHtml = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+    c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+   const toNum = v => parseFloat(String(v == null ? '' : v).replace(/,/g, '')) || 0;
+
    class SlipStatusPage {
     constructor() {
      this.url = '/api/account_management/slip_status';
@@ -883,17 +843,17 @@
      this.viewData = new wijmo.collections.CollectionView();
      this.uploader = null;
      this.currentSlipId = null;
-     this.lineIndex = 0;
      this.mssecOptions = null;
+     this.lines = [];      // 분개 라인 데이터 (화면 목록은 이 배열을 그리기만 한다)
+     this.sel = -1;        // 선택된 라인 index
      this.init();
     }
 
     init() {
      let _this = this;
-     _this.initDrcrControl();
 
-     this.addSlipLine('1');  // 차변
-     this.addSlipLine('2');
+     _this.initLineEditor();
+     _this.resetLines();
 
      _this.grid = new wijmo.grid.FlexGrid('#theGrid_slip_list', {
       headersVisibility: wijmo.grid.HeadersVisibility.Column,
@@ -919,10 +879,10 @@
          } else if (val === '대체') {
           e.cell.style.color = 'green';
          } else {
-          e.cell.style.color = '';  // 초기화
+          e.cell.style.color = '';
          }
         } else {
-         e.cell.style.color = '';  // 다른 컬럼 초기화
+         e.cell.style.color = '';
         }
        }
       },
@@ -933,7 +893,7 @@
         width: 50,
         align: 'center',
         dataType: wijmo.DataType.Boolean,
-        isReadOnly: false   // 체크박스만 편집 가능
+        isReadOnly: false
        },
        {binding: 'setnum', header: '관리번호', width: 100, align: 'center', visible: false, isReadOnly: true},
        {binding: 'spdate', header: '전표일자', width: 100, align: 'center', isReadOnly: true},
@@ -958,16 +918,13 @@
      new FlexGridContextMenu(this.grid);
      _this.grid.downloadFileName = '전표내역';
 
-     // footer 합계행 추가
      _this.grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
 
-     // '일자' 컬럼 위치에 합계 표시
      const apvDtColIndex = _this.grid.columns.findIndex(c => c.binding === 'spdate');
      if (apvDtColIndex > -1) {
       _this.grid.columnFooters.setCellData(0, apvDtColIndex, '합계');
      }
 
-     // 금액 컬럼 aggregate 지정
      const buySumCol = _this.grid.columns.getColumn('amt');
      if (buySumCol) {
       buySumCol.aggregate = wijmo.Aggregate.Sum;
@@ -979,48 +936,604 @@
       if (!items || items.length === 0) return;
 
       const selected = items[0];
-
-      // 탭2(전표 등록)로 전환
       $('a[href="#tab2"]').trigger('click');
-
-      // 탭 전환 후 데이터 바인딩
       setTimeout(() => {
        _this.bindToTab2Form(selected);
       }, 100);
      });
-
-     //===전표등록 ==
-
-     //-- 행 추가 --
-     $('#addSlipLine').on('click', () => {
-      this.addSlipLine('1', true);
-     });
-
-     // ── 행 삭제 ──
-     $('#slipLineTbody').on('click', 'a[title="행 삭제"]', function () {
-      const $tbody = $('#slipLineTbody');
-      const $rows = $tbody.find('tr:not(.slip-line-template)');
-      const $targetRow = $(this).closest('tr');
-
-      if ($rows.length <= 2) {
-       $targetRow.find('input[type="text"]:not([readonly])').val('');
-       $targetRow.find('input[type="hidden"]').val('');
-       $targetRow.find('textarea').val('').css('height', '');
-       $targetRow.find('input[name="dramt"]').val('0');
-       $targetRow.find('input[name="cramt"]').val('0');
-      } else {
-       $targetRow.remove();
-      }
-      _this.calcSum();
-     });
-
-     // ── 합계 계산 ──
-     $('#slipLineTbody').on('input', 'input[name="dramt"], input[name="cramt"]', function () {
-      _this.calcSum();
-     });
-
-
     }//init
+
+    // ════════════════════════════════════════════════════════
+    //  분개 라인 : 데이터 / 목록 / 하단 입력 영역
+    // ════════════════════════════════════════════════════════
+
+    emptyLine(drcr = '1') {
+     return {
+      spseq: '', acccd: '', accnm: '', acnflag: '', drcr: drcr,
+      it1cd: '', it1nm: '', it2cd: '', it2nm: '',
+      msseccd: '', mssecnm: '', summy: '',
+      dramt: 0, cramt: 0,
+      cltcd: '', cltflag: '', cltnm: '',
+      cardcd: '', cardnum: '', cardnm: '',
+      bankcd: '', accnum: '', banknm: '',
+     };
+    }
+
+    resetLines() {
+     this.lines = [this.emptyLine('1'), this.emptyLine('2')];
+     this.sel = -1;
+     this.renderLines();
+     this.selectLine(0, false);
+     this.calcSum();
+    }
+
+    // 목록 한 행 HTML
+    rowHtml(l, i) {
+     const isCr = l.drcr === '2';
+     const fmt = n => (n ? Number(n).toLocaleString() : '0');
+
+     // 산출내역: 목록에는 첫 줄만, 여러 줄이면 … 표시. 전체는 마우스 오버로 본다.
+     const summyLines = String(l.summy || '').split(/\r?\n/);
+     const summyShow = summyLines[0] + (summyLines.length > 1 ? ' …' : '');
+
+     // 거래처·카드·계좌 요약
+     const parts = [];
+     if (l.cltnm) parts.push(l.cltnm);
+     if (l.cardnm || l.cardnum) parts.push(((l.cardnm || '') + ' ' + (l.cardnum || '')).trim());
+     if (l.banknm || l.accnum) parts.push(((l.banknm || '') + ' ' + (l.accnum || '')).trim());
+     const needBank = l.acnflag === '1' && !l.bankcd;
+     const detail = needBank ? '계좌 필수' : parts.join(' · ');
+
+     return `<tr class="${isCr ? 'cr' : 'dr'}${i === this.sel ? ' sel' : ''}" data-idx="${i}">`
+      + `<td class="c">${escHtml(l.acccd)}</td>`
+      + `<td title="${escHtml(l.accnm)}">${escHtml(l.accnm)}</td>`
+      + `<td class="c drcr">${isCr ? '대변' : '차변'}</td>`
+      + `<td title="${escHtml(l.it1nm)}">${escHtml(l.it1nm)}</td>`
+      + `<td title="${escHtml(l.it2nm)}">${escHtml(l.it2nm)}</td>`
+      + `<td title="${escHtml(l.summy)}">${escHtml(summyShow)}</td>`
+      + `<td class="c">${escHtml(l.mssecnm)}</td>`
+      + `<td class="r${l.dramt ? '' : ' zero'}">${fmt(l.dramt)}</td>`
+      + `<td class="r${l.cramt ? '' : ' zero'}">${fmt(l.cramt)}</td>`
+      + `<td class="${needBank ? 'warn' : ''}" title="${escHtml(parts.join(' · '))}">${escHtml(detail)}</td>`
+      + `</tr>`;
+    }
+
+    renderLines() {
+     $('#slipLineTbody').html(this.lines.map((l, i) => this.rowHtml(l, i)).join(''));
+    }
+
+    renderRow(i) {
+     const $tr = $(`#slipLineTbody tr[data-idx="${i}"]`);
+     if ($tr.length) $tr.replaceWith(this.rowHtml(this.lines[i], i));
+    }
+
+    // 행 선택 → 하단 입력 영역에 표시
+    selectLine(i, focus = true) {
+     if (i < 0 || i >= this.lines.length) return;
+     this.sel = i;
+     const $rows = $('#slipLineTbody tr');
+     $rows.removeClass('sel');
+     const $tr = $rows.filter(`[data-idx="${i}"]`).addClass('sel');
+     if ($tr.length) $tr[0].scrollIntoView({block: 'nearest'});
+
+     this.loadPanel();
+     if (focus) {
+      setTimeout(() => $('#pnl_accnm').focus().select(), 30);
+     }
+    }
+
+    loadPanel() {
+     const l = this.lines[this.sel];
+     if (!l) return;
+     Object.keys(LINE_FIELD_IDS).forEach(k => {
+      $('#' + LINE_FIELD_IDS[k]).val(l[k] == null ? '' : l[k]);
+     });
+     $('#pnl_dramt').val(l.dramt ? Number(l.dramt).toLocaleString() : '0');
+     $('#pnl_cramt').val(l.cramt ? Number(l.cramt).toLocaleString() : '0');
+     this.applyPanelDrcr();
+     this.refreshPanelHead();
+     this.fitDetailDisp();
+    }
+
+    refreshPanelHead() {
+     const l = this.lines[this.sel];
+     if (!l) return;
+     const isCr = l.drcr === '2';
+     $('#lpTitle').text(`${this.sel + 1}행 입력 (${isCr ? '대변' : '차변'})`);
+     $('#linePanel').toggleClass('is-credit', isCr);
+
+     const isBankReq = l.acnflag === '1';
+     $('#lblBank').toggleClass('req', isBankReq).text(isBankReq ? '계좌 (필수)' : '계좌');
+    }
+
+    // 차대 선택에 따라 반대쪽 금액칸을 잠근다
+    applyPanelDrcr() {
+     const isCr = $('#pnl_drcr').val() === '2';
+     const $dr = $('#pnl_dramt');
+     const $cr = $('#pnl_cramt');
+     if (isCr) {
+      $cr.prop('readonly', false);
+      $dr.prop('readonly', true).val('0');
+     } else {
+      $dr.prop('readonly', false);
+      $cr.prop('readonly', true).val('0');
+     }
+    }
+
+    // 하단 입력 영역 → 선택 라인 데이터 반영
+    syncPanel() {
+     const l = this.lines[this.sel];
+     if (!l) return;
+     Object.keys(LINE_FIELD_IDS).forEach(k => {
+      l[k] = $('#' + LINE_FIELD_IDS[k]).val() || '';
+     });
+     l.dramt = toNum($('#pnl_dramt').val());
+     l.cramt = toNum($('#pnl_cramt').val());
+     this.renderRow(this.sel);
+     this.refreshPanelHead();
+     this.fitDetailDisp();
+     this.calcSum();
+    }
+
+    activeAmountInput() {
+     return $('#pnl_drcr').val() === '2' ? $('#pnl_cramt') : $('#pnl_dramt');
+    }
+
+    addLine(drcr = '1', copyPrev = false) {
+     const l = this.emptyLine(drcr);
+     if (copyPrev && this.lines.length) {
+      const prev = this.lines[this.lines.length - 1];
+      ['it1cd', 'it1nm', 'it2cd', 'it2nm', 'msseccd', 'mssecnm'].forEach(k => l[k] = prev[k] || '');
+     }
+     this.lines.push(l);
+     this.renderLines();
+     this.selectLine(this.lines.length - 1, true);
+    }
+
+    deleteLine() {
+     if (this.sel < 0) return;
+     if (this.lines.length <= 2) {
+      // 최소 두 줄(차변·대변)은 남기고 내용만 비운다
+      this.lines[this.sel] = this.emptyLine(this.lines[this.sel].drcr);
+      this.renderRow(this.sel);
+      this.selectLine(this.sel, false);
+     } else {
+      this.lines.splice(this.sel, 1);
+      const next = Math.min(this.sel, this.lines.length - 1);
+      this.sel = -1;
+      this.renderLines();
+      this.selectLine(next, false);
+     }
+     this.calcSum();
+    }
+
+    // 다음 행으로 (없으면 새 행 추가)
+    goNextLine() {
+     this.syncPanel();
+     const next = this.sel + 1;
+     if (next < this.lines.length) {
+      this.copyItemFields(this.sel, next);
+      this.renderRow(next);
+      this.selectLine(next, true);
+     } else {
+      this.addLine('1', true);
+     }
+    }
+
+    // 앞 행 → 대상 행으로 항/목/재원 복사 (대상이 비어 있을 때만)
+    copyItemFields(fromIdx, toIdx) {
+     const from = this.lines[fromIdx];
+     const to = this.lines[toIdx];
+     if (!from || !to) return;
+     [
+      {disp: 'it1nm', code: 'it1cd'},
+      {disp: 'it2nm', code: 'it2cd'},
+      {disp: 'mssecnm', code: 'msseccd'},
+     ].forEach(({disp, code}) => {
+      if ((to[disp] || '').trim() !== '') return;
+      to[disp] = from[disp] || '';
+      to[code] = from[code] || '';
+     });
+    }
+
+    focusAfterCard() {
+     if ($('#pnl_acnflag').val() === '1') {
+      setTimeout(() => $('#pnl_banknum').focus().select(), 50);
+     } else {
+      this.goNextLine();
+     }
+    }
+
+    // 카드명·은행명 표시칸 폭을 글자 길이에 맞춘다 (90px ~ 220px)
+    fitDispWidth(el) {
+     if (!el) return;
+     const text = el.value || '';
+     el.title = text;
+     if (!text) { el.style.setProperty('width', '90px', 'important'); return; }
+
+     if (!this._measureCtx) {
+      this._measureCtx = document.createElement('canvas').getContext('2d');
+     }
+     const cs = getComputedStyle(el);
+     this._measureCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+     const textW = this._measureCtx.measureText(text).width;
+     const extra = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0)
+      + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0) + 6;
+     const w = Math.min(Math.max(Math.ceil(textW + extra), 90), 220);
+     el.style.setProperty('width', w + 'px', 'important');
+    }
+
+    fitDetailDisp() {
+     this.fitDispWidth(document.getElementById('pnl_cardnmdisp'));
+     this.fitDispWidth(document.getElementById('pnl_banknmdisp'));
+    }
+
+    // 하단 입력 영역 이벤트 (한 번만 바인딩)
+    initLineEditor() {
+     let _this = this;
+     const $panel = $('#linePanel');
+
+     // ── 목록: 클릭 선택 / 키보드 이동 ──
+     $('#slipLineTbody').on('click', 'tr', function () {
+      _this.selectLine(Number($(this).attr('data-idx')), false);
+      $('#lineListWrap').focus();
+     });
+     $('#lineListWrap').on('keydown', function (e) {
+      if (e.target !== this) return;
+      if (e.key === 'ArrowDown') {
+       e.preventDefault();
+       _this.selectLine(Math.min(_this.sel + 1, _this.lines.length - 1), false);
+      } else if (e.key === 'ArrowUp') {
+       e.preventDefault();
+       _this.selectLine(Math.max(_this.sel - 1, 0), false);
+      } else if (e.key === 'Enter') {
+       e.preventDefault();
+       $('#pnl_accnm').focus().select();
+      }
+     });
+
+     $('#addSlipLine').on('click', () => _this.addLine('1', true));
+     $('#delSlipLine').on('click', () => _this.deleteLine());
+
+     // ── 입력칸 변경 → 데이터 반영 ──
+     $panel.on('input change', 'input, select, textarea', function (e) {
+      const id = this.id;
+      if (id === 'pnl_drcr' && e.type === 'change') {
+       _this.applyPanelDrcr();
+      }
+      if (id === 'pnl_cltnm' && $(this).val().trim() === '') {
+       $('#pnl_cltcd').val('');
+       $('#pnl_cltflag').val('');
+      }
+      if (id === 'pnl_accnm' && $(this).val().trim() === '') {
+       $('#pnl_acccd').val('');
+       $('#pnl_acnflag').val('');
+      }
+      _this.syncPanel();
+     });
+
+     // ── 금액칸: 포커스 시 콤마 제거, 입력 중 천단위 콤마 ──
+     $('#pnl_dramt, #pnl_cramt')
+     .on('focus', function () {
+      if ($(this).prop('readonly')) return;
+      const raw = $(this).val().replace(/,/g, '');
+      $(this).val(raw === '0' ? '' : raw);
+     })
+     .on('keyup', function (e) {
+      if (e.key === 'Enter') return;
+      _this.formatNumberInput($(this).val(), this);
+     })
+     .on('blur', function () {
+      const n = toNum($(this).val());
+      $(this).val(n ? n.toLocaleString() : '0');
+      _this.syncPanel();
+     });
+
+     // ── Enter 이동 (카드·계좌는 아래에서 따로 처리) ──
+     $panel.on('keydown', 'input, select, textarea', function (e) {
+      const id = this.id;
+
+      // F2 : 거래처·카드·계좌 전체 목록
+      if (e.key === 'F2') {
+       if (id === 'pnl_cltnm')   { e.preventDefault(); _this.openCltPopup(''); }
+       if (id === 'pnl_cardnum') { e.preventDefault(); _this.openCardPopup(); }
+       if (id === 'pnl_banknum') { e.preventDefault(); _this.openBankPopup(); }
+       return;
+      }
+
+      if (e.key !== 'Enter') return;
+      if (id === 'pnl_cardnum' || id === 'pnl_banknum') return;
+      if (id === 'pnl_summy' && e.shiftKey) return;   // 산출내역 줄바꿈
+      e.preventDefault();
+
+      switch (id) {
+       case 'pnl_accnm':   _this.searchAccnm(); break;
+       case 'pnl_drcr':    $('#pnl_it1nm').focus().select(); break;
+       case 'pnl_it1nm':   _this.searchIt1nm(); break;
+       case 'pnl_it2nm':   _this.searchIt2nm(); break;
+       case 'pnl_summy':   $('#pnl_mssecnm').focus().select(); break;
+       case 'pnl_mssecnm': _this.searchMssec(); break;
+       case 'pnl_dramt':
+       case 'pnl_cramt':
+        $(this).trigger('blur');
+        $('#pnl_cltnm').focus().select();
+        break;
+       case 'pnl_cltnm': {
+        const kw = $(this).val().trim();
+        if (kw === '') {
+         $('#pnl_cardnum').focus().select();   // 비어 있으면 건너뜀
+        } else {
+         _this.openCltPopup(kw);
+        }
+        break;
+       }
+      }
+     });
+
+     // ── 카드 : 비어 있으면 Enter 로 건너뛴다 (핸들러보다 먼저 바인딩해야 가로챌 수 있다) ──
+     $('#pnl_cardnum').on('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      if ($(this).val().trim() === '') {
+       e.preventDefault();
+       e.stopImmediatePropagation();
+       _this.focusAfterCard();
+      }
+     });
+     CardInputHandler.bind({
+      cardnumSelector: '#pnl_cardnum',
+      cardnmSelector:  '#pnl_cardnmdisp',
+      cardidSelector:  '#pnl_cardcd',
+      minLength: 0,
+      onComplete: function (item) {
+       if (item) {
+        $('#pnl_cardnum').val(item.cardnum || '');
+        $('#pnl_cardcd').val(item.cardid || '');
+        $('#pnl_cardnmdisp').val(item.cardnm || item.cardName || '');
+       }
+       _this.syncPanel();
+       _this.focusAfterCard();
+      }
+     });
+
+     // ── 계좌 : 비어 있으면 Enter 로 다음 행 (계좌 필수 계정은 막는다) ──
+     $('#pnl_banknum').on('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      if ($(this).val().trim() === '') {
+       e.preventDefault();
+       e.stopImmediatePropagation();
+       if ($('#pnl_acnflag').val() === '1') {
+        Alert.alert('', '이 계정은 계좌 입력이 필수입니다.');
+        return;
+       }
+       _this.goNextLine();
+      }
+     });
+     AccountInputHandler.bind({
+      accnumSelector: '#pnl_banknum',
+      banknmSelector: '#pnl_banknmdisp',
+      bankidSelector: '#pnl_bankcd',
+      minLength: 0,
+      onSelect: function () {
+       _this.syncPanel();
+       _this.goNextLine();
+      }
+     });
+    }
+
+    // ── 거래처 / 카드 / 계좌 팝업 ──
+    openCltPopup(keyword) {
+     let _this = this;
+     const poppage = new PopCompComponent();
+     poppage.show(function (item) {
+      $('#pnl_cltnm').val(item.compname || '');
+      $('#pnl_cltcd').val(item.compcode || '');
+      $('#pnl_cltflag').val(item.cltflag || '');
+      _this.syncPanel();
+      setTimeout(() => $('#pnl_cardnum').focus().select(), 200);
+     }, keyword);
+    }
+
+    openCardPopup() {
+     let _this = this;
+     const poppage = new PopCardComponent();
+     poppage.show(function (item) {
+      $('#pnl_cardnum').val(item.cardnum || '');
+      $('#pnl_cardcd').val(item.cardid || '');
+      $('#pnl_cardnmdisp').val(item.cardnm || item.cardName || '');
+      _this.syncPanel();
+      _this.focusAfterCard();
+     }, '');
+    }
+
+    openBankPopup() {
+     let _this = this;
+     const poppage = new PopAccountComponent();
+     poppage.show(function (item) {
+      $('#pnl_banknum').val(item.accountNumber || '');
+      $('#pnl_banknmdisp').val(item.BankName || '');
+      $('#pnl_bankcd').val(item.bankId || '');
+      _this.syncPanel();
+      _this.goNextLine();
+     }, '');
+    }
+
+    // ── 목록형 선택 팝업 공통 (관·항·목·재원) ──
+    pickPopup(key, title, templateId, gridSelector, columns, dataList, onPick, width = 700, height = 420) {
+     let _this = this;
+     const popKey = key + 'Popup';
+     const gridKey = key + 'Grid';
+
+     if (_this[popKey]) {
+      _this[popKey].close();
+      _this[popKey] = null;
+     }
+
+     _this[popKey] = new PopupDraggable(title);
+     _this[popKey].open({width: width, height: height, $content: $(tmpl(templateId, {}))});
+
+     _this[gridKey] = new wijmo.grid.FlexGrid(gridSelector, {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: columns,
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+     _this[gridKey].keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const pick = function () {
+      const g = _this[gridKey];
+      if (!g) return;
+      const sel = g.selection;
+      if (!sel || sel.row < 0) return;
+      const item = g.rows[sel.row].dataItem;
+      if (_this[popKey]) {
+       _this[popKey].close();
+       _this[popKey] = null;
+      }
+      _this[gridKey] = null;
+      onPick(item);
+     };
+
+     setTimeout(function () {
+      const g = _this[gridKey];
+      if (g && g.rows.length > 0) {
+       g.select(0, 0);
+       g.focus();
+      }
+     }, 50);
+
+     _this[gridKey].hostElement.addEventListener('dblclick', pick);
+     _this[gridKey].hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       pick();
+      }
+     });
+    }
+
+    // ── 관명(계정) ──
+    searchAccnm() {
+     let _this = this;
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/findAccnm',
+      {accnm: $('#pnl_accnm').val(), type: 'account'},
+      function (res) {
+       const list = res.data || [];
+       if (list.length === 0) {
+        Alert.alert('', '관 조회 결과가 없습니다.');
+        return;
+       }
+       _this.pickPopup('acc', '관 조회', 'accnmTemplate', '#AccGrid', [
+        {binding: 'acccd', header: '관코드', width: 100, align: 'center'},
+        {binding: 'accnm', header: '관명', width: '*', align: 'left'},
+        {binding: 'acnflag', header: '계좌필수여부', visible: false}
+       ], list, item => {
+        $('#pnl_acccd').val(item.acccd || '');
+        $('#pnl_accnm').val(item.accnm || '');
+        $('#pnl_acnflag').val(item.acnflag || '');
+        _this.syncPanel();
+        setTimeout(() => $('#pnl_drcr').focus(), 50);
+       });
+      }
+     );
+    }
+
+    // ── 항 ──
+    searchIt1nm() {
+     let _this = this;
+     const tiosec = $('#tiosec').val();
+     if (!tiosec) {
+      Alert.alert('', '입출구분을 먼저 선택하세요.');
+      $('#tiosec').focus();
+      return;
+     }
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/findIt1nm',
+      {it1nm: $('#pnl_it1nm').val(), tiosec: tiosec},
+      function (res) {
+       const list = res.data || [];
+       if (list.length === 0) {
+        Alert.alert('', '항 조회 결과가 없습니다.');
+        return;
+       }
+       _this.pickPopup('it1', '항 조회', 'it1Template', '#It1Grid', [
+        {binding: 'it1cd', header: '항코드', width: 100, align: 'center'},
+        {binding: 'it1nm', header: '항명', width: '*', align: 'left'}
+       ], list, item => {
+        $('#pnl_it1cd').val(item.it1cd || '');
+        $('#pnl_it1nm').val(item.it1nm || '');
+        _this.syncPanel();
+        setTimeout(() => $('#pnl_it2nm').focus().select(), 50);
+       });
+      }
+     );
+    }
+
+    // ── 목 ──
+    searchIt2nm() {
+     let _this = this;
+     const tiosec = $('#tiosec').val();
+     if (!tiosec) {
+      Alert.alert('', '입출구분을 먼저 선택하세요.');
+      $('#tiosec').focus();
+      return;
+     }
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/findIt2nm',
+      {it2nm: $('#pnl_it2nm').val(), tiosec: tiosec},
+      function (res) {
+       const list = res.data || [];
+       if (list.length === 0) {
+        Alert.alert('', '목 조회 결과가 없습니다.');
+        return;
+       }
+       _this.pickPopup('it2', '목 조회', 'it2Template', '#It2Grid', [
+        {binding: 'it2cd', header: '목코드', width: 100, align: 'center'},
+        {binding: 'it2nm', header: '목명', width: '*', align: 'left'}
+       ], list, item => {
+        $('#pnl_it2cd').val(item.it2cd || '');
+        $('#pnl_it2nm').val(item.it2nm || '');
+        _this.syncPanel();
+        setTimeout(() => $('#pnl_summy').focus().select(), 50);
+       });
+      }
+     );
+    }
+
+    // ── 재원 ──
+    searchMssec() {
+     const _this = this;
+     const open = list => {
+      _this.pickPopup('mssec', '재원 조회', 'mssecTemplate', '#MssecGrid', [
+       {binding: 'value', header: '코드', width: 100, align: 'center'},
+       {binding: 'text', header: '재원명', width: '*', align: 'left'}
+      ], list, item => {
+       $('#pnl_msseccd').val(item.value || '');
+       $('#pnl_mssecnm').val(item.text || '');
+       _this.syncPanel();
+       setTimeout(() => _this.activeAmountInput().focus().select(), 50);
+      }, 400, 350);
+     };
+
+     if (_this.mssecOptions && _this.mssecOptions.length > 0) {
+      open(_this.mssecOptions);
+      return;
+     }
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/mssec', {},
+      function (res) {
+       const list = res.data || [];
+       if (list.length === 0) {
+        Alert.alert('', '재원 목록이 없습니다.');
+        return;
+       }
+       _this.mssecOptions = list;
+       open(list);
+      }
+     );
+    }
 
     searchMainData() {
      let _this = this;
@@ -1028,7 +1541,6 @@
      let start = $('#searchfrdate').val();
      let end = $('#searchtodate').val();
 
-     // 콤마·부호를 제거해 숫자 문자열만 넘긴다. 빈 값이면 조건에서 빠진다.
      const cleanAmt = v => (v == null ? '' : String(v)).replace(/[^0-9.\-]/g, '').trim();
 
      let data = {
@@ -1055,7 +1567,6 @@
     // 전표 출력 팝업 열기
     showPrintSelectPopup(keysParam) {
      let _this = this;
-     // html2pdf.js 동적 로드
      if (!document.getElementById('html2pdf-script')) {
       const script = document.createElement('script');
       script.id = 'html2pdf-script';
@@ -1066,30 +1577,20 @@
      const existing = document.getElementById('slip-print-overlay');
      if (existing) existing.remove();
 
-     /*const selectedItems = _this.viewData.sourceCollection.filter(r => r.selected);
-     const keys = selectedItems.map(r => r.spdate.replace(/-/g, '') + r.spnum).join(',');*/
      let keys = keysParam;
      if (!keys) {
       const selectedItems = _this.viewData.sourceCollection.filter(r => r.selected);
       keys = selectedItems.map(r => r.spdate.replace(/-/g, '') + r.spnum).join(',');
      }
 
-     // console.log('keys:', keys);
-
      fetch(withCtx(`/api/account_management/slip_status/print?printType=1&keys=${encodeURIComponent(keys)}`))
      .then(r => r.json())
      .then(d => {
-      // console.log('전체:', d);
-      // console.log('전표 수:', d.data?.length);
       if (d.data?.length > 0) {
        console.log('첫번째 전표:', d.data[0]);
-       // console.log('차변:', d.data[0].debit);
-       // console.log('대변:', d.data[0].credit);
-       // console.log('amt:', d.data[0].amt);
       }
      });
 
-     // ── 스타일 ──
      const css = `
         #slip-print-overlay {
             position:fixed; inset:0; background:rgba(0,0,0,.5);
@@ -1116,8 +1617,6 @@
      }
      styleEl.textContent = css;
 
-     // ── 팝업 HTML ──
-     // 인쇄/다운로드 버튼 없음 → 브라우저 PDF toolbar가 자동으로 제공
      const overlay = document.createElement('div');
      overlay.id = 'slip-print-overlay';
 
@@ -1170,7 +1669,6 @@
             </button>
             </div>
         </div>
-        <!-- ↓ PDF iframe → 브라우저가 toolbar(인쇄/다운로드) 자동 제공 -->
         <div class="sp-body">
             <iframe id="spIframe" style="width:100%;height:100%;border:none;"></iframe>
         </div>
@@ -1179,7 +1677,6 @@
      overlay.appendChild(popup);
      document.body.appendChild(overlay);
 
-     // ── sessionStorage에서 이전 선택값 복원 ──
      const savedPrintType = sessionStorage.getItem('slip_print_type');
      if (savedPrintType) {
       document.getElementById('spPrintType').value = savedPrintType;
@@ -1189,7 +1686,6 @@
       document.getElementById('spApprovers').value = savedApprovers;
      }
 
-     // 직급 입력값 정리: " 담당 ,, 팀장 " → "담당,팀장"
      const getApprovers = function () {
       const v = (document.getElementById('spApprovers').value || '')
       .split(',')
@@ -1204,7 +1700,6 @@
       return v;
      };
 
-     // ── iframe에 PDF URL 세팅 ──
      function renderPreview(printType) {
       const approvers = getApprovers();
       const url = `${_this.url}/print?printType=${printType}&keys=${encodeURIComponent(keys)}&approvers=${encodeURIComponent(approvers)}`;
@@ -1222,7 +1717,6 @@
       renderPreview(document.getElementById('spPrintType').value);
      });
 
-     // 직급 입력 후 Enter → 즉시 반영
      document.getElementById('spApprovers').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') {
        e.preventDefault();
@@ -1230,7 +1724,6 @@
       }
      });
 
-     // 초기화 → 비워서 설정값으로 출력
      document.getElementById('spApproversClear').addEventListener('click', function () {
       document.getElementById('spApprovers').value = '';
       renderPreview(document.getElementById('spPrintType').value);
@@ -1245,7 +1738,6 @@
       const approvers = getApprovers();
       const url = withCtx(`${_this.url}/print/pdf?printType=${printType}&keys=${encodeURIComponent(keys)}&approvers=${encodeURIComponent(approvers)}`);
 
-      // 링크 클릭으로 다운로드
       const a = document.createElement('a');
       a.href = url;
       a.download = '';
@@ -1254,7 +1746,6 @@
       document.body.removeChild(a);
      });
 
-     // 기존 이벤트들 아래에 추가
      document.getElementById('spPrintBtn').addEventListener('click', function () {
       const iframe = document.getElementById('spIframe');
       iframe.contentWindow.focus();
@@ -1268,64 +1759,21 @@
 
     //==== 전표 등록 ====
 
-    // ── 더블클릭 선택 데이터 → 전표 등록 탭 바인딩 ──
-    // 'YYYYMMDD' / 'YYYY-MM-DD' → input[type=date] 용 'YYYY-MM-DD'
     toDateInput(v) {
      const d = (v == null ? '' : String(v)).replace(/[^0-9]/g, '');
      if (d.length < 8) return '';
      return d.substring(0, 4) + '-' + d.substring(4, 6) + '-' + d.substring(6, 8);
     }
 
-    // 카드명·은행명 표시칸 폭을 글자 길이에 맞춘다 (90px ~ 260px).
-    // 260px 를 넘는 긴 이름은 마우스를 올리면 전체가 보이도록 title 에도 넣는다.
-    fitDispWidth(el) {
-     if (!el) return;
-     const text = el.value || '';
-     el.title = text;
-     if (!text) { el.style.width = '90px'; return; }
-
-     if (!this._measureCtx) {
-      this._measureCtx = document.createElement('canvas').getContext('2d');
-     }
-     const cs = getComputedStyle(el);
-     this._measureCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-     const textW = this._measureCtx.measureText(text).width;
-     const extra = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0)
-      + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0) + 6;
-     el.style.width = Math.min(Math.max(Math.ceil(textW + extra), 90), 260) + 'px';
-    }
-
-    // 상세행의 카드명·은행명 표시칸을 한 번에 맞춘다
-    fitDetailDisp($detailRow) {
-     const _this = this;
-     $detailRow.find('input.disp-autofit').each(function () {
-      _this.fitDispWidth(this);
-     });
-    }
-
-    // 산출내역 textarea 높이를 내용에 맞춘다 (max-height 넘으면 스크롤)
-    autoGrowSummy(el) {
-     if (!el) return;
-     el.style.height = 'auto';
-     const max = parseFloat(getComputedStyle(el).maxHeight) || 9999;
-     el.style.height = Math.min(el.scrollHeight + 2, max) + 'px';
-     el.style.overflowY = el.scrollHeight > max ? 'auto' : 'hidden';
-    }
-
     bindToTab2Form(item) {
      let _this = this;
 
-     // 폼 초기화 후 바인딩
      _this.resetForm();
-
-     // 헤더 키값 저장 (수정 모드 구분용)
      _this.currentSlipId = item.spnum;
 
-     // 헤더 필드 바인딩
      $('#spdate').val(item.spdate);
      $('#spnum').val(item.spnum);
 
-     // 입출구분 (1:세입, 2:세출, 3:대체)
      const tiosecMap = { '세입': '1', '세출': '2', '대체': '3' };
      $('#tiosec').val(tiosecMap[item.tiosec] || '');
 
@@ -1339,22 +1787,19 @@
      $('#inputdate').val(item.inputdate || '');
      $('#cashyn').prop('checked', item.cashyn === '1' || item.cashyn === true);
 
-     // 헤더 상세(inputdate 등) + 라인 동시 조회
      _this.fetchSlipHeader(item.spdate, item.spnum);
      _this.fetchSlipLines(item.spdate, item.spnum);
     }
 
-    // ── 헤더 상세 조회 (inputdate 등 별도 API) ──
     fetchSlipHeader(spdate, spnum) {
      let _this = this;
      const spdateFmt = (spdate || '').replace(/-/g, '');
 
      AjaxUtil.getAsyncData(
-      _this.entry_url + '/getHeader',   // ← 새로 만들 API
+      _this.entry_url + '/getHeader',
       { spdate: spdateFmt, spnum: spnum },
       function (res) {
        if (!res || !res.success || !res.data) return;
-       // getHeader 는 select * 결과를 List 로 돌려준다.
        const h = Array.isArray(res.data) ? res.data[0] : res.data;
        if (!h) return;
        $('#inputdate').val(h.inputdate || '');
@@ -1363,7 +1808,7 @@
      );
     }
 
-    // ── 분개 라인 서버 조회 후 바인딩 ──
+    // ── 분개 라인 서버 조회 → 라인 데이터 ──
     fetchSlipLines(spdate, spnum) {
      let _this = this;
      const spdateFmt = (spdate || '').replace(/-/g, '');
@@ -1373,300 +1818,37 @@
       function (res) {
        if (!res || !res.success || !res.data || res.data.length === 0) return;
 
-       $('#slipLineTbody tr:not(.slip-line-template)').remove();
-       _this.lineIndex = 0;
-
-       res.data.forEach(function (line) {
-        _this.addSlipLine(line.drcr || '1');
-
-        const $row = $('#slipLineTbody tr:not(.slip-line-template)').filter(':not([data-detail-idx])').last();
-        const idx  = $row.attr('data-line-idx');
-
-        $row.find('input[name^="spseq"]').val(line.spseq || '');
-        $row.find('input[name^="acccd"]').val(line.acccd || '');
-        $row.find('input[name^="accnm"]').val(line.accnm || '');
-        $row.find('select[name^="drcr"]').val(line.drcr || '1');
-        $row.find('input[name^="it1cd"]').val(line.it1cd || '');
-        $row.find('input[name^="it1nm"]').val(line.it1nm || '');
-        $row.find('input[name^="it2cd"]').val(line.it2cd || '');
-        $row.find('input[name^="it2nm"]').val(line.it2nm || '');
-        $row.find('textarea[name^="summy"]').val(line.summy || '');
-        $row.find('input[name^="msseccd"]').val(line.mssec || line.msseccd || '');
-        $row.find('input[name^="mssecnm"]').val(line.mssecnm || '');
-
-        // ── applyDrcrRule 먼저: readonly 상태 결정 ──
-        _this.applyDrcrRule($row);
-
-        // ── 금액은 applyDrcrRule 이후에 바인딩 (val('') 초기화 방지) ──
-        const drFmt = line.dramt ? Number(line.dramt).toLocaleString() : '0';
-        const crFmt = line.cramt ? Number(line.cramt).toLocaleString() : '0';
-        $row.find('input[name^="dramt"]').val(drFmt);
-        $row.find('input[name^="cramt"]').val(crFmt);
-
-        // ── 상세행 표시 여부 ──
-        const accnmClean = (line.accnm || '').replace(/\s/g, '');
-        const hasValue   = line.cltnm || line.cardnum  || line.accnum || line.banknm;
-        const isOpen     = accnmClean.includes('보통예금') || !!hasValue;
-
-        const $detailRow = $(`tr[data-detail-idx="${idx}"]`);
-        $detailRow[0].style.display = isOpen ? '' : 'none';
-
-        if (isOpen) {
-         $detailRow.find('input[name^="cltnm"]').val(line.cltnm  || '');
-         $detailRow.find('input[name^="cltcd"]').val(line.cltcd  || '');
-         $detailRow.find('input[name^="cardnm"]').val(line.cardnum || '');
-         $detailRow.find('input[name^="cardcd"]').val(line.cardcd || '');
-         $detailRow.find('input[name^="cardnmdisp"]').val(line.cardnm || '');
-         $detailRow.find('input[name^="banknm"]').val(line.accnum || '');
-         $detailRow.find('input[name^="bankcd"]').val(line.bankcd || '');
-         $detailRow.find('input[name^="banknmdisp"]').val(line.banknm || '');
-         _this.fitDetailDisp($detailRow);
-        }
+       _this.lines = res.data.map(function (line) {
+        const l = _this.emptyLine(line.drcr || '1');
+        l.spseq   = line.spseq || '';
+        l.acccd   = line.acccd || '';
+        l.accnm   = line.accnm || '';
+        l.it1cd   = line.it1cd || '';
+        l.it1nm   = line.it1nm || '';
+        l.it2cd   = line.it2cd || '';
+        l.it2nm   = line.it2nm || '';
+        l.summy   = line.summy || '';
+        l.msseccd = line.mssec || line.msseccd || '';
+        l.mssecnm = line.mssecnm || '';
+        l.dramt   = Number(line.dramt) || 0;
+        l.cramt   = Number(line.cramt) || 0;
+        l.cltnm   = line.cltnm || '';
+        l.cltcd   = line.cltcd || '';
+        l.cardnum = line.cardnum || '';
+        l.cardcd  = line.cardcd || '';
+        l.cardnm  = line.cardnm || '';
+        l.accnum  = line.accnum || '';
+        l.bankcd  = line.bankcd || '';
+        l.banknm  = line.banknm || '';
+        return l;
        });
 
-       // ── 산출내역 높이 맞춤 (행이 화면에 붙은 뒤 계산해야 정확) ──
-       $('#slipLineTbody textarea[name^="summy"]').each(function () {
-        _this.autoGrowSummy(this);
-       });
-
-       // ── 전체 바인딩 완료 후 합계 갱신 ──
+       _this.sel = -1;
+       _this.renderLines();
+       _this.selectLine(0, false);
        _this.calcSum();
-       // console.log('calcSum 호출됨');
-       // console.log($('#sum_dramt').val());
       }
      );
-    }
-
-    // 행 추가 공통 함수
-    addSlipLine(drcrVal = '1', copyPrev = false) {
-     const $tbody = $('#slipLineTbody');
-     const $template    = $tbody.find('.slip-line-template').not('.slip-detail-template').first();
-     const $detailTmpl  = $tbody.find('.slip-detail-template').first();
-
-     const $newRow    = $template.clone().removeClass('slip-line-template').show();
-     const $detailRow = $detailTmpl.clone().removeClass('slip-line-template slip-detail-template');
-     // 상세 행은 기본 숨김
-     $detailRow.hide();
-     // 상세 행과 메인 행 연결용 data 속성
-     const idx = this.lineIndex;
-     $newRow.attr('data-line-idx', idx);
-     $detailRow.attr('data-detail-idx', idx);
-
-     // name에 index 부여
-     $newRow.find('input, select, textarea').each(function () {
-      const baseName = $(this).attr('name');
-      if (baseName) $(this).attr('name', `${baseName}_${idx}`);
-     });
-     $detailRow.find('input').each(function () {
-      const baseName = $(this).attr('name');
-      if (baseName) $(this).attr('name', `${baseName}_${idx}`);
-     });
-
-     $newRow.find('select[name^="drcr"]').val(drcrVal);
-     $newRow.find('input[type="text"]:not([readonly])').val('');
-     $newRow.find('input[type="hidden"]').val('');
-     $newRow.find('textarea').val('');
-     $newRow.find('input[name^="dramt"]').val('0');
-     $newRow.find('input[name^="cramt"]').val('0');
-
-     // ── 직전 행의 항/목/재원 복사 (사용자 추가 시에만) ──
-     if (copyPrev) {
-      const $prevRow = $tbody.find('tr[data-line-idx]').last();  // 아직 append 전이므로 직전 행
-      if ($prevRow.length) {
-       const copyPairs = [
-        { disp: 'it1nm',   code: 'it1cd' },
-        { disp: 'it2nm',   code: 'it2cd' },
-        { disp: 'mssecnm', code: 'msseccd' },
-       ];
-       copyPairs.forEach(({ disp, code }) => {
-        $newRow.find(`input[name^="${disp}"]`).val($prevRow.find(`input[name^="${disp}"]`).val() || '');
-        $newRow.find(`input[name^="${code}"]`).val($prevRow.find(`input[name^="${code}"]`).val() || '');
-       });
-      }
-     }
-
-     $tbody.append($newRow);
-     $tbody.append($detailRow);  // 메인 행 바로 아래에 추가
-     // ── 핸들러 바인딩 ──
-     this.bindDetailHandlers($detailRow, idx);
-
-     this.applyDrcrRule($newRow);
-     this.lineIndex++;
-    }
-
-    bindDetailHandlers($detailRow, idx) {
-     let _this = this;
-
-     // ── 상세 3칸이 모두 비면 토글 닫기 (계좌 필수 계정은 제외) ──
-     const closeDetailIfEmpty = function () {
-      // ── 팝업이 열려 있는 동안에는 닫지 않음 ──
-      if (document.querySelector('.content_wrap.popup')) return;
-
-      const $mainRow = $(`tr[data-line-idx="${idx}"]`);
-      const acnflag  = $mainRow.find('input[name^="acnflag"]').val();
-      if (acnflag === '1') return;
-
-      const cltEmpty  = ($detailRow.find('input[name^="cltnm"]').val()  || '').trim() === '';
-      const cardEmpty = ($detailRow.find('input[name^="cardnm"]').val() || '').trim() === '';
-      const bankEmpty = ($detailRow.find('input[name^="banknm"]').val() || '').trim() === '';
-
-      if (cltEmpty && cardEmpty && bankEmpty) {
-       $detailRow.find('input[type="hidden"]').val('');
-       $detailRow.find('input[name^="cardnmdisp"], input[name^="banknmdisp"]').val('');
-       _this.fitDetailDisp($detailRow);
-       $detailRow[0].style.display = 'none';
-      }
-     };
-
-     // ── 빈 채로 탭/엔터로 빠져나가면 토글 닫기 ──
-     $detailRow.find('input.btn-clt-search, input.btn-card-search, input.btn-bank-search')
-     .on('blur', function () {
-      setTimeout(function () {
-       // 포커스가 아직 같은 상세행 안(거래처/카드/계좌)에 있으면 닫지 않음
-       const active = document.activeElement;
-       if (active && $.contains($detailRow[0], active)) return;
-
-       closeDetailIfEmpty();
-      }, 200);
-     });
-
-     // ── 거래처 ──
-     const $cltInput  = $detailRow.find('input.btn-clt-search');
-     const $cltHidden = $detailRow.find('input[name^="cltcd"]');
-     const $cltFlag   = $detailRow.find('input[name^="cltflag"]');
-
-     const cltInputId  = `clt_nm_${idx}`;
-     const cltHiddenId = `clt_cd_${idx}`;
-     const cltFlagId   = `clt_flag_${idx}`;
-
-     $cltInput.attr('id', cltInputId);
-     $cltHidden.attr('id', cltHiddenId);
-     $cltFlag.attr('id', cltFlagId);
-
-     $cltInput.off('keydown').on('keydown', function(e) {
-      if (e.key !== 'Enter') return;
-      e.preventDefault();
-
-      const keyword = $cltInput.val();   // ← 입력한 검색어
-
-      const poppage = new PopCompComponent();
-      poppage.show(function(item) {
-       $cltInput.val(item.compname || '');
-       $cltHidden.val(item.compcode || '');
-       $cltFlag.val(item.cltflag || '');
-       setTimeout(() => {
-        $detailRow.find('input[name^="cardnm"]').focus().select();
-       }, 200);
-      }, keyword);   // ← 두 번째 인자로 검색어 전달
-     });
-
-     // ── 거래처: 입력 비우면 hidden도 비움 ──
-     $cltInput.on('input', function () {
-      if ($cltInput.val().trim() === '') {
-       $cltHidden.val('');
-       $cltFlag.val('');
-      }
-      closeDetailIfEmpty();
-     });
-
-     // ── 카드 ──
-     const $cardInput  = $detailRow.find('input.btn-card-search');
-     const $cardHidden = $detailRow.find('input[name^="cardcd"]');
-     const $cardNmDisp  = $detailRow.find('input[name^="cardnmdisp"]');
-     const cardInputId  = `card_nm_${idx}`;
-     const cardHiddenId = `card_cd_${idx}`;
-     const cardNmDispId  = `card_nmdisp_${idx}`;
-     $cardInput.attr('id', cardInputId);
-     $cardHidden.attr('id', cardHiddenId);
-     $cardNmDisp.attr('id', cardNmDispId);
-
-     $cardInput.off('keydown').off('input');
-     CardInputHandler.bind({
-      cardnumSelector: `#${cardInputId}`,
-      cardnmSelector:  `#${cardInputId}`,
-      cardidSelector:  `#${cardHiddenId}`,
-      minLength: 0,
-      onComplete: function(item) {
-       if (item) {
-        $cardInput.val(item.cardnum || item.cardnm || '');
-        $cardHidden.val(item.cardid || '');
-        $cardNmDisp.val(item.cardnm || item.cardName || '');
-       }
-       _this.fitDispWidth($cardNmDisp[0]);
-       _this.focusAfterCard($detailRow, idx);
-      }
-     });
-     // ── 카드: 입력 비우면 hidden/표시칸도 비움 ──
-     $cardInput.on('input', function () {
-      if ($cardInput.val().trim() === '') {
-       $cardHidden.val('');
-       $cardNmDisp.val('');
-       _this.fitDispWidth($cardNmDisp[0]);
-      }
-      closeDetailIfEmpty();
-     });
-
-     // ── 계좌 ──
-     const $bankInput    = $detailRow.find('input.btn-bank-search');
-     const $bankHidden   = $detailRow.find('input[name^="bankcd"]');
-     const $bankNmDisp   = $detailRow.find('input[name^="banknmdisp"]');  // ★추가
-     const bankInputId   = `bank_nm_${idx}`;
-     const bankHiddenId  = `bank_cd_${idx}`;
-     const bankNmDispId  = `bank_nmdisp_${idx}`;                          // ★추가
-     $bankInput.attr('id', bankInputId);
-     $bankHidden.attr('id', bankHiddenId);
-     $bankNmDisp.attr('id', bankNmDispId);                               // ★추가
-
-     AccountInputHandler.bind({
-      accnumSelector: `#${bankInputId}`,
-      banknmSelector: `#${bankNmDispId}`,
-      bankidSelector:  `#${bankHiddenId}`,
-      minLength: 0,
-      onSelect: function() {
-       // 은행명은 AccountInputHandler 가 채우므로, 채워진 뒤에 폭을 맞춘다
-       _this.fitDispWidth($bankNmDisp[0]);
-       _this.focusNextAfterDetail($detailRow);
-      }
-     });
-
-     // ── 계좌: 입력 비우면 hidden/표시칸도 비움 ──
-     $bankInput.on('input', function () {
-      if ($bankInput.val().trim() === '') {
-       $bankHidden.val('');
-       $bankNmDisp.val('');
-       _this.fitDispWidth($bankNmDisp[0]);
-      }
-      closeDetailIfEmpty();
-     });
-    }
-
-    // 카드 선택 후 → acnflag 판단
-    focusAfterCard($detailRow, idx) {
-     const $mainRow = $(`tr[data-line-idx="${idx}"]`);
-     const acnflag  = $mainRow.find('input[name^="acnflag"]').val();
-
-     if (acnflag === '1') {
-      setTimeout(() => $detailRow.find('input[name^="banknm"]').focus().select(), 50);
-     } else {
-      this.focusNextAfterDetail($detailRow);
-     }
-    }
-
-// 상세행 완료 후 → 다음 메인행 관명으로
-    focusNextAfterDetail($detailRow) {
-     const idx      = $detailRow.attr('data-detail-idx');
-     const $mainRow = $(`tr[data-line-idx="${idx}"]`);
-     const $nextRow = $mainRow.nextAll('tr[data-line-idx]:visible').first();
-
-     if ($nextRow.length) {
-      setTimeout(() => $nextRow.find('input[name^="accnm"]').focus().select(), 50);
-     } else {
-      $('#addSlipLine').trigger('click');
-      setTimeout(() => {
-       const $newRow = $('#slipLineTbody tr[data-line-idx]:last');
-       $newRow.find('input[name^="accnm"]').focus().select();
-      }, 80);
-     }
     }
 
     // ── 사업명 팝업 ──
@@ -1745,365 +1927,10 @@
     applyBusimData(item) {
      $('#busicd').val(item.buiscd || '');
      $('#businame').val(item.busim || '');
-     $('#bsdate').val(item.bsdate || '');//사업코드1 - 히든값
-     $('#bseccd').val(item.bseccd || '');//사업코드2 - 히든값
+     $('#bsdate').val(item.bsdate || '');
+     $('#bseccd').val(item.bseccd || '');
 
      setTimeout(() => $('#remark').focus(), 50);
-    }
-
-// ── 관명(계정) 팝업 ──
-    searchAccnm($row) {
-     let _this = this;
-     let accnm = $row.find('input[name^="accnm"]').val();
-
-     AjaxUtil.getAsyncData(
-      _this.entry_url + '/findAccnm',
-      {accnm: accnm, type: 'account'},
-      function (res) {
-       let list = res.data || [];
-       if (!list || list.length === 0) {
-        Alert.alert('', '관 조회 결과가 없습니다.');
-        return;
-       }
-       _this.showAccnmPopup(list, $row);
-      }
-     );
-    }
-
-    showAccnmPopup(dataList, $row) {
-     let _this = this;
-
-     if (_this.accnmPopup) {
-      _this.accnmPopup.close();
-      _this.accnmPopup = null;
-     }
-
-     let content = tmpl('accnmTemplate', {});
-     _this.accnmPopup = new PopupDraggable('관 조회');
-     _this.accnmPopup.open({width: 700, height: 420, $content: $(content)});
-
-     _this.accGrid = new wijmo.grid.FlexGrid('#AccGrid', {
-      isReadOnly: true,
-      selectionMode: wijmo.grid.SelectionMode.Row,
-      headersVisibility: wijmo.grid.HeadersVisibility.Column,
-      autoGenerateColumns: false,
-      columns: [
-       {binding: 'acccd', header: '관코드', width: 100, align: 'center'},
-       {binding: 'accnm', header: '관명', width: '*', align: 'left'},
-       {binding: 'acnflag', header: '계좌필수여부', visible: false}
-      ],
-      itemsSource: new wijmo.collections.CollectionView(dataList)
-     });
-     _this.accGrid.keyActionEnter = wijmo.grid.KeyAction.None;
-
-     const selectAccnm = function () {
-      let sel = _this.accGrid.selection;
-      if (!sel || sel.row < 0) return;
-      let item = _this.accGrid.rows[sel.row].dataItem;
-      _this.applyAccnmData(item, $row);
-      _this.accnmPopup.close();
-      _this.accnmPopup = null;
-      _this.accGrid = null;
-     };
-
-     setTimeout(function () {
-      if (_this.accGrid && _this.accGrid.rows.length > 0) {
-       _this.accGrid.select(0, 0);
-       _this.accGrid.focus();
-      }
-     }, 50);
-
-     _this.accGrid.hostElement.addEventListener('dblclick', selectAccnm);
-     _this.accGrid.hostElement.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-       e.preventDefault();
-       e.stopPropagation();
-       selectAccnm();
-      }
-     });
-    }
-
-    applyAccnmData(item, $row) {
-     $row.find('input[name^="acccd"]').val(item.acccd || '');
-     $row.find('input[name^="accnm"]').val(item.accnm || '');
-     $row.find('input[name^="acnflag"]').val(item.acnflag || '');
-
-     const idx        = $row.attr('data-line-idx');
-     const $detailRow = $(`tr[data-detail-idx="${idx}"]`);
-     const isBankReq  = item.acnflag === '1';
-
-     // 관 선택하면 상세행 항상 열기
-     $detailRow[0].style.display = '';
-
-     // 계좌 필수 라벨 색상 + placeholder
-     const $bankLabel = $detailRow.find('span.bank-label');
-     $bankLabel.css('color', isBankReq
-      ? 'var(--color-text-danger)'
-      : 'var(--color-text-secondary)'
-     );
-     $detailRow.find('input[name^="banknm"]')
-     .attr('placeholder', isBankReq ? '계좌 (필수)' : '계좌');
-
-     setTimeout(() => $row.find('select[name^="drcr"]').focus(), 50);
-    }
-
-// ── 항 팝업 ──
-    searchIt1nm($row) {
-     let _this = this;
-     let it1nm = $row.find('input[name^="it1nm"]').val();
-     let tiosec = $('#tiosec').val();
-
-     if (!tiosec) {
-      Alert.alert('', '입출구분을 먼저 선택하세요.');
-      $('#tiosec').focus();
-      return;
-     }
-
-     AjaxUtil.getAsyncData(
-      _this.entry_url + '/findIt1nm',
-      {it1nm: it1nm, tiosec: tiosec},
-      function (res) {
-       let list = res.data || [];
-       if (!list || list.length === 0) {
-        Alert.alert('', '항 조회 결과가 없습니다.');
-        return;
-       }
-       _this.showIt1Popup(list, $row);
-      }
-     );
-    }
-
-    showIt1Popup(dataList, $row) {
-     let _this = this;
-
-     if (_this.it1Popup) {
-      _this.it1Popup.close();
-      _this.it1Popup = null;
-     }
-
-     let content = tmpl('it1Template', {});
-     _this.it1Popup = new PopupDraggable('항 조회');
-     _this.it1Popup.open({width: 700, height: 420, $content: $(content)});
-
-     _this.it1Grid = new wijmo.grid.FlexGrid('#It1Grid', {
-      isReadOnly: true,
-      selectionMode: wijmo.grid.SelectionMode.Row,
-      headersVisibility: wijmo.grid.HeadersVisibility.Column,
-      autoGenerateColumns: false,
-      columns: [
-       {binding: 'it1cd', header: '항코드', width: 100, align: 'center'},
-       {binding: 'it1nm', header: '항명', width: '*', align: 'left'}
-      ],
-      itemsSource: new wijmo.collections.CollectionView(dataList)
-     });
-     _this.it1Grid.keyActionEnter = wijmo.grid.KeyAction.None;
-
-     const selectIt1 = function () {
-      let sel = _this.it1Grid.selection;
-      if (!sel || sel.row < 0) return;
-      let item = _this.it1Grid.rows[sel.row].dataItem;
-      _this.applyIt1Data(item, $row);
-      _this.it1Popup.close();
-      _this.it1Popup = null;
-      _this.it1Grid = null;
-     };
-
-     setTimeout(function () {
-      if (_this.it1Grid && _this.it1Grid.rows.length > 0) {
-       _this.it1Grid.select(0, 0);
-       _this.it1Grid.focus();
-      }
-     }, 50);
-
-     _this.it1Grid.hostElement.addEventListener('dblclick', selectIt1);
-     _this.it1Grid.hostElement.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-       e.preventDefault();
-       e.stopPropagation();
-       selectIt1();
-      }
-     });
-    }
-
-    applyIt1Data(item, $row) {
-     $row.find('input[name^="it1cd"]').val(item.it1cd || '');
-     $row.find('input[name^="it1nm"]').val(item.it1nm || '');
-     $row.find('input[name^="hangcd"]').val(item.it1cd || '');
-     // 팝업 선택 후 → 목으로 포커스
-     setTimeout(() => $row.find('input[name^="it2nm"]').focus().select(), 50);
-    }
-
-// ── 목 팝업 ──
-    searchIt2nm($row) {
-     let _this = this;
-     let it2nm = $row.find('input[name^="it2nm"]').val();
-     let tiosec = $('#tiosec').val();   // ← 입출구분
-
-     if (!tiosec) {
-      Alert.alert('', '입출구분을 먼저 선택하세요.');
-      $('#tiosec').focus();
-      return;
-     }
-
-     AjaxUtil.getAsyncData(
-      _this.entry_url + '/findIt2nm',
-      {it2nm: it2nm, tiosec: tiosec},
-      function (res) {
-       let list = res.data || [];
-       if (!list || list.length === 0) {
-        Alert.alert('', '목 조회 결과가 없습니다.');
-        return;
-       }
-       _this.showIt2Popup(list, $row);
-      }
-     );
-    }
-
-    showIt2Popup(dataList, $row) {
-     let _this = this;
-
-     if (_this.it2Popup) {
-      _this.it2Popup.close();
-      _this.it2Popup = null;
-     }
-
-     let content = tmpl('it2Template', {});
-     _this.it2Popup = new PopupDraggable('목 조회');
-     _this.it2Popup.open({width: 700, height: 420, $content: $(content)});
-
-     _this.it2Grid = new wijmo.grid.FlexGrid('#It2Grid', {
-      isReadOnly: true,
-      selectionMode: wijmo.grid.SelectionMode.Row,
-      headersVisibility: wijmo.grid.HeadersVisibility.Column,
-      autoGenerateColumns: false,
-      columns: [
-       {binding: 'it2cd', header: '목코드', width: 100, align: 'center'},
-       {binding: 'it2nm', header: '목명', width: '*', align: 'left'}
-      ],
-      itemsSource: new wijmo.collections.CollectionView(dataList)
-     });
-     _this.it2Grid.keyActionEnter = wijmo.grid.KeyAction.None;
-
-     const selectIt2 = function () {
-      let sel = _this.it2Grid.selection;
-      if (!sel || sel.row < 0) return;
-      let item = _this.it2Grid.rows[sel.row].dataItem;
-      _this.applyIt2Data(item, $row);
-      _this.it2Popup.close();
-      _this.it2Popup = null;
-      _this.it2Grid = null;
-     };
-
-     setTimeout(function () {
-      if (_this.it2Grid && _this.it2Grid.rows.length > 0) {
-       _this.it2Grid.select(0, 0);
-       _this.it2Grid.focus();
-      }
-     }, 50);
-
-     _this.it2Grid.hostElement.addEventListener('dblclick', selectIt2);
-     _this.it2Grid.hostElement.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-       e.preventDefault();
-       e.stopPropagation();
-       selectIt2();
-      }
-     });
-    }
-
-    applyIt2Data(item, $row) {
-     $row.find('input[name^="it2cd"]').val(item.it2cd || '');
-     $row.find('input[name^="it2nm"]').val(item.it2nm || '');
-     $row.find('input[name^="mokcd"]').val(item.it2cd || '');
-     // 팝업 선택 후 → 산출내역으로 포커스
-     setTimeout(() => $row.find('textarea[name^="summy"]').focus().select(), 50);
-    }
-
-    // 재원 조회
-    searchMssec($row) {                           // $detailRow → $row
-     const _this = this;
-     if (_this.mssecOptions && _this.mssecOptions.length > 0) {
-      _this.showMssecPopup(_this.mssecOptions, $row);
-      return;
-     }
-     AjaxUtil.getAsyncData(
-      _this.entry_url + '/mssec', {},
-      function (res) {
-       const list = res.data || [];
-       if (list.length === 0) {
-        Alert.alert('', '재원 목록이 없습니다.');
-        return;
-       }
-       _this.mssecOptions = list;
-       _this.showMssecPopup(list, $row);
-      }
-     );
-    }
-
-    showMssecPopup(dataList, $row) {             // $detailRow → $row
-     let _this = this;
-     if (_this.mssecPopup) {
-      _this.mssecPopup.close();
-      _this.mssecPopup = null;
-     }
-
-     let content = tmpl('mssecTemplate', {});
-     _this.mssecPopup = new PopupDraggable('재원 조회');
-     _this.mssecPopup.open({width: 400, height: 350, $content: $(content)});
-
-     _this.mssecGrid = new wijmo.grid.FlexGrid('#MssecGrid', {
-      isReadOnly: true,
-      selectionMode: wijmo.grid.SelectionMode.Row,
-      headersVisibility: wijmo.grid.HeadersVisibility.Column,
-      autoGenerateColumns: false,
-      columns: [
-       {binding: 'value', header: '코드', width: 100, align: 'center'},
-       {binding: 'text', header: '재원명', width: '*', align: 'left'}
-      ],
-      itemsSource: new wijmo.collections.CollectionView(dataList)
-     });
-     _this.mssecGrid.keyActionEnter = wijmo.grid.KeyAction.None;
-
-     const selectCurrent = function () {
-      let sel = _this.mssecGrid.selection;
-      if (!sel || sel.row < 0) return;
-      let selectedItem = _this.mssecGrid.rows[sel.row].dataItem;
-      _this.applyMssecData(selectedItem, $row);   // $detailRow → $row
-      if (_this.mssecPopup) {
-       _this.mssecPopup.close();
-       _this.mssecPopup = null;
-      }
-      _this.mssecGrid = null;
-     };
-
-     setTimeout(function () {
-      if (_this.mssecGrid && _this.mssecGrid.rows.length > 0) {
-       _this.mssecGrid.select(0, 0);
-       _this.mssecGrid.focus();
-      }
-     }, 50);
-
-     _this.mssecGrid.hostElement.addEventListener('dblclick', selectCurrent);
-     _this.mssecGrid.hostElement.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-       e.preventDefault();
-       e.stopPropagation();
-       selectCurrent();
-      }
-     });
-    }
-
-    applyMssecData(selectedItem, $row) {         // $detailRow → $row, 포커스도 수정
-     $row.find('input[name^="msseccd"]').val(selectedItem.value || '');
-     $row.find('input[name^="mssecnm"]').val(selectedItem.text || '');
-
-     // 재원 선택 후 → 차/대변금액으로 포커스 (readonly가 아닌 쪽)
-     setTimeout(() => {
-      const $dramt = $row.find('input[name^="dramt"]');
-      const $cramt = $row.find('input[name^="cramt"]');
-      const $target = !$dramt.prop('readonly') ? $dramt : $cramt;
-      $target.focus().select();
-     }, 50);
     }
 
     setUploader(id) {
@@ -2111,13 +1938,13 @@
      let accept_files = 'hwp,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,gif,png,txt,zip,pdf';
 
      _this.uploader = new ax5FileUploadClass('fileUploadInnerDiv', id, {
-      table_name: 'SLIP',           // 전표 테이블명으로 변경
+      table_name: 'SLIP',
       attach_name: 'basic',
       accept_files: accept_files,
       multiple: true,
       max_count: 5,
       file_size: 20,
-      manual_upload: true,          // 저장 시점에 업로드
+      manual_upload: true,
       upload_callback: function (param) {
        return;
       },
@@ -2133,7 +1960,6 @@
 
     formatNumberInput(val, target) {
      const raw = (val == null ? '' : String(val));
-     // 맨 앞의 '-' 하나만 부호로 인정한다. '-' 만 친 상태도 유지해야 이어서 입력할 수 있다.
      const negative = raw.trim().charAt(0) === '-';
      let cleaned = raw.replace(/[^0-9]/g, '');
      let formatted = cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -2142,177 +1968,19 @@
     }
 
     calcSum() {
-     let totalDr = 0;
-     let totalCr = 0;
-
-     $('#slipLineTbody tr[data-line-idx]').each(function () {
-      const drVal = $(this).find('input[name^="dramt"]').val();
-      const crVal = $(this).find('input[name^="cramt"]').val();
-
-      totalDr += parseFloat((drVal || '0').replace(/,/g, '')) || 0;
-      totalCr += parseFloat((crVal || '0').replace(/,/g, '')) || 0;
-     });
-
+     const totalDr = this.lines.reduce((s, l) => s + (Number(l.dramt) || 0), 0);
+     const totalCr = this.lines.reduce((s, l) => s + (Number(l.cramt) || 0), 0);
      const diff = totalDr - totalCr;
 
      $('#sum_dramt').val(totalDr.toLocaleString());
      $('#sum_cramt').val(totalCr.toLocaleString());
      $('#sum_diff').val(diff.toLocaleString());
-
-     // 차액 색상: 0 → 초록, 불일치 → 빨강
      $('#sum_diff').css('color', diff === 0 ? '#198754' : '#dc3545');
-    }
-
-    applyDrcrRule($row) {
-     const val = $row.find('select[name^="drcr"]').val();
-     const $dramt = $row.find('input[name^="dramt"]');
-     const $cramt = $row.find('input[name^="cramt"]');
-     // ── 추가: 차/대변에 따라 카드 색 바 토글 ──
-     const isCredit = (val === '2');
-     $row.toggleClass('is-credit', isCredit);
-     const idx = $row.attr('data-line-idx');
-     $(`tr[data-detail-idx="${idx}"]`).toggleClass('is-credit-detail', isCredit);
-     // ──────────────────────────────────────────
-     if (val === '1') {
-      $dramt.prop('readonly', false).css({background: '', color: '', paddingRight: '30px'});
-      $cramt.prop('readonly', true).val('').css({background: '#f5f5f5', color: '#aaa', paddingRight: '30px'});
-     } else {
-      $cramt.prop('readonly', false).css({background: '', color: '', paddingRight: '30px'});
-      $dramt.prop('readonly', true).val('').css({background: '#f5f5f5', color: '#aaa', paddingRight: '30px'});
-     }
-    }
-
-    initDrcrControl() {
-     let _this = this;
-
-     // 초기 행 적용
-     $('#slipLineTbody tr:not(.slip-line-template)').each(function () {
-      _this.applyDrcrRule($(this));
-     });
-
-     // select 변경 시
-     $('#slipLineTbody').on('change', 'select[name^="drcr"]', function () {
-      _this.applyDrcrRule($(this).closest('tr'));
-     });
-
-     // 숫자만 + 자동 포맷 (keyup)
-     $('#slipLineTbody').on('keyup', 'input[name^="dramt"], input[name^="cramt"]', function () {
-      _this.formatNumberInput($(this).val(), this);
-     });
-
-     // 포커스 아웃 시 합계 계산
-     $('#slipLineTbody').on('blur', 'input[name^="dramt"], input[name^="cramt"]', function () {
-      _this.calcSum();
-     });
-
-     // 포커스 인 시 포맷 제거
-     $('#slipLineTbody').on('focus', 'input[name^="dramt"], input[name^="cramt"]', function () {
-      const raw = $(this).val().replace(/,/g, '');
-      $(this).val(raw === '0' ? '' : raw);
-     });
-
-     // 산출내역: 입력할 때마다 높이 조절
-     $('#slipLineTbody').on('input', 'textarea[name^="summy"]', function () {
-      _this.autoGrowSummy(this);
-     });
-
-     // ── 엔터키 포커스 이동 ──
-     const focusOrder = [
-      'input[name^="accnm"]',       // 관명(계정) - 엔터 시 팝업 열림
-      'select[name^="drcr"]',       // 차대
-      'input[name^="it1nm"]',       // 항 - 엔터 시 팝업 열림
-      'input[name^="it2nm"]',       // 목 - 엔터 시 팝업 열림
-      'textarea[name^="summy"]',    // 산출내역 (Shift+Enter 는 줄바꿈)
-      'input[name^="mssecnm"]',     // 재원
-      'input[name^="dramt"]',       // 차변금액
-      'input[name^="cramt"]',       // 대변금액
-     ];
-
-     $('#slipLineTbody').on('keydown', 'input, select, textarea', function (e) {
-      if (e.key !== 'Enter') return;
-      // 산출내역에서 Shift+Enter 는 줄바꿈으로 둔다
-      if ($(this).is('textarea') && e.shiftKey) return;
-      e.preventDefault();
-
-      const $current = $(this);
-      const $row = $current.closest('tr');
-      const currentSelector = focusOrder.find(sel => $current.is(sel));
-      if (!currentSelector) return;
-
-      const currentIdx = focusOrder.indexOf(currentSelector);
-
-      // 팝업 필드는 팝업에서 선택 후 포커스 이동하므로 여기서 처리 안 함
-      const popupFields = ['input[name^="accnm"]', 'input[name^="it1nm"]', 'input[name^="it2nm"]', 'input[name^="mssecnm"]',];
-      if (popupFields.includes(currentSelector)) return;
-
-      // 다음 칸으로 이동 (readonly인 금액 칸은 건너뜀)
-      if (currentIdx < focusOrder.length - 1) {
-       const $next = $row.find(focusOrder[currentIdx + 1]);
-       if ($next.length && !$next.prop('readonly')) {
-        $next.focus();
-        if ($next.is('input, textarea')) $next.select();
-        return;
-       }
-       // readonly면 그 다음 칸도 확인
-       if (currentIdx + 2 < focusOrder.length) {
-        const $nextNext = $row.find(focusOrder[currentIdx + 2]);
-        if ($nextNext.length && !$nextNext.prop('readonly')) {
-         $nextNext.focus();
-         if ($nextNext.is('input, textarea')) $nextNext.select();
-         return;
-        }
-       }
-      }
-
-      // 마지막 활성 금액 칸(dramt 또는 cramt)에서 엔터
-      // → 상세행(토글)이 열려있으면 거래처로, 아니면 다음행으로
-      const lineIdx = $row.attr('data-line-idx');
-      const $detailRow = $(`tr[data-detail-idx="${lineIdx}"]`);
-      const isDetailOpen = $detailRow.length && $detailRow.is(':visible');
-
-      if (isDetailOpen) {
-       $detailRow.find('input[name^="cltnm"]').focus().select();
-      } else {
-       const $nextRow = $row.nextAll('tr[data-line-idx]:visible').first();
-       if ($nextRow.length) {
-        _this.copyItemFields($row, $nextRow); // 다음 행에 복사
-        $nextRow.find(focusOrder[0]).focus().select();
-       } else {
-        $('#addSlipLine').trigger('click');
-        setTimeout(() => {
-         const $newRow = $('#slipLineTbody tr[data-line-idx]:last');
-         $newRow.find(focusOrder[0]).focus().select();
-        }, 50);
-       }
-      }
-     });
-
-    }//initDrcrControl
-
-    // 직전 행 → 대상 행으로 항/목/재원 복사 (대상이 비어 있을 때만)
-    copyItemFields($from, $to) {
-     const copyPairs = [
-      {disp: 'it1nm', code: 'it1cd'},
-      {disp: 'it2nm', code: 'it2cd'},
-      {disp: 'mssecnm', code: 'msseccd'},
-     ];
-     copyPairs.forEach(({disp, code}) => {
-      const $toDisp = $to.find(`input[name^="${disp}"]`);
-      if (($toDisp.val() || '').trim() !== '') return;   // 이미 값 있으면 건너뜀
-      $toDisp.val($from.find(`input[name^="${disp}"]`).val() || '');
-      $to.find(`input[name^="${code}"]`).val($from.find(`input[name^="${code}"]`).val() || '');
-     });
     }
 
     resetForm() {
      document.getElementById('CategoryForm').reset();
-     $('#slipLineTbody tr:not(.slip-line-template)').remove();
-
-     this.lineIndex = 0;      // ← 리셋
-     this.addSlipLine('1');   // 차변
-     this.addSlipLine('2');   // 대변
-
-     this.calcSum();
+     this.resetLines();
      this.currentSlipId = null;
      $('#spdate').val(getNowDate());
      $('#readate').val(getNowDate());
@@ -2323,7 +1991,9 @@
     saveSlip() {
      let _this = this;
 
-     // ── 1. 헤더 데이터 수집 ──
+     // 입력 중이던 값까지 반영
+     _this.syncPanel();
+
      const spdate = $('#spdate').val();
      const spnum = $('#spnum').val();
      const tiosec = $('#tiosec').val();
@@ -2338,7 +2008,6 @@
      const bseccd = $('#bseccd').val();
      const readate = $('#readate').val();
 
-     // ── 2. 헤더 유효성 검사 ──
      if (!spdate) {
       Alert.alert('', '전표일자를 입력하세요.');
       $('#spdate').focus();
@@ -2360,88 +2029,49 @@
       return;
      }
 
-     // ── 3. 분개 라인 수집 ──
+     // ── 분개 라인 수집·검증 ──
      const lines = [];
-     let lineValid = true;
+     for (let i = 0; i < _this.lines.length; i++) {
+      const l = _this.lines[i];
+      const dramt = Number(l.dramt) || 0;
+      const cramt = Number(l.cramt) || 0;
 
-     $('#slipLineTbody tr[data-line-idx]').each(function (i) {
-      const $row = $(this);
-      const lineIdx = $row.attr('data-line-idx');
-      const $detailRow = $(`tr[data-detail-idx="${lineIdx}"]`);
+      // 관명도 없고 금액도 0 이면 입력하지 않은 행
+      if (!l.acccd && dramt === 0 && cramt === 0) continue;
 
-      const spseq = $row.find('input[name^="spseq"]').val();
-      const acccd = $row.find('input[name^="acccd"]').val();
-      const accnm = $row.find('input[name^="accnm"]').val();
-      const drcr = $row.find('select[name^="drcr"]').val();
-      const it1cd = $row.find('input[name^="it1cd"]').val();
-      const it1nm = $row.find('input[name^="it1nm"]').val();
-      const it2cd = $row.find('input[name^="it2cd"]').val();
-      const it2nm = $row.find('input[name^="it2nm"]').val();
-      const summy = $row.find('textarea[name^="summy"]').val();
-      const msseccd = $row.find('input[name^="msseccd"]').val();
-      const mssecnm = $row.find('input[name^="mssecnm"]').val();
-      const dramt = parseFloat($row.find('input[name^="dramt"]').val().replace(/,/g, '')) || 0;
-      const cramt = parseFloat($row.find('input[name^="cramt"]').val().replace(/,/g, '')) || 0;
-
-      // ── 상세행 (코드/번호 기준) ──
-      const cltcd = $detailRow.find('input[name^="cltcd"]').val() || '';   // 거래처: 코드
-      const cardnum = $detailRow.find('input[name^="cardnm"]').val() || '';   // 카드: 번호
-      const bankcd = $detailRow.find('input[name^="bankcd"]').val() || '';   // 계좌: 코드
-      const acnflag = $row.find('input[name^="acnflag"]').val() || '';   // ★추가: 계좌 필수 여부
-
-
-      // ── 빈 행 스킵: 관명도 없고 금액도 0이면 입력 안 한 행 ──
-      const isEmptyRow = !acccd && dramt === 0 && cramt === 0;
-      if (isEmptyRow) {
-       return true; // continue
-      }
-
-      // 여기부터는 "내용이 있는 행"만 옴 → 검증
-      if (!acccd) {
+      if (!l.acccd) {
+       _this.selectLine(i, false);
        Alert.alert('', `${i + 1}번째 행의 관명(계정)을 입력하세요.`);
-       $row.find('input[name^="accnm"]').focus();
-       lineValid = false;
-       return false;
+       $('#pnl_accnm').focus();
+       return;
       }
       if (dramt === 0 && cramt === 0) {
+       _this.selectLine(i, false);
        Alert.alert('', `${i + 1}번째 행의 금액을 입력하세요.`);
-       lineValid = false;
-       return false;
+       _this.activeAmountInput().focus();
+       return;
       }
-
-      // ── ★추가: 상세행 검증/정리 ──
-      const isDetailOpen = $detailRow.length && $detailRow.is(':visible');
-      const isDetailEmpty = !cltcd && !cardnum && !bankcd;
-
-      // 1) 계좌 필수 계정인데 계좌가 비었으면 → 저장 막기
-      if (acnflag === '1' && !bankcd) {
+      if (l.acnflag === '1' && !l.bankcd) {
+       _this.selectLine(i, false);
        Alert.alert('', `${i + 1}번째 행은 계좌 입력이 필수입니다.`);
-       $detailRow.find('input[name^="banknm"]').focus();
-       lineValid = false;
-       return false;
-      }
-
-      // 2) 필수 아닌데 거래처/카드/계좌 모두 비었으면 → 토글 닫고 통과
-      if (isDetailOpen && isDetailEmpty) {
-       $detailRow.find('input').val('');
-       $detailRow[0].style.display = 'none';
+       $('#pnl_banknum').focus();
+       return;
       }
 
       lines.push({
-       spseq, acccd, accnm, drcr, it1cd, it1nm, it2cd, it2nm,
-       summy, dramt, cramt, msseccd, mssecnm, lineSeq: i + 1,
-       cltcd, cardnum, bankcd
+       spseq: l.spseq, acccd: l.acccd, accnm: l.accnm, drcr: l.drcr,
+       it1cd: l.it1cd, it1nm: l.it1nm, it2cd: l.it2cd, it2nm: l.it2nm,
+       summy: l.summy, dramt: dramt, cramt: cramt,
+       msseccd: l.msseccd, mssecnm: l.mssecnm, lineSeq: i + 1,
+       cltcd: l.cltcd || '', cardnum: l.cardnum || '', bankcd: l.bankcd || ''
       });
-     });
-
-     if (!lineValid) return;
+     }
 
      if (lines.length === 0) {
       Alert.alert('', '분개 라인을 1건 이상 입력하세요.');
       return;
      }
 
-     // ── 4. 차변/대변 합계 일치 검사 ──
      const totalDr = lines.reduce((s, l) => s + l.dramt, 0);
      const totalCr = lines.reduce((s, l) => s + l.cramt, 0);
 
@@ -2450,27 +2080,22 @@
       return;
      }
 
-     // ── 5. 전송 데이터 구성 ──
      const payload = {
       spdate, spnum, tiosec, busipur, spoccu,
       cashyn, subject, remark, readate,
       busicd, businame, bsdate, bseccd,
-      //분개라인
       lines
      };
 
-     // ── 6. API 호출 ──
      const url = _this.entry_url + '/save';
 
      AjaxUtil.postJsonData(url, payload, function (result) {
       if (result && result.success) {
        Alert.alert('', '저장되었습니다.', function () {
-        // 저장 후 전표번호 세팅 (신규 시 서버에서 채번)
         if (result.data?.spnum) {
          $('#spnum').val(result.data.spnum);
          _this.currentSlipId = result.data.spnum;
         }
-        // 초기화 + 목록 새로고침
         _this.resetForm();
         _this.searchMainData();
        });
@@ -2488,53 +2113,41 @@
      const spdate = $('#spdate').val();
      const spnum = $('#spnum').val();
 
-     // console.log('1. DeleteSlip 진입', spdate, spnum);
-
-     // 신규 작성 중이면 삭제 대상 없음
      if (!spnum) {
       Alert.alert('', '삭제할 전표가 없습니다. 먼저 전표를 선택하세요.');
       return;
      }
-     // console.log('2. spnum 통과');
 
-     // 삭제 확인
      Alert.confirm('', '선택한 전표를 삭제하시겠습니까?', function () {
-      // console.log('3. confirm 확인 클릭');
-
       const payload = {spdate, spnum};
       const url = _this.entry_url + '/delete';
-      // console.log('4. 요청 직전', url, payload);
 
       AjaxUtil.postJsonData(url, payload, function (result) {
-       // console.log('5. 응답 도착', result);
        if (result && result.success) {
         Alert.alert('', '삭제되었습니다.', function () {
-         _this.resetForm();        // 폼 초기화
-         _this.searchMainData();   // 목록 새로고침
+         _this.resetForm();
+         _this.searchMainData();
         });
        } else {
         const msg = result?.message || '삭제 중 오류가 발생했습니다.';
         Alert.alert('', msg);
        }
       });
-      // console.log('6. 요청 호출 끝');
      });
 
     }//DeleteSlip
 
-    // 전표 복사 — 새 일자 입력 팝업
     copySlip() {
      let _this = this;
 
-     const spdate = $('#spdate').val();   // 원본 일자
-     const spnum = $('#spnum').val();    // 원본 번호
+     const spdate = $('#spdate').val();
+     const spnum = $('#spnum').val();
 
      if (!spnum) {
       Alert.alert('', '복사할 전표가 없습니다. 먼저 전표를 선택하세요.');
       return;
      }
 
-     // 이전 팝업 정리
      if (_this.copyPopup) {
       _this.copyPopup.close();
       _this.copyPopup = null;
@@ -2546,11 +2159,9 @@
      _this.copyPopup.open({width: 360, height: 200, $content});
 
      setTimeout(() => {
-      // 기본값: 원본 일자
       $content.find('#copyTargetSpnum').text(spnum);
       $content.find('#copyNewSpdate').val(getNowDate());
 
-      // 복사 실행
       $content.find('#btnCopyConfirm').on('click', function () {
        const newSpdate = $content.find('#copyNewSpdate').val();
        if (!newSpdate) {
@@ -2576,7 +2187,6 @@
        });
       });
 
-      // 닫기
       $content.find('#btnCopyCancel').on('click', function () {
        _this.copyPopup.close();
        _this.copyPopup = null;
@@ -2585,19 +2195,17 @@
 
     }//copySlip
 
-    // 전표일자 변경 — 새 일자 입력 팝업
     changeSpdate() {
      let _this = this;
 
-     const spdate = $('#spdate').val();   // 원본 일자
-     const spnum = $('#spnum').val();    // 원본 번호
+     const spdate = $('#spdate').val();
+     const spnum = $('#spnum').val();
 
      if (!spnum) {
       Alert.alert('', '변경할 전표가 없습니다. 먼저 전표를 선택하세요.');
       return;
      }
 
-     // 이전 팝업 정리
      if (_this.spdatePopup) {
       _this.spdatePopup.close();
       _this.spdatePopup = null;
@@ -2609,7 +2217,6 @@
      _this.spdatePopup.open({width: 380, height: 240, $content});
 
      setTimeout(() => {
-      // 기본값: 현재 전표일자
       $content.find('#chgTargetSpnum').text(spnum);
       $content.find('#chgNewSpdate').val(spdate);
 
@@ -2625,7 +2232,6 @@
         return;
        }
 
-       // tb_aa009.spdate 는 char(8) 이므로 하이픈 제거 후 전송
        const payload = {
         spdate: (spdate || '').replace(/-/g, ''),
         spnum: spnum,
@@ -2638,7 +2244,6 @@
          _this.spdatePopup.close();
          _this.spdatePopup = null;
 
-         // 서버가 재채번했을 수 있으므로 응답값을 신뢰한다
          const resSpdate = result.data?.spdate || payload.newSpdate;
          const resSpnum = result.data?.spnum || spnum;
          const shown = resSpdate.length === 8
@@ -2671,7 +2276,6 @@
        }
       });
 
-      // 닫기
       $content.find('#btnSpdateCancel').on('click', function () {
        _this.spdatePopup.close();
        _this.spdatePopup = null;
@@ -2682,7 +2286,6 @@
 
     }//changeSpdate
 
-    // 전표번호 변경 — 빈 번호 목록 팝업
     changeSpnum() {
      let _this = this;
 
@@ -2694,7 +2297,6 @@
       return;
      }
 
-     // 빈 전표번호 목록 조회 (spdate 무관, 전체 기준)
      AjaxUtil.getAsyncData(
       _this.entry_url + '/availableSpnums',
       {spdate: spdateFmt},
@@ -2739,7 +2341,6 @@
       let item = _this.spnumGrid.rows[sel.row].dataItem;
       const newSpnum = item.spnum;
 
-      // 헤더 + 분개라인 동시 변경 요청
       const payload = {spdate, spnum: oldSpnum, newSpnum};
       const url = _this.entry_url + '/changeSpnum';
 
@@ -2779,11 +2380,6 @@
 
    }//SlipStatusPage
 
-   // ── 금액 입력 시 합계 갱신 ──
-   $('#slipLineTbody').on('input', 'input[name="dramt"], input[name="cramt"]', function () {
-    this.calcSum();
-   });
-
    let page = null;
 
    $(document).ready(function (e) {
@@ -2796,31 +2392,16 @@
     $('#searchfrdate').val(CommonUtil.formatYYYYMMDD(fr));
     $('#searchtodate').val(getNowDate());
     $('#spdate').val(getNowDate());
+    $('#readate').val(getNowDate());
 
     AjaxUtil.fillSelectOptions($('#mssec'), 'mssec', 'all', false);
 
     page.searchMainData();
 
-    // // 첨부파일 버튼: tb_xenv.approflag = '1'인 경우에만 표시
-    // AjaxUtil.getAsyncData(page.url + '/envInfo', {}, function(res) {
-    //  if (res && res.success && res.data && String(res.data.approflag) === '1') {
-    //   $('#li_btnFileUpload').show();
-    //  }
-    // }); // 이후에 활성화 예정:
-
-    $('#search_sbuject').on('keydown', function (e) {
-     if (e.key === 'Enter') {
-      e.preventDefault();
-      page.searchMainData();
-     }
-    });
-
-    // 금액구간 입력칸: 천단위 콤마 + 마이너스 허용
     $('#search_amtfr, #search_amtto').on('keyup', function () {
      page.formatNumberInput($(this).val(), this);
     });
 
-    // 검색 조건 입력 중 Enter 로 조회
     $('#search_sbuject, #search_remark, #search_amtfr, #search_amtto').on('keydown', function (e) {
      if (e.key === 'Enter') {
       e.preventDefault();
@@ -2832,7 +2413,6 @@
      page.searchMainData();
     });
 
-    // 전표 출력 버튼
     $('#btnSlipPrint').on('click', function () {
      const selectedItems = page.viewData.sourceCollection?.filter(r => r.selected);
      if (!selectedItems || selectedItems.length === 0) {
@@ -2841,7 +2421,7 @@
      }
      page.showPrintSelectPopup();
     });
-    // 전표 등록 탭 — 현재 전표 출력
+
     $('#btnSlipPrint2').on('click', function () {
      const spdate = $('#spdate').val();
      const spnum = $('#spnum').val();
@@ -2855,7 +2435,6 @@
      page.showPrintSelectPopup(keys);
     });
 
-    // 첨부파일 버튼 클릭
     $('#btnFileUpload').on('click', function () {
      let content = tmpl('fileUploadTemplate', {});
      let $content = $(content);
@@ -2866,7 +2445,6 @@
       page.setUploader();
       page.uploader.mode = 'active';
 
-      // 저장 버튼만 연결하면 됨 (닫기는 PopupDraggable이 자동 처리)
       $content.find('#btn_file_save').on('click', function () {
        if (page.uploader) {
         page.uploader.uploadNow(page.currentSlipId, function () {
@@ -2878,7 +2456,6 @@
      }, 100);
     });
 
-    // ── 사업명 엔터 → 팝업 ──
     $('#businame').on('keydown', function (e) {
      if (e.key === 'Enter') {
       e.preventDefault();
@@ -2886,70 +2463,31 @@
      }
     });
 
-// ── 분개 라인 항/목 엔터 → 팝업 ──
-    $('#slipLineTbody').on('keydown', 'input.btn-it1-search', function (e) {
-     if (e.key === 'Enter') {
-      e.preventDefault();
-      let $row = $(this).closest('tr');
-      page.searchIt1nm($row);
-     }
-    });
-
-    $('#slipLineTbody').on('keydown', 'input.btn-it2-search', function (e) {
-     if (e.key === 'Enter') {
-      e.preventDefault();
-      let $row = $(this).closest('tr');
-      page.searchIt2nm($row);
-     }
-    });
-
-    $('#slipLineTbody').on('keydown', 'input[name^="accnm"]', function (e) {
-     if (e.key === 'Enter') {
-      e.preventDefault();
-      let $row = $(this).closest('tr');
-      page.searchAccnm($row);
-     }
-    });
-    //재원
-    $('#slipLineTbody').on('keydown', 'input[name^="mssecnm"]', function (e) {
-     if (e.key !== 'Enter') return;
-     e.preventDefault();
-     let $row = $(this).closest('tr');
-     page.searchMssec($row);
-    });
-
-    // 저장 버튼
     $('#btnSave').on('click', function () {
      page.saveSlip();
     });
 
-    // 신규등록 버튼
     $('#Newbtn').on('click', function () {
      page.resetForm();
     });
 
-    // 삭제 버튼
     $('#btnDelete').on('click', function () {
      page.DeleteSlip();
     });
 
-    // 전표복사 버튼
     $('#capy').on('click', function () {
      page.copySlip();
     });
 
-    // 전표번호 변경 버튼
     $('#spnum_btn').on('click', function () {
      page.changeSpnum();
     });
 
-    // 전표일자 변경 버튼
     $('#btnChangeSpdate').on('click', function () {
      page.changeSpdate();
     });
 
     $(document).on('keydown', function (e) {
-     // 전표 등록 탭이 활성일 때만 동작시키려면 조건 추가 가능
      switch (e.key) {
       case 'F4':
        e.preventDefault();

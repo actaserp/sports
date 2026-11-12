@@ -1,0 +1,453 @@
+<!--
+  세출내역서 — PowerBuilder w_tb_x00072_sh2 이식. 2026-11-11
+  * 조건: 년도(비우면 당해 연도) · 재원구분(전체 = 모든 재원) · 조회형식(관별현황 / 재원별현황, 원본은 탭)
+  * 관별현황 (d_tb_x00072_sh2)
+      열: 관명(계정) · 사업명 · 항 · 목 · 산출내역 · 예산액
+      묶음: 관 → 관+항. 항 끝 '소계'(목 칸), 관 끝 '합계'(항 칸), 맨 끝 '총계'(관명 칸)
+      정렬: 원본 SQL 그대로 부문순서 → 재원 → 관 → 사업 → 항 → 목
+  * 재원별현황 (d_tb_x00072_prt330, 원본은 크로스탭)
+      열: 관 · 항 · 목 · 예산액 · 산출내역 · 재원별 금액(조회된 재원마다 한 열)
+      정렬 · 묶음은 크로스탭처럼 이름 기준: 관명 → 항명 → 목명 → 예산액 → 산출내역, 재원 열은 재원명 순
+      항 끝 '항 계'(하늘색), 관 끝 '관 합계'(회색)
+  * 인쇄: 지금 화면 모양 그대로 A4 가로 (원본 출력 양식 prt2 · prt22 · prt23 · prt33 선택은 자료 받은 뒤 반영)
+  * API  GET /api/budget/report/expenditureDetail?yyyy=&mssec=   재원 목록은 /api/account_management/slip_entry/mssec
+-->
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml">
+<th:block layout:fragment="content">
+  <style>
+      .layout-contents { height: 100vh !important; min-height: 0 !important; box-sizing: border-box; padding-bottom: 8px !important; overflow: hidden !important; }
+      .layout-contents section { flex: 1 1 auto !important; min-height: 0 !important; overflow: auto !important; }
+
+      .dt-bar { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+      .dt-bar dl dt { font-size: 14px; font-weight: 700; color: #4d4d4d; margin-bottom: 4px; }
+      /* 라디오 칸: 공통 CSS(sf21_all_5/6.css)의 부트스트랩 .radio 규칙을 피하려고 클래스 이름을 dt-radio 로 쓴다 */
+      .dt-bar .dt-radio { display: flex; gap: 18px; align-items: center; height: 36px; font-size: 14px; }
+      .dt-bar .dt-radio label { display: inline-flex; align-items: center; gap: 6px; margin: 0; cursor: pointer;
+          line-height: 1.3; white-space: nowrap; font-weight: 400; }
+      /* 라디오 — bank_account.html 의 정산유형(.ba-type)과 같은 방식.
+         전역 ui.css 가 ::before/::after 로 동그라미를 다시 그리므로, 네이티브 모양으로 되돌리고 가상요소를 지운다.
+         ⚠ !important 는 전역 규칙을 이길 유일한 수단이다. 전역이 바뀌면 이 블록도 다시 볼 것 */
+      .dt-bar .dt-radio input[type="radio"] {
+          -webkit-appearance: auto !important; -moz-appearance: auto !important; appearance: auto !important;
+          flex: 0 0 16px !important; width: 16px !important; height: 16px !important;
+          min-width: 16px !important; max-width: 16px !important; min-height: 16px !important;
+          margin: 0 !important; padding: 0 !important;
+          border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important;
+          vertical-align: middle !important; accent-color: #2563eb;
+      }
+      .dt-bar .dt-radio input[type="radio"]::before,
+      .dt-bar .dt-radio input[type="radio"]::after { content: none !important; display: none !important; }
+      .dt-bar .right { margin-left: auto; display: flex; gap: 6px; }
+
+      .dt-list-wrap { max-height: 640px; overflow: auto; border: 1px solid #dee2e6; }
+      table.dt-list { width: 100%; border-collapse: collapse; table-layout: fixed; border-top: none; font-size: 14px; }
+      table.dt-list th {
+          position: sticky; top: 0; z-index: 1; background: #edeff5; height: 40px; width: auto;
+          border-bottom: 1px solid #c6c6c6; padding: 4px 6px; text-align: center; font-weight: 700;
+          /* 열 이름이 길면 잘라내지 않고 단어 단위로 줄을 바꾼다 (재원 이름 등) */
+          white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.3;
+      }
+      table.dt-list td {
+          height: 32px; padding: 0 8px; border-bottom: 1px solid #ebebeb;
+          white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.3; text-align: left;
+      }
+      table.dt-list td.r { text-align: right; }
+      table.dt-list td.c { text-align: center; }
+      table.dt-list tr.s2 td { background: #f7f9fc; }
+      table.dt-list tr.s1 td { background: #fffbe6; font-weight: 700; }
+      table.dt-list tr.t td  { background: #e6f7f9; font-weight: 700; }
+      /* 재원별현황은 원본 d_tb_x00072_prt330 색 · 정렬을 따른다 */
+      table.dt-list.by-src tr.s2 td { background: #e6f7f9; font-weight: 700; }
+      table.dt-list.by-src tr.s1 td { background: #ececec; font-weight: 700; }
+      table.dt-list.by-src tr.s2 td.lbl, table.dt-list.by-src tr.s1 td.lbl { text-align: right; }
+      .dt-empty { text-align: center !important; color: #888; padding: 40px 0 !important; }
+
+      #dtPrint { display: none; }
+      .dt-paper {
+          width: 297mm; height: 210mm; box-sizing: border-box; background: #fff;
+          padding: 10mm 12mm 8mm; font-family: 'Malgun Gothic', sans-serif; color: #000;
+          display: flex; flex-direction: column; overflow: hidden;
+      }
+      .dt-paper .dt-body { flex: 1; min-height: 0; overflow: hidden; }
+      /* 줄바꿈되는 칸이 있어도 숫자는 한 줄 */
+      table.dt td.r { white-space: nowrap; }
+      .dt-title { text-align: center; font-size: 22px; font-weight: 700; letter-spacing: 4px; margin: 0 0 12px; }
+      .dt-title-space { height: 32px; margin: 0 0 12px; }
+      .dt-meta { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
+      .dt-page-no { text-align: center; font-size: 10px; padding-top: 4px; }
+      table.dt { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; border-top: none; }
+      table.dt th, table.dt td {
+          border: 1px solid #000; height: 19px; padding: 1px 5px; background: #fff; width: auto;
+          font-weight: 400; white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.3; text-align: left;
+      }
+      table.dt th { text-align: center; white-space: normal; word-break: keep-all; overflow-wrap: anywhere;
+          line-height: 1.2; height: auto; padding: 2px 4px; }
+      table.dt td.r { text-align: right; }
+      table.dt td.c { text-align: center; }
+      table.dt tr.s1 td, table.dt tr.t td { font-weight: 700; }
+      table.dt.by-src tr.s2 td, table.dt.by-src tr.s1 td { font-weight: 700; }
+      table.dt.by-src td.lbl { text-align: right; }
+      /* 원본처럼 항계·관합계의 예산액은 보통 굵기, 재원별 금액만 굵게 */
+      table.dt-list.by-src tr.s2 td:nth-child(4), table.dt-list.by-src tr.s1 td:nth-child(4),
+      table.dt.by-src tr.s2 td:nth-child(4), table.dt.by-src tr.s1 td:nth-child(4) { font-weight: 400; }
+
+      @page { size: A4 landscape; margin: 0; }
+      @media print {
+          body * { visibility: hidden; }
+          #dtPrint, #dtPrint * { visibility: visible; }
+          #dtPrint { display: block; position: absolute; left: 0; top: 0; }
+          .dt-paper { page-break-after: always; break-after: page; }
+          .dt-paper:last-child { page-break-after: auto; break-after: auto; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      }
+  </style>
+
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>세출내역서</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>예산관리</li>
+        <li>예산서출력</li>
+        <li>세출내역서</li>
+      </ul>
+    </div>
+
+    <section>
+      <div class="dt-bar">
+        <dl>
+          <dt><label for="dtYyyy">년도</label></dt>
+          <dd><input id="dtYyyy" maxlength="4" style="width:90px; text-align:center;" type="text"/></dd>
+        </dl>
+        <dl>
+          <dt><label for="dtMssec">재원구분</label></dt>
+          <dd><select id="dtMssec" style="width:150px;"><option value="">전체</option></select></dd>
+        </dl>
+        <dl>
+          <dt>조회형식</dt>
+          <dd class="dt-radio">
+            <label><input checked name="dtFlag" type="radio" value="0"/><span>관별현황</span></label>
+            <label><input name="dtFlag" type="radio" value="1"/><span>재원별현황</span></label>
+          </dd>
+        </dl>
+        <button class="btn btn-delete" id="btnDtSearch" title="조회" type="button">
+          <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}"> 조회
+        </button>
+        <span id="dtCount" style="font-size:13px; color:#666; margin-bottom:8px;"></span>
+        <div class="right">
+          <a class="btn btn-edit" id="btnDtPrint" title="인쇄">
+            <img alt="인쇄 아이콘" th:src="@{/images/icon/ico-edit.svg}"> 인쇄
+          </a>
+          <a class="btn btn-excell" id="btnDtExcel" title="EXCEL">EXCEL</a>
+        </div>
+      </div>
+
+      <div class="dt-list-wrap">
+        <table class="dt-list">
+          <colgroup id="dtCols"></colgroup>
+          <thead id="dtHead"></thead>
+          <tbody id="dtBody"><tr><td class="dt-empty">년도를 입력하고 조회하세요.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div id="dtPrint"></div>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   (function () {
+    const API = '/api/budget/report/expenditureDetail';
+    const TITLE = '세출내역서';
+    let raw = null;    // 서버 원본 행
+    let view = null;   // {head:[], widths:[], numCols:Set, rows:[{kind, cells, center}], ...}
+
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+     c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    const num = v => Number(v) || 0;
+    const now = () => {
+     const d = new Date(), p = n => String(n).padStart(2, '0');
+     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    };
+    const flag = () => $('input[name="dtFlag"]:checked').val();
+    const bizKey = r => [r.bsdate || '', r.bseccd || '', r.busicd || ''].join('|');
+
+    // ── 관별현황 (d_tb_x00072_sh2) — 묶음: 관 → 관+항 ──
+    function buildByItem(rows) {
+     const out = [];
+     let total = 0, i = 0;
+     while (i < rows.length) {
+      const acccd = rows[i].acccd;
+      let g1 = 0, firstAcc = true;
+      while (i < rows.length && rows[i].acccd === acccd) {
+       const k2 = (rows[i].it1cd || '');
+       let g2 = 0, first2 = true, prevIt2 = null, prevBiz = null;
+       while (i < rows.length && rows[i].acccd === acccd && (rows[i].it1cd || '') === k2) {
+        const r = rows[i], it2 = r.it2cd || '';
+        out.push({kind: 'd', cells: [
+          firstAcc ? (r.accnm || r.acccd || '') : '',
+          first2 || (r.businm || '') !== prevBiz ? (r.businm || '') : '',
+          first2 ? (r.it1nm || r.it1cd || '') : '',
+          prevIt2 !== null && prevIt2 === it2 ? '' : (r.it2nm || r.it2cd || ''),
+          r.summy || '',
+          num(r.price),
+         ]});
+        g2 += num(r.price);
+        firstAcc = false; first2 = false; prevIt2 = it2; prevBiz = r.businm || ''; i++;
+       }
+       out.push({kind: 's2', cells: ['', '', '', '소계', '', g2], center: 3});
+       g1 += g2;
+      }
+      out.push({kind: 's1', cells: ['', '', '합계', '', '', g1], center: 2});
+      total += g1;
+     }
+     if (out.length) out.push({kind: 't', cells: ['총계', '', '', '', '', total], center: 0});
+     return {
+      head: ['관명(계정)', '사업명', '항', '목', '산출내역', '예산액'],
+      widths: [14, 20, 14, 12, 26, 14],
+      numCols: new Set([5]),
+      rows: out,
+     };
+    }
+
+    // ── 재원별현황 (d_tb_x00072_prt330, 크로스탭) ──
+    // 원본 크로스탭은 행을 '관명 → 항명 → 목명 → 예산액 → 산출내역' 순으로 정렬하고,
+    // 같은 이름끼리 묶어 항 계 · 관합계를 낸다(코드가 아니라 이름 기준). 재원 열도 재원명 순이다.
+    function buildBySource(rows) {
+     const nm = v => String(v == null ? '' : v);
+     // 원본 크로스탭은 글자 코드 순 비교(영문·숫자가 한글보다 앞, 띄어쓰기도 그대로)
+     const cmp = (a, b) => { const x = nm(a), y = nm(b); return x < y ? -1 : x > y ? 1 : 0; };
+     const accName = r => nm(r.accnm || r.acccd);
+     const it1Name = r => nm(r.it1nm || r.it1cd);
+     const it2Name = r => nm(r.it2nm || r.it2cd);
+     // 세입내역서와 같이 항 이름이 없는 행은 크로스탭에서 빠진다
+     const sorted = rows.filter(r => it1Name(r).trim() !== '').sort((a, b) =>
+      cmp(accName(a), accName(b)) || cmp(it1Name(a), it1Name(b)) || cmp(it2Name(a), it2Name(b)) ||
+      num(a.price) - num(b.price) || cmp(a.summy, b.summy));
+
+     // 조회된 재원마다 한 열 (재원명 순)
+     const srcMap = new Map();
+     sorted.forEach(r => { const k = r.mssec || ''; if (!srcMap.has(k)) srcMap.set(k, r.mssecnm || (k ? k : '(미지정)')); });
+     const srcKeys = [...srcMap.keys()].sort((a, b) => cmp(srcMap.get(a), srcMap.get(b)));
+     const base = 5;
+     const zero = () => srcKeys.map(() => 0);
+     const line = (cells, amounts) => cells.concat(amounts);
+
+     const out = [];
+     let i = 0;
+     while (i < sorted.length) {
+      const acc = accName(sorted[i]);
+      let a1 = 0, s1 = zero(), firstAcc = true;
+      while (i < sorted.length && accName(sorted[i]) === acc) {
+       const it1 = it1Name(sorted[i]);
+       let a2 = 0, s2 = zero(), firstIt = true, prevIt2 = null;
+       while (i < sorted.length && accName(sorted[i]) === acc && it1Name(sorted[i]) === it1) {
+        const r = sorted[i], it2 = it2Name(r);
+        // 크로스탭은 관·항·목·예산액·산출내역이 모두 같은 행을 한 줄로 합친다.
+        // 재원 금액은 더하지만 예산액은 한 번만 잡힌다(원본 관 합계가 재원 합보다 작게 나오는 이유).
+        const amts = zero();
+        const same = q => accName(q) === acc && it1Name(q) === it1 && it2Name(q) === it2 &&
+         num(q.price) === num(r.price) && nm(q.summy) === nm(r.summy);
+        let si = srcKeys.indexOf(r.mssec || '');
+        amts[si] += num(r.price); s2[si] += num(r.price);
+        while (i + 1 < sorted.length && same(sorted[i + 1])) {
+         i++;
+         si = srcKeys.indexOf(sorted[i].mssec || '');
+         amts[si] += num(sorted[i].price); s2[si] += num(sorted[i].price);
+        }
+        out.push({kind: 'd', cells: line([
+          firstAcc ? acc : '',
+          firstIt ? it1 : '',
+          prevIt2 !== null && prevIt2 === it2 ? '' : it2,
+          num(r.price),
+          r.summy || '',
+         ], amts.map(v => v || ''))});
+        a2 += num(r.price);
+        firstAcc = false; firstIt = false; prevIt2 = it2; i++;
+       }
+       out.push({kind: 's2', cells: line(['', '항 계', '', a2, ''], s2), label: 1});
+       a1 += a2; s1 = s1.map((v, k) => v + s2[k]);
+      }
+      out.push({kind: 's1', cells: line(['관 합계', '', '', a1, ''], s1), label: 0});
+     }
+     // 재원 열 폭: 이름 길이(한글 1자 ≈ 1.6)와 금액 자리(약 11) 중 큰 쪽
+     const srcW = k => Math.max(11, Math.ceil(String(srcMap.get(k) || '').length * 1.6) + 2);
+     return {
+      head: ['관', '항', '목', '예산액', '산출내역'].concat(srcKeys.map(k => srcMap.get(k))),
+      widths: [14, 14, 12, 12, 26].concat(srcKeys.map(srcW)),
+      numCols: new Set([3].concat(srcKeys.map((_, k) => base + k))),
+      rows: out,
+     };
+    }
+
+    const fmtCell = (v, isNum) => isNum ? (v === '' || v == null ? '' : Number(v).toLocaleString()) : v;
+    function trHtml(row) {
+     return `<tr class="${row.kind}">` + row.cells.map((v, k) => {
+      const isNum = view.numCols.has(k);
+      const cls = isNum ? 'r' : (row.center === k ? 'c' : (row.label === k ? 'lbl' : ''));
+      const txt = fmtCell(v, isNum);
+      return `<td${cls ? ` class="${cls}"` : ''} title="${esc(txt)}">${esc(txt)}</td>`;
+     }).join('') + '</tr>';
+    }
+    const colsHtml = () => {
+     const sum = view.widths.reduce((s, w) => s + w, 0);
+     return view.widths.map(w => `<col style="width:${(w / sum * 100).toFixed(2)}%">`).join('');
+    };
+
+    function render() {
+     view = flag() === '1' ? buildBySource(raw.rows) : buildByItem(raw.rows);
+     $('#dtCols').html(colsHtml());
+     $('table.dt-list').toggleClass('by-src', flag() === '1');
+     $('#dtHead').html(`<tr>${view.head.map(h => `<th title="${esc(h)}">${esc(h)}</th>`).join('')}</tr>`);
+     $('#dtCount').text(`${raw.yyyy}년도 · ${raw.mssecnm} · ${raw.rows.length}건`);
+     $('#dtBody').html(view.rows.length
+      ? view.rows.map(trHtml).join('')
+      : `<tr><td class="dt-empty" colspan="${view.head.length}">조회된 자료가 없습니다.</td></tr>`);
+    }
+
+    function retrieve() {
+     let yyyy = String($('#dtYyyy').val() || '').trim();
+     if (yyyy === '') { yyyy = String(new Date().getFullYear()); $('#dtYyyy').val(yyyy); }
+     if (!/^\d{4}$/.test(yyyy)) {
+      Alert.alert('', '년도를 4자리로 입력하세요.');
+      $('#dtYyyy').focus();
+      return;
+     }
+     const mssec = $('#dtMssec').val() || '';
+     const mssecnm = $('#dtMssec option:selected').text() || '전체';
+     AjaxUtil.getAsyncData(API, {yyyy: yyyy, mssec: mssec}, res => {
+      if (!res || !res.success) {
+       Alert.alert('', (res && res.message) || '조회 중 오류가 발생했습니다.');
+       return;
+      }
+      const data = res.data || {};
+      raw = {yyyy: data.yyyy, spjangnm: data.spjangnm, mssecnm: mssecnm, rows: data.rows || []};
+      render();
+     });
+    }
+
+
+    /**
+     * 인쇄 쪽 나누기 — 줄 수가 아니라 실제 높이를 재서 넘치면 다음 쪽으로 넘긴다.
+     * 긴 글자가 줄바꿈되어 행 높이가 달라져도 한 쪽을 넘치지 않는다.
+     *  pageHtml(i): i번째 쪽 틀(빈 tbody, .pg-body, .pg-no 포함) / blocks: 함께 다닐 행 묶음 [[tr html, ...], ...]
+     */
+    function paginate(wrap, pageHtml, blocks) {
+     const st = wrap.style;
+     const hidden = getComputedStyle(wrap).display === 'none';
+     if (hidden) { st.display = 'block'; st.position = 'absolute'; st.left = '-10000px'; st.top = '0'; }
+     wrap.innerHTML = '';
+     const pages = [];
+     const add = () => {
+      const t = document.createElement('div');
+      t.innerHTML = pageHtml(pages.length).trim();
+      const el = t.firstElementChild;
+      wrap.appendChild(el);
+      const pg = {el: el, body: el.querySelector('.pg-body'), tbody: el.querySelector('tbody')};
+      pages.push(pg);
+      return pg;
+     };
+     let cur = add();
+     blocks.forEach(block => {
+      const t = document.createElement('tbody');
+      t.innerHTML = block.join('');
+      const trs = [...t.children];
+      trs.forEach(tr => cur.tbody.appendChild(tr));
+      // 인쇄 시 글꼴·배율 차이로 화면보다 조금 길어지므로 여유(SAFE)를 둔다
+      const SAFE = 24;
+      if (cur.tbody.closest('table').getBoundingClientRect().bottom - cur.body.getBoundingClientRect().top > cur.body.clientHeight - SAFE && cur.tbody.children.length > trs.length) {
+       trs.forEach(tr => tr.remove());
+       cur = add();
+       trs.forEach(tr => cur.tbody.appendChild(tr));
+       // 새 쪽 첫 행의 반복값을 먼저 복원해서 높이에 반영
+       const td = cur.tbody.querySelector('tr:first-child td[data-full]');
+       if (td) td.textContent = td.dataset.full;
+      }
+     });
+     pages.forEach((p, i) => {
+      const n = p.el.querySelector('.pg-no');
+      if (n) n.textContent = `페이지 : ${i + 1} (${pages.length})`;
+      // 쪽 첫 행에서 숨겼던 반복값(월 · 사업구분 등)은 다시 보여준다
+      const td = p.tbody.querySelector('tr:first-child td[data-full]');
+      if (td) td.textContent = td.dataset.full;
+     });
+     if (hidden) { st.display = ''; st.position = ''; st.left = ''; st.top = ''; }
+     return pages;
+    }
+
+    function buildPrint() {
+     const printed = now();
+     const mode = flag() === '1' ? '재원별현황' : '관별현황';
+     const pageHtml = pi => `
+      <div class="dt-paper">
+       <div class="dt-body pg-body">
+        ${pi === 0 ? `<div class="dt-title">${esc(raw.yyyy)}년도 ${TITLE}</div>` : `<div class="dt-title-space"></div>`}
+        <div class="dt-meta">
+          <span>${esc(raw.spjangnm || '')} · 재원구분 : ${esc(raw.mssecnm)} · ${mode}</span>
+          <span>출력일시 : ${printed}</span>
+        </div>
+        <table class="dt${flag() === '1' ? ' by-src' : ''}">
+          <colgroup>${colsHtml()}</colgroup>
+          <thead><tr>${view.head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+          <tbody></tbody>
+        </table>
+       </div>
+       <div class="dt-page-no pg-no"></div>
+      </div>`;
+     paginate(document.getElementById('dtPrint'), pageHtml, view.rows.map(r => [trHtml(r)]));
+    }
+
+    function exportExcel() {
+     const wb = new wijmo.xlsx.Workbook();
+     const sheet = new wijmo.xlsx.WorkSheet();
+     sheet.name = TITLE;
+     view.widths.forEach(w => { const col = new wijmo.xlsx.WorkbookColumn(); col.width = w * 9; sheet.columns.push(col); });
+     const mkRow = (vals, bold) => {
+      const row = new wijmo.xlsx.WorkbookRow();
+      vals.forEach((v, k) => {
+       const cell = new wijmo.xlsx.WorkbookCell();
+       cell.value = v === '' ? null : v;
+       cell.style = new wijmo.xlsx.WorkbookStyle();
+       if (view.numCols.has(k)) cell.style.format = '#,##0';
+       if (bold) { cell.style.font = new wijmo.xlsx.WorkbookFont(); cell.style.font.bold = true; }
+       row.cells.push(cell);
+      });
+      return row;
+     };
+     sheet.rows.push(mkRow(view.head, true));
+     view.rows.forEach(r => sheet.rows.push(mkRow(r.cells, r.kind !== 'd')));
+     wb.sheets.push(sheet);
+     wb.saveAsync(`${TITLE}_${raw.yyyy}${flag() === '1' ? '_재원별현황' : ''}.xlsx`);
+    }
+
+    $(document).ready(function () {
+     $('#dtYyyy').val(String(new Date().getFullYear()));
+     AjaxUtil.getAsyncData('/api/account_management/slip_entry/mssec', {}, res => {
+      ((res && res.data) || []).forEach(m =>
+       $('#dtMssec').append(`<option value="${esc(m.value)}">${esc(m.text)}</option>`));
+     });
+     $('#btnDtSearch').on('click', retrieve);
+     $('#dtYyyy').on('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); retrieve(); } });
+     $('#dtMssec').on('change', retrieve);
+     // 조회형식만 바꾸면 같은 자료로 모양만 다시 그린다
+     $('input[name="dtFlag"]').on('change', () => { if (raw) render(); });
+     $(document).on('keydown', e => { if (e.key === 'F4') { e.preventDefault(); retrieve(); } });
+     $('#btnDtPrint').on('click', () => {
+      if (!view || !view.rows.length) { Alert.alert('', '먼저 조회하세요.'); return; }
+      buildPrint();
+      window.print();
+     });
+     $('#btnDtExcel').on('click', () => {
+      if (!view || !view.rows.length) { Alert.alert('', '먼저 조회하세요.'); return; }
+      exportExcel();
+     });
+     retrieve();
+    });
+   })();
+  </script>
+</th:block>
+</html>

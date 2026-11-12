@@ -1,0 +1,329 @@
+<!--
+  월결산서 — PowerBuilder w_tb_aa009_sh17 이식. 2026-11-12
+  * 조건: 사업년도(비우면 당해 연도) · 월
+  * 탭(원본 그대로 3개, 탭을 바꾸면 그 탭을 조회)
+      관1  (sh17_4) 수입 | 지출 좌우. 과목 · 월결산금액
+      수입  (sh17_5) 과목 · 항 · 목 · 월결산금액. 관+항 끝 '소계', 관 끝 '합계'
+      지출  (sh17_6) 수입 탭과 같은 모양
+  * 맨 아래: 합계 → 전기이월금 / 차기이월금 → 총 계 (원본은 사업 조건이 없어 이월금 행이 항상 나온다)
+  * 계산은 서버(예산 및 결산대조표와 같은 SQL 을 한 달 · 사업 · 재원 전체로 조회, 원본 ue_retrieve · wf_iwolamt 식)
+  * 인쇄: 지금 탭 모양 그대로 A4 세로, 실제 높이로 쪽 나누기, 브라우저 머리글 없음
+  * API  GET /api/settlement/monthly/read?tab=&yyyy=&mm=
+-->
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml">
+<th:block layout:fragment="content">
+  <style>
+      .layout-contents { height: 100vh !important; min-height: 0 !important; box-sizing: border-box; padding-bottom: 8px !important; overflow: hidden !important; }
+      .layout-contents section { flex: 1 1 auto !important; min-height: 0 !important; overflow: auto !important; }
+
+      .bc-bar { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+      .bc-bar dl dt { font-size: 14px; font-weight: 700; color: #4d4d4d; margin-bottom: 4px; }
+      .bc-bar .right { margin-left: auto; display: flex; gap: 6px; }
+      .bc-bar .mm { display: flex; align-items: center; gap: 4px; }
+
+      .bc-tabs { display: flex; gap: 4px; border-bottom: 1px solid #c6c6c6; margin-bottom: 10px; }
+      .bc-tabs button { border: 1px solid #c6c6c6; border-bottom: none; background: #f5f6f8; padding: 6px 16px;
+          font-size: 14px; cursor: pointer; border-radius: 4px 4px 0 0; margin-bottom: -1px; }
+      .bc-tabs button.on { background: #fff; font-weight: 700; color: #2f5cff; }
+
+      .bc-list-wrap { max-height: 600px; overflow: auto; border: 1px solid #dee2e6; }
+      table.bc-list { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; border-top: none; font-size: 14px; }
+      table.bc-list th {
+          background: #edeff5; height: 34px; width: auto; box-sizing: border-box;
+          border: 0; border-right: 1px solid #d5d9e0; border-bottom: 1px solid #d5d9e0; padding: 2px 6px; text-align: center; font-weight: 700;
+          white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.3;
+      }
+      /* 머리글 두 줄을 한 덩어리로 고정 — 줄마다 따로 고정하거나 border-collapse 를 쓰면 줄 사이 틈으로 아래 데이터가 비친다.
+         그래서 표는 separate + 칸마다 오른쪽 · 아래 선만 긋는다 */
+      table.bc-list thead { position: sticky; top: 0; z-index: 2; background: #edeff5; }
+      table.bc-list td {
+          height: 30px; padding: 2px 6px; border: 0; border-right: 1px solid #ebebeb; border-bottom: 1px solid #ebebeb;
+          white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.3; text-align: left;
+      }
+      table.bc-list td.r, table.bc td.r { text-align: right; white-space: nowrap; }
+      table.bc-list td.c, table.bc td.c { text-align: center; }
+      table.bc-list tr.s2 td { background: #f7f9fc; }
+      table.bc-list tr.s1 td { background: #fffbe6; font-weight: 700; }
+      table.bc-list tr.s td, table.bc-list tr.t td { background: #e6f7f9; font-weight: 700; }
+      table.bc-list tr.c td { background: #f5f6f8; }
+      .bc-empty { text-align: center !important; color: #888; padding: 40px 0 !important; }
+
+      /* 인쇄용 (화면에서는 숨김) */
+      #bcPrint { display: none; }
+      .bc-paper {
+          width: 210mm; height: 297mm; box-sizing: border-box; background: #fff;
+          padding: 10mm 12mm 8mm; font-family: 'Malgun Gothic', sans-serif; color: #000;
+          display: flex; flex-direction: column; overflow: hidden;
+      }
+      .bc-paper .bc-body { flex: 1; min-height: 0; overflow: hidden; }
+      .bc-title { text-align: center; font-size: 22px; font-weight: 700; letter-spacing: 2px; margin: 0 0 6px; }
+      .bc-title-space { height: 28px; margin: 0 0 6px; }
+      .bc-sub { font-size: 12px; margin-bottom: 2px; }
+      .bc-meta { display: flex; justify-content: space-between; font-size: 11px; margin: 4px 0; }
+      .bc-page-no { text-align: center; font-size: 10px; padding-top: 4px; }
+      table.bc { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; border-top: none; }
+      table.bc th, table.bc td {
+          border: 1px solid #000; height: 19px; padding: 1px 4px; background: #fff; width: auto;
+          font-weight: 400; white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.3; text-align: left;
+      }
+      table.bc th { text-align: center; }
+      table.bc tr.s1 td, table.bc tr.s td, table.bc tr.t td { font-weight: 700; }
+
+      @page { size: A4 portrait; margin: 0; }
+      @media print {
+          body * { visibility: hidden; }
+          #bcPrint, #bcPrint * { visibility: visible; }
+          #bcPrint { display: block; position: absolute; left: 0; top: 0; }
+          .bc-paper { page-break-after: always; break-after: page; }
+          .bc-paper:last-child { page-break-after: auto; break-after: auto; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      }
+  </style>
+
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>월결산서</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>수지결산서</li>
+        <li>월결산서</li>
+      </ul>
+    </div>
+
+    <section>
+      <div class="bc-bar">
+        <dl>
+          <dt><label for="bcYyyy">사업년도</label></dt>
+          <dd><input id="bcYyyy" maxlength="4" style="width:80px; text-align:center;" type="text"/></dd>
+        </dl>
+        <dl>
+          <dt><label for="bcMm">월</label></dt>
+          <dd><select id="bcMm" style="width:80px;"></select></dd>
+        </dl>
+        <button class="btn btn-delete" id="btnBcSearch" title="조회" type="button">
+          <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}"> 조회
+        </button>
+        <div class="right">
+          <a class="btn btn-edit" id="btnBcPrint" title="인쇄">
+            <img alt="인쇄 아이콘" th:src="@{/images/icon/ico-edit.svg}"> 인쇄
+          </a>
+        </div>
+      </div>
+
+      <div class="bc-tabs" id="bcTabs">
+        <button class="on" data-tab="1" type="button">관1</button>
+        <button data-tab="2" type="button">수입</button>
+        <button data-tab="3" type="button">지출</button>
+      </div>
+
+      <div class="bc-list-wrap">
+        <table class="bc-list">
+          <colgroup id="bcCols"></colgroup>
+          <thead id="bcHead"></thead>
+          <tbody id="bcBody"><tr><td class="bc-empty">사업년도를 입력하고 조회하세요.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div id="bcPrint"></div>
+
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   (function () {
+    const API = '/api/settlement/monthly/read';
+    const TITLES = {1: '결산서', 2: '수입 결산서', 3: '지출 결산서'};
+    let tab = 1;
+    let last = null;   // {tab, yyyy, mm, spjangnm, view}
+
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+     c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    const num = v => Number(v) || 0;
+    const has = v => v !== undefined && v !== null && v !== '';
+    const fmt = v => has(v) ? num(v).toLocaleString() : '';
+    // 원본: If (결산 / 예산 = 0, 0, 결산 / 예산 * 100) — 예산이 0 이면 0.00%
+    const rate = (a, b) => (!has(a) && !has(b)) ? '' : ((num(a) === 0 ? 0 : num(b) / num(a) * 100).toFixed(2) + '%');
+    // 원본 출력물: 전기이월금 · 차기이월금 · 총 계 행은 진행율을 비워 둔다 (합계 행은 표시)
+    const noRate = r => r.kind === 'c' || r.kind === 't';
+    const now = () => {
+     const d = new Date(), p = n => String(n).padStart(2, '0');
+     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    };
+
+    /**
+     * 화면 모양 만들기
+     *  cells: 칸 값 배열, cls: 칸별 정렬(r/c/'')
+     */
+    function buildView(t, rows, mm) {
+     const mmHead = `${mm} 월결산금액`;
+     if (t === 1) {
+      const sideHead = ['과목', mmHead];
+      const out = rows.map(r => ({kind: r.kind, cells: [
+        has(r.acc1) ? r.acc1 : '', has(r.acc1) ? fmt(r.amt2) : '',
+        has(r.acc2) ? r.acc2 : '', has(r.acc2) ? fmt(r.amt4) : '', '']}));
+      return {
+       head2: [{label: '수          입', span: 2}, {label: '지          출', span: 2}, {label: '비          고', span: 1, rows: 2}],
+       head: sideHead.concat(sideHead), widths: [21, 16, 21, 16, 26], cls: ['', 'r', '', 'r', ''], rows: out,
+      };
+     }
+     // 수입 · 지출 탭: 관 → 관+항 묶음, 항 끝 '소계', 관 끝 '합계'
+     const line = (kind, c1, c2, c3, a2) => ({kind: kind, cells: [c1, c2, c3, fmt(a2), '']});
+     const out = [];
+     const det = rows.filter(r => r.kind === 'd');
+     let i = 0;
+     while (i < det.length) {
+      const acc = det[i].acccd;
+      let g1 = 0, firstAcc = true;
+      while (i < det.length && det[i].acccd === acc) {
+       const it1 = det[i].it1cd;
+       let g2 = 0, firstIt = true;
+       while (i < det.length && det[i].acccd === acc && det[i].it1cd === it1) {
+        const r = det[i];
+        out.push(line('d', firstAcc ? r.acc1 : '', firstIt ? r.it1nm : '', r.it2nm, r.amt2));
+        g2 += num(r.amt2);
+        firstAcc = false; firstIt = false; i++;
+       }
+       out.push(line('s2', '', '소계', '', g2));
+       g1 += g2;
+      }
+      out.push(line('s1', '', '합계', '', g1));
+     }
+     rows.filter(r => r.kind !== 'd').forEach(r => out.push(line(r.kind, r.acc1, '', '', r.amt2)));
+     return {
+      head2: [{label: t === 2 ? '수          입' : '지          출', span: 5}],
+      head: ['과목', '항', '목', mmHead, '비고'],
+      widths: [15, 19, 18, 14, 34], cls: ['', '', '', 'r', ''], rows: out,
+     };
+    }
+
+    // 소계 · 합계 글자는 가운데
+    const trHtml = (v, row) => `<tr class="${row.kind}">` + row.cells.map((c, k) => {
+     const center = (row.kind === 's2' || row.kind === 's1') && c === (row.kind === 's2' ? '소계' : '합계');
+     return `<td class="${center ? 'c' : v.cls[k]}">${esc(c)}</td>`;
+    }).join('') + '</tr>';
+    const headHtml = v => `<tr>${v.head2.map(h => `<th colspan="${h.span}"${h.rows ? ` rowspan="${h.rows}"` : ''}>${h.label}</th>`).join('')}</tr>`
+     + `<tr>${v.head.map(h => `<th>${esc(h)}</th>`).join('')}</tr>`;
+    const colsHtml = v => {
+     const tot = v.widths.reduce((a, b) => a + b, 0);
+     return v.widths.map(w => `<col style="width:${(w / tot * 100).toFixed(2)}%">`).join('');
+    };
+
+    function render() {
+     const v = last.view;
+     $('#bcCols').html(colsHtml(v));
+     $('#bcHead').html(headHtml(v));
+     $('#bcBody').html(v.rows.length ? v.rows.map(r => trHtml(v, r)).join('')
+      : `<tr><td class="bc-empty" colspan="${v.widths.length}">조회된 자료가 없습니다.</td></tr>`);
+    }
+
+    function retrieve() {
+     let yyyy = String($('#bcYyyy').val() || '').trim();
+     if (yyyy === '') { yyyy = String(new Date().getFullYear()); $('#bcYyyy').val(yyyy); }
+     if (!/^\d{4}$/.test(yyyy)) { Alert.alert('', '사업년도를 4자리로 입력하세요.'); $('#bcYyyy').focus(); return; }
+     const mm = $('#bcMm').val();
+     const t = tab;
+     AjaxUtil.getAsyncData(API, {tab: t, yyyy: yyyy, mm: mm}, res => {
+      if (!res || !res.success) { Alert.alert('', (res && res.message) || '조회 중 오류가 발생했습니다.'); return; }
+      const d = res.data || {};
+      last = {tab: t, yyyy: d.yyyy, mm: d.mm, spjangnm: d.spjangnm, view: buildView(t, d.rows || [], d.mm)};
+      render();
+     });
+    }
+
+    /**
+     * 인쇄 쪽 나누기 — 줄 수가 아니라 실제 높이를 재서 넘치면 다음 쪽으로 넘긴다.
+     *  pageHtml(i): i번째 쪽 틀(빈 tbody, .pg-body, .pg-no 포함) / blocks: 함께 다닐 행 묶음 [[tr html, ...], ...]
+     */
+    function paginate(wrap, pageHtml, blocks) {
+     const st = wrap.style;
+     const hidden = getComputedStyle(wrap).display === 'none';
+     if (hidden) { st.display = 'block'; st.position = 'absolute'; st.left = '-10000px'; st.top = '0'; }
+     wrap.innerHTML = '';
+     const pages = [];
+     const add = () => {
+      const t = document.createElement('div');
+      t.innerHTML = pageHtml(pages.length).trim();
+      const el = t.firstElementChild;
+      wrap.appendChild(el);
+      const pg = {el: el, body: el.querySelector('.pg-body'), tbody: el.querySelector('tbody')};
+      pages.push(pg);
+      return pg;
+     };
+     let cur = add();
+     blocks.forEach(block => {
+      const t = document.createElement('tbody');
+      t.innerHTML = block.join('');
+      const trs = [...t.children];
+      trs.forEach(tr => cur.tbody.appendChild(tr));
+      // 인쇄 시 글꼴·배율 차이로 화면보다 조금 길어지므로 여유(SAFE)를 둔다
+      const SAFE = 24;
+      if (cur.tbody.closest('table').getBoundingClientRect().bottom - cur.body.getBoundingClientRect().top > cur.body.clientHeight - SAFE && cur.tbody.children.length > trs.length) {
+       trs.forEach(tr => tr.remove());
+       cur = add();
+       trs.forEach(tr => cur.tbody.appendChild(tr));
+      }
+     });
+     pages.forEach((p, i) => {
+      const n = p.el.querySelector('.pg-no');
+      if (n) n.textContent = `페이지 : ${i + 1} (${pages.length})`;
+     });
+     if (hidden) { st.display = ''; st.position = ''; st.left = ''; st.top = ''; }
+     return pages;
+    }
+
+    function buildPrint() {
+     const v = last.view;
+     const printed = now();
+     const title = `${last.yyyy}년 ${last.mm}월 ${TITLES[last.tab]}`;   // 원본 sh17_4 · 5 · 6 제목
+     const subs = [];
+     const pageHtml = pi => `
+      <div class="bc-paper">
+       <div class="bc-body pg-body">
+        ${pi === 0 ? `<div class="bc-title">${esc(title)}</div>${subs.map(s => `<div class="bc-sub">${esc(s)}</div>`).join('')}`
+      : `<div class="bc-title-space"></div>`}
+        <div class="bc-meta"><span>${esc(last.spjangnm || '')}</span><span>출력일시 : ${printed}</span></div>
+        <table class="bc">
+          <colgroup>${colsHtml(v)}</colgroup>
+          <thead>${headHtml(v)}</thead>
+          <tbody></tbody>
+        </table>
+       </div>
+       <div class="bc-page-no pg-no"></div>
+      </div>`;
+     paginate(document.getElementById('bcPrint'), pageHtml, v.rows.map(r => [trHtml(v, r)]));
+    }
+
+    $(document).ready(function () {
+     const today = new Date();
+     $('#bcYyyy').val(String(today.getFullYear()));
+     for (let m = 1; m <= 12; m++) {
+      const v = String(m).padStart(2, '0');
+      $('#bcMm').append(`<option value="${v}">${v}</option>`);
+     }
+     $('#bcMm').on('change', retrieve);
+     $('#bcMm').val(String(today.getMonth() + 1).padStart(2, '0'));
+     $('#btnBcSearch').on('click', retrieve);
+     $('#bcYyyy').on('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); retrieve(); } });
+     $('#bcTabs button').on('click', function () {
+      $('#bcTabs button').removeClass('on');
+      $(this).addClass('on');
+      tab = Number($(this).data('tab'));
+      retrieve();
+     });
+     $(document).on('keydown', e => { if (e.key === 'F4') { e.preventDefault(); retrieve(); } });
+     $('#btnBcPrint').on('click', () => {
+      if (!last || !last.view.rows.length) { Alert.alert('', '먼저 조회하세요.'); return; }
+      buildPrint();
+      window.print();
+     });
+     retrieve();
+    });
+   })();
+  </script>
+</th:block>
+</html>

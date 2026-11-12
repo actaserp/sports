@@ -1,0 +1,751 @@
+<!--
+  세출내역서등록 (예산) — PowerBuilder w_tb_x00072 이식. 2026-11-10
+  * 테이블 TB_X0007 (tiosec = '2'). 세출 it1cd = 부문(TB_X0001.bseccd 2자리) + 항 3자리
+  * 목록: 원본 d_tb_x00072_1 (부문 내부 조인, 관 → 사업 · 항 소계 → 관 소계 → 합계)
+  * 입력: 헤더에서 사업년도 · 관 · 항 · 사업을 고르면 그 관 · 항의 행만 불러온다 (원본 Retrieve(custcd, spjangcd, yyyy, acccd, it1cd))
+          저장 시 모든 행의 관 · 항 · 사업을 헤더 값으로 맞춘다 (원본 wf_save)
+  * 상단: 그해 세입예산금액 · 세출예산금액 · 잔액
+  * 삭제: 선택 행만 / 이월: 세입과 동일 / 엑셀가져오기 제외
+  * API  /api/budget/expenditure/entry/{read|readEntry|searchIt1|summary|save|delete|carryover}
+-->
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml">
+<th:block layout:fragment="content">
+  <style>
+      .bg-guide {
+          background: #eef3ff;
+          border-left: 4px solid #2f5cff;
+          padding: 6px 10px;
+          font-size: 13px;
+          color: #333;
+      }
+      .bg-grid { height: 520px; }
+      .bg-sum { display: flex; gap: 18px; align-items: center; margin: 0 16px 16px auto; font-size: 14px; }
+      .bg-sum span { background: #f4f6fa; border: 1px solid #e5e7ec; border-radius: 6px; padding: 6px 12px; }
+      .bg-sum b { margin-left: 6px; font-weight: 700; }
+      .bg-head { display: grid; grid-template-columns: 90px 140px 90px 1fr 90px 1fr; border-top: 1px solid #333; margin-bottom: 8px; }
+      .bg-head > label { background: #edeff5; font-weight: 700; padding: 0 10px; display: flex; align-items: center;
+          border-bottom: 1px solid #d4d5d7; height: 40px; }
+      .bg-head > div { display: flex; gap: 4px; align-items: center; padding: 0 8px; border-bottom: 1px solid #ebebeb; }
+      .bg-head input[readonly] { background: #f5f5f5; color: #888; }
+      .bg-head .code { width: 84px !important; flex: 0 0 84px; text-align: center; padding: 0 4px !important; }
+      .bg-head .nm { flex: 1; min-width: 0; }
+      .bg-grid .wj-cell.bg-code { color: #6b7280; }
+      .bg-grid .wj-cell.bg-pick { color: #1552b0; }
+      .bg-grid .wj-cell.bg-iwol { color: #b45309; }
+      /* 목록: 원본 DataWindow 처럼 항 소계 · 관 소계 · 합계 행을 내용 아래에 붙인다 */
+      #listGrid .wj-cell.bg-sub { background: #dce9fb; }
+      #listGrid .wj-cell.bg-sub.bg-lbl { text-align: right; }
+      #listGrid .wj-cell.bg-tot { background: #c9dcf7; font-weight: 700; }
+      #listGrid .wj-cell.bg-tot.bg-lbl { text-align: right; }
+  </style>
+
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>세출내역서등록</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>예산관리</li>
+        <li>세출내역서등록</li>
+      </ul>
+    </div>
+
+    <div class="tab-wrap">
+      <ul class="tab-links">
+        <li><a href="#tab1" title="목록">목록</a></li>
+        <li><a href="#tab2" title="입력">입력</a></li>
+      </ul>
+      <div class="tab-contents">
+        <!-- 공통 검색 · 버튼 영역은 각 탭 위에 같이 둔다 -->
+
+        <!-- 목록 -->
+        <section class="tab-item" id="tab1">
+          <div class="section-top">
+            <div class="search-wrap">
+              <dl>
+                <dt><label for="srchYyyy1">사업년도</label></dt>
+                <dd><input class="srch-yyyy" id="srchYyyy1" maxlength="4" style="width:90px; text-align:center;" type="text"/></dd>
+              </dl>
+              <dl>
+                <dt>&nbsp;</dt>
+                <dd>
+                  <button class="btn btn-delete btn-search" title="조회" type="button">
+                    <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}"> 조회
+                  </button>
+                </dd>
+              </dl>
+            </div>
+            <div class="bg-sum">
+              <span>세입예산금액 <b id="sumRev">0</b></span>
+              <span>세출예산금액 <b id="sumExp">0</b></span>
+              <span>잔액 <b id="sumBal">0</b></span>
+            </div>
+            <div class="button-wrap">
+              <ul>
+                <li><a class="btn btn-excell btn-new" title="신규">
+                  <img alt="등록 아이콘" th:src="@{/images/icon/ico-plus.svg}"> 신규</a></li>
+                <li><a class="btn btn-delete btn-del" title="삭제">
+                  <img alt="삭제 아이콘" th:src="@{/images/icon/ico-delete.svg}"> 삭제</a></li>
+                <li><a class="btn btn-edit btn-iwol" title="이월">
+                  <img alt="이월 아이콘" th:src="@{/images/icon/ico-edit.svg}"> 이월</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="bg-guide" style="margin-bottom:6px;">
+            ※ 관 · 사업 · 항 단위 소계, 관 소계, 합계를 보여줍니다. 행을 더블클릭하면 [입력] 탭에서 수정합니다. 단축키 조회: F4
+          </div>
+          <div class="bg-grid" id="listGrid"></div>
+        </section>
+
+        <!-- 입력: 헤더(사업년도 · 관 · 항 · 사업) + 목 단위 행 -->
+        <section class="tab-item" id="tab2">
+          <div class="section-top">
+            <div class="search-wrap" style="margin-bottom:8px;">
+              <dl>
+                <dt>&nbsp;</dt>
+                <dd>
+                  <button class="btn btn-delete btn-search" title="조회" type="button">
+                    <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}"> 조회
+                  </button>
+                </dd>
+              </dl>
+            </div>
+            <div class="button-wrap">
+              <ul>
+                <li><a class="btn btn-excell btn-new" title="행 추가">
+                  <img alt="등록 아이콘" th:src="@{/images/icon/ico-plus.svg}"> 행 추가</a></li>
+                <li><a class="btn btn-edit" id="btnSave" title="저장">
+                  <img alt="저장 아이콘" th:src="@{/images/icon/ico-save.svg}"> 저장</a></li>
+                <li><a class="btn btn-delete btn-del" title="선택 행 삭제">
+                  <img alt="삭제 아이콘" th:src="@{/images/icon/ico-delete.svg}"> 행 삭제</a></li>
+                <li><a class="btn btn-edit btn-iwol" title="이월">
+                  <img alt="이월 아이콘" th:src="@{/images/icon/ico-edit.svg}"> 이월</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="bg-head">
+            <label for="srchYyyy2">사업년도</label>
+            <div><input class="srch-yyyy" id="srchYyyy2" maxlength="4" style="width:80px; text-align:center;" type="text"/></div>
+            <label for="hdAccnm">관명(계정)</label>
+            <div>
+              <input class="code" id="hdAcccd" readonly tabindex="-1" type="text" placeholder="코드"/>
+              <input class="nm" id="hdAccnm" type="text" placeholder="관명 입력 후 Enter / F2"/>
+            </div>
+            <label for="hdIt1nm">항명</label>
+            <div>
+              <input class="code" id="hdIt1cd" readonly tabindex="-1" type="text" placeholder="코드"/>
+              <input class="nm" id="hdIt1nm" type="text" placeholder="항명 입력 후 Enter / F2"/>
+            </div>
+            <label for="hdBusinm">사업명</label>
+            <div style="grid-column: span 5;">
+              <input id="hdBsdate" type="hidden"/><input id="hdBseccd" type="hidden"/>
+              <input class="code" id="hdBusicd" readonly tabindex="-1" type="text" placeholder="코드"/>
+              <input class="nm" id="hdBusinm" type="text" placeholder="사업명 입력 후 Enter / F2 (선택)"/>
+            </div>
+          </div>
+
+          <div class="bg-guide" style="margin-bottom:6px;">
+            ※ 관 · 항을 고르면 그 관 · 항의 내역을 불러옵니다. 저장하면 모든 행의 관 · 항 · 사업이 위 값으로 저장됩니다.
+            목명은 입력 후 Enter 또는 F2 로 조회합니다. 단축키 조회: F4 / 저장: F6 / 삭제: F7
+          </div>
+          <div class="bg-grid" id="entryGrid"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- 코드 조회 팝업 (관 · 항 · 목 · 사업 공용) -->
+  <script id="pickTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup">
+      <section class="section">
+        <div id="PickGrid" style="height:350px; display:block;"></div>
+      </section>
+    </div>
+  </script>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   const KIND = 'expenditure';
+   const TIOSEC = KIND === 'revenue' ? '1' : '2';
+   const API = '/api/budget/' + KIND + '/entry';
+   const SLIP_API = '/api/account_management/slip_entry';
+
+   // 팝업으로 값을 고르는 칸: 이름 칸 → 함께 채울 코드 칸
+   // 입력 그리드에서 팝업으로 고르는 칸
+   const PICK_COLS = {
+    it2nm:  {title: '목 조회', url: SLIP_API + '/findIt2nm', param: q => ({it2nm: q, tiosec: TIOSEC}),
+     cols: [{binding: 'it2cd', header: '목코드', width: 100, align: 'center'}, {binding: 'it2nm', header: '목명', width: '*'}],
+     apply: (r, it) => { r.it2cd = it.it2cd || ''; r.it2nm = it.it2nm || ''; },
+     clear: r => { r.it2cd = ''; r.it2nm = ''; }},
+   };
+   // 헤더에서 팝업으로 고르는 칸
+   const HEAD_PICKS = {
+    hdAccnm:  {title: '관 조회', url: SLIP_API + '/findAccnm', param: q => ({accnm: q, type: 'account'}),
+     cols: [{binding: 'acccd', header: '관코드', width: 100, align: 'center'}, {binding: 'accnm', header: '관명', width: '*'}],
+     apply: it => { $('#hdAcccd').val(it.acccd || ''); $('#hdAccnm').val(it.accnm || ''); },
+     clear: () => $('#hdAcccd').val(''), next: '#hdIt1nm'},
+    hdIt1nm:  {title: '항 조회', url: API + '/searchIt1', param: q => ({keyword: q}),
+     cols: [{binding: 'bsecnm', header: '부문', width: 120},
+      {binding: 'it1cd', header: '항코드', width: 90, align: 'center'},
+      {binding: 'it1nm', header: '항명', width: '*'}],
+     apply: it => { $('#hdIt1cd').val(it.it1cd || ''); $('#hdIt1nm').val(it.it1nm || ''); },
+     clear: () => $('#hdIt1cd').val(''), next: '#hdBusinm'},
+    hdBusinm: {title: '사업 조회', url: SLIP_API + '/findBusim', param: q => ({busim: q}),
+     cols: [{binding: 'bsdate', header: '년도', width: 70, align: 'center'},
+      {binding: 'buiscd', header: '사업코드', width: 90, align: 'center'},
+      {binding: 'busim', header: '사업명', width: '*'}],
+     apply: it => { $('#hdBsdate').val(it.bsdate || ''); $('#hdBseccd').val(it.bseccd || '');
+      $('#hdBusicd').val(it.buiscd || ''); $('#hdBusinm').val(it.busim || ''); },
+     clear: () => { $('#hdBsdate,#hdBseccd,#hdBusicd').val(''); }, next: null},
+   };
+
+   class BudgetEntryPage {
+    constructor() {
+     this.yyyy = String(new Date().getFullYear());
+     this.listView = new wijmo.collections.CollectionView([]);
+     this.entryView = new wijmo.collections.CollectionView([], {trackChanges: true});
+     this.mssecMap = new wijmo.grid.DataMap([], 'value', 'text');
+     this.picking = false;
+     this.init();
+    }
+
+    init() {
+     const _this = this;
+     $('.srch-yyyy').val(this.yyyy);
+
+     // ── 목록: 관 → 항 그룹 + 소계 ──
+     this.listGrid = new wijmo.grid.FlexGrid('#listGrid', {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      columns: [
+       {binding: 'accnm', header: '관명(계정)', width: 180},
+       {binding: 'businm', header: '사업명', width: 220},
+       {binding: 'it1nm', header: '항', width: 180},
+       {binding: 'it2nm', header: '목', width: 160},
+       {binding: 'summy', header: '산출내역', width: '*', minWidth: 240},
+       {binding: 'price', header: '금액', width: 140, align: 'right', format: 'n0'},
+      ],
+      itemsSource: this.listView,
+     });
+     this.listGrid.formatItem.addHandler((s, e) => {
+      if (e.panel !== s.cells) return;
+      const it = s.rows[e.row].dataItem;
+      const kind = it ? it.kind : 'd';
+      const b = s.columns[e.col].binding;
+      wijmo.toggleClass(e.cell, 'bg-sub', kind === 's2' || kind === 's1');
+      wijmo.toggleClass(e.cell, 'bg-tot', kind === 't');
+      wijmo.toggleClass(e.cell, 'bg-lbl', kind !== 'd' && b === 'summy');
+     });
+     new FlexGridContextMenu(this.listGrid);
+     this.listGrid.downloadFileName = '세출내역서';
+     this.listGrid.hostElement.addEventListener('dblclick', () => {
+      const it = this.listGrid.selectedItems[0];
+      if (!it || it.kind !== 'd') return;
+      this.confirmDiscard(() => {
+       this.setHead(it._src || it);
+       $('a[href="#tab2"]').trigger('click');
+       this.retrieveEntry(() => {
+        const idx = this.entryView.sourceCollection.findIndex(r => r.spdate === it.spdate && r.spnum === it.spnum);
+        if (idx >= 0) this.entryGrid.select(idx, this.entryGrid.columns.getColumn('summy').index);
+        this.entryGrid.focus();
+       }, true);
+      });
+     });
+
+     // ── 입력 그리드 ──
+     this.entryGrid = new wijmo.grid.FlexGrid('#entryGrid', {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      selectionMode: wijmo.grid.SelectionMode.CellRange,
+      keyActionEnter: wijmo.grid.KeyAction.CycleOut,
+      keyActionTab: wijmo.grid.KeyAction.Cycle,
+      imeEnabled: true,
+      columns: [
+       {binding: 'it2cd', header: '목코드', width: 80, align: 'center', isReadOnly: true, cssClass: 'bg-code'},
+       {binding: 'it2nm', header: '목명', width: 200, cssClass: 'bg-pick'},
+       {binding: 'mssec', header: '재원구분', width: 110, dataMap: this.mssecMap},
+       {binding: 'summy', header: '산출내역', width: '*', minWidth: 300, maxLength: 50},
+       {binding: 'price', header: '금액', width: 150, align: 'right', format: 'n0', dataType: wijmo.DataType.Number, aggregate: 'Sum'},
+      ],
+      itemsSource: this.entryView,
+     });
+     this.entryGrid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+     this.entryGrid.columnFooters.setCellData(0, 3, '합계');
+     this.initHead();
+     new FlexGridContextMenu(this.entryGrid);
+
+     // 이월로 생긴 행은 표시 (사업 재등록 필요)
+     this.entryGrid.formatItem.addHandler((s, e) => {
+      if (e.panel !== s.cells) return;
+      const it = s.rows[e.row].dataItem;
+      wijmo.toggleClass(e.cell, 'bg-iwol', !!(it && it.iwolflag === '1' && s.columns[e.col].binding === 'summy'));
+     });
+
+     // 이름 칸을 고치면 → 그 글자로 조회 팝업, 지우면 코드도 지움
+     this.entryGrid.cellEditEnding.addHandler((s, e) => {
+      const b = s.columns[e.col].binding;
+      if (!PICK_COLS[b]) return;
+      const oldVal = s.getCellData(e.row, e.col, false) || '';
+      const newVal = (s.activeEditor ? s.activeEditor.value : '').trim();
+      if (newVal === oldVal) return;
+      e.cancel = true;   // 직접 입력값은 쓰지 않고, 팝업에서 고른 값만 넣는다
+      const row = e.row;
+      if (newVal === '') {
+       this.updateItem(row, r => PICK_COLS[b].clear(r));
+      } else {
+       setTimeout(() => this.openPick(b, row, newVal), 0);
+      }
+     });
+
+     // F2: 현재 이름 칸 조회 / 마지막 행 사업명에서 Enter: 행 추가
+     this.entryGrid.hostElement.addEventListener('keydown', e => {
+      const g = this.entryGrid;
+      const sel = g.selection;
+      if (sel.row < 0 || g.activeEditor) return;
+      const b = g.columns[sel.col] ? g.columns[sel.col].binding : '';
+      if (e.key === 'F2' && PICK_COLS[b]) {
+       e.preventDefault();
+       e.stopPropagation();
+       this.openPick(b, sel.row, g.getCellData(sel.row, sel.col, false) || '');
+      } else if (e.key === 'Enter' && b === 'price' && sel.row === g.rows.length - 1) {
+       e.preventDefault();
+       e.stopPropagation();
+       this.addRow();
+      }
+     }, true);
+
+     // ── 버튼 ──
+     $('.btn-search').on('click', () => this.retrieve());
+     $('.srch-yyyy').on('change', function () {
+      $('.srch-yyyy').val($(this).val());
+     }).on('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); this.retrieve(); }
+     });
+     $('.btn-new').on('click', () => this.newRow());
+     $('#btnSave').on('click', () => this.save());
+     $('.btn-del').on('click', () => this.remove());
+     $('.btn-iwol').on('click', () => this.carryover());
+
+     $(document).on('keydown', e => {
+      if (e.key === 'F4') { e.preventDefault(); this.retrieve(); }
+      if (e.key === 'F6') { e.preventDefault(); this.save(); }
+      if (e.key === 'F7') { e.preventDefault(); this.remove(); }
+     });
+
+     // 저장하지 않고 화면을 떠나려 하면 경고 (원본 closequery)
+     window.addEventListener('beforeunload', e => {
+      if (this.isDirty()) { e.preventDefault(); e.returnValue = ''; }
+     });
+
+     AjaxUtil.getAsyncData(SLIP_API + '/mssec', {}, res => {
+      this.mssecMap.collectionView.sourceCollection = (res && res.data) || [];
+      this.entryGrid.invalidate();
+     });
+    }
+
+    // ── 공통 ──
+    currentTab() {
+     return $('#tab2').is(':visible') ? 2 : 1;
+    }
+
+    getYyyy() {
+     const v = String($('.srch-yyyy:visible').val() || $('.srch-yyyy').first().val() || '').trim();
+     $('.srch-yyyy').val(v);
+     if (!/^\d{4}$/.test(v)) {
+      Alert.alert('', '사업년도를 4자리로 입력하십시오.');
+      $('.srch-yyyy:visible').focus();
+      return null;
+     }
+     return v;
+    }
+
+    isDirty() {
+     const cv = this.entryView;
+     const added = cv.itemsAdded.filter(r => Number(r.price) || (r.summy || '').trim() || (r.it2cd || '').trim());
+     return added.length + cv.itemsEdited.length > 0;
+    }
+
+    // 변경이 있으면 묻고 진행 (원본: 저장/저장 안 함/취소)
+    confirmDiscard(proceed) {
+     if (!this.isDirty()) { proceed(); return; }
+     Alert.confirm('', '변경된 자료가 있습니다.\n저장하지 않고 계속하시겠습니까?\n(저장하려면 취소 후 [저장]을 누르세요)', proceed);
+    }
+
+    updateItem(row, fn) {
+     const cv = this.entryView;
+     const item = this.entryGrid.rows[row].dataItem;
+     cv.editItem(item);
+     fn(item);
+     cv.commitEdit();
+    }
+
+    // ── 헤더 ──
+    initHead() {
+     Object.keys(HEAD_PICKS).forEach(id => {
+      const def = HEAD_PICKS[id];
+      const $in = $('#' + id);
+      $in.data('picked', '');
+      $in.on('input', () => { if ($in.val().trim() === '') def.clear(); });
+      $in.on('keydown', e => {
+       if (e.key !== 'Enter' && e.key !== 'F2') return;
+       e.preventDefault();
+       const q = $in.val().trim();
+       // 사업은 선택 항목: 비워 두고 Enter 면 지나간다
+       if (e.key === 'Enter' && q === '' && id === 'hdBusinm') { def.clear(); this.entryGrid.focus(); return; }
+       this.pickList(def, q, it => {
+        this.confirmDiscard(() => {
+         def.apply(it);
+         if (def.next) $(def.next).focus().select();
+         if (id !== 'hdBusinm') this.retrieveEntry(null, true);
+         else this.entryGrid.focus();
+        });
+       });
+      });
+     });
+    }
+
+    setHead(it) {
+     $('#hdAcccd').val(it.acccd || ''); $('#hdAccnm').val(it.accnm || '');
+     $('#hdIt1cd').val(it.it1cd || ''); $('#hdIt1nm').val(it.it1nm || '');
+     $('#hdBsdate').val(it.bsdate || ''); $('#hdBseccd').val(it.bseccd || '');
+     $('#hdBusicd').val(it.busicd || ''); $('#hdBusinm').val(it.businm || '');
+    }
+
+    getHead() {
+     return {
+      acccd: $('#hdAcccd').val().trim(), it1cd: $('#hdIt1cd').val().trim(),
+      bsdate: $('#hdBsdate').val().trim(), bseccd: $('#hdBseccd').val().trim(), busicd: $('#hdBusicd').val().trim(),
+     };
+    }
+
+    // ── 조회 ──
+    retrieve() {
+     const yyyy = this.getYyyy();
+     if (!yyyy) return;
+     this.confirmDiscard(() => {
+      this.yyyy = yyyy;
+      AjaxUtil.getAsyncData(API + '/read', {yyyy: yyyy}, res => {
+       this.listView.sourceCollection = this.buildList((res && res.data) || []);
+      });
+      this.loadSummary();
+      this.retrieveEntry(null, true);
+     });
+    }
+
+    loadSummary() {
+     AjaxUtil.getAsyncData(API + '/summary', {yyyy: this.yyyy}, res => {
+      const d = (res && res.data) || {};
+      const fmt = v => (Number(v) || 0).toLocaleString();
+      $('#sumRev').text(fmt(d.revenue));
+      $('#sumExp').text(fmt(d.expenditure));
+      $('#sumBal').text(fmt(d.balance)).css('color', Number(d.balance) < 0 ? '#dc3545' : '');
+     });
+    }
+
+    // 입력 탭: 헤더의 관 · 항 단위 조회 (원본 Retrieve(custcd, spjangcd, yyyy, acccd, it1cd))
+    retrieveEntry(done, skipConfirm) {
+     const yyyy = this.getYyyy();
+     if (!yyyy) return;
+     const h = this.getHead();
+     const run = () => {
+      if (!h.acccd || !h.it1cd) {
+       this.entryView.sourceCollection = [];
+       this.entryView.clearChanges();
+       if (done) done();
+       return;
+      }
+      AjaxUtil.getAsyncData(API + '/readEntry', Object.assign({yyyy: yyyy}, h), res => {
+       const rows = (res && res.data) || [];
+       this.entryView.sourceCollection = rows.map(r => Object.assign({}, r));
+       this.entryView.clearChanges();
+       if (rows.length === 0) this.addRow();   // 원본: 0건이면 행 추가
+       if (done) done();
+      });
+     };
+     if (skipConfirm) run(); else this.confirmDiscard(run);
+    }
+
+    /**
+     * 목록 행 만들기 — 원본 d_tb_x00071_1 과 같은 모양
+     *  그룹1 = 관(acccd), 그룹2 = 관 + 사업명 + 항(acccd, businm, it1cd)
+     *  각 그룹2 끝에 '항명 소계', 그룹1 끝에 '관명 소계', 맨 끝에 '합계'
+     *  관명은 그룹1 첫 행에만, 사업명 · 항은 그룹2 첫 행에만, 목은 앞 행과 같으면 숨김
+     *  서버가 acccd, it1cd, spdate, spnum 순으로 주므로 연속된 행끼리 묶는다
+     */
+    buildList(rows) {
+     const out = [];
+     const sum = arr => arr.reduce((s, r) => s + (Number(r.price) || 0), 0);
+     let total = 0;
+     let i = 0;
+     while (i < rows.length) {
+      const acccd = rows[i].acccd;
+      const accnm = rows[i].accnm || '';
+      let g1 = 0;
+      let first1 = true;
+      while (i < rows.length && rows[i].acccd === acccd) {
+       const k2 = (rows[i].businm || '') + '\u0001' + (rows[i].it1cd || '');
+       const grp = [];
+       while (i < rows.length && rows[i].acccd === acccd
+       && ((rows[i].businm || '') + '\u0001' + (rows[i].it1cd || '')) === k2) {
+        grp.push(rows[i]);
+        i++;
+       }
+       // 같은 그룹2 안에서는 사업명 · 항을 첫 행에만, 목은 앞 행과 같으면 비운다 (원본 반복값 숨김)
+       grp.forEach((r, gi) => {
+        const prev = gi > 0 ? grp[gi - 1] : null;
+        out.push(Object.assign({}, r, {
+         kind: 'd',
+         _src: r,   // 화면용으로 숨긴 관명 · 사업명 · 항 · 목의 원래 값
+         accnm: first1 ? accnm : '',
+         businm: gi === 0 ? r.businm : '',
+         it1nm: gi === 0 ? r.it1nm : '',
+         it2nm: prev && (prev.it2cd || '') === (r.it2cd || '') ? '' : r.it2nm,
+        }));
+        first1 = false;
+       });
+       const s2 = sum(grp);
+       out.push({kind: 's2', summy: (grp[0].it1nm || '') + ' 소계 :', price: s2});
+       g1 += s2;
+      }
+      out.push({kind: 's1', summy: accnm + ' 소계 :', price: g1});
+      total += g1;
+     }
+     if (out.length) out.push({kind: 't', summy: '합계 :', price: total});
+     return out;
+    }
+
+    // ── 신규 / 행 추가 (원본 cb_5: 빈 행 추가, 사업년도는 조회 조건) ──
+    newRow() {
+     if (this.currentTab() === 1) $('a[href="#tab2"]').trigger('click');
+     setTimeout(() => this.addRow(), 50);
+    }
+
+    addRow() {
+     const yyyy = this.getYyyy();
+     if (!yyyy) return;
+     const h = this.getHead();
+     if (!h.acccd || !h.it1cd) {
+      Alert.alert('', '관명(계정)과 항명을 먼저 선택하십시오.');
+      $(h.acccd ? '#hdIt1nm' : '#hdAccnm').focus();
+      return;
+     }
+     const cv = this.entryView;
+     const item = cv.addNew();
+     Object.assign(item, {
+      yyyy: yyyy, spdate: '', spnum: '', acccd: h.acccd, mssec: '', summy: '', price: 0,
+      it1cd: h.it1cd, it2cd: '', it2nm: '', bsdate: h.bsdate, bseccd: h.bseccd, busicd: h.busicd, iwolflag: ''
+     });
+     cv.commitNew();
+     const g = this.entryGrid;
+     const r = g.rows.length - 1;
+     g.select(r, g.columns.getColumn('it2nm').index);
+     g.scrollIntoView(r, 0);
+     g.focus();
+    }
+
+    // ── 저장 ──
+    save() {
+     if (this.entryGrid.activeEditor) this.entryGrid.finishEditing();
+     const yyyy = this.getYyyy();
+     if (!yyyy) return;
+     if (!this.isDirty()) { Alert.alert('', '변경된 자료가 없습니다.'); return; }
+
+     const h = this.getHead();
+     if (!h.acccd) { Alert.alert('', '관명(계정)을 입력하십시오.'); $('#hdAccnm').focus(); return; }
+     if (!h.it1cd) { Alert.alert('', '항명을 입력하십시오.'); $('#hdIt1nm').focus(); return; }
+     const rows = this.entryView.sourceCollection;
+     for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const empty = !Number(r.price) && !(r.summy || '').trim() && !(r.it2cd || '').trim();
+      if (empty) continue;   // 빈 행은 저장하지 않는다
+      if (!Number(r.price)) {
+       this.entryGrid.select(i, this.entryGrid.columns.getColumn('price').index);
+       Alert.alert('', (i + 1) + '번째 행의 금액을 입력하십시오.');
+       return;
+      }
+     }
+
+     // 바뀐 행만 보낸다 (신규 + 수정)
+     const cv = this.entryView;
+     const changed = cv.itemsAdded.concat(cv.itemsEdited)
+     .filter(r => Number(r.price) || (r.summy || '').trim() || (r.it2cd || '').trim());
+     AjaxUtil.postJsonData(API + '/save', {yyyy: yyyy, header: h, rows: changed}, res => {
+      if (res && res.success) {
+       Alert.alert('', '저장되었습니다.');
+       this.entryView.clearChanges();
+       this.retrieve();
+      } else {
+       Alert.alert('', (res && res.message) || '저장 중 오류가 발생했습니다.');
+      }
+     });
+    }
+
+    // ── 삭제 (선택 행만) ──
+    remove() {
+     let items;
+     if (this.currentTab() === 1) {
+      items = this.listGrid.selectedItems.filter(it => it && it.kind === 'd');
+     } else {
+      const g = this.entryGrid;
+      const rng = g.selection;
+      if (rng.row < 0) return;
+      items = [];
+      for (let r = Math.min(rng.row, rng.row2); r <= Math.max(rng.row, rng.row2); r++) items.push(g.rows[r].dataItem);
+     }
+     if (!items.length) { Alert.alert('', '삭제할 행을 선택하세요.'); return; }
+
+     // 아직 저장 안 된 행은 화면에서만 지운다
+     const unsaved = items.filter(it => !it.spnum);
+     const saved = items.filter(it => it.spnum);
+     unsaved.forEach(it => this.entryView.remove(it));
+     if (!saved.length) return;
+
+     const sum = saved.reduce((s, it) => s + (Number(it.price) || 0), 0);
+     const desc = saved.length === 1
+      ? `관-항 : ${saved[0].accnm || $('#hdAccnm').val()}-${saved[0].it1nm || $('#hdIt1nm').val()}\n목 : ${saved[0].it2nm || ''}\n금액 : ${sum.toLocaleString()}`
+      : `${saved.length}건 (금액 합계 ${sum.toLocaleString()})`;
+
+     this.confirmDiscard(() => {
+      Alert.confirm('', '선택한 자료를 삭제하시겠습니까?\n' + desc, () => {
+       const keys = saved.map(it => ({yyyy: it.yyyy, spdate: it.spdate, spnum: it.spnum}));
+       AjaxUtil.postJsonData(API + '/delete', {keys: keys}, res => {
+        if (res && res.success) {
+         Alert.alert('', '삭제되었습니다.');
+         this.entryView.clearChanges();
+         this.retrieve();
+        } else {
+         Alert.alert('', (res && res.message) || '삭제 중 오류가 발생했습니다.');
+        }
+       });
+      });
+     });
+    }
+
+    // ── 이월 (원본 동일: 이월분이 있으면 취소 여부, 없으면 실행 여부를 묻는다) ──
+    carryover() {
+     const yyyy = this.getYyyy();
+     if (!yyyy) return;
+     const nyyyy = String(Number(yyyy) + 1);
+     AjaxUtil.getAsyncData(API + '/carryover/count', {yyyy: yyyy}, res => {
+      const cnt = Number(res && res.data) || 0;
+      const post = (mode, done) => AjaxUtil.postJsonData(API + '/carryover', {yyyy: yyyy, mode: mode}, r => {
+       if (r && r.success) Alert.alert('', done);
+       else Alert.alert('', (r && r.message) || '이월 처리 중 오류가 발생했습니다.');
+      });
+      if (cnt > 0) {
+       Alert.confirm('', `${yyyy} → ${nyyyy}년도로 이월된 자료가 있습니다(${cnt}건).\n전체 삭제할까요?`,
+        () => post('cancel', '이월이 취소되었습니다.'));
+      } else {
+       Alert.confirm('', `${yyyy} → ${nyyyy}년도로 자료를 이월하시겠습니까?`,
+        () => post('run', `이월이 완료되었습니다.\n사업은 ${nyyyy}년도 사업으로 다시 등록하셔야 합니다.`));
+      }
+     });
+    }
+
+    // ── 코드 조회 팝업 ──
+    openPick(binding, row, keyword) {
+     if (this.picking) return;
+     const def = PICK_COLS[binding];
+     this.picking = true;
+     AjaxUtil.getAsyncData(def.url, def.param(keyword || ''), res => {
+      const list = (res && res.data) || [];
+      if (!list.length) {
+       this.picking = false;
+       Alert.alert('', def.title.replace(' 조회', '') + ' 조회 결과가 없습니다.');
+       return;
+      }
+      if (list.length === 1) {
+       this.picking = false;
+       this.applyPick(binding, row, list[0]);
+       return;
+      }
+      const popup = new PopupDraggable(def.title);
+      popup.open({width: 600, height: 420, $content: $(tmpl('pickTemplate', {}))});
+      const grid = new wijmo.grid.FlexGrid('#PickGrid', {
+       isReadOnly: true,
+       selectionMode: wijmo.grid.SelectionMode.Row,
+       headersVisibility: wijmo.grid.HeadersVisibility.Column,
+       autoGenerateColumns: false,
+       columns: def.cols,
+       itemsSource: new wijmo.collections.CollectionView(list),
+      });
+      grid.keyActionEnter = wijmo.grid.KeyAction.None;
+      const pick = () => {
+       const sel = grid.selection;
+       if (!sel || sel.row < 0) return;
+       const item = grid.rows[sel.row].dataItem;
+       popup.close();
+       this.picking = false;
+       this.applyPick(binding, row, item);
+      };
+      grid.hostElement.addEventListener('dblclick', pick);
+      grid.hostElement.addEventListener('keydown', e => {
+       if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); pick(); }
+       if (e.key === 'Escape') { popup.close(); this.picking = false; this.entryGrid.focus(); }
+      });
+      setTimeout(() => { if (grid.rows.length) { grid.select(0, 0); grid.focus(); } }, 50);
+      // 팝업 X 로 닫혀도 다시 열 수 있게
+      setTimeout(() => { this.picking = false; }, 500);
+     });
+    }
+
+    // 헤더용 목록 팝업 (1건이면 바로 선택)
+    pickList(def, keyword, onPick) {
+     AjaxUtil.getAsyncData(def.url, def.param(keyword || ''), res => {
+      const list = (res && res.data) || [];
+      if (!list.length) { Alert.alert('', def.title.replace(' 조회', '') + ' 조회 결과가 없습니다.'); return; }
+      if (list.length === 1) { onPick(list[0]); return; }
+      const popup = new PopupDraggable(def.title);
+      popup.open({width: 600, height: 420, $content: $(tmpl('pickTemplate', {}))});
+      const grid = new wijmo.grid.FlexGrid('#PickGrid', {
+       isReadOnly: true, selectionMode: wijmo.grid.SelectionMode.Row,
+       headersVisibility: wijmo.grid.HeadersVisibility.Column, autoGenerateColumns: false,
+       columns: def.cols, itemsSource: new wijmo.collections.CollectionView(list),
+      });
+      grid.keyActionEnter = wijmo.grid.KeyAction.None;
+      const pick = () => {
+       const sel = grid.selection;
+       if (!sel || sel.row < 0) return;
+       const item = grid.rows[sel.row].dataItem;
+       popup.close();
+       onPick(item);
+      };
+      grid.hostElement.addEventListener('dblclick', pick);
+      grid.hostElement.addEventListener('keydown', e => {
+       if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); pick(); }
+       if (e.key === 'Escape') popup.close();
+      });
+      setTimeout(() => { if (grid.rows.length) { grid.select(0, 0); grid.focus(); } }, 50);
+     });
+    }
+
+    applyPick(binding, row, item) {
+     this.updateItem(row, r => PICK_COLS[binding].apply(r, item));
+     // 다음 칸으로
+     const g = this.entryGrid;
+     const col = g.columns.getColumn(binding).index;
+     let next = col + 1;
+     while (next < g.columns.length && g.columns[next].isReadOnly) next++;
+     setTimeout(() => {
+      if (next < g.columns.length) g.select(row, next);
+      else if (row === g.rows.length - 1) this.addRow();
+      else g.select(row + 1, g.columns.getColumn('it2nm').index);
+      g.focus();
+     }, 50);
+    }
+   }
+
+   let page = null;
+   $(document).ready(function () {
+    page = new BudgetEntryPage();
+    page.retrieve();
+   });
+  </script>
+</th:block>
+</html>

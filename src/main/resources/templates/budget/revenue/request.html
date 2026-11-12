@@ -1,0 +1,336 @@
+<!--
+  세입의부 — PowerBuilder w_tb_x00071_sh1 / d_tb_x00071_sh1 이식. 2026-11-11
+  * 조건: 년도(비우면 당해 연도) · 재원구분(전체 = 모든 재원)
+  * 열: 관명(계정) · 사업명 · 항 · 목 · 금액. Wijmo 그리드 없이 일반 표.
+  * 원본 그룹: 관 → 관+항
+      항이 끝나면 '소계'(목 칸), 관이 끝나면 '합계'(항 칸), 맨 끝 '세입총계'(관명 칸)
+      관명은 관의 첫 행에만, 항은 항의 첫 행에만, 목은 바로 위 행과 같으면 숨긴다
+  * 인쇄: A4 세로, 한 쪽 40줄, 쪽마다 머리글 · '페이지 : n (전체)'. 인쇄 여백 0 이라 브라우저 머리글이 찍히지 않는다
+  * API  GET /api/budget/report/revenueLedger?yyyy=&mssec=   재원 목록은 /api/account_management/slip_entry/mssec
+-->
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml">
+<th:block layout:fragment="content">
+  <style>
+      .layout-contents { height: 100vh !important; min-height: 0 !important; box-sizing: border-box; padding-bottom: 8px !important; overflow: hidden !important; }
+      .layout-contents section { flex: 1 1 auto !important; min-height: 0 !important; overflow: auto !important; }
+
+      .lg-bar { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 14px; }
+      .lg-bar dl dt { font-size: 14px; font-weight: 700; color: #4d4d4d; margin-bottom: 4px; }
+      .lg-bar .right { margin-left: auto; display: flex; gap: 6px; }
+
+      /* 화면 목록 */
+      .lg-list-wrap { max-height: 640px; overflow: auto; border: 1px solid #dee2e6; }
+      table.lg-list { width: 100%; border-collapse: collapse; table-layout: fixed; border-top: none; font-size: 14px; }
+      table.lg-list th {
+          position: sticky; top: 0; z-index: 1; background: #edeff5; height: 40px; width: auto;
+          border-bottom: 1px solid #c6c6c6; padding: 0 8px; text-align: center; font-weight: 700;
+      }
+      table.lg-list td {
+          height: 32px; padding: 0 8px; border-bottom: 1px solid #ebebeb;
+          white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.3; text-align: left;
+      }
+      table.lg-list td.r { text-align: right; }
+      table.lg-list td.c { text-align: center; }
+      table.lg-list tr.s2 td { background: #f7f9fc; }
+      table.lg-list tr.s1 td { background: #fffbe6; font-weight: 700; }
+      table.lg-list tr.t td  { background: #e6f7f9; font-weight: 700; }
+      .lg-empty { text-align: center !important; color: #888; padding: 40px 0 !important; }
+
+      /* 인쇄용 (화면에서는 숨김) */
+      #lgPrint { display: none; }
+      .lg-paper {
+          width: 210mm; height: 297mm; box-sizing: border-box; background: #fff;
+          padding: 12mm 12mm 10mm; font-family: 'Malgun Gothic', sans-serif; color: #000;
+          display: flex; flex-direction: column; overflow: hidden;
+      }
+      .lg-paper .lg-body { flex: 1; min-height: 0; overflow: hidden; }
+      /* 줄바꿈되는 칸이 있어도 숫자는 한 줄 */
+      table.lg td.r { white-space: nowrap; }
+      .lg-title { text-align: center; font-size: 22px; font-weight: 700; letter-spacing: 4px; margin: 0 0 12px; }
+      .lg-title-space { height: 32px; margin: 0 0 12px; }
+      .lg-meta { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
+      .lg-page-no { text-align: center; font-size: 10px; padding-top: 4px; }
+      table.lg { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; border-top: none; }
+      table.lg th, table.lg td {
+          border: 1px solid #000; height: 19px; padding: 1px 5px; background: #fff; width: auto;
+          font-weight: 400; white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.3; text-align: left;
+      }
+      table.lg th { text-align: center; }
+      table.lg td.r { text-align: right; }
+      table.lg td.c { text-align: center; }
+      table.lg tr.s1 td, table.lg tr.t td { font-weight: 700; }
+
+      @page { size: A4 portrait; margin: 0; }
+      @media print {
+          body * { visibility: hidden; }
+          #lgPrint, #lgPrint * { visibility: visible; }
+          #lgPrint { display: block; position: absolute; left: 0; top: 0; }
+          .lg-paper { page-break-after: always; break-after: page; }
+          .lg-paper:last-child { page-break-after: auto; break-after: auto; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      }
+  </style>
+
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>세입의부</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>예산관리</li>
+        <li>예산서출력</li>
+        <li>세입의부</li>
+      </ul>
+    </div>
+
+    <section>
+      <div class="lg-bar">
+        <dl>
+          <dt><label for="lgYyyy">년도</label></dt>
+          <dd><input id="lgYyyy" maxlength="4" style="width:90px; text-align:center;" type="text"/></dd>
+        </dl>
+        <dl>
+          <dt><label for="lgMssec">재원구분</label></dt>
+          <dd><select id="lgMssec" style="width:150px;"><option value="">전체</option></select></dd>
+        </dl>
+        <button class="btn btn-delete" id="btnLgSearch" title="조회" type="button">
+          <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}"> 조회
+        </button>
+        <span id="lgCount" style="font-size:13px; color:#666; margin-bottom:8px;"></span>
+        <div class="right">
+          <a class="btn btn-edit" id="btnLgPrint" title="인쇄">
+            <img alt="인쇄 아이콘" th:src="@{/images/icon/ico-edit.svg}"> 인쇄
+          </a>
+          <a class="btn btn-excell" id="btnLgExcel" title="EXCEL">EXCEL</a>
+        </div>
+      </div>
+
+      <div class="lg-list-wrap">
+        <table class="lg-list">
+          <colgroup><col style="width:18%"><col style="width:30%"><col style="width:18%"><col style="width:16%"><col style="width:18%"></colgroup>
+          <thead><tr><th>관명(계정)</th><th>사업명</th><th>항</th><th>목</th><th>금액</th></tr></thead>
+          <tbody id="lgBody"><tr><td class="lg-empty" colspan="5">년도를 입력하고 조회하세요.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div id="lgPrint"></div>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   (function () {
+    const API = '/api/budget/report/revenueLedger';
+    const TITLE = '세입의부';
+    const TOTAL_LABEL = '세입총계';
+    const HEAD = ['관명(계정)', '사업명', '항', '목', '금액'];
+    let last = null;
+
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+     c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    const fmt = v => (Number(v) || 0).toLocaleString();
+    const now = () => {
+     const d = new Date(), p = n => String(n).padStart(2, '0');
+     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    };
+
+    /**
+     * 원본 d_tb_x00071_sh1 모양으로 행 만들기
+     *  {kind:'d'} 내역 / {kind:'s2'} 항 소계 / {kind:'s1'} 관 합계 / {kind:'t'} 세입총계
+     *  cells: [관명, 사업명, 항, 목, 금액]
+     */
+    function build(rows) {
+     const out = [];
+     let total = 0, i = 0;
+     while (i < rows.length) {
+      const acccd = rows[i].acccd;
+      let g1 = 0, firstAcc = true;
+      while (i < rows.length && rows[i].acccd === acccd) {
+       const it1 = rows[i].it1cd || '';
+       let g2 = 0, firstIt = true, prevIt2 = null;
+       while (i < rows.length && rows[i].acccd === acccd && (rows[i].it1cd || '') === it1) {
+        const r = rows[i];
+        const it2 = r.it2cd || '';
+        out.push({kind: 'd', cells: [
+          firstAcc ? (r.accnm || r.acccd || '') : '',
+          r.businm || '',
+          firstIt ? (r.it1nm || r.it1cd || '') : '',
+          prevIt2 !== null && prevIt2 === it2 ? '' : (r.it2nm || r.it2cd || ''),
+          Number(r.price) || 0,
+         ]});
+        g2 += Number(r.price) || 0;
+        firstAcc = false; firstIt = false; prevIt2 = it2;
+        i++;
+       }
+       out.push({kind: 's2', cells: ['', '', '', '소계', g2]});
+       g1 += g2;
+      }
+      out.push({kind: 's1', cells: ['', '', '합계', '', g1]});
+      total += g1;
+     }
+     if (out.length) out.push({kind: 't', cells: [TOTAL_LABEL, '', '', '', total]});
+     return out;
+    }
+
+    // 소계는 목 칸 가운데, 합계는 항 칸 가운데, 총계는 관명 칸 가운데
+    const tdHtml = (row, idx) => {
+     const v = row.cells[idx];
+     if (idx === 4) return `<td class="r">${fmt(v)}</td>`;
+     const center = (row.kind === 's2' && idx === 3) || (row.kind === 's1' && idx === 2) || (row.kind === 't' && idx === 0);
+     return `<td${center ? ' class="c"' : ''} title="${esc(v)}">${esc(v)}</td>`;
+    };
+    const trHtml = row => `<tr class="${row.kind}">${[0, 1, 2, 3, 4].map(k => tdHtml(row, k)).join('')}</tr>`;
+
+    function render() {
+     const n = last.rows.filter(r => r.kind === 'd').length;
+     $('#lgCount').text(`${last.yyyy}년도 · ${last.mssecnm} · ${n}건`);
+     if (!last.rows.length) {
+      $('#lgBody').html(`<tr><td class="lg-empty" colspan="5">조회된 자료가 없습니다.</td></tr>`);
+      return;
+     }
+     $('#lgBody').html(last.rows.map(trHtml).join(''));
+    }
+
+    function retrieve() {
+     let yyyy = String($('#lgYyyy').val() || '').trim();
+     if (yyyy === '') { yyyy = String(new Date().getFullYear()); $('#lgYyyy').val(yyyy); }
+     if (!/^\d{4}$/.test(yyyy)) {
+      Alert.alert('', '년도를 4자리로 입력하세요.');
+      $('#lgYyyy').focus();
+      return;
+     }
+     const mssec = $('#lgMssec').val() || '';
+     const mssecnm = $('#lgMssec option:selected').text() || '전체';
+     AjaxUtil.getAsyncData(API, {yyyy: yyyy, mssec: mssec}, res => {
+      if (!res || !res.success) {
+       Alert.alert('', (res && res.message) || '조회 중 오류가 발생했습니다.');
+       return;
+      }
+      const data = res.data || {};
+      last = {yyyy: data.yyyy, spjangnm: data.spjangnm, mssecnm: mssecnm, rows: build(data.rows || [])};
+      render();
+     });
+    }
+
+
+    /**
+     * 인쇄 쪽 나누기 — 줄 수가 아니라 실제 높이를 재서 넘치면 다음 쪽으로 넘긴다.
+     * 긴 글자가 줄바꿈되어 행 높이가 달라져도 한 쪽을 넘치지 않는다.
+     *  pageHtml(i): i번째 쪽 틀(빈 tbody, .pg-body, .pg-no 포함) / blocks: 함께 다닐 행 묶음 [[tr html, ...], ...]
+     */
+    function paginate(wrap, pageHtml, blocks) {
+     const st = wrap.style;
+     const hidden = getComputedStyle(wrap).display === 'none';
+     if (hidden) { st.display = 'block'; st.position = 'absolute'; st.left = '-10000px'; st.top = '0'; }
+     wrap.innerHTML = '';
+     const pages = [];
+     const add = () => {
+      const t = document.createElement('div');
+      t.innerHTML = pageHtml(pages.length).trim();
+      const el = t.firstElementChild;
+      wrap.appendChild(el);
+      const pg = {el: el, body: el.querySelector('.pg-body'), tbody: el.querySelector('tbody')};
+      pages.push(pg);
+      return pg;
+     };
+     let cur = add();
+     blocks.forEach(block => {
+      const t = document.createElement('tbody');
+      t.innerHTML = block.join('');
+      const trs = [...t.children];
+      trs.forEach(tr => cur.tbody.appendChild(tr));
+      // 인쇄 시 글꼴·배율 차이로 화면보다 조금 길어지므로 여유(SAFE)를 둔다
+      const SAFE = 24;
+      if (cur.tbody.closest('table').getBoundingClientRect().bottom - cur.body.getBoundingClientRect().top > cur.body.clientHeight - SAFE && cur.tbody.children.length > trs.length) {
+       trs.forEach(tr => tr.remove());
+       cur = add();
+       trs.forEach(tr => cur.tbody.appendChild(tr));
+       // 새 쪽 첫 행의 반복값을 먼저 복원해서 높이에 반영
+       const td = cur.tbody.querySelector('tr:first-child td[data-full]');
+       if (td) td.textContent = td.dataset.full;
+      }
+     });
+     pages.forEach((p, i) => {
+      const n = p.el.querySelector('.pg-no');
+      if (n) n.textContent = `페이지 : ${i + 1} (${pages.length})`;
+      // 쪽 첫 행에서 숨겼던 반복값(월 · 사업구분 등)은 다시 보여준다
+      const td = p.tbody.querySelector('tr:first-child td[data-full]');
+      if (td) td.textContent = td.dataset.full;
+     });
+     if (hidden) { st.display = ''; st.position = ''; st.left = ''; st.top = ''; }
+     return pages;
+    }
+
+    function buildPrint() {
+     const rows = last.rows;
+     const printed = now();
+     const pageHtml = pi => `
+      <div class="lg-paper">
+       <div class="lg-body pg-body">
+        ${pi === 0 ? `<div class="lg-title">${esc(last.yyyy)}년도 ${TITLE}</div>` : `<div class="lg-title-space"></div>`}
+        <div class="lg-meta">
+          <span>${esc(last.spjangnm || '')} · 재원구분 : ${esc(last.mssecnm)}</span>
+          <span>출력일시 : ${printed}</span>
+        </div>
+        <table class="lg">
+          <colgroup><col style="width:18%"><col style="width:30%"><col style="width:18%"><col style="width:16%"><col style="width:18%"></colgroup>
+          <thead><tr>${HEAD.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+          <tbody></tbody>
+        </table>
+       </div>
+       <div class="lg-page-no pg-no"></div>
+      </div>`;
+     paginate(document.getElementById('lgPrint'), pageHtml, rows.map(r => [trHtml(r)]));
+    }
+
+    function exportExcel() {
+     const wb = new wijmo.xlsx.Workbook();
+     const sheet = new wijmo.xlsx.WorkSheet();
+     sheet.name = TITLE;
+     [18, 40, 18, 16, 18].forEach(w => { const col = new wijmo.xlsx.WorkbookColumn(); col.width = w * 7; sheet.columns.push(col); });
+     const mkRow = (vals, bold) => {
+      const row = new wijmo.xlsx.WorkbookRow();
+      vals.forEach((v, k) => {
+       const cell = new wijmo.xlsx.WorkbookCell();
+       cell.value = v;
+       cell.style = new wijmo.xlsx.WorkbookStyle();
+       if (k === 4 && typeof v === 'number') cell.style.format = '#,##0';
+       if (bold) { cell.style.font = new wijmo.xlsx.WorkbookFont(); cell.style.font.bold = true; }
+       row.cells.push(cell);
+      });
+      return row;
+     };
+     sheet.rows.push(mkRow(HEAD, true));
+     last.rows.forEach(r => sheet.rows.push(mkRow(r.cells, r.kind !== 'd')));
+     wb.sheets.push(sheet);
+     wb.saveAsync(`${TITLE}_${last.yyyy}.xlsx`);
+    }
+
+    $(document).ready(function () {
+     $('#lgYyyy').val(String(new Date().getFullYear()));
+     AjaxUtil.getAsyncData('/api/account_management/slip_entry/mssec', {}, res => {
+      ((res && res.data) || []).forEach(m =>
+       $('#lgMssec').append(`<option value="${esc(m.value)}">${esc(m.text)}</option>`));
+     });
+     $('#btnLgSearch').on('click', retrieve);
+     $('#lgYyyy').on('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); retrieve(); } });
+     $('#lgMssec').on('change', retrieve);
+     $(document).on('keydown', e => { if (e.key === 'F4') { e.preventDefault(); retrieve(); } });
+     $('#btnLgPrint').on('click', () => {
+      if (!last || !last.rows.length) { Alert.alert('', '먼저 조회하세요.'); return; }
+      buildPrint();
+      window.print();
+     });
+     $('#btnLgExcel').on('click', () => {
+      if (!last || !last.rows.length) { Alert.alert('', '먼저 조회하세요.'); return; }
+      exportExcel();
+     });
+     retrieve();
+    });
+   })();
+  </script>
+</th:block>
+</html>

@@ -1055,6 +1055,7 @@ footer {
 /*Contents*/
 .layout-contents {
     /*min-height: calc(100% - 70px);*/
+    box-sizing: border-box;
     padding: 20px 30px 30px 30px;
 }
 
