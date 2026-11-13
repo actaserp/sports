@@ -279,7 +279,8 @@ public class SlipStatusService {
 						b.mssec, A.tiosec, b.drcr, b.summy, a.setnum,
 						b.bankcd, b.cardnum, B.tiosec, b.dramt, b.cramt,
 						a.regdate, a.spjangnm, B.rowseq, a.spoccu, b.spjangnm
-	 ORDER BY a.spdate, a.spnum, b.spseq
+	 -- 원본 d_aa009_bill2_og01 처럼 구분(비용 · 자산 …) → 관 → 항 으로 묶어 찍는다. 같은 묶음 안에서는 라인 순번 순
+	 ORDER BY a.spdate, a.spnum, upnm, b.acccd, b.it1cd, b.spseq
     """;
 
 		return sqlRunner.getRows(sql, param);
@@ -296,7 +297,11 @@ public class SlipStatusService {
 		sqlParam.addValue("spjangcd", spjangcd);
 
 		String sql = """
-			SELECT settle1, settle2, settle3, settle4, settle5, approflag
+			SELECT settle1, settle2, settle3, settle4, settle5, settle6, settle7, settle8,
+			       setchk1, setchk2, setchk3, setchk4, setchk5, setchk6, setchk7, setchk8,
+			       junchk1, junchk2, junchk3, junchk4, junchk5, junchk6, junchk7, junchk8,
+			       crolin1, crolin2, crolin3, crolin4, crolin5, crolin6, crolin7, crolin8,
+			       approflag
 			    FROM tb_xenv
 			    WHERE custcd = :custcd
 			    AND spjangcd = :spjangcd

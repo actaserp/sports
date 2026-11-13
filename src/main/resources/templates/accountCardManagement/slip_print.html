@@ -107,6 +107,10 @@
       .lg-clear { clear: none; }
 
       /* 결재란 */
+      /* ── 결재란 표시 (환경설정 결재라인: 전결 junchk · 사선 crolin) ── */
+      .apv-mark { position: relative; text-align: center; vertical-align: middle; }
+      .apv-mark .apv-jun { display: inline-block; margin-top: 4px; font-size: 11px; font-weight: 700; }
+      .apv-cro { background: linear-gradient(to top right, transparent calc(50% - 0.6px), #333 50%, transparent calc(50% + 0.6px)); }
       .lg-apv {
           float: right;
           border-collapse: collapse;
@@ -382,8 +386,8 @@
             <tr>
               <th:block th:each="apv : ${approverList}">
                 <td>
-                  <div class="apv-h" th:text="${apv}"></div>
-                  <div class="apv-b"></div>
+                  <div class="apv-h" th:text="${apv.name}"></div>
+                  <div class="apv-b apv-mark" th:classappend="${apv.cro} ? 'apv-cro'"><span class="apv-jun" th:if="${apv.jun}">전결</span></div>
                 </td>
               </th:block>
             </tr>
@@ -439,52 +443,23 @@
               <th>재원</th>
             </tr>
 
-            <!-- 차변/대변을 라인 단위로 짝지어 출력 -->
-            <th:block th:with="dbCnt=${slip.debit  == null ? 0 : slip.debit.size()},
-                               crCnt=${slip.credit == null ? 0 : slip.credit.size()}">
-              <th:block th:with="lineCnt=${dbCnt > crCnt ? dbCnt : crCnt}">
-                <th:block th:if="${lineCnt > 0}">
-                  <th:block th:each="i : ${#numbers.sequence(0, lineCnt - 1)}">
-
-                    <!-- ▸ 차변 라인 -->
-                    <th:block th:if="${i &lt; dbCnt}" th:with="d=${slip.debit[i]}">
-                      <tr>
-                        <td rowspan="2" th:text="${d.upnm}"></td>
-                        <td rowspan="2" class="l" th:text="${d.accnm}"></td>
-                        <td class="l" th:text="${d.it1nm}"></td>
-                        <td rowspan="2" class="l" th:text="${d.it2nm}"></td>
-                        <td class="mssec" th:text="${d.mssec}"></td>
-                        <td class="r" th:text="${#numbers.formatInteger(d.dramt, 0, 'COMMA')}"></td>
-                        <td class="r">0</td>
-                      </tr>
-                      <tr>
-                        <td class="l sub"
-                            th:text="${#strings.isEmpty(slip.banknm) ? '' : slip.banknm + ' : ' + slip.accnum}"></td>
-                        <td colspan="3" class="l sub" th:text="${d.summy}"></td>
-                      </tr>
-                    </th:block>
-
-                    <!-- ▸ 대변 라인 -->
-                    <th:block th:if="${i &lt; crCnt}" th:with="c=${slip.credit[i]}">
-                      <tr>
-                        <td rowspan="2" th:text="${c.upnm}"></td>
-                        <td rowspan="2" class="l" th:text="${c.accnm}"></td>
-                        <td class="l" th:text="${c.it1nm}"></td>
-                        <td rowspan="2" class="l" th:text="${c.it2nm}"></td>
-                        <td class="mssec" th:text="${c.mssec}"></td>
-                        <td class="r">0</td>
-                        <td class="r" th:text="${#numbers.formatInteger(c.cramt, 0, 'COMMA')}"></td>
-                      </tr>
-                      <tr>
-                        <td class="l sub"
-                            th:text="${#strings.isEmpty(slip.banknm) ? '' : slip.banknm + ' : ' + slip.accnum}"></td>
-                        <td colspan="3" class="l sub" th:text="${c.summy}"></td>
-                      </tr>
-                    </th:block>
-
-                  </th:block>
-                </th:block>
-              </th:block>
+            <!-- 라인을 SQL 순서 그대로 출력 (구분 → 관 → 항 → 라인 순번). 원본 d_aa009_bill2_og01 과 같은 순서.
+                 예전에는 차변 i번 · 대변 i번을 번갈아 찍어서 자산(보통예금) 줄이 비용 줄 사이에 끼었다. -->
+            <th:block th:each="d : ${slip.lines}">
+              <tr>
+                <td rowspan="2" th:text="${d.upnm}"></td>
+                <td rowspan="2" class="l" th:text="${d.accnm}"></td>
+                <td class="l" th:text="${d.it1nm}"></td>
+                <td rowspan="2" class="l" th:text="${d.it2nm}"></td>
+                <td class="mssec" th:text="${d.mssec}"></td>
+                <td class="r" th:text="${d.side == 'D' ? #numbers.formatInteger(d.dramt, 0, 'COMMA') : '0'}"></td>
+                <td class="r" th:text="${d.side == 'C' ? #numbers.formatInteger(d.cramt, 0, 'COMMA') : '0'}"></td>
+              </tr>
+              <tr>
+                <td class="l sub"
+                    th:text="${#strings.isEmpty(slip.banknm) ? '' : slip.banknm + ' : ' + slip.accnum}"></td>
+                <td colspan="3" class="l sub" th:text="${d.summy}"></td>
+              </tr>
             </th:block>
 
             <!-- 합계 -->
@@ -507,8 +482,8 @@
               <tr>
                 <th:block th:each="apv : ${approverList}">
                   <td>
-                    <div class="apv-h" th:text="${apv}"></div>
-                    <div class="apv-b"></div>
+                    <div class="apv-h" th:text="${apv.name}"></div>
+                    <div class="apv-b apv-mark" th:classappend="${apv.cro} ? 'apv-cro'"><span class="apv-jun" th:if="${apv.jun}">전결</span></div>
                   </td>
                 </th:block>
               </tr>
@@ -722,8 +697,7 @@
               <!-- 적요 내용 -->
               <div style="min-height:55mm; padding:7px 7px 7px 7px; font-size:10px;
                           line-height:1.7; white-space:pre-wrap; vertical-align:top;
-                          border-bottom:1.5px solid #333;">
-                <span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
+                          border-bottom:1.5px solid #333;"><span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
                 <br/>- 이 하 여 백 -
               </div>
 
@@ -744,10 +718,10 @@
                 <th:block th:each="apv, apvStat : ${approverList}">
                   <tr>
                     <td th:style="'text-align:center; font-size:9px; padding:3px; background:#f0f0f0; font-weight:700;' + (!apvStat.last ? 'border-bottom:1px solid #555;' : '')"
-                        th:text="${apv}"></td>
+                        th:text="${apv.name}"></td>
                   </tr>
                   <tr>
-                    <td th:style="'height:40mm;' + (!apvStat.last ? 'border-bottom:1px solid #555;' : '')"></td>
+                    <td class="apv-mark" th:classappend="${apv.cro} ? 'apv-cro'" th:style="'height:40mm;' + (!apvStat.last ? 'border-bottom:1px solid #555;' : '')"><span class="apv-jun" th:if="${apv.jun}">전결</span></td>
                   </tr>
                 </th:block>
               </table>
@@ -870,8 +844,7 @@
                        border:1px solid #555; padding:4px 2px;">내<br/>역</td>
             <td style="vertical-align:top; padding:7px 8px; font-size:10px;
                        line-height:1.7; white-space:pre-wrap; min-height:55mm;
-                       border:1px solid #555;" colspan="5">
-              <span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
+                       border:1px solid #555;" colspan="5"><span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
               <br/>- 이 하 여 백 -
             </td>
           </tr>
@@ -898,8 +871,8 @@
               <td style="border:1px solid #333; text-align:center; padding:0; width:100px;">
                 <div style="background:#f0f0f0; border-bottom:1px solid #333;
               padding:3px 14px; font-size:10px; font-weight:700;"
-                     th:text="${apv}"></div>
-                <div style="height:16mm; width:100px;"></div>
+                     th:text="${apv.name}"></div>
+                <div class="apv-mark" style="height:16mm; width:100px;" th:classappend="${apv.cro} ? 'apv-cro'"><span class="apv-jun" th:if="${apv.jun}">전결</span></div>
               </td>
             </th:block>
           </tr>
@@ -921,8 +894,8 @@
               <td style="border:1px solid #333; text-align:center; padding:0; width:100px;">
                 <div style="background:#f0f0f0; border-bottom:1px solid #333;
               padding:3px 14px; font-size:10px; font-weight:700;"
-                     th:text="${apv}"></div>
-                <div style="height:16mm; width:100px;"></div>
+                     th:text="${apv.name}"></div>
+                <div class="apv-mark" style="height:16mm; width:100px;" th:classappend="${apv.cro} ? 'apv-cro'"><span class="apv-jun" th:if="${apv.jun}">전결</span></div>
               </td>
             </th:block>
           </tr>
@@ -1028,8 +1001,7 @@
                        border:1px solid #555; padding:4px 2px;">내<br/>역</td>
             <td style="vertical-align:top; padding:7px 8px; font-size:10px;
                        line-height:1.7; white-space:pre-wrap; min-height:55mm;
-                       border:1px solid #555;" colspan="5">
-              <span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
+                       border:1px solid #555;" colspan="5"><span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
               <br/>- 이 하 여 백 -
             </td>
           </tr>
@@ -1065,8 +1037,8 @@
               <td style="border:1px solid #333; text-align:center; padding:0; width:100px;">
                 <div style="background:#f0f0f0; border-bottom:1px solid #333;
               padding:3px 14px; font-size:10px; font-weight:700;"
-                     th:text="${apv}"></div>
-                <div style="height:16mm; width:100px;"></div>
+                     th:text="${apv.name}"></div>
+                <div class="apv-mark" style="height:16mm; width:100px;" th:classappend="${apv.cro} ? 'apv-cro'"><span class="apv-jun" th:if="${apv.jun}">전결</span></div>
               </td>
             </th:block>
           </tr>
@@ -1163,8 +1135,7 @@
                        border:1px solid #555; padding:4px 2px;">비<br/>고</td>
             <td style="vertical-align:top; padding:7px 8px; font-size:10px;
                        line-height:1.7; white-space:pre-wrap; min-height:40mm;
-                       border:1px solid #555;" colspan="5">
-              <span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
+                       border:1px solid #555;" colspan="5"><span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
               <br/>- 이 하 여 백 -
             </td>
           </tr>
@@ -1199,7 +1170,7 @@
             <td style="border:1px solid #555; padding:4px; text-align:right;"
                 th:text="${#numbers.formatInteger(slip.tiosec == '1' ? entry.cramt : entry.dramt, 1, 'COMMA')}"></td>
             <td style="border:1px solid #555; padding:4px; text-align:center;"
-                th:text="${slip.cltnm != null ? slip.cltnm : ''}"></td>
+                th:text="${entry.cltnm != null ? entry.cltnm : ''}"></td>
             <td style="border:1px solid #555; padding:4px; text-align:center;"
                 th:text="${slip.cardnm != null and !#strings.isEmpty(slip.cardnm)
                             ? slip.cardnm : (slip.banknm != null ? slip.banknm : '')}"></td>
@@ -1236,8 +1207,8 @@
               <td style="border:1px solid #333; text-align:center; padding:0; width:100px;">
                 <div style="background:#f0f0f0; border-bottom:1px solid #333;
               padding:3px 14px; font-size:10px; font-weight:700;"
-                     th:text="${apv}"></div>
-                <div style="height:16mm; width:100px;"></div>
+                     th:text="${apv.name}"></div>
+                <div class="apv-mark" style="height:16mm; width:100px;" th:classappend="${apv.cro} ? 'apv-cro'"><span class="apv-jun" th:if="${apv.jun}">전결</span></div>
               </td>
             </th:block>
           </tr>
@@ -1334,8 +1305,7 @@
                        border:1px solid #555; padding:4px 2px;">비<br/>고</td>
             <td style="vertical-align:top; padding:7px 8px; font-size:10px;
                        line-height:1.7; white-space:pre-wrap; min-height:40mm;
-                       border:1px solid #555;" colspan="5">
-              <span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
+                       border:1px solid #555;" colspan="5"><span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
               <br/>- 이 하 여 백 -
             </td>
           </tr>

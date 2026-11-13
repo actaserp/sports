@@ -1,0 +1,575 @@
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml">
+<th:block layout:fragment="content">
+  <style>
+      /* 이 페이지 전용 레이아웃 구조 */
+
+      /* 전표결재 2단 flex 컨테이너 */
+      .junpyo-wrap {
+          display: flex;
+          align-items: stretch;
+          border: 1px solid #D5D7DC;
+          border-top: none;
+      }
+
+      /* 왼쪽 패널 */
+      .junpyo-left {
+          display: flex;
+          flex-direction: column;
+          flex: 0 0 50%;
+          width: 50%;
+          border-right: 1px solid #D5D7DC;
+          box-sizing: border-box;
+      }
+      .junpyo-left-top {
+          display: flex;
+          flex: 1;
+      }
+
+      /* 결재관인 세로 라벨 */
+      .vert-label {
+          writing-mode: vertical-lr;
+          letter-spacing: 4px;
+          background: #EDEFF5;
+          text-align: center;
+          padding: 6px 5px;
+          border-right: 1px solid #D5D7DC;
+          font-size: 12px;
+          font-weight: 500;
+          color: #333;
+          white-space: nowrap;
+          min-width: 24px;
+      }
+
+      /* 회사직인 */
+      .seal-row {
+          display: flex;
+          border-top: 1px solid #D5D7DC;
+      }
+      .seal-label {
+          background: #EDEFF5;
+          font-weight: 500;
+          font-size: 12px;
+          color: #333;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 6px 10px;
+          border-right: 1px solid #D5D7DC;
+          text-align: center;
+          white-space: nowrap;
+      }
+      .seal-body {
+          padding: 8px 14px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          background: #fff;
+      }
+      #sealPreview {
+          width: 100px;
+          height: 80px;
+          border: 1px solid #D5D7DC;
+          background: #F5F5F5;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+      }
+      #sealEmpty { font-size: 11px; color: #aaa; }
+      #sealImg   { max-width: 100%; max-height: 100%; display: none; }
+
+      /* 오른쪽 패널 */
+      .junpyo-right {
+          flex: 0 0 50%;
+          width: 50%;
+          display: flex;
+          flex-direction: column;
+          box-sizing: border-box;
+      }
+      .junpyo-right .write-table {
+          border: none;
+          height: 100%;
+      }
+
+      /* 지출일자사용안함 세로 배치 */
+      .jichul-cell {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+      }
+
+      /* 섹션 헤더 bar */
+      .section-header-bar {
+          background: #c8d4e8;
+          text-align: center;
+          font-weight: bold;
+          height: 26px;
+          line-height: 26px;
+          font-size: 13px;
+          border: 1px solid #D5D7DC;
+          border-bottom: none;
+      }
+
+      /* ── 공통 CSS 충돌 최소 보정 ── */
+
+      /* settle 테이블 구조 */
+      .settle-table { width: 100%; border-collapse: collapse; }
+      .settle-table th, .settle-table td {
+          border: 1px solid #D5D7DC;
+          padding: 4px;
+          text-align: center;
+          height: auto;
+      }
+      .settle-table th { background: #EDEFF5; }
+
+      /* settle 내 input: 공통 width:360px 차단 */
+      .settle-table td .input-clear {
+          display: block !important;
+          width: 100% !important;
+          position: relative !important;
+      }
+      .settle-table td input[type=text] {
+          width: 100% !important;
+          height: 28px !important;
+          padding: 0 24px 0 6px !important;
+          box-sizing: border-box !important;
+      }
+
+      /* settle 내 checkbox: 공통 :before 가상요소 차단 */
+      .settle-table td input[type=checkbox],
+      .junpyo-right td input[type=checkbox],
+      .junpyo-right td input[type=radio] {
+          width: 16px !important;
+          height: 16px !important;
+          min-width: 16px !important;
+          padding: 0 !important;
+          vertical-align: middle !important;
+          appearance: auto !important;
+          /*-webkit-appearance: auto !important;*/
+      }
+      .settle-table td input[type=checkbox]::before,
+      .settle-table td input[type=checkbox]::after,
+      .junpyo-right td input[type=checkbox]::before,
+      .junpyo-right td input[type=checkbox]::after,
+      .junpyo-right td input[type=radio]::before,
+      .junpyo-right td input[type=radio]::after {
+          display: none !important;
+          content: none !important;
+      }
+
+      /* 인쇄배율: 공통 width:360px 차단 */
+      #printzoom {
+          width: 60px !important;
+      }
+
+      /* 지출일자 input */
+      #jichulflag {
+          width: 120px !important;
+      }
+
+      /* 오른쪽 패널 일반 input: 공통 width:360px 차단 */
+      .junpyo-right td input[type=text],
+      .junpyo-right td input[type=tel] {
+          width: 95% !important;
+          box-sizing: border-box !important;
+      }
+
+      /* label 내 체크박스/라디오가 위로 뜨는 현상 방지 */
+      .junpyo-right label,
+      .write-table label {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          vertical-align: middle;
+      }
+  </style>
+
+  <div class="layout-contents">
+    <!-- Page Title -->
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>환경 설정</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>시스템 관리</li>
+        <li>환경 설정</li>
+      </ul>
+    </div>
+
+    <div style="display:flex; gap:5px;">
+      <section>
+        <div class="section-top">
+          <div class="title-wrap"></div>
+          <div class="button-wrap" style="justify-content:end;">
+            <ul>
+              <li></li>
+              <li>
+                <a class="btn btn-edit" id="btnSave" onclick="save()" title="저장">
+                  <img alt="저장 아이콘" th:src="@{/images/icon/ico-save.svg}"> 저장
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+
+          <!-- 전표결재 헤더 -->
+          <div class="section-header-bar">전표결재</div>
+
+          <!-- 전표결재: 좌(결재관인+회사직인) / 우(홈택스ID~전표번호표시안함) -->
+          <div class="junpyo-wrap">
+
+            <!-- ── 왼쪽 ── -->
+            <div class="junpyo-left">
+
+              <!-- 결재관인 + settle 1~8 -->
+              <div class="junpyo-left-top">
+                <div class="vert-label">결재관인</div>
+                <div style="width:100%; padding:4px;">
+                  <table class="settle-table" style="width:100%;">
+                    <thead>
+                    <tr>
+                      <td colspan="5" style="text-align:left; background:#fff; border:none; padding:2px 4px; white-space:nowrap;">
+                        전자결재:
+                        <select id="approFlag"><option value="">approFlag</option></select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th style="width:24px;"></th>
+                      <th>결재명</th>
+                      <th style="width:44px;" title="체크하면 출력 결재란에서 이 칸을 뺍니다">숨김</th>
+                      <th style="width:44px;">전결</th>
+                      <th style="width:44px;">사선</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr><td>1</td><td><div class="input-clear"><input type="text" id="settle1" maxlength="10"><span class="btn-clear" data-clear="settle1">×</span></div></td><td><input type="checkbox" id="setchk1"></td><td><input type="checkbox" id="junchk1"></td><td><input type="checkbox" id="crolin1"></td></tr>
+                    <tr><td>2</td><td><div class="input-clear"><input type="text" id="settle2" maxlength="10"><span class="btn-clear" data-clear="settle2">×</span></div></td><td><input type="checkbox" id="setchk2"></td><td><input type="checkbox" id="junchk2"></td><td><input type="checkbox" id="crolin2"></td></tr>
+                    <tr><td>3</td><td><div class="input-clear"><input type="text" id="settle3" maxlength="10"><span class="btn-clear" data-clear="settle3">×</span></div></td><td><input type="checkbox" id="setchk3"></td><td><input type="checkbox" id="junchk3"></td><td><input type="checkbox" id="crolin3"></td></tr>
+                    <tr><td>4</td><td><div class="input-clear"><input type="text" id="settle4" maxlength="10"><span class="btn-clear" data-clear="settle4">×</span></div></td><td><input type="checkbox" id="setchk4"></td><td><input type="checkbox" id="junchk4"></td><td><input type="checkbox" id="crolin4"></td></tr>
+                    <tr><td>5</td><td><div class="input-clear"><input type="text" id="settle5" maxlength="10"><span class="btn-clear" data-clear="settle5">×</span></div></td><td><input type="checkbox" id="setchk5"></td><td><input type="checkbox" id="junchk5"></td><td><input type="checkbox" id="crolin5"></td></tr>
+                    <tr><td>6</td><td><div class="input-clear"><input type="text" id="settle6" maxlength="10"><span class="btn-clear" data-clear="settle6">×</span></div></td><td><input type="checkbox" id="setchk6"></td><td><input type="checkbox" id="junchk6"></td><td><input type="checkbox" id="crolin6"></td></tr>
+                    <tr><td>7</td><td><div class="input-clear"><input type="text" id="settle7" maxlength="10"><span class="btn-clear" data-clear="settle7">×</span></div></td><td><input type="checkbox" id="setchk7"></td><td><input type="checkbox" id="junchk7"></td><td><input type="checkbox" id="crolin7"></td></tr>
+                    <tr><td>8</td><td><div class="input-clear"><input type="text" id="settle8" maxlength="10"><span class="btn-clear" data-clear="settle8">×</span></div></td><td><input type="checkbox" id="setchk8"></td><td><input type="checkbox" id="junchk8"></td><td><input type="checkbox" id="crolin8"></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- 회사직인 -->
+              <div class="seal-row">
+                <div class="seal-label">회사<br>직인</div>
+                <div class="seal-body">
+                  <div id="sealPreview">
+                    <img id="sealImg" src="" alt="">
+                    <span id="sealEmpty">미리보기</span>
+                  </div>
+                  <input type="file" id="sealFile" name="sealFile" accept="image/*" style="display:none;">
+                  <div style="display:flex; gap:4px;">
+                    <button type="button" class="btn" onclick="document.getElementById('sealFile').click()">등록</button>
+                    <button type="button" class="btn" onclick="removeSeal()">삭제</button>
+                  </div>
+                </div>
+              </div>
+
+            </div><!-- /junpyo-left -->
+
+            <!-- ── 오른쪽 ── -->
+            <div class="junpyo-right">
+              <table class="write-table">
+                <colgroup>
+                  <col style="width:145px;">
+                  <col>
+                </colgroup>
+                <tbody>
+                <tr>
+                  <th>홈택스ID</th>
+                  <td><input id="hometaxid" name="hometaxid" type="text"></td>
+                </tr>
+                <tr>
+                  <th>전표출력양식설정</th>
+                  <td><input id="junpyoprt" name="junpyoprt" type="text"></td>
+                </tr>
+                <tr>
+                  <th>년 세입내역에 전기이월 포함</th>
+                  <td><input type="checkbox"></td>
+                </tr>
+                <tr>
+                  <th>세입출력양식Type</th>
+                  <td><input id="authftype" name="authftype" type="text"></td>
+                </tr>
+                <tr>
+                  <th>세출출력양식Type</th>
+                  <td><input id="bprttype" name="bprttype" type="text"></td>
+                </tr>
+                <tr>
+                  <th>출력율옵션</th>
+                  <td>
+                    <label><input type="checkbox"> 페이지표기안함</label>
+                    <label><input type="checkbox"> 출력일자표시안함</label>
+                  </td>
+                </tr>
+                <tr>
+                  <th>인쇄배율</th>
+                  <td><input id="printzoom" name="printzoom" type="text"> %</td>
+                </tr>
+                <tr>
+                  <th>전표번호관리</th>
+                  <td><input id="setnumchk" name="setnumchk" type="text"></td>
+                </tr>
+                <tr>
+                  <th>지출일자사용안함</th>
+                  <td>
+                    <div class="jichul-cell">
+                      <div><input type="checkbox"></div>
+                      <div><input id="jichulflag" name="jichulflag" type="text"></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th>전표번호표시안함</th>
+                  <td><input type="checkbox"></td>
+                </tr>
+                </tbody>
+              </table>
+            </div><!-- /junpyo-right -->
+
+          </div><!-- /junpyo-wrap -->
+
+          <!-- 출력 설정 (계좌별원장결재란~) -->
+          <table class="write-table" style="border-top:none;">
+            <colgroup>
+              <col style="width:150px;">
+              <col>
+              <col style="width:150px;">
+              <col>
+            </colgroup>
+            <tbody>
+            <tr>
+              <th>계좌별원장결재란</th>
+              <td><input type="checkbox"></td>
+              <th>건강보험요율계산여부</th>
+              <td>
+                <label><input type="radio" name="healthCalc" value="1"> 요율계산</label>
+                <label><input type="radio" name="healthCalc" value="2"> 금액표시</label>
+              </td>
+            </tr>
+            <tr>
+              <th>국민연금요율계산여부</th>
+              <td>
+                <label><input type="radio" name="pensionCalc" value="1"> 요율계산</label>
+                <label><input type="radio" name="pensionCalc" value="2"> 금액표시</label>
+              </td>
+              <th>소득세계산여부</th>
+              <td>
+                <label><input type="radio" name="incomeTax" value="1"> 소득세계산</label>
+                <label><input type="radio" name="incomeTax" value="2"> 직전달표시</label>
+              </td>
+            </tr>
+            <tr>
+              <th>세목사용</th>
+              <td colspan="3"></td>
+            </tr>
+            <tr>
+              <th>전표출력컬러인쇄</th>
+              <td></td>
+              <th>전표(산출내역)</th>
+              <td><input id="prtcolor" name="prtcolor" type="text"></td>
+            </tr>
+
+            <!-- 세무서 정보 -->
+            <tr class="section-header"><th colspan="4">세무서 정보</th></tr>
+            <tr>
+              <th>관할세무서</th>
+              <td style="white-space:nowrap;">
+                세무서명: <input id="taxnm" name="taxnm" type="text">
+                &nbsp;코드: <input id="comtaxoff" name="comtaxoff" type="text">
+              </td>
+              <th>성명</th>
+              <td><input id="taxagentnm" name="taxagentnm" type="text"></td>
+            </tr>
+            <tr>
+              <th rowspan="2">세무대리인</th>
+              <td style="white-space:nowrap;">코드: <input id="taxagentcd" name="taxagentcd" type="text"></td>
+              <th>전화번호</th>
+              <td><input id="taxagenttel" name="taxagenttel" type="tel"></td>
+            </tr>
+            <tr>
+              <td style="white-space:nowrap;">사업자번호: <input id="taxagentsp" name="taxagentsp" type="text"></td>
+              <th>세무서코드</th>
+              <td><input id="taxaccnum" name="taxaccnum" type="text"></td>
+            </tr>
+            <tr>
+              <th rowspan="2">부가세 담당자</th>
+              <td style="white-space:nowrap;">성명: <input id="agnertel1" name="agnertel1" type="text"></td>
+              <th>연락처</th>
+              <td><input id="agnertel2" name="agnertel2" type="tel"></td>
+            </tr>
+            <tr>
+              <th>메일주소</th>
+              <td colspan="2"><input id="emailadres" name="emailadres" type="text"></td>
+            </tr>
+            <tr>
+              <th>종사업장 코드</th>
+              <td colspan="3"><input id="ajongcd" name="ajongcd" type="text"></td>
+            </tr>
+
+            <!-- 국세환급금 -->
+            <tr class="section-header"><th colspan="4">국세환급금 은행 및 계좌번호</th></tr>
+            <tr>
+              <th>은행</th>
+              <td><input id="taxbank" name="taxbank" type="text"></td>
+              <th>계좌번호</th>
+              <td><input id="taxaccnum2" name="taxaccnum2" type="text"></td>
+            </tr>
+            <tr>
+              <th>전표출력후신규전환</th>
+              <td colspan="3"><input type="checkbox"></td>
+            </tr>
+
+            <!-- 은행거래내역 연계정보 -->
+            <tr class="section-header"><th colspan="4">은행거래내역 연계정보</th></tr>
+            <tr>
+              <th>자동수집</th>
+              <td colspan="3"><input type="checkbox"></td>
+            </tr>
+
+            <!-- Bizplay -->
+            <tr class="section-header"><th colspan="4">Bizplay 바로가기</th></tr>
+            <tr>
+              <th>뱅크노트 ID</th>
+              <td><input id="bankntid" name="bankntid" type="text"></td>
+              <th rowspan="4" style="text-align:center;">연동</th>
+              <td rowspan="4" style="vertical-align:middle; text-align:center;">
+                <input id="resulttxt" name="resulttxt" type="text">
+              </td>
+            </tr>
+            <tr>
+              <th>뱅크노트 PWD</th>
+              <td><input id="bankntpw" name="bankntpw" type="password"></td>
+            </tr>
+            <tr>
+              <th>Bizplay 고객 ID</th>
+              <td><input id="bizplayid" name="bizplayid" type="text"></td>
+            </tr>
+            <tr>
+              <th>Bizplay 고객 PW</th>
+              <td><input id="bizplaypw" name="bizplaypw" type="password"></td>
+            </tr>
+
+            <!-- 카드거래내역 -->
+            <tr class="section-header"><th colspan="4">카드거래내역 연계정보</th></tr>
+            <tr>
+              <td colspan="2" style="text-align:center;">
+                <button type="button" class="btn">1. 서비스인증 요청</button>
+              </td>
+              <td colspan="2" style="text-align:center;">
+                <button type="button" class="btn">2. 서비스인증 확인</button>
+              </td>
+            </tr>
+            <tr>
+              <th>서비스인증key</th>
+              <td colspan="3"><input id="cardapi_key" name="cardapi_key" type="text"></td>
+            </tr>
+            <tr>
+
+            </tr>
+
+            </tbody>
+          </table>
+
+        </div><!-- /table-wrap -->
+      </section>
+    </div>
+  </div>
+
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   /*
+    * 환경설정 — 지금은 결재라인(결재관인 1~8)만 서버와 연결돼 있다. (2026-11-13)
+    *  저장 위치: 테넌트 DB TB_XENV  settle1~8 결재명 / setchk1~8 숨김 / junchk1~8 전결 / crolin1~8 사선
+    *  출력 결재란 규칙 (원본 d_confirm_001): 숨김이 켜진 칸과 결재명이 빈 칸은 빼고,
+    *  전결이 켜지면 칸에 "전결", 사선이 켜지면 칸에 대각선.
+    *  나머지 항목(직인 · 홈택스 등)은 아직 화면만 있다.
+    */
+   class PreferencesPage {
+    constructor() {
+     this.url = '/api/system/preferences';
+    }
+
+    load() {
+     AjaxUtil.getAsyncData(this.url + '/settle', {}, function (res) {
+      if (!res || !res.success) { Alert.alert('', (res && res.message) || '결재라인을 불러오지 못했습니다.'); return; }
+      const d = res.data || {};
+      for (let i = 1; i <= 8; i++) {
+       $('#settle' + i).val((d['settle' + i] || '').trim());
+       ['setchk', 'junchk', 'crolin'].forEach(k => {
+        const v = String(d[k + i] == null ? '' : d[k + i]).trim();
+        $('#' + k + i).prop('checked', v !== '' && v !== '0');
+       });
+      }
+     });
+    }
+
+    save() {
+     const data = {};
+     for (let i = 1; i <= 8; i++) {
+      const nm = ($('#settle' + i).val() || '').trim();
+      const bytes = [...nm].reduce((n, ch) => n + (ch.charCodeAt(0) > 127 ? 2 : 1), 0);   // DB(char 10) 기준: 한글 2바이트
+      if (bytes > 10) { Alert.alert('', i + '번 결재명이 너무 깁니다. (한글 5자까지)'); $('#settle' + i).focus(); return; }
+      data['settle' + i] = nm;
+      ['setchk', 'junchk', 'crolin'].forEach(k => data[k + i] = $('#' + k + i).is(':checked') ? '1' : '0');
+     }
+     const _this = this;
+     Alert.confirm('', '저장하시겠습니까?', function () {
+      AjaxUtil.postAsyncData(_this.url + '/settle/save', data, function (res) {
+       if (!res || !res.success) { Alert.alert('', (res && res.message) || '저장하지 못했습니다.'); return; }
+       Notify.success('저장되었습니다.');
+       _this.load();
+      });
+     });
+    }
+   }
+
+   // 저장 버튼 (onclick="save()")
+   function save() { if (page) page.save(); }
+
+   // 결재명 지우기 ×
+   $(document).on('click', '.settle-table .btn-clear[data-clear]', function () {
+    $('#' + $(this).data('clear')).val('').focus();
+   });
+
+   document.getElementById('sealFile').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+     document.getElementById('sealImg').src = e.target.result;
+     document.getElementById('sealImg').style.display = 'block';
+     document.getElementById('sealEmpty').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+   });
+
+   function removeSeal() {
+    document.getElementById('sealFile').value = '';
+    document.getElementById('sealImg').src = '';
+    document.getElementById('sealImg').style.display = 'none';
+    document.getElementById('sealEmpty').style.display = 'block';
+   }
+
+   let page = null;
+
+   $(document).ready(function (e) {
+    page = new PreferencesPage();
+    page.load();
+   });
+  </script>
+</th:block>
+</html>

@@ -959,6 +959,14 @@
      };
     }
 
+    // 차변 → 대변 순으로 정렬 (같은 차대 안에서는 입력 순서 유지). 원본 전표처럼 대변이 아래로 모인다.
+    sortLinesByDrcr() {
+     this.lines = this.lines
+     .map((l, i) => ({l: l, i: i}))
+     .sort((a, b) => ((a.l.drcr === '2') - (b.l.drcr === '2')) || (a.i - b.i))
+     .map(x => x.l);
+    }
+
     resetLines() {
      this.lines = [this.emptyLine('1'), this.emptyLine('2')];
      this.sel = -1;
@@ -1081,13 +1089,18 @@
 
     addLine(drcr = '1', copyPrev = false) {
      const l = this.emptyLine(drcr);
+     // 차변은 대변보다 위에 넣는다 (첫 대변 행 바로 앞). 대변은 맨 아래.
+     const firstCr = this.lines.findIndex(x => x.drcr === '2');
+     const at = (drcr !== '2' && firstCr >= 0) ? firstCr : this.lines.length;
      if (copyPrev && this.lines.length) {
-      const prev = this.lines[this.lines.length - 1];
+      // 바로 위 행(같은 쪽의 마지막 행)의 항 · 목 · 재원을 이어받는다
+      const prev = this.lines[at > 0 ? at - 1 : 0];
       ['it1cd', 'it1nm', 'it2cd', 'it2nm', 'msseccd', 'mssecnm'].forEach(k => l[k] = prev[k] || '');
      }
-     this.lines.push(l);
+     this.lines.splice(at, 0, l);
+     this.sel = -1;
      this.renderLines();
-     this.selectLine(this.lines.length - 1, true);
+     this.selectLine(at, true);
     }
 
     deleteLine() {
@@ -1200,6 +1213,15 @@
       const id = this.id;
       if (id === 'pnl_drcr' && e.type === 'change') {
        _this.applyPanelDrcr();
+       // 차대를 바꾸면 그 행을 제자리(차변 위 · 대변 아래)로 옮기고 계속 선택해 둔다
+       _this.syncPanel();
+       const cur = _this.lines[_this.sel];
+       _this.sortLinesByDrcr();
+       const idx = _this.lines.indexOf(cur);
+       _this.sel = -1;
+       _this.renderLines();
+       _this.selectLine(idx, false);
+       return;
       }
       if (id === 'pnl_cltnm' && $(this).val().trim() === '') {
        $('#pnl_cltcd').val('');
@@ -1842,6 +1864,7 @@
         l.banknm  = line.banknm || '';
         return l;
        });
+       _this.sortLinesByDrcr();
 
        _this.sel = -1;
        _this.renderLines();
@@ -1994,6 +2017,11 @@
      // 입력 중이던 값까지 반영
      _this.syncPanel();
 
+     // 대변이 아래로 가도록 정렬해서 그 순서로 저장한다 (화면도 같은 순서로 다시 그린다)
+     _this.sortLinesByDrcr();
+     _this.sel = -1;
+     _this.renderLines();
+
      const spdate = $('#spdate').val();
      const spnum = $('#spnum').val();
      const tiosec = $('#tiosec').val();
@@ -2096,8 +2124,14 @@
          $('#spnum').val(result.data.spnum);
          _this.currentSlipId = result.data.spnum;
         }
-        _this.resetForm();
-        _this.searchMainData();
+        // 화면을 비우지 않고 저장한 전표를 그대로 둔다.
+        // 서버에 저장된 값(전표번호 · 라인 순번 · 최종수정일)으로 다시 읽어 와 이어서 수정할 수 있게 한다.
+        const sd = $('#spdate').val(), sn = $('#spnum').val();
+        if (sd && sn) {
+         _this.fetchSlipHeader(sd, sn);
+         _this.fetchSlipLines(sd, sn);
+        }
+        _this.searchMainData();   // 목록만 새로 고친다 (탭은 그대로)
        });
       } else {
        const msg = result?.message || '저장 중 오류가 발생했습니다.';

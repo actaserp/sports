@@ -263,9 +263,10 @@ public class PayslipController {
 				String subject = mailService.buildSubject(subjectTpl, head);
 
 				// 수신자 1명 = 메일 1통. 이 반복이 전체 설계의 핵심이다.
+				// 보내는 계정은 사업장 메일 설정을 따른다 (없으면 시스템 계정). 담당자 이름은 설정에서 켠 경우에만 붙는다.
 				mailService.sendToOne(sentTo, subject,
 					mailService.buildBody(bodyTpl, head, str(head.get("spjangnm")), replyTo, lock),
-					pdf, fileName, replyTo);
+					pdf, fileName, replyTo, senderName(auth));
 
 				payslipService.saveSendLog(spjangcd, paytype, paybasic, perid, sentTo, "S", head, null, testMode, userId);
 				out.put("success", true);
@@ -326,6 +327,12 @@ public class PayslipController {
 
 	private String str(Object o) {
 		return o == null ? "" : String.valueOf(o).trim();
+	}
+
+	/** 메일 보내는 이름에 붙일 담당자 이름 (auth_user.first_name) */
+	private String senderName(Authentication auth) {
+		if (auth == null || !(auth.getPrincipal() instanceof User u)) return null;
+		return u.getFirst_name();
 	}
 
 	private String username(Authentication auth) {

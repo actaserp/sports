@@ -159,7 +159,7 @@ public class SlipStatusController {  //전표입력현황
 			}
 
 			// ── 결재란: 화면 직접 입력(URL 파라미터) 우선, 없으면 DB(settle1~5), 없으면 기본값 ──
-			List<String> approverList = resolveApproverList(approvers);
+			List<Map<String, Object>> approverList = resolveApproverList(approvers);
 
 			// Thymeleaf 렌더링
 			Context context = new Context();
@@ -350,6 +350,7 @@ public class SlipStatusController {  //전표입력현황
 				slip.put("cardnm", row.get("cardnm"));
 				slip.put("debit", new ArrayList<Map<String, Object>>());
 				slip.put("credit", new ArrayList<Map<String, Object>>());
+				slip.put("lines", new ArrayList<Map<String, Object>>());   // 차변 · 대변을 SQL 순서 그대로 (전표 출력용)
 				slip.put("amt", 0L);
 				slip.put("accnum", row.get("accnum"));   // 계좌번호
 				slip.put("cardnum", row.get("cardnum"));  // 카드번호
@@ -377,20 +378,21 @@ public class SlipStatusController {  //전표입력현황
 
 			if ("1".equals(drcr) || "D".equals(drcr)) {
 //				log.info("[SlipPrint]   → 차변 추가 | accnm={} | dramt={}", row.get("accnm"), dramt);
-				((List<Map<String, Object>>) group.get("debit")).add(entry);
+				((List<Map<String, Object>>) group.get("debit")).add(entry); entry.put("side", "D");
 				group.put("amt", ((Long) group.get("amt")) + dramt);
 			} else if ("2".equals(drcr) || "C".equals(drcr)) {
 //				log.info("[SlipPrint]   → 대변 추가 | accnm={} | cramt={}", row.get("accnm"), cramt);
-				((List<Map<String, Object>>) group.get("credit")).add(entry);
+				((List<Map<String, Object>>) group.get("credit")).add(entry); entry.put("side", "C");
 			} else {
 				// drcr 값이 없을 경우 dramt로 판단 (fallback)
 				if (dramt > 0) {
-					((List<Map<String, Object>>) group.get("debit")).add(entry);
+					((List<Map<String, Object>>) group.get("debit")).add(entry); entry.put("side", "D");
 					group.put("amt", ((Long) group.get("amt")) + dramt);
 				} else {
-					((List<Map<String, Object>>) group.get("credit")).add(entry);
+					((List<Map<String, Object>>) group.get("credit")).add(entry); entry.put("side", "C");
 				}
 			}
+			((List<Map<String, Object>>) group.get("lines")).add(entry);
 		}
 
 		return new ArrayList<>(groupMap.values());
@@ -477,7 +479,7 @@ public class SlipStatusController {  //전표입력현황
 				creditEntry.put("summy", "");
 				creditEntry.put("dramt", 0L);
 				creditEntry.put("cramt", cramt);
-				creditEntry.put("cltnm", "cltnm");
+				creditEntry.put("cltnm", row.get("cltnm"));   // 글자 "cltnm" 이 그대로 들어가던 것 수정
 
 			} else {
 				// drcr=2 : 대변에 accnm, 차변은 빈칸
@@ -595,36 +597,53 @@ public class SlipStatusController {  //전표입력현황
 	}
 
 	/**
-	 * 결재란 직급 목록.
-	 *  1순위: 출력 팝업에서 직접 입력한 값(approvers, 쉼표 구분) — 입력한 개수만큼 칸이 생긴다
-	 *  2순위: tb_xenv.settle1~5
+	 * 결재란 칸 목록. 칸마다 {name 직위, jun 전결 표시, cro 사선 표시}.
+	 *  1순위: 출력 팝업에서 직접 입력한 값(approvers, 쉼표 구분) — 입력한 개수만큼 칸이 생긴다 (전결 · 사선 없음)
+	 *  2순위: 환경설정 결재라인 tb_xenv (원본 d_confirm_001 과 같은 규칙)
+	 *         settle1~8 직위, setchk = '1' 이면 그 칸을 숨김, junchk = '1' 이면 "전결", crolin = '1' 이면 사선
 	 *  3순위: 기본값
-	 * (이전에는 DB 가 1순위라 settle 값이 있으면 화면 입력이 무시되었다)
 	 */
-	private List<String> resolveApproverList(String approversParam) {
+	private List<Map<String, Object>> resolveApproverList(String approversParam) {
 		// 1순위: 화면 직접 입력
 		if (approversParam != null && !approversParam.trim().isEmpty()) {
-			List<String> paramList = java.util.Arrays.stream(approversParam.split(","))
-																 .map(String::trim)
-																 .filter(s -> !s.isEmpty())
-																 .collect(Collectors.toList());
+			List<Map<String, Object>> paramList = java.util.Arrays.stream(approversParam.split(","))
+																							.map(String::trim)
+																							.filter(s -> !s.isEmpty())
+																							.map(s -> apv(s, false, false))
+																							.collect(Collectors.toList());
 			if (!paramList.isEmpty()) return paramList;
 		}
 
-		// 2순위: DB(settle1~5)
-		Map<String, Object> settle = slipStatusService.getSettleInfo();
-		if (settle != null) {
-			List<String> dbList = java.util.Arrays.asList("settle1","settle2","settle3","settle4","settle5")
-															.stream()
-															.map(k -> settle.get(k))
-															.filter(v -> v != null && !v.toString().trim().isEmpty())
-															.map(v -> v.toString().trim())
-															.collect(Collectors.toList());
+		// 2순위: 환경설정 결재라인
+		Map<String, Object> st = slipStatusService.getSettleInfo();
+		if (st != null) {
+			List<Map<String, Object>> dbList = new ArrayList<>();
+			for (int i = 1; i <= 8; i++) {
+				if (on(st.get("setchk" + i))) continue;            // 숨김
+				Object nm = st.get("settle" + i);
+				if (nm == null || nm.toString().trim().isEmpty()) continue;   // 직위가 없는 칸은 그리지 않는다
+				dbList.add(apv(nm.toString().trim(), on(st.get("junchk" + i)), on(st.get("crolin" + i))));
+			}
 			if (!dbList.isEmpty()) return dbList;
 		}
 
 		// 3순위: 기본값
-		return java.util.Arrays.asList("담당", "차장", "사무처장");
+		return java.util.Arrays.asList(apv("담당", false, false), apv("차장", false, false), apv("사무처장", false, false));
+	}
+
+	private static Map<String, Object> apv(String name, boolean jun, boolean cro) {
+		Map<String, Object> m = new LinkedHashMap<>();
+		m.put("name", name);
+		m.put("jun", jun);
+		m.put("cro", cro);
+		return m;
+	}
+
+	/** 원본 조건: null · 빈칸 · '0' 이면 꺼짐, 그 외 켜짐 */
+	private static boolean on(Object v) {
+		if (v == null) return false;
+		String s = v.toString().trim();
+		return !s.isEmpty() && !"0".equals(s);
 	}
 
 }

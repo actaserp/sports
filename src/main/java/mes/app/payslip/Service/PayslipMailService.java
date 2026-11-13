@@ -8,7 +8,10 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import mes.app.system.MailSettingController;
+import mes.app.system.service.MailSettingService;
 
+import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeUtility;
 import java.util.Map;
@@ -17,14 +20,18 @@ import java.util.Map;
  * 급여명세서 메일 발송.
  *
  * 핵심 원칙: 수신자 1명 = 메일 1통.
- * 여러 명을 한 통에 담는 경로는 이 클래스에 존재하지 않는다.
+ * 여러 명을 한 통에 담는 경로는 이 클래스에 존재하지 않는다. 참조(CC)도 넣지 않는다 — 급여는 본인만 봐야 한다.
  *
  * 제목과 본문은 화면에서 받는다. 레거시 w_sendmail_pop 과 같은 방식이다.
  * 사람마다 달라지는 부분은 치환어로 처리한다.
  *
- * SMTP 접속 정보는 application.properties 와 MailConfig 를 그대로 쓴다.
- * 네이버는 발신 주소가 로그인 계정과 반드시 같아야 하므로 사업장별 발신 계정은 의미가 없고,
- * 답장 받을 주소만 화면에서 받아 Reply-To 로 넣는다. (balju_order 와 동일한 방식)
+ * 보내는 계정 (SaaS, 2026-11-13)
+ *  - 사업장이 시스템관리 > 메일 설정에 등록한 계정이 있으면 그 계정으로 보낸다 (MailSettingService.account()).
+ *    From = 사업장 계정, 보내는 이름 = 설정의 이름 (+ 설정에 따라 담당자 이름), Reply-To = 화면의 회신 주소.
+ *    설정에 따라 회신 주소(담당자)를 숨은참조로 넣어 담당자 메일함에 사본을 남긴다.
+ *  - 사업장 설정이 아예 없으면 지금까지처럼 시스템 계정(application.properties spring.mail.*)으로 보낸다.
+ *  - 설정은 있는데 꺼짐 · 잠김이면 보내지 않고 사유를 돌려준다. 시스템 계정으로 몰래 돌리지 않는다.
+ *  - 인증 실패가 연속되면 MailSettingService 가 그 사업장 계정을 잠시 멈춘다.
  */
 @Slf4j
 @Service
@@ -33,39 +40,65 @@ public class PayslipMailService {
 	@Autowired
 	private JavaMailSender mailSender;
 
+	@Autowired
+	private MailSettingService mailSettingService;
+
 	@Value("${spring.mail.username}")
 	private String fromEmail;
 
-	/** 발신자 표시명. 비우면 계정 주소가 그대로 보인다. */
+	/** 시스템 계정으로 보낼 때 발신자 표시명. 비우면 계정 주소가 그대로 보인다. */
 	@Value("${payslip.sender-name:}")
 	private String senderName;
+
+	/** 사업장 설정 없이 시스템 계정으로 보낸 경우를 표시하는 값 (발송 이력 등에서 쓸 수 있다) */
+	public static final String SYSTEM = "system";
+
+	public void sendToOne(String to, String subject, String htmlBody,
+												byte[] pdfBytes, String attachName, String replyTo) throws Exception {
+		sendToOne(to, subject, htmlBody, pdfBytes, attachName, replyTo, null);
+	}
 
 	/**
 	 * 단 한 명에게만 보낸다.
 	 *
-	 * @param to       수신자 1명. 배열/List 를 받지 않는 것이 이 메서드의 요점이다.
-	 * @param pdfBytes 첨부할 PDF. 디스크를 거치지 않고 메모리에서 바로 붙인다.
-	 * @param replyTo  답장 받을 주소. 비어 있으면 넣지 않는다.
+	 * @param to             수신자 1명. 배열/List 를 받지 않는 것이 이 메서드의 요점이다.
+	 * @param pdfBytes       첨부할 PDF. 디스크를 거치지 않고 메모리에서 바로 붙인다.
+	 * @param replyTo        답장 받을 주소. 비어 있으면 넣지 않는다.
+	 * @param senderUserName 보낸 담당자 이름. 메일 설정에서 「담당자 이름 붙이기」를 켠 경우에만 쓴다.
+	 * @return 실제로 쓴 보내는 주소
 	 */
-	public void sendToOne(String to, String subject, String htmlBody,
-												byte[] pdfBytes, String attachName, String replyTo) throws Exception {
+	public String sendToOne(String to, String subject, String htmlBody,
+													byte[] pdfBytes, String attachName, String replyTo, String senderUserName) throws Exception {
 
-		MimeMessage message = mailSender.createMimeMessage();
+		// 설정 없음이면 null, 꺼짐 · 잠김이면 여기서 사유와 함께 막힌다
+		MailSettingService.Account acc = mailSettingService.account();
+		JavaMailSender sender = acc != null ? acc.sender : mailSender;
+
+		MimeMessage message = sender.createMimeMessage();
 		MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
 		helper.setTo(to);
 		helper.setSubject(subject);
 		helper.setText(htmlBody, true);
 
-		// 네이버 SMTP 는 발신 주소가 로그인 계정과 반드시 일치해야 한다
-		if (StringUtils.hasText(senderName)) {
-			helper.setFrom(fromEmail, senderName);
+		String from;
+		if (acc != null) {
+			from = acc.fromAddr;
+			String name = displayName(acc, senderUserName);
+			helper.setFrom(new InternetAddress(from, StringUtils.hasText(name) ? name : null, "UTF-8"));
 		} else {
-			helper.setFrom(fromEmail);
+			// 시스템 계정 — 네이버 SMTP 는 발신 주소가 로그인 계정과 반드시 일치해야 한다
+			from = fromEmail;
+			if (StringUtils.hasText(senderName)) helper.setFrom(fromEmail, senderName);
+			else helper.setFrom(fromEmail);
 		}
 
 		if (StringUtils.hasText(replyTo)) {
-			helper.setReplyTo(replyTo);
+			String r = replyTo.trim();
+			helper.setReplyTo(r);
+			// 담당자 사본: 사업장 설정에서 켠 경우만. 받는 사람 · 보내는 주소와 같으면 넣지 않는다
+			if (acc != null && acc.bccSender && !r.equalsIgnoreCase(to) && !r.equalsIgnoreCase(acc.fromAddr))
+				helper.setBcc(r);
 		}
 
 		if (pdfBytes != null && pdfBytes.length > 0) {
@@ -76,7 +109,23 @@ public class PayslipMailService {
 				"application/pdf");
 		}
 
-		mailSender.send(message);
+		try {
+			sender.send(message);
+			if (acc != null) mailSettingService.markOk(acc.key);
+		} catch (Exception e) {
+			if (acc != null) mailSettingService.markFail(acc.key, e);
+			// 컨트롤러는 가장 안쪽 원인 메시지를 화면에 보여 준다 → 사람이 읽을 사유만 담아 원인 없이 던지고, 원본은 로그로 남긴다
+			log.error("[Payslip] 메일 발송 실패 (보내는 계정 {}): {}", acc != null ? acc.fromAddr : fromEmail, MailSettingService.rootMessage(e));
+			throw new IllegalStateException(MailSettingController.friendly(e));
+		}
+		return acc != null ? from : SYSTEM;
+	}
+
+	private static String displayName(MailSettingService.Account acc, String userName) {
+		String base = acc.fromName == null ? "" : acc.fromName.trim();
+		String u = userName == null ? "" : userName.trim();
+		if (acc.nameWithUser && !u.isEmpty()) return base.isEmpty() ? u : base + " " + u;
+		return base;
 	}
 
 	/** 화면에서 받은 제목. 비어 있으면 기존 형식으로 되돌린다. */

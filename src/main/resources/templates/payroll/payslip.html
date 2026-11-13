@@ -553,6 +553,11 @@
         </div>
 
         <div class="fld">
+          <label class="k">보내는 계정</label>
+          <div id="psFromInfo" class="hint" style="margin-top:0">확인 중...</div>
+        </div>
+
+        <div class="fld">
           <label class="k" for="psSubject">메일 제목</label>
           <input type="text" id="psSubject"/>
           <div class="hint">치환어 : {사업장} {제목} {성명} {귀속월} {지급일}</div>
@@ -1066,6 +1071,20 @@
        '<span class="sub">1명씩 개별 발송하므로 인원수만큼 시간이 걸립니다.</span></div>';
       $c.find('#psSendBody').html(html);
      };
+
+     // 보내는 계정 (시스템관리 > 메일 설정, 사업장별). 쓸 수 없는 상태면 미리 알려 준다.
+     $.get('/api/system/mail_setting/status').done(function (res) {
+      const st = (res && res.data) || {};
+      const $f = $c.find('#psFromInfo');
+      if (st.ok === false) {
+       $f.css('color', '#c0392b').text('메일을 보낼 수 없습니다: ' + (st.message || ''));
+      } else if (st.system) {
+       $f.text('시스템 기본 계정 (우리 사업장 메일 설정 없음 — 시스템관리 > 메일 설정에서 등록할 수 있습니다)');
+      } else {
+       $f.text((st.from_name ? st.from_name + ' ' : '') + '<' + (st.from_addr || '') + '>'
+        + (st.bcc_sender ? ' · 회신 주소에 사본' : ''));
+      }
+     }).fail(function () { $c.find('#psFromInfo').text('보내는 계정을 확인하지 못했습니다.'); });
 
      setTimeout(function () {
       // 사업장 메일이 있으면 회신 주소를 미리 채운다.
