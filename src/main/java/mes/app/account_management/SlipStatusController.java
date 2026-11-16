@@ -622,7 +622,7 @@ public class SlipStatusController {  //전표입력현황
 
 	/**
 	 * 결재란 칸 목록. 칸마다 {name 직위, jun 전결 표시, cro 사선 표시}.
-	 *  1순위: 출력 팝업에서 직접 입력한 값(approvers, 쉼표 구분) — 입력한 개수만큼 칸이 생긴다 (전결 · 사선 없음)
+	 *  1순위: 출력 팝업에서 직접 입력한 값(approvers, 쉼표 구분) — 입력한 개수만큼 칸이 생긴다. "직위:J" 전결, "직위:C" 사선
 	 *  2순위: 환경설정 결재라인 tb_xenv (원본 d_confirm_001 과 같은 규칙)
 	 *         settle1~8 직위, setchk = '1' 이면 그 칸을 숨김, junchk = '1' 이면 "전결", crolin = '1' 이면 사선
 	 *  3순위: 기본값
@@ -633,7 +633,15 @@ public class SlipStatusController {  //전표입력현황
 			List<Map<String, Object>> paramList = java.util.Arrays.stream(approversParam.split(","))
 																							.map(String::trim)
 																							.filter(s -> !s.isEmpty())
-																							.map(s -> apv(s, false, false))
+																							.map(s -> {
+																								// "직위:JC" — J 전결, C 사선 (출력 팝업에서 갱신 후 고른 값)
+																								int k = s.lastIndexOf(':');
+																								if (k > 0) {
+																									String f = s.substring(k + 1).toUpperCase();
+																									if (f.matches("[JC]+")) return apv(s.substring(0, k).trim(), f.contains("J"), f.contains("C"));
+																								}
+																								return apv(s, false, false);
+																							})
 																							.collect(Collectors.toList());
 			if (!paramList.isEmpty()) return paramList;
 		}

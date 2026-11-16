@@ -1806,6 +1806,21 @@
             padding:14px 20px; border-bottom:1px solid #e5e7eb; flex-shrink:0;
         }
         #slip-print-popup .sp-body { flex:1; overflow:hidden; }
+        /* 직접 입력한 결재칸마다 전결 · 사선 고르기 */
+        #slip-print-popup .sp-flags { display:none; flex-wrap:wrap; align-items:center; gap:6px 10px;
+            padding:8px 16px; border-bottom:1px solid #e5e7eb; background:#f9fafb; font-size:12px; color:#374151; }
+        #slip-print-popup .sp-flags.on { display:flex; }
+        #slip-print-popup .sp-flags .lb { color:#6b7280; margin-right:4px; }
+        #slip-print-popup .sp-flags .chip { display:inline-flex; align-items:center; gap:8px;
+            border:1px solid #d1d5db; border-radius:4px; background:#fff; padding:3px 8px; }
+        #slip-print-popup .sp-flags .chip b { font-weight:700; color:#111827; }
+        #slip-print-popup .sp-flags label { display:inline-flex; align-items:center; gap:3px; margin:0; cursor:pointer; font-weight:400; }
+        #slip-print-popup .sp-flags input[type=checkbox] {
+            -webkit-appearance:auto !important; appearance:auto !important; width:14px !important; height:14px !important;
+            min-width:14px !important; margin:0 !important; padding:0 !important; border:0 !important; background:none !important;
+            box-shadow:none !important; accent-color:#1a56db; }
+        #slip-print-popup .sp-flags input[type=checkbox]::before,
+        #slip-print-popup .sp-flags input[type=checkbox]::after { content:none !important; display:none !important; }
         #slip-print-popup .sp-body iframe { width:100%; height:100%; border:none; }
     `;
      let styleEl = document.getElementById('slip-print-style');
@@ -1868,6 +1883,7 @@
             </button>
             </div>
         </div>
+        <div class="sp-flags" id="spApvFlags"></div>
         <div class="sp-body">
             <iframe id="spIframe" style="width:100%;height:100%;border:none;"></iframe>
         </div>
@@ -1885,22 +1901,59 @@
       document.getElementById('spApprovers').value = savedApprovers;
      }
 
+     // 직접 입력한 결재칸의 전결(J) · 사선(C) — 칸 순서대로 { j, c }
+     let apvFlags = [];
+     try { apvFlags = JSON.parse(sessionStorage.getItem('slip_print_apvflags') || '[]') || []; } catch (e) { apvFlags = []; }
+
+     const apvNames = function () {
+      return (document.getElementById('spApprovers').value || '')
+      .split(',').map(s => s.trim()).filter(s => s !== '');
+     };
+
+     // 서버로 보내는 값 : "담당,팀장:J,사무국장:C" (J 전결, C 사선)
      const getApprovers = function () {
-      const v = (document.getElementById('spApprovers').value || '')
-      .split(',')
-      .map(s => s.trim())
-      .filter(s => s !== '')
-      .join(',');
-      if (v) {
-       sessionStorage.setItem('slip_print_approvers', v);
+      const names = apvNames();
+      const v = names.map((n, i) => {
+       const f = apvFlags[i] || {};
+       const t = (f.j ? 'J' : '') + (f.c ? 'C' : '');
+       return t ? n + ':' + t : n;
+      }).join(',');
+      if (names.length) {
+       sessionStorage.setItem('slip_print_approvers', names.join(','));
+       sessionStorage.setItem('slip_print_apvflags', JSON.stringify(apvFlags.slice(0, names.length)));
       } else {
        sessionStorage.removeItem('slip_print_approvers');
+       sessionStorage.removeItem('slip_print_apvflags');
       }
       return v;
      };
 
+     // 갱신 후 : 입력한 칸마다 [전결] [사선] 체크를 보여준다
+     const renderApvFlags = function () {
+      const box = document.getElementById('spApvFlags');
+      const names = apvNames();
+      if (!names.length) { box.classList.remove('on'); box.innerHTML = ''; return; }
+      const esc = v => String(v).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+      box.innerHTML = '<span class="lb">결재칸 표시</span>' + names.map((n, i) => {
+       const f = apvFlags[i] || {};
+       return '<span class="chip"><b>' + esc(n) + '</b>'
+        + '<label><input type="checkbox" data-i="' + i + '" data-k="j"' + (f.j ? ' checked' : '') + '/>전결</label>'
+        + '<label><input type="checkbox" data-i="' + i + '" data-k="c"' + (f.c ? ' checked' : '') + '/>사선</label></span>';
+      }).join('');
+      box.classList.add('on');
+     };
+
+     document.getElementById('spApvFlags').addEventListener('change', function (e) {
+      const t = e.target;
+      if (!t || t.type !== 'checkbox') return;
+      const i = +t.dataset.i;
+      apvFlags[i] = Object.assign({}, apvFlags[i] || {}, {[t.dataset.k]: t.checked});
+      renderPreview(document.getElementById('spPrintType').value);
+     });
+
      function renderPreview(printType) {
       const approvers = getApprovers();
+      renderApvFlags();
       const url = `${_this.url}/print?printType=${printType}&keys=${encodeURIComponent(keys)}&approvers=${encodeURIComponent(approvers)}`;
       document.getElementById('spIframe').src = withCtx(url);
      }
@@ -1925,6 +1978,7 @@
 
      document.getElementById('spApproversClear').addEventListener('click', function () {
       document.getElementById('spApprovers').value = '';
+      apvFlags = [];
       renderPreview(document.getElementById('spPrintType').value);
      });
 
