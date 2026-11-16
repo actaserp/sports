@@ -773,7 +773,13 @@
                  헤더·푸터가 한 박자 엉뚱한 자리에 남는 편이 더 나빴다. */
             window.LayoutState = (function () {
                 let collapsed = false;
-                function apply() {
+                let selfResize = false;   // apply 가 직접 쏜 resize 인지 (되먹임 방지)
+                /* toggled : 햄버거로 «실제로 접고 편» 때만 true.
+                   refresh(치수만 다시 계산)에서는 resize 를 다시 쏘거나 iframe 에 포커스를 주지 않는다.
+                   예전에는 refresh → resize → refresh … 가 320ms 마다 끝없이 돌면서
+                   그때마다 iframe 에 focus() 를 줘서, 메시지 보내기 같은 부모 창 입력칸의
+                   포커스를 빼앗아 «깜박하고 입력이 안 되는» 문제가 있었다. (2026-11-16) */
+                function apply(toggled) {
                     $('#navbarBarMenu2 .open_menu').toggleClass('menu_open', collapsed);
                     $('.menu_area').toggleClass('hidden', collapsed);
                     $('.dashboard-layout-header').toggleClass('header-collapsed', collapsed);
@@ -828,8 +834,12 @@
                     $('.tab-content .tab-pane').css('height', '100%');
                     $('.nth-tabs-frame').css('height', '100%');
 
-                    if (!collapsed) {
-                        setTimeout(function () { $(window).trigger('resize'); }, 320);
+                    if (toggled && !collapsed) {
+                        setTimeout(function () {
+                            selfResize = true;
+                            $(window).trigger('resize');
+                            selfResize = false;
+                        }, 320);
                     }
 
                     // ★ iframe 안의 .layout-contents 높이를 메뉴 상태에 맞춰 넣는다.
@@ -842,13 +852,18 @@
                          헤더가 화면 위로 밀려 «숨은 것처럼» 보였다.
                          (실제로는 display:block, height:68 인데 y:-68 이었다)
                          preventScroll 로 스크롤 없이 포커스만 준다. */
-                    $('.con_area iframe').each(function () {
-                        try {
-                            this.focus({preventScroll: true});
-                        } catch (e) {
-                            try { $(this.contentWindow).trigger('focus'); } catch (e2) {}
-                        }
-                    });
+                    // 부모 창에서 무언가 입력 중이면 포커스를 건드리지 않는다
+                    const ae = document.activeElement;
+                    const typing = ae && ae !== document.body && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
+                    if (toggled && !typing) {
+                        $('.con_area iframe').each(function () {
+                            try {
+                                this.focus({preventScroll: true});
+                            } catch (e) {
+                                try { $(this.contentWindow).trigger('focus'); } catch (e2) {}
+                            }
+                        });
+                    }
 
                     // 이미 밀려 있으면 되돌린다
                     if (window.pageYOffset !== 0) {
@@ -856,10 +871,11 @@
                     }
                 }
                 return {
-                    set(v) { collapsed = !!v; apply(); },
+                    set(v) { collapsed = !!v; apply(true); },
                     toggle() { this.set(!collapsed); },
                     get() { return collapsed; },
-                    refresh() { apply(); }      // 상태는 그대로, 치수만 다시 계산
+                    refresh() { apply(false); },   // 상태는 그대로, 치수만 다시 계산
+                    isSelfResize() { return selfResize; }
                 };
             })();
 
@@ -874,6 +890,7 @@
                  그 시점에 레이아웃을 바꾸면 이미 보인 화면이 움직여 깜빡임이 된다. */
             function adjustMenu() {
                 // 접힘 여부는 건드리지 않고 치수만 다시 맞춘다
+                if (window.LayoutState && window.LayoutState.isSelfResize()) return;   // 내가 쏜 resize 는 무시
                 if (window.LayoutState) window.LayoutState.refresh();
             }
             $(window).off('resize.layout').on('resize.layout', adjustMenu);
