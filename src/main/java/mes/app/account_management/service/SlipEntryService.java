@@ -54,7 +54,7 @@ public class SlipEntryService {
 		String sql = """
     select
       acccd,
-      accnm, acnflag, drcr
+      accnm, acnflag, drcr, isnull(cltflag,'') as cltflag
     from tb_ac001
     where useyn = '1' and spyn='1'
     and replace(isnull(accnm, ''), ' ', '') like '%' + replace(:accnm, ' ', '') + '%'
@@ -131,23 +131,23 @@ public class SlipEntryService {
 
 		// ── TB_AA009 헤더 저장 ──
 		MapSqlParameterSource headerParam = new MapSqlParameterSource()
-			.addValue("custcd",    custcd)		//회사코드
-			.addValue("spjangcd",  spjangcd)	//사업장코드
-			.addValue("spdate",    spdate)		//전표일자(발송일자)
-			.addValue("spnum",     spnum)		//전표 번호
-			.addValue("tiosec",    tiosec)		//입출구분
-			.addValue("cashyn",    cashyn)		//현금
-			.addValue("busipur",   busipur)	//사업구분
-			.addValue("spoccu",    spoccu)		//증빙구분
-			.addValue("remark",    remark)		//비고
-			.addValue("subject",   subject)	//제목
-			.addValue("regdate",   isBlank(readate) ? today : readate)	//작성일자
-			.addValue("bsdate",    bsdate)
-			.addValue("bseccd",    bseccd)
-			.addValue("busicd",    busicd)
-			.addValue("spjangnm",  spjangnm)
-			.addValue("inputid",  userID)
-			.addValue("inputdate", LocalDateTime.now());	//최종수정일
+																					.addValue("custcd",    custcd)		//회사코드
+																					.addValue("spjangcd",  spjangcd)	//사업장코드
+																					.addValue("spdate",    spdate)		//전표일자(발송일자)
+																					.addValue("spnum",     spnum)		//전표 번호
+																					.addValue("tiosec",    tiosec)		//입출구분
+																					.addValue("cashyn",    cashyn)		//현금
+																					.addValue("busipur",   busipur)	//사업구분
+																					.addValue("spoccu",    spoccu)		//증빙구분
+																					.addValue("remark",    remark)		//비고
+																					.addValue("subject",   subject)	//제목
+																					.addValue("regdate",   isBlank(readate) ? today : readate)	//작성일자
+																					.addValue("bsdate",    bsdate)
+																					.addValue("bseccd",    bseccd)
+																					.addValue("busicd",    busicd)
+																					.addValue("spjangnm",  spjangnm)
+																					.addValue("inputid",  userID)
+																					.addValue("inputdate", LocalDateTime.now());	//최종수정일
 
 		if (isNew) {
 			String insertAa009 = """
@@ -191,10 +191,10 @@ public class SlipEntryService {
 
 		// ── TB_AA010 기존 라인 삭제 후 재INSERT ──
 		MapSqlParameterSource delParam = new MapSqlParameterSource()
-		 .addValue("custcd",   custcd)
-		 .addValue("spjangcd", spjangcd)
-		 .addValue("spdate",   spdate)
-		 .addValue("spnum",    spnum);
+																			 .addValue("custcd",   custcd)
+																			 .addValue("spjangcd", spjangcd)
+																			 .addValue("spdate",   spdate)
+																			 .addValue("spnum",    spnum);
 
 
 		sqlRunner.execute("""
@@ -230,6 +230,19 @@ public class SlipEntryService {
             )
             """;
 
+			// ── 거래처 필수 계정 검사 (원본: TB_AC001.cltflag = '1' 이면 거래처 없이 저장 불가) ──
+			for (Map<String, Object> line : lines) {
+				String acccd = getString(line, "acccd");
+				if (isBlank(acccd) || !isBlank(getString(line, "cltcd"))) continue;
+				Map<String, Object> ac = sqlRunner.getRow(
+					"SELECT isnull(cltflag,'') AS cltflag FROM tb_ac001 WHERE custcd = :custcd AND acccd = :acccd",
+					new MapSqlParameterSource().addValue("custcd", custcd).addValue("acccd", acccd));
+				if (ac != null && "1".equals(String.valueOf(ac.get("cltflag")).trim())) {
+					throw new IllegalArgumentException(line.get("lineSeq") + "번째 행(" + getString(line, "accnm")
+																							 + ")은 거래처 입력이 필수입니다.");
+				}
+			}
+
 			for (Map<String, Object> line : lines) {
 				int lineSeq = ((Number) line.get("lineSeq")).intValue();
 
@@ -243,28 +256,28 @@ public class SlipEntryService {
 				}
 
 				MapSqlParameterSource lineParam = new MapSqlParameterSource()
-					.addValue("custcd",    custcd)
-					.addValue("spjangcd",  spjangcd)
-					.addValue("spdate",    spdate)
-					.addValue("spnum",     spnum)
-					.addValue("spseq",     String.format("%04d", lineSeq))
-					.addValue("spjangnm",  spjangnm)
-					.addValue("acccd",     getString(line, "acccd"))
-					.addValue("accnm",     getString(line, "accnm"))
-					.addValue("drcr",      getString(line, "drcr"))
-					.addValue("dramt",     dramt)
-					.addValue("cramt",     cramt)
-					.addValue("summy",     getString(line, "summy"))
-					.addValue("it1cd",     it1cd)
-					.addValue("it2cd",     getString(line, "it2cd"))
-					.addValue("tiosec",    tiosec)
-					.addValue("spoccu",    spoccu)
-					.addValue("inputdate", LocalDateTime.now())
-					.addValue("rowseq",    lineSeq)
-					.addValue("mssec",   getString(line, "msseccd"))
-					.addValue("cltcd",   getString(line, "cltcd"))
-					.addValue("cardnum", getString(line, "cardnum"))
-					.addValue("bankcd",  getString(line, "bankcd"));
+																						.addValue("custcd",    custcd)
+																						.addValue("spjangcd",  spjangcd)
+																						.addValue("spdate",    spdate)
+																						.addValue("spnum",     spnum)
+																						.addValue("spseq",     String.format("%04d", lineSeq))
+																						.addValue("spjangnm",  spjangnm)
+																						.addValue("acccd",     getString(line, "acccd"))
+																						.addValue("accnm",     getString(line, "accnm"))
+																						.addValue("drcr",      getString(line, "drcr"))
+																						.addValue("dramt",     dramt)
+																						.addValue("cramt",     cramt)
+																						.addValue("summy",     getString(line, "summy"))
+																						.addValue("it1cd",     it1cd)
+																						.addValue("it2cd",     getString(line, "it2cd"))
+																						.addValue("tiosec",    tiosec)
+																						.addValue("spoccu",    spoccu)
+																						.addValue("inputdate", LocalDateTime.now())
+																						.addValue("rowseq",    lineSeq)
+																						.addValue("mssec",   getString(line, "msseccd"))
+																						.addValue("cltcd",   isBlank(getString(line, "cltcd")) ? null : getString(line, "cltcd"))	// 거래처 없으면 원본처럼 NULL
+																						.addValue("cardnum", getString(line, "cardnum"))
+																						.addValue("bankcd",  getString(line, "bankcd"));
 
 				sqlRunner.execute(insertAa010, lineParam);
 			}
@@ -436,6 +449,74 @@ public class SlipEntryService {
 		return result;
 	}
 
+	/**
+	 * 전표입력에서 거래처를 바로 등록한다. 구분(clttype) 1 매입처 / 2 매출처 / 3 공통 (기본 공통).
+	 * 코드는 기존처럼 다섯 자리 순번(00001…) — 숫자 코드 중 최대값 + 1.
+	 * 고정값은 기존 자료와 같게: rnumchk 0, foreyn 0, relyn X, useyn 0, inputdate 등록일.
+	 */
+	@Transactional
+	public Map<String, Object> registerClient(Map<String, Object> payload) {
+		String spjangcd = TenantContext.get();
+		String custcd = getBizInfoBySpjangcd(spjangcd).get("custcd");
+
+		String cltnm   = getString(payload, "cltnm");
+		String saupnum = getString(payload, "saupnum").replaceAll("[^0-9]", "");
+		String prenm   = getString(payload, "prenm");
+		String clttype = getString(payload, "clttype");
+		if (isBlank(clttype)) clttype = "3";   // 기본 공통
+		if (!clttype.matches("[123]")) throw new IllegalArgumentException("구분이 올바르지 않습니다.");
+
+		if (isBlank(cltnm)) throw new IllegalArgumentException("거래처명을 입력하세요.");
+		if (cltnm.length() > 40) throw new IllegalArgumentException("거래처명은 40자까지 입력할 수 있습니다.");
+		if (!saupnum.isEmpty() && saupnum.length() != 10) throw new IllegalArgumentException("사업자번호는 숫자 10자리입니다.");
+		if (prenm.length() > 30) throw new IllegalArgumentException("대표자는 30자까지 입력할 수 있습니다.");
+
+		MapSqlParameterSource p = new MapSqlParameterSource()
+																.addValue("custcd",  custcd)
+																.addValue("cltnm",   cltnm)
+																.addValue("saupnum", saupnum.isEmpty() ? null : saupnum)
+																.addValue("prenm",   isBlank(prenm) ? null : prenm)
+																.addValue("clttype", clttype)
+																.addValue("today",   LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")));
+
+		if (!saupnum.isEmpty()) {
+			Map<String, Object> dup = sqlRunner.getRow(
+				"SELECT TOP 1 cltcd, cltnm FROM tb_xclient WHERE custcd = :custcd AND replace(saupnum,'-','') = :saupnum", p);
+			if (dup != null && dup.get("cltcd") != null) {
+				throw new IllegalStateException("이미 등록된 사업자번호입니다. (" + String.valueOf(dup.get("cltcd")).trim()
+																					+ " " + (dup.get("cltnm") == null ? "" : String.valueOf(dup.get("cltnm")).trim()) + ")");
+			}
+		}
+
+		// 동시에 두 명이 등록해도 같은 번호가 나오지 않도록 잠그고 채번
+		Map<String, Object> row = sqlRunner.getRow("""
+			SELECT ISNULL(MAX(CAST(cltcd AS INT)), 0) + 1 AS next_cd
+			  FROM tb_xclient WITH (UPDLOCK, HOLDLOCK)
+			 WHERE custcd = :custcd
+			   AND LEN(cltcd) = 5
+			   AND cltcd NOT LIKE '%[^0-9]%'
+			""", p);
+		int next = row == null || row.get("next_cd") == null ? 1 : Integer.parseInt(String.valueOf(row.get("next_cd")).trim());
+		if (next > 99999) throw new IllegalStateException("거래처 코드(5자리)를 더 만들 수 없습니다.");
+		String cltcd = String.format("%05d", next);
+		p.addValue("cltcd", cltcd);
+
+		sqlRunner.execute("""
+			INSERT INTO tb_xclient (
+				custcd, cltcd, cltnm, prtcltnm, saupnum, prenm,
+				clttype, rnumchk, foreyn, relyn, useyn, inputdate
+			) VALUES (
+				:custcd, :cltcd, :cltnm, :cltnm, :saupnum, :prenm,
+				:clttype, '0', '0', 'X', '0', :today
+			)
+			""", p);
+
+		Map<String, Object> result = new HashMap<>();
+		result.put("cltcd", cltcd);
+		result.put("cltnm", cltnm);
+		return result;
+	}
+
 	private String getString(Map<String, Object> item, String key) {
 		Object value = item.get(key);
 		return value == null ? "" : value.toString().trim();
@@ -491,7 +572,9 @@ public class SlipEntryService {
 					a.cltcd,
 				e.cltnm,
 				a.cardnum ,
-				card.cardnm
+				card.cardnm,
+				isnull(ac.acnflag, '') as acnflag,
+				isnull(ac.cltflag, '') as acccltflag
 			FROM tb_aa010 a
 			INNER JOIN tb_aa009 h
 					ON  a.custcd   = h.custcd
@@ -520,6 +603,7 @@ public class SlipEntryService {
 			left join tb_x0005 d on a.custcd = d.custcd and a.mssec = d.mssec
 			left join tb_xclient e on a.custcd = e.custcd and a.cltcd = e.cltcd
 			left join tb_iz010 card on a.spjangcd = card.spjangcd and a.cardnum =card.cardnum
+			left join tb_ac001 ac on a.custcd = ac.custcd and a.acccd = ac.acccd
 			WHERE a.custcd   = :custcd
 			AND a.spjangcd   = :spjangcd
 			AND a.spdate     = :spdate
@@ -678,15 +762,15 @@ public class SlipEntryService {
 
 		// ── 공통 파라미터 ──
 		MapSqlParameterSource param = new MapSqlParameterSource()
-			.addValue("custcd",    custcd)
-			.addValue("spjangcd",  spjangcd)
-			.addValue("orgSpdate", orgSpdate)
-			.addValue("orgSpnum",  orgSpnum)
-			.addValue("newSpdate", newSpdate)
-			.addValue("newSpnum",  newSpnum)
-			.addValue("today",     LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")))
-			.addValue("now",       LocalDateTime.now())
-			.addValue("inputid", userId);
+																		.addValue("custcd",    custcd)
+																		.addValue("spjangcd",  spjangcd)
+																		.addValue("orgSpdate", orgSpdate)
+																		.addValue("orgSpnum",  orgSpnum)
+																		.addValue("newSpdate", newSpdate)
+																		.addValue("newSpnum",  newSpnum)
+																		.addValue("today",     LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")))
+																		.addValue("now",       LocalDateTime.now())
+																		.addValue("inputid", userId);
 
 		// ── 4. 헤더 복사 ──
 		sqlRunner.execute("""

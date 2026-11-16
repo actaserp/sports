@@ -81,5 +81,55 @@ public class CategoryItemLedgerController { //관항별원장
 		return result;
 	}
 
-}
 
+	// tab2 : 계정 상세내역 (d_book10_1)
+	@GetMapping("/readAccDetail")
+	public AjaxResult searchAccDetail(
+		@RequestParam(value = "start") String start,
+		@RequestParam(value = "end") String end,
+		@RequestParam(value = "mssec", required = false) String mssec,
+		@RequestParam(value = "acccd", required = false) String acccd) {
+		AjaxResult result = new AjaxResult();
+		result.data = categoryItemLedgerService.selectAccDetailList(start, end, mssec, acccd);
+		return result;
+	}
+
+	// tab3 : 계정 원장 (d_book10_2)
+	@GetMapping("/readAccLedger")
+	public AjaxResult searchAccLedger(
+		@RequestParam(value = "start") String start,
+		@RequestParam(value = "end") String end,
+		@RequestParam(value = "mssec", required = false) String mssec,
+		@RequestParam(value = "acccd") String acccd) {
+		AjaxResult result = new AjaxResult();
+		result.data = categoryItemLedgerService.selectAccLedgerList(start, end, mssec, acccd);
+		return result;
+	}
+
+	// tab4 : 사업구분-사업별 (d_book10_4)
+	@GetMapping("/readBusi")
+	public AjaxResult searchBusi(
+		@RequestParam(value = "start") String start,
+		@RequestParam(value = "end") String end,
+		@RequestParam(value = "mssec", required = false) String mssec,
+		@RequestParam(value = "acccd", required = false) String acccd,
+		@RequestParam(value = "busipur", required = false) String busipur) {
+		AjaxResult result = new AjaxResult();
+		result.data = categoryItemLedgerService.selectBusiSummaryList(start, end, mssec, acccd, busipur);
+		return result;
+	}
+
+	// tab5 : 사업구분-사업별 계정 원장 (d_book10_6)
+	@GetMapping("/readBusiLedger")
+	public AjaxResult searchBusiLedger(
+		@RequestParam(value = "start") String start,
+		@RequestParam(value = "end") String end,
+		@RequestParam(value = "mssec", required = false) String mssec,
+		@RequestParam(value = "acccd") String acccd,
+		@RequestParam(value = "busipur", required = false) String busipur,
+		@RequestParam(value = "bsdate", required = false) String bsdate) {
+		AjaxResult result = new AjaxResult();
+		result.data = categoryItemLedgerService.selectBusiLedgerList(start, end, mssec, acccd, busipur, bsdate);
+		return result;
+	}
+}

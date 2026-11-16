@@ -60,6 +60,10 @@
 
       .search-wrap.ps-search input[type=text],
       .search-wrap.ps-search select { height: 34px; padding: 0 10px; }
+      /* 공통 layout.css 가 검색칸을 max-width 220px 로 묶어 회차 문구가 잘린다 — 이 화면은 풀어 준다 */
+      .search-wrap.ps-search select,
+      .search-wrap.ps-search input[type=text] { max-width: none; }
+      .search-wrap.ps-search select { padding-right: 28px; }
       .search-wrap.ps-search .w-batch { width: 300px; }
       .search-wrap.ps-search .w-sel   { width: 104px; }
       .search-wrap.ps-search .w-txt   { width: 112px; }

@@ -156,6 +156,54 @@
       .lp-pair { display: flex; gap: 4px; }
       .lp-pair input.code { flex: 0 0 64px; width: 64px !important; }
       .lp-pair input.main { flex: 1; min-width: 0; }
+      .lp-clt-add { flex: 0 0 auto; padding: 0 10px; border: 1px solid #c8ced6; background: #fff; border-radius: 4px;
+          font-size: 12px; color: #333; cursor: pointer; white-space: nowrap; }
+      .lp-clt-add:hover { background: #f2f4f7; }
+
+      /* ── 거래처 등록 팝업 : 급여명세서 발송 팝업과 같은 잉크·괘선 계열 ──
+         PopupDraggable 은 body 아래에 붙으므로 변수 대신 값을 직접 쓴다. */
+      .cr-pop { font-size: 13px; color: #1B2430; text-align: left; display: flex; flex-direction: column; height: 100%; }
+      .cr-pop > section { flex: 1 1 auto; min-height: 0; overflow: visible; padding: 16px 18px; }
+      .cr-pop .cr-note {
+          background: #EDF1F4; border: 1px solid #CBD3DB; border-left: 4px solid #8A99A8;
+          padding: 9px 12px; margin: 0 0 14px; font-size: 12.5px; line-height: 1.6; color: #45566A;
+      }
+      .cr-pop .cr-note b { color: #1B2430; }
+      .cr-pop .fld { margin-bottom: 14px; }
+      .cr-pop .fld:last-child { margin-bottom: 0; }
+      .cr-pop .fld > label.k {
+          display: block; margin-bottom: 5px;
+          font-size: 12px; font-weight: 600; color: #45566A; letter-spacing: .5px;
+      }
+      .cr-pop .fld > label.k em { font-style: normal; color: #9E2A20; }
+      .cr-pop .fld > label.k .opt { font-weight: normal; color: #8A99A8; }
+      .cr-pop .fld .hint { margin-top: 4px; font-size: 11.5px; color: #8A99A8; }
+      .cr-pop select {
+          width: 100%; max-width: none; height: 34px; padding: 0 28px 0 10px; box-sizing: border-box;
+          border: 1px solid #C0CAD3; border-radius: 0; font-family: inherit; font-size: 13px; color: #1B2430;
+      }
+      .cr-pop select:focus-visible { outline: 2px solid #24466F; outline-offset: 1px; border-color: #24466F; }
+      .cr-pop input[type=text] {
+          width: 100%; max-width: none; height: 34px; padding: 0 10px; box-sizing: border-box;
+          border: 1px solid #C0CAD3; border-radius: 0; background: #fff;
+          font-family: inherit; font-size: 13px; color: #1B2430;
+      }
+      .cr-pop input[type=text]::placeholder { color: #8A99A8; }
+      .cr-pop input[type=text]:focus-visible { outline: 2px solid #24466F; outline-offset: 1px; border-color: #24466F; }
+      .cr-pop .popup-button {
+          flex: 0 0 auto; display: flex; justify-content: flex-end; gap: 8px;
+          padding: 12px 18px; border-top: 1px solid #CBD3DB; background: #fff;
+      }
+      .cr-pop .popup-button .btn-popup {
+          height: 34px !important; min-width: 0 !important; padding: 0 20px !important;
+          border: 1px solid #8A99A8 !important; border-radius: 2px !important;
+          background: #fff !important; color: #1B2430 !important; box-shadow: none !important;
+          font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: .5px; cursor: pointer;
+      }
+      .cr-pop .popup-button .btn-popup span { color: inherit !important; }
+      .cr-pop .popup-button .btn-popup.solid { background: #24466F !important; border-color: #24466F !important; color: #fff !important; }
+      .cr-pop .btn-popup:hover { filter: brightness(.94); }
+      .cr-pop .btn-popup:focus-visible { outline: 2px solid #24466F; outline-offset: 2px; }
       .lp-pair input.disp { flex: 0 0 auto; min-width: 90px; max-width: 220px; }
       .lp-amt { text-align: right; }
       .span2 { grid-column: span 2; }
@@ -187,8 +235,13 @@
       /* ── 검색 영역 ── */
       .search-wrap {
           flex-wrap: wrap;
-          row-gap: 12px;
+          justify-content: flex-start;
+          align-items: flex-end;
+          gap: 12px 16px;
       }
+      .search-wrap #search_datetype { width: 120px; min-width: 0; margin-right: 8px; }
+      .search-wrap #searchfrdate,
+      .search-wrap #searchtodate { width: 140px; min-width: 0; }
       .search-wrap #search_tiosec {
           width: 110px;
           min-width: 0;
@@ -235,12 +288,16 @@
             <div class="search-wrap">
               <dl>
                 <dt>
-                  <label>
-                    승인 기간<span class="eq"></span>
+                  <label for="search_datetype">
+                    조회 기간<span class="eq"></span>
                   </label>
                 </dt>
                 <dd>
                   <div class="srch-box">
+                    <select id="search_datetype" name="search_datetype">
+                      <option value="spdate">전표일자</option>
+                      <option value="upd">최종수정일</option>
+                    </select>
                     <input id="searchfrdate" name="searchfrdate" type="date"/>
                     <span class="slow_sign">~</span>
                     <input id="searchtodate" name="searchtodate" type="date"/>
@@ -618,6 +675,7 @@
                     <input class="code" id="pnl_acccd" placeholder="코드" readonly tabindex="-1" type="text"/>
                     <input class="main" id="pnl_accnm" placeholder="관명 입력 후 Enter" type="text"/>
                     <input id="pnl_acnflag" type="hidden"/>
+                    <input id="pnl_acccltflag" type="hidden"/>
                   </div>
                 </div>
                 <div class="lp-field">
@@ -659,7 +717,10 @@
                   <label for="pnl_cltnm">거래처</label>
                   <input id="pnl_cltcd" type="hidden"/>
                   <input id="pnl_cltflag" type="hidden"/>
-                  <input id="pnl_cltnm" placeholder="거래처명 입력 후 Enter" type="text"/>
+                  <div class="lp-pair">
+                    <input class="main" id="pnl_cltnm" placeholder="거래처명 입력 후 Enter" type="text"/>
+                    <button class="lp-clt-add" id="btnCltAdd" title="거래처 신규 등록 (구분: 공통)" type="button">+ 등록</button>
+                  </div>
                 </div>
                 <div class="lp-field span2">
                   <label for="pnl_cardnum">카드</label>
@@ -765,6 +826,40 @@
     </div>
   </script>
 
+  <!-- 거래처 신규 등록 팝업 -->
+  <script id="cltRegTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup cr-pop">
+      <section class="section">
+        <div class="cr-note">코드는 자동으로 매겨집니다.</div>
+        <div class="fld">
+          <label class="k" for="regClttype">구분 <em>*</em></label>
+          <select id="regClttype">
+            <option value="3" selected>공통</option>
+            <option value="1">매입처</option>
+            <option value="2">매출처</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label class="k" for="regCltnm">거래처명 <em>*</em></label>
+          <input type="text" id="regCltnm" maxlength="40" placeholder="상호"/>
+        </div>
+        <div class="fld">
+          <label class="k" for="regSaupnum">사업자번호 <span class="opt">(선택)</span></label>
+          <input type="text" id="regSaupnum" maxlength="12" placeholder="숫자 10자리"/>
+          <div class="hint">입력하면 이미 등록된 번호인지 확인합니다.</div>
+        </div>
+        <div class="fld">
+          <label class="k" for="regPrenm">대표자 <span class="opt">(선택)</span></label>
+          <input type="text" id="regPrenm" maxlength="30"/>
+        </div>
+      </section>
+      <div class="popup-button">
+        <button type="button" class="btn-popup" id="btnCltRegCancel"><span>닫기</span></button>
+        <button type="button" class="btn-popup solid" id="btnCltRegSave"><span>등록</span></button>
+      </div>
+    </div>
+  </script>
+
   <!-- 전표일자 변경 팝업 -->
   <script id="spdateChangeTemplate" type="text/x-tmpl">
     <div class="content_wrap popup">
@@ -812,6 +907,7 @@
     acccd:   'pnl_acccd',
     accnm:   'pnl_accnm',
     acnflag: 'pnl_acnflag',
+    acccltflag: 'pnl_acccltflag',
     drcr:    'pnl_drcr',
     it1cd:   'pnl_it1cd',
     it1nm:   'pnl_it1nm',
@@ -949,7 +1045,7 @@
 
     emptyLine(drcr = '1') {
      return {
-      spseq: '', acccd: '', accnm: '', acnflag: '', drcr: drcr,
+      spseq: '', acccd: '', accnm: '', acnflag: '', acccltflag: '', drcr: drcr,
       it1cd: '', it1nm: '', it2cd: '', it2nm: '',
       msseccd: '', mssecnm: '', summy: '',
       dramt: 0, cramt: 0,
@@ -1223,6 +1319,11 @@
        _this.selectLine(idx, false);
        return;
       }
+      if (id === 'pnl_cltnm' && e.type === 'input') {
+       // 이름을 고치면 이전에 고른 거래처 코드는 더 이상 맞지 않는다
+       $('#pnl_cltcd').val('');
+       $('#pnl_cltflag').val('');
+      }
       if (id === 'pnl_cltnm' && $(this).val().trim() === '') {
        $('#pnl_cltcd').val('');
        $('#pnl_cltflag').val('');
@@ -1230,6 +1331,7 @@
       if (id === 'pnl_accnm' && $(this).val().trim() === '') {
        $('#pnl_acccd').val('');
        $('#pnl_acnflag').val('');
+       $('#pnl_acccltflag').val('');
       }
       _this.syncPanel();
      });
@@ -1282,10 +1384,10 @@
         break;
        case 'pnl_cltnm': {
         const kw = $(this).val().trim();
-        if (kw === '') {
-         $('#pnl_cardnum').focus().select();   // 비어 있으면 건너뜀
+        if (kw === '' || $('#pnl_cltcd').val()) {
+         $('#pnl_cardnum').focus().select();   // 비었거나 이미 고른 거래처면 건너뜀
         } else {
-         _this.openCltPopup(kw);
+         _this.lookupClient(kw);
         }
         break;
        }
@@ -1353,6 +1455,79 @@
       _this.syncPanel();
       setTimeout(() => $('#pnl_cardnum').focus().select(), 200);
      }, keyword);
+    }
+
+    // ── 거래처 신규 등록 (구분: 공통) — 등록하면 현재 라인에 바로 넣는다 ──
+    openCltRegister(prefill) {
+     let _this = this;
+     if (_this.sel < 0 || !_this.lines[_this.sel]) {
+      Alert.alert('', '거래처를 넣을 분개 라인을 먼저 선택하세요.');
+      return;
+     }
+     if (_this.cltRegPopup) { _this.cltRegPopup.close(); _this.cltRegPopup = null; }
+
+     const $content = $(tmpl('cltRegTemplate', {}));
+     _this.cltRegPopup = new PopupDraggable('거래처 등록');
+     _this.cltRegPopup.open({width: 420, height: 500, $content});
+
+     setTimeout(() => {
+      // 거래처칸에 쳐 둔 이름(아직 코드가 없는 경우)을 그대로 가져온다
+      if (prefill != null) $content.find('#regCltnm').val(prefill);
+      else if (!$('#pnl_cltcd').val()) $content.find('#regCltnm').val($('#pnl_cltnm').val().trim());
+      $content.find('#regCltnm').focus();
+
+      const closePop = () => { if (_this.cltRegPopup) { _this.cltRegPopup.close(); _this.cltRegPopup = null; } };
+
+      $content.find('#btnCltRegSave').on('click', function () {
+       const cltnm = $content.find('#regCltnm').val().trim();
+       const saupnum = $content.find('#regSaupnum').val().replace(/[^0-9]/g, '');
+       if (!cltnm) { Alert.alert('', '거래처명을 입력하세요.'); return; }
+       if (saupnum && saupnum.length !== 10) { Alert.alert('', '사업자번호는 숫자 10자리입니다.'); return; }
+
+       _this.saveClient({cltnm: cltnm, saupnum: saupnum, prenm: $content.find('#regPrenm').val().trim(),
+        clttype: $content.find('#regClttype').val()}, closePop);
+      });
+      $content.find('#regCltnm, #regSaupnum, #regPrenm').on('keydown', function (e) {
+       if (e.key === 'Enter') { e.preventDefault(); $content.find('#btnCltRegSave').click(); }
+      });
+      $content.find('#btnCltRegCancel').on('click', closePop);
+     }, 50);
+    }
+
+    // 거래처 등록 요청 → 성공하면 현재 라인에 넣고 카드칸으로 넘어간다
+    saveClient(data, onSaved) {
+     let _this = this;
+     AjaxUtil.postJsonData(_this.url + '/client/save', data, function (result) {
+      if (result && result.success) {
+       if (typeof onSaved === 'function') onSaved();
+       $('#pnl_cltnm').val(result.data.cltnm);
+       $('#pnl_cltcd').val(result.data.cltcd);
+       $('#pnl_cltflag').val('');
+       _this.syncPanel();
+       Alert.alert('', `거래처가 등록되었습니다. (${result.data.cltcd} ${result.data.cltnm})`, function () {
+        setTimeout(() => $('#pnl_cardnum').focus().select(), 100);
+       });
+      } else {
+       Alert.alert('', result?.message || '거래처 등록 중 오류가 발생했습니다.');
+      }
+     });
+    }
+
+    // 거래처칸 Enter : 검색 결과가 있으면 선택 팝업, 하나도 없으면 공통으로 바로 등록할지 묻는다.
+    lookupClient(kw) {
+     let _this = this;
+     AjaxUtil.getAsyncData('/api/popup/search_Comp', {compCode: '', compName: kw, business_number: ''}, function (res) {
+      // 조회가 실패하면 예전처럼 선택 팝업을 연다
+      if (!res || res.success === false || !Array.isArray(res.data)) { _this.openCltPopup(kw); return; }
+      const list = res.data;
+      if (list.length > 0) {
+       _this.openCltPopup(kw);
+      } else {
+       Alert.confirm('', `'${kw}' 거래처가 없습니다.\n공통 거래처로 바로 등록할까요?`, function () {
+        _this.saveClient({cltnm: kw, saupnum: '', prenm: '', clttype: '3'});
+       });
+      }
+     });
     }
 
     openCardPopup() {
@@ -1455,6 +1630,7 @@
         $('#pnl_acccd').val(item.acccd || '');
         $('#pnl_accnm').val(item.accnm || '');
         $('#pnl_acnflag').val(item.acnflag || '');
+        $('#pnl_acccltflag').val(item.cltflag || '');
         _this.syncPanel();
         setTimeout(() => $('#pnl_drcr').focus(), 50);
        });
@@ -1574,6 +1750,7 @@
       remark: $('#search_remark').val(),
       amtFrom: cleanAmt($('#search_amtfr').val()),
       amtTo: cleanAmt($('#search_amtto').val()),
+      dateType: $('#search_datetype').val(),
      };
      let fnsuccess = function (result) {
       if (result != null && result.success) {
@@ -1845,6 +2022,8 @@
         l.spseq   = line.spseq || '';
         l.acccd   = line.acccd || '';
         l.accnm   = line.accnm || '';
+        l.acnflag = line.acnflag || '';
+        l.acccltflag = line.acccltflag || '';
         l.it1cd   = line.it1cd || '';
         l.it1nm   = line.it1nm || '';
         l.it2cd   = line.it2cd || '';
@@ -2083,6 +2262,12 @@
        _this.selectLine(i, false);
        Alert.alert('', `${i + 1}번째 행은 계좌 입력이 필수입니다.`);
        $('#pnl_banknum').focus();
+       return;
+      }
+      if (l.acccltflag === '1' && !l.cltcd) {
+       _this.selectLine(i, false);
+       Alert.alert('', `${i + 1}번째 행은 거래처 입력이 필수입니다.`);
+       $('#pnl_cltnm').focus();
        return;
       }
 
@@ -2445,6 +2630,11 @@
 
     $('#btnSearch').on('click', function () {
      page.searchMainData();
+    });
+
+    // 거래처 신규 등록 (구분: 공통)
+    $('#btnCltAdd').on('click', function () {
+     page.openCltRegister();
     });
 
     $('#btnSlipPrint').on('click', function () {

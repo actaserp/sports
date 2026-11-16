@@ -63,9 +63,10 @@ public class BusinessInOutController { // 사업별입출현황
 		@RequestParam(value = "bsdate", required = false) String bsdate,
 		@RequestParam(value = "bseccd", required = false) String bseccd,
 		@RequestParam(value = "busicd", required = false) String busicd,
-		@RequestParam(value = "tiosec", required = false) String tiosec) {
+		@RequestParam(value = "tiosec", required = false) String tiosec,
+		@RequestParam(value = "acccd", required = false) String acccd) {
 		AjaxResult result = new AjaxResult();
-		result.data = businessInOutService.searchRelatedList(start, end, bsdate, bseccd, busicd, tiosec);
+		result.data = businessInOutService.searchRelatedList(start, end, bsdate, bseccd, busicd, tiosec, acccd);
 		return result;
 	}
 

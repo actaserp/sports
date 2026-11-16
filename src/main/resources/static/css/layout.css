@@ -1089,21 +1089,37 @@ section .section-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 20px;
+    gap: 15px;
     margin-bottom: 16px;
 }
 
 .search-wrap ul {
     display: flex;
-    align-items: center;
-    gap: 20px;
+    align-items: flex-end;       /* center → flex-end (라벨이 위, 입력칸 아래 정렬) */
+    gap: 12px;                   /* 20 → 12 */
+    width: 100%;
+    flex: 1;                     /* 검색 영역이 남는 공간을 차지 */
+}
+
+.search-wrap ul li {
+    flex: 1 1 0;                 /* ★ 항목들이 공간을 나눠 갖고 같이 줄어듦 */
+    min-width: 100px;            /* 너무 좁아지지 않게 하한 */
 }
 
 .search-wrap dl dt {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: #4d4d4d;
     margin-bottom: 4px;
+}
+
+/* ★ 검색 영역 안 input/select는 칸을 채움 */
+.search-wrap select,
+.search-wrap input[type="text"],
+.search-wrap input[type="search"],
+.search-wrap input[type="date"] {
+    width: 100%;
+    max-width: 220px;            /* 넓은 화면에서 과하게 안 커지게 */
 }
 
 /*Button*/
@@ -1158,11 +1174,13 @@ section .section-top {
 .tab-links li a {
     display: inline-flex;
     justify-content: center;
-    min-width: 90px;
-    padding: 8px 32px 8px 32px;
+    align-items: center;         /* 세로 중앙 정렬 추가 */
+    min-width: 80px;             /* 90 → 80 */
+    height: 32px;                /* 높이를 명시 (padding 대신 높이로 관리) */
+    padding: 0 20px;             /* 8px 32px → 좌우만 */
     background-color: #3069B3;
     color: #fff;
-    font-size: 17px;
+    font-size: 14px;             /* 17 → 14 */
     font-weight: 500;
     text-align: center;
     transition: all .3s;
@@ -1178,7 +1196,8 @@ section .tab-links {
 }
 
 section .tab-links li a {
-    padding: 8px 10px;
+    height: 30px;                /* 섹션 내부 탭은 버튼과 동일하게 30px */
+    padding: 0 12px;             /* 8px 10px → 좌우만 */
     margin-right: -1px;
     border: 1px solid #E4E4E4;
     background-color: #fff;
@@ -1186,11 +1205,11 @@ section .tab-links li a {
 }
 
 section .tab-links li:first-child a {
-    border-radius: 12px 0 0 12px;
+    border-radius: 10px 0 0 10px;   /* 12 → 10, 높이 30px에 맞춰 */
 }
 
 section .tab-links li:last-child a {
-    border-radius: 0 12px 12px 0;
+    border-radius: 0 10px 10px 0;
     margin-right: 0;
 }
 
@@ -1386,7 +1405,7 @@ section .tab-links li.active a {
 /*List style*/
 table {
     font-family: 'Pretendard';
-    font-size: 15px;
+    font-size: 14px;
     width: 100%;
     background-color: #fff;
     border-top: 1px solid #333;
@@ -1398,19 +1417,19 @@ table tr, table td, table td a {
 }
 
 table th {
-    font-size: 15px;
+    font-size: 14px;
     border-bottom: 1px solid #C6C6C6;
     background-color: #EDEFF5;
-    padding: 0 10px;
+    padding: 2px 10px;       /* 0 10px → 상하 2px */
     width: 160px;
-    height: 48px;
+    height: 34px;            /* 48px → 34px */
     font-weight: 700;
 }
 
 table td {
     border-bottom: 1px solid #EBEBEB;
-    height: 48px;
-    padding: 5px 10px;
+    height: 34px;            /* 48px → 34px */
+    padding: 2px 10px;       /* 5px 10px → 축소 */
 }
 
 table td .ico-file {
@@ -1423,8 +1442,8 @@ table td input[type="password"],
 table td input[type="tel"],
 table td input[type="email"],
 table td input[type="number"] {
-    line-height: 34px;
-    font-size: 15px;
+    line-height: normal;     /* 34px → 제거 (input 높이 30px과 충돌) */
+    font-size: inherit;      /* 15px → 테이블 글자 크기 따라감 */
 }
 
 table tr .list-dot {
@@ -1438,18 +1457,18 @@ table tr .list-dot li {
 }
 
 table tr .btn table, table tr .btn-blue, table tr .btn-lightnavy {
-    height: 38px;
+    height: 30px;            /* 38px → 30px, 버튼 기준과 통일 */
 }
 
 .write-table th {
-    padding: 10px 20px;
+    padding: 2px 10px;       /* 10px 20px → 축소 */
     border-right: 1px solid #E6E6E6;
     border-bottom: 1px solid #E6E6E6;
     text-align: left;
 }
 
 .write-table td {
-    padding: 5px 12px;
+    padding: 2px 8px;        /* 5px 12px → 축소 */
     border-bottom: 1px solid #e8e8e8;
     text-align: left;
 }

@@ -3,10 +3,13 @@ package mes.app.account_management;
 import com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import lombok.extern.slf4j.Slf4j;
+import mes.app.account_management.service.SlipEntryService;
 import mes.app.account_management.service.SlipStatusService;
 import mes.domain.model.AjaxResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,6 +35,26 @@ public class SlipStatusController {  //전표입력현황
 	SlipStatusService slipStatusService;
 
 	@Autowired
+	SlipEntryService slipEntryService;
+
+	/** 전표입력에서 거래처 바로 등록 (구분: 공통) */
+	@PostMapping("/client/save")
+	public AjaxResult saveClient(@RequestBody Map<String, Object> payload) {
+		AjaxResult result = new AjaxResult();
+		try {
+			result.data = slipEntryService.registerClient(payload);
+		} catch (IllegalArgumentException | IllegalStateException e) {
+			result.success = false;
+			result.message = e.getMessage();
+		} catch (Exception e) {
+			log.error("거래처 등록 오류", e);
+			result.success = false;
+			result.message = "거래처 등록 중 오류가 발생했습니다.";
+		}
+		return result;
+	}
+
+	@Autowired
 	private TemplateEngine templateEngine;
 
 //	@Autowired
@@ -53,10 +76,11 @@ public class SlipStatusController {  //전표입력현황
 																@RequestParam(value = "sbuject", required = false) String sbuject,
 																@RequestParam(value = "remark", required = false) String remark,
 																@RequestParam(value = "amtFrom", required = false) String amtFrom,
-																@RequestParam(value = "amtTo", required = false) String amtTo) {
+																@RequestParam(value = "amtTo", required = false) String amtTo,
+																@RequestParam(value = "dateType", required = false) String dateType) {
 
 		List<Map<String, Object>> items = this.slipStatusService.getSlipList(
-			start, end, mssec, tiosec, sbuject, remark, amtFrom, amtTo);
+			start, end, mssec, tiosec, sbuject, remark, amtFrom, amtTo, dateType);
 
 		AjaxResult result = new AjaxResult();
 		result.data = items;

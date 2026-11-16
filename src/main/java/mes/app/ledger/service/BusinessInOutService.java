@@ -317,10 +317,15 @@ public class BusinessInOutService { // 사업별입출현황
 // ============================================================
 	public Object searchRelatedList(String start, String end,
 																	String bsdate, String bseccd, String busicd,
-																	String tiosec) {
+																	String tiosec, String acccd) {
+		// 원본 d_book23 : 사업코드 3개 · 관(acccd) · 구분(tiosec) 을 모두 '=' 로 받는다.
+		// 세입/세출내역에서 고른 행의 값으로만 조회되므로, 하나라도 비면 결과가 없다.
+		for (String v : new String[]{bsdate, bseccd, busicd, tiosec, acccd}) {
+			if (v == null || v.trim().isEmpty() || "%".equals(v.trim())) return java.util.Collections.emptyList();
+		}
 		MapSqlParameterSource param = buildBaseParam(start, end, bsdate, bseccd, busicd);
-		param.addValue("acccd", "%");
-		param.addValue("tiosec", (tiosec == null || tiosec.trim().isEmpty()) ? "%" : tiosec.trim());
+		param.addValue("acccd", acccd.trim());
+		param.addValue("tiosec", tiosec.trim());
 
 		String sql = """
         SELECT A.custcd,
@@ -348,7 +353,8 @@ public class BusinessInOutService { // 사업별입출현황
                A.subject,
                SUM(ISNULL(B.dramt,0)) AS dramt,
                SUM(ISNULL(B.cramt,0)) AS cramt,
-               MIN(B.comnote)         AS summy
+               MIN(B.comnote)         AS summy,
+               B.rowseq
           FROM TB_AA009 A, TB_AA010 B
          WHERE A.custcd   = B.custcd
            AND A.spjangcd = B.spjangcd
@@ -357,14 +363,14 @@ public class BusinessInOutService { // 사업별입출현황
            AND A.custcd   = :custcd
            AND A.spjangcd = :spjangcd
            AND A.spdate   BETWEEN :frdate AND :todate
-           AND A.bsdate  LIKE :bsdate + '%'
-           AND A.bseccd  LIKE :bseccd + '%'
-           AND A.busicd  LIKE :busicd + '%'
-           AND B.acccd   LIKE :acccd
-           AND A.tiosec  LIKE :tiosec
+           AND A.bsdate  = :bsdate
+           AND A.bseccd  = :bseccd
+           AND A.busicd  = :busicd
+           AND B.acccd   = :acccd
+           AND A.tiosec  = :tiosec
          GROUP BY A.custcd, A.spjangcd, A.spdate, A.spnum, A.tiosec, A.cashyn,
-                  A.busipur, A.spoccu, A.remark, A.taxdate, A.taxnum, A.subject
-         ORDER BY A.spdate, A.spnum
+                  A.busipur, A.spoccu, A.remark, A.taxdate, A.taxnum, A.subject, B.rowseq
+         ORDER BY A.spdate, A.spnum, B.rowseq
         """;
 		return sqlRunner.getRows(sql, param);
 	}

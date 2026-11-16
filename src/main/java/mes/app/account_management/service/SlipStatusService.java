@@ -22,7 +22,8 @@ public class SlipStatusService {
 	SqlRunner sqlRunner;
 
 	public List<Map<String, Object>> getSlipList(String start, String end, String mssec, String tiosec, String sbuject,
-																							 String remark, String amtFrom, String amtTo) {
+																							 String remark, String amtFrom, String amtTo,
+																							 String dateType) {
 		String spjangcd = TenantContext.get();
 
 		Map<String, String> bizInfo = getBizInfoBySpjangcd(spjangcd);
@@ -100,8 +101,14 @@ public class SlipStatusService {
            AND A.spnum    = B.spnum
            AND A.custcd   = :as_custcd
            AND A.spjangcd = :as_spjangcd
-           AND A.spdate   BETWEEN :as_frdate AND :as_todate
         """;
+
+		// 조회 기간 기준 — spdate: 승인일자(전표일자) / upd: 최종수정일(TB_AA009.inputdate)
+		if ("upd".equals(dateType)) {
+			sql += " AND CONVERT(CHAR(8), A.inputdate, 112) BETWEEN :as_frdate AND :as_todate ";
+		} else {
+			sql += " AND A.spdate BETWEEN :as_frdate AND :as_todate ";
+		}
 
 		// mssec 조건
 		if (mssec != null && !mssec.trim().isEmpty()) {

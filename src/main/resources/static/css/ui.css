@@ -4,7 +4,7 @@
  * UI Style
  =================================================================================*/
 /* Input */
-input,
+/*input,
 select,
 textarea {
     font-family: 'Pretendard',sans-serif;
@@ -24,10 +24,32 @@ textarea {
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
     box-sizing: border-box;
+}*/
+input,
+select,
+textarea {
+    font-family: 'Pretendard', sans-serif;
+    width: auto;
+    height: 30px;            /* 36 → 30 */
+    line-height: 30px;
+    padding: 0 12px;         /* 16 → 12, 높이에 맞춰 축소 */
+    background-color: #fff;
+    border: 1px solid #D5D7DC;
+    font-size: 14px;         /* 15 → 14 */
+    font-weight: 500;
+    color: #1d1d1d;
+    border-radius: 5px;
+    vertical-align: middle;
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
 }
 
-.write-table input, select{
-    width: 360px;
+/* 기존: .write-table input, select { width: 360px; } */
+.write-table input,
+.write-table select {
+    width: 100%;
+    max-width: 300px;        /* 360 → 300 상한, 셀이 좁으면 유동 */
 }
 
 input[readonly],
@@ -123,13 +145,13 @@ textarea {
 
 /* Select*/
 select {
-    width: 180px;
+    min-width: 140px;
     background: url("../images/icon/ico-select.svg") calc(100% - 10px) 50% no-repeat #fff;
 }
 
 /* Select*/
 .write-table select {
-    width: 360px;
+    /*width: 360px;*/
     background: url("../images/icon/ico-select.svg") calc(100% - 10px) 50% no-repeat #fff;
 }
 
@@ -534,7 +556,7 @@ input[type=text].input-date {
 /*=================================================================================
  * Progressbar Type
  =================================================================================*/
- .time-progress-bar {
+.time-progress-bar {
     display: flex;
     align-items: center;
     width: 520px;
@@ -561,13 +583,13 @@ input[type=text].input-date {
 /*=================================================================================
  * Progressbar Type
  =================================================================================*/
- .battery-wrap {
+.battery-wrap {
     display: flex;
     justify-content: flex-start;
     align-items: center;
     gap: 5px;
- }
- .battery {
+}
+.battery {
     position: relative;
     width: 20px;
     height: 10px;
@@ -624,10 +646,29 @@ input[type=text].input-date {
  * Button
  =================================================================================*/
 .btn-wrap {display: flex; justify-content: center; align-items: center; gap: 6px;}
- button, .btn {display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 4px 18px; line-height: 36px; background-color: #fff; font-weight: 500; border: 1px solid #B3B3B3; border-radius: 5px; font-weight: 700; white-space: nowrap; transition: all .3s; opacity: 1;}
+button, .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;            /* 36 → 30 */
+    padding: 2px 14px;       /* 4px 18px → 살짝 축소 */
+    line-height: 1;          /* inline-flex라 line-height 고정 불필요 */
+    font-size: 0.8125rem;
+    background-color: #fff;
+    border: 1px solid #B3B3B3;
+    border-radius: 5px;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: all .3s;
+    opacity: 1;
+}
 /*button:hover, .btn:hover {background-color: #F5F6FA; border: 1px solid #4D4D4D;}*/
 /*button:disabled, .btn:disabled {background-color: #fff; border: 1px solid #B3B3B3; color: #B3B3B3;}*/
-button img, .btn img {margin-right: 10px;}
+button img, .btn img {
+    height: 14px;
+    width: auto;
+    margin-right: 6px;
+}
 .btn-navy {background-color: #03428E; color: #fff;}
 .btn-navy:hover {background-color: #033777;}
 .btn-navy:disabled {background-color: #E6E6E6; border: none; color: #B3B3B3;}
@@ -637,9 +678,19 @@ button img, .btn img {margin-right: 10px;}
 .btn-plus::before {width: 100%; height: 3px; border-radius: 2px; top: 50%; left: 0; transform: translateY(-50%);}
 .btn-plus::after {height: 100%; width: 3px; border-radius: 2px; top: 0; left: 50%; transform: translateX(-50%);}
 
-.list-table button, .list-table .btn {height: 32px; line-height: 32px;}
+.list-table button, .list-table .btn {
+    height: 28px;            /* 32 → 28, 기본보다 한 단계 작게 유지 */
+    line-height: 1;
+}
 
-.btn-srch {width: 36px; height: 36px; background: url('../images/icon/btn-srch.svg')#E9F2FB no-repeat center; border: 1px solid #D5D7DC; border-radius: 0 5px 5px 0;}
+.btn-srch {
+    width: 30px;             /* 36 → 30 */
+    height: 30px;
+    background: url('../images/icon/btn-srch.svg')#E9F2FB no-repeat center;
+    background-size: 16px;   /* 아이콘이 커 보이면 추가 */
+    border: 1px solid #D5D7DC;
+    border-radius: 0 5px 5px 0;
+}
 
 /* 첨부파일 다운로드 */
 .btn-filedown {color: #3069B3; text-decoration: underline;}
@@ -678,9 +729,9 @@ button img, .btn img {margin-right: 10px;}
     background-color: #03428E;
     color: #FFFFFF;
     font-weight: 700;
-    font-size: 16px;
+    font-size: 14px;
     width: 85px;
-    height: 36px;
+    height: 30px;
     border: 0;
     border-right: 3px;
 }
@@ -689,9 +740,9 @@ button img, .btn img {margin-right: 10px;}
     background-color: #FFFFFF;
     color: #03428E;
     font-weight: 700;
-    font-size: 16px;
+    font-size: 14px;
     width: 85px;
-    height: 36px;
+    height: 30px;
     border: 1px solid #03428E;
 }
 
@@ -703,9 +754,9 @@ button img, .btn img {margin-right: 10px;}
 
 
 
-    /*=================================================================================
-     * Icon Style
-     =================================================================================*/
+/*=================================================================================
+ * Icon Style
+ =================================================================================*/
 .info-box {margin-top: 10px;}
 .ico-info-blue {display: flex; align-items: center; font-size: 13px; color: #125DE6;}
 .ico-info-blue::before {content: ''; display: inline-block; width: 16px; height: 18px; margin-right: 4px; background: url('../images/icon/ico-info-blue.svg')no-repeat center; vertical-align: middle;}
