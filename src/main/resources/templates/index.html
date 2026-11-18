@@ -895,6 +895,22 @@
             }
             $(window).off('resize.layout').on('resize.layout', adjustMenu);
 
+            /* ★ 바깥 창은 스크롤되면 안 된다 (헤더 · 탭 · 화면이 모두 고정 배치).
+                 iframe 안에서 그리드 · 입력칸에 포커스가 가면 브라우저가 그것을 보이게 하려고
+                 바깥 창까지 몇십 px 밀어 올린다 → 위 헤더가 잘리고 아래에 빈 띠가 생긴다.
+                 예전에는 320ms 마다 돌던 apply() 의 scrollTo(0,0) 가 이를 가려 주었다.
+                 그 반복을 없앴으므로, 밀리는 순간 바로 되돌린다. (2026-11-18) */
+            $(window).off('scroll.layoutpin').on('scroll.layoutpin', function () {
+                if (window.pageYOffset !== 0 || window.pageXOffset !== 0) window.scrollTo(0, 0);
+            });
+            // 바깥 틀 요소(.page-wrapper · .con_area · .tab-content)가 밀리는 경우도 되돌린다
+            document.addEventListener('scroll', function (e) {
+                const t = e.target;
+                if (t && t.nodeType === 1 && t.matches('.page-wrapper, .con_area, .tab-content, .nth-tabs') && t.scrollTop !== 0) {
+                    t.scrollTop = 0;
+                }
+            }, true);
+
             /* ★ 탭을 새로 열면 그 iframe 은 방금 만들어진 것이라 위 동기화를 놓친다.
                  load 는 버블링하지 않아 위임이 안 되므로, 탭 조작 뒤 한 박자 뒤에 맞춘다. */
             $(document).on('click', '.nth-tabs .page-tabs, .nth-tabs .content-tabs', function () {
@@ -902,6 +918,12 @@
                     syncLayoutContents(window.LayoutState.get());
                 }, 100);
             });
+            // 새 탭 iframe 이 다 뜬 뒤에도 맞춘다 (load 는 버블링하지 않으므로 캡처로 받는다)
+            document.addEventListener('load', function (e) {
+                if (e.target && e.target.tagName === 'IFRAME' && $(e.target).closest('.con_area').length) {
+                    window.LayoutState.refresh();
+                }
+            }, true);
 
             // 햄버거: 메뉴+헤더 함께 토글 (PC/태블릿 공통, 풀스크린 사용 안 함)
             $('#navbarBarMenu2 .open_menu').click(function () {
@@ -942,6 +964,26 @@
                 sync();
                 setTimeout(sync, 300);
                 setTimeout(sync, 1000);
+
+                /* ★ 첫 진입 때 아래에 빈 띠가 남던 문제 (2026-11-18)
+                     .con_area 높이는 «헤더 아래 실제 top» 을 재서 정하는데, 위 세 번(0 · 0.3 · 1초)
+                     잴 때는 로고 이미지 · 메뉴 · 탭바가 아직 다 그려지기 전이라 헤더 · 탭바 높이가 덜 잡힌다.
+                     예전에는 0.32초마다 돌던 되먹임 반복이 우연히 계속 다시 재 줬고,
+                     그 반복을 없앤 뒤로는 창 크기를 바꿔야만(전체화면 → 복귀) 다시 재졌다.
+                     → 이미지까지 다 받은 뒤(load) 한 번 더 재고,
+                       헤더 · 탭바 높이가 바뀔 때마다(ResizeObserver) 다시 잰다. */
+                $(window).on('load.layoutcontents', sync);
+                if (window.ResizeObserver) {
+                    let roTimer = null;
+                    const ro = new ResizeObserver(function () {
+                        clearTimeout(roTimer);
+                        roTimer = setTimeout(sync, 50);   // 여러 번 와도 한 번만
+                    });
+                    ['.dashboard-layout-header', '.nth-tabs .page-tabs', '.footer'].forEach(function (sel) {
+                        const el = document.querySelector(sel);
+                        if (el) ro.observe(el);
+                    });
+                }
 
                 // 지금 존재하는 iframe 은 load 시점에도 한 번 맞춘다
                 $('.con_area iframe').on('load.layoutcontents', sync);

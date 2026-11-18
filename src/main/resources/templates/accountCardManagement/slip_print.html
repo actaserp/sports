@@ -1,1381 +1,2933 @@
-<!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>전표 출력</title>
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
   <style>
-      /* ── 전체 레이아웃 ───────────────────────────── */
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-      body {
-          font-family: 'Noto Sans KR', sans-serif;
-          font-size: 13px;
-          background: #f0f2f5;
-          color: #222;
+      /* ── tab2 헤더 테이블 셀 크기 ── */
+      #tab2 table th,
+      #tab2 table td {
+          font-size: 90% !important;
+          height: 2em !important;
       }
-
-      /* ── 미리보기 컨테이너 ───────────────────────── */
-      #preview {
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 24px;
+      #tab2 table.view-table th,
+      #tab2 table.view-table td {
+          padding: 0.25em 0.67em !important;
       }
-
-      /* ── 공통 전표 카드 ──────────────────────────── */
-      .doc-page {
-          width: 210mm;
-          min-height: 297mm;
-          background: #fff;
-          border: 1px solid #ccc;
-          box-shadow: 0 2px 12px rgba(0,0,0,.1);
-          padding: 12mm 14mm;
-          position: relative;
-          page-break-after: always;
+      #tab2 table td input[type="text"],
+      #tab2 table td input[type="date"] {
+          font-size: 100% !important;
+          height: 2.17em !important;
+          line-height: 2.17em !important;
       }
-
-      /* ── 제목 ──────────────────────────────────── */
-      .doc-title {
-          font-size: 20px;
-          font-weight: 800;
-          letter-spacing: 6px;
-          margin: 4px 0 2px;
-          text-align: center;
+      #tab2 table td select {
+          font-size: 100% !important;
+          height: 2.17em !important;
+          line-height: normal !important;
+          padding: 0 0.5em !important;
+          vertical-align: middle !important;
+          box-sizing: border-box !important;
       }
-
-      /* ── 전표 테이블 ─────────────────────────────── */
-      .slip-table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 11px;
-          margin-top: 8px;
+      #tab2 table td textarea {
+          font-size: 100% !important;
       }
-      .slip-table th, .slip-table td {
-          border: 1px solid #555;
-          padding: 4px 6px;
-          text-align: center;
-          vertical-align: middle;
-      }
-      .slip-table th {
-          background: #e8edf5;
-          font-weight: 700;
-          font-size: 10px;
-      }
-      .slip-table td.left  { text-align: left; }
-      .slip-table td.right { text-align: right; }
-      .slip-table .section-header td {
-          background: #f5f5f5;
-          font-weight: 700;
-          font-size: 10px;
-      }
-      .slip-table .total-row td {
-          background: #e8edf5;
-          font-weight: 700;
-      }
-
-      /* ── 비고/적요란 ─────────────────────────────── */
-      .remark-box {
-          border: 1px solid #555;
-          margin-top: 6px;
-          padding: 6px 8px;
-          font-size: 11px;
-          min-height: 60px;
-          line-height: 1.6;
-          white-space: pre-line;
-      }
-      .remark-box .rb-title {
-          font-weight: 700;
-          font-size: 10px;
-          margin-bottom: 3px;
-      }
-
-      /* ════════════════════════════════════════
-         구형 전표 양식 (printType=1,7) 전용
-         ════════════════════════════════════════ */
-      .lg-topbar {
-          display: flex;
-          justify-content: space-between;
-          font-size: 11px;
-          margin-bottom: 4px;
-      }
-      .lg-frame {
-          border: 1.5px solid #000;
-          padding: 10px 12px 14px;
-      }
-      .lg-clear { clear: none; }
-
-      /* 결재란 */
-      /* ── 결재란 표시 (환경설정 결재라인: 전결 junchk · 사선 crolin) ── */
-      .apv-mark { position: relative; text-align: center; vertical-align: middle; }
-      .apv-mark .apv-jun { display: inline-block; margin-top: 4px; font-size: 11px; font-weight: 700; }
-      .apv-cro { background: linear-gradient(to top right, transparent calc(50% - 0.6px), #333 50%, transparent calc(50% + 0.6px)); }
-      .lg-apv {
-          float: right;
-          border-collapse: collapse;
-          margin: 0 0 6px 12px;
-      }
-      .lg-apv td {
-          border: 1px solid #000;
-          width: 64px;
-          padding: 0;
-          text-align: center;
-          vertical-align: top;
-      }
-      .lg-apv .apv-h {
-          border-bottom: 1px solid #000;
-          padding: 3px 2px;
-          font-size: 10px;
+      /* ── 전표번호 변경 버튼 축소 ── */
+      #tab2 table .btn.in_btn {
+          font-size: 92% !important;
+          padding: 0.18em 0.67em !important;
+          height: 2em !important;
+          line-height: 2em !important;
           white-space: nowrap;
-          overflow: hidden;
       }
-      .lg-apv .apv-b { height: 56px; }
 
-      /* 표제 / 일자 */
-      .lg-title {
-          font-size: 26px;
-          font-weight: 700;
-          letter-spacing: 8px;
-          color: #23237a;
-          margin: 4px 0 12px;
+      .grid-guide-box {
+          background: #eef3ff;
+          border-left: 4px solid #2f5cff;
+          padding: 6px 10px;
+          font-size: 13px;
+          margin-bottom: 6px;
+          color: #333;
       }
-      .lg-meta {
-          font-size: 11px;
-          letter-spacing: 1px;
-          line-height: 1.8;
-      }
-      .lg-subject {
+
+      /* ============================================================
+         분개 라인 — 목록(읽기 전용) + 하단 입력 영역
+         ============================================================ */
+      .line-toolbar {
           display: flex;
+          align-items: center;
           justify-content: space-between;
-          align-items: flex-end;
-          font-size: 11px;
-          margin: 14px 0 5px;
-          clear: both;
+          margin: 8px 0 4px;
+          gap: 8px;
       }
+      .line-toolbar ul { display: flex; gap: 5px; margin: 0; padding: 0; list-style: none; }
+      .line-toolbar .hint { font-size: 12px; color: #666; }
 
-      /* 내역 테이블 */
-      .lg-table {
+      .line-list-wrap {
+          max-height: 320px;
+          overflow: auto;
+          border: 1px solid #dee2e6;
+          outline: none;
+      }
+      .line-list-wrap:focus { border-color: #378ADD; }
+
+      #slipLineTable {
           width: 100%;
           border-collapse: collapse;
           table-layout: fixed;
-          font-size: 11px;
       }
-      .lg-table th, .lg-table td {
-          border: 1px solid #000;
-          padding: 3px 5px;
+      #slipLineTable th {
+          position: sticky;
+          top: 0;
+          z-index: 1;
+          background: #f1f3f5;
+          font-weight: 600;
           text-align: center;
-          vertical-align: middle;
-          word-break: break-all;
+          border-bottom: 1px solid #ced4da;
+          padding: 4px 6px !important;
       }
-      .lg-table th {
-          font-weight: 400;
-          letter-spacing: 2px;
-      }
-      .lg-table td.l { text-align: left; }
-      .lg-table td.r {
-          text-align: right;
-          letter-spacing: 0;
+      #slipLineTable td {
+          padding: 3px 6px !important;
+          border-bottom: 1px solid #eef0f2;
           white-space: nowrap;
-          word-break: keep-all;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          cursor: pointer;
       }
-      .lg-table td.mssec {
-          font-size: 9px;
-          color: #1552b0;
-      }
-      .lg-table td.sub {
-          font-size: 10px;
-          height: 17px;
-          /* 산출내역에 입력한 줄바꿈을 그대로 보여준다 */
-          white-space: pre-line;
-      }
-      .lg-table .lg-total td:first-child { letter-spacing: 4px; }
+      #slipLineTable td.r { text-align: right; }
+      #slipLineTable td.c { text-align: center; }
+      #slipLineTable td.zero { color: #c4c4c4; }
+      #slipLineTable td.warn { color: #dc3545; }
+      #slipLineTable tr.dr td:first-child { border-left: 3px solid #378ADD; }
+      #slipLineTable tr.cr td:first-child { border-left: 3px solid #D85A30; }
+      #slipLineTable tr.dr td.drcr { color: #185FA5; }
+      #slipLineTable tr.cr td.drcr { color: #993C1D; }
+      #slipLineTable tbody tr:hover td { background: #f8f9fa; }
+      #slipLineTable tbody tr.sel td { background: #e7f1fb !important; }
 
-      /* 적요 */
-      .lg-remark {
-          font-size: 11px;
-          line-height: 1.7;
-          padding: 4px 2px 0;
-          min-height: 70px;
-          white-space: pre-line;
+      .line-panel {
+          border: 1px solid #ced4da;
+          border-left: 4px solid #378ADD;
+          padding: 8px 10px 10px;
+          margin-top: 6px;
+          background: #fbfcfd;
       }
+      .line-panel.is-credit { border-left-color: #D85A30; }
+      .line-panel .lp-head {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 6px;
+          font-weight: 600;
+      }
+      .line-panel .lp-head .hint { font-weight: 400; font-size: 12px; color: #666; }
 
-      /* ── 지출결의서 전용 ─────────────────────────── */
-      .res-table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 11px;
-          margin-top: 4px;
+      .lp-grid {
+          display: grid;
+          grid-template-columns: repeat(8, minmax(0, 1fr));
+          gap: 6px 10px;
       }
-      .res-table th, .res-table td {
-          border: 1px solid #555;
-          padding: 4px 6px;
-          text-align: center;
-          vertical-align: middle;
-      }
-      .res-table th { background: #e8edf5; font-weight: 700; font-size: 10px; }
-      .res-table td.left { text-align: left; }
-
-      .kanji-char {
-          border: 1px solid #555;
-          width: 22px; height: 22px;
-          display: inline-flex;
-          align-items: center; justify-content: center;
+      .lp-field { min-width: 0; display: flex; flex-direction: column; }
+      .lp-field > label {
+          display: block;
           font-size: 12px;
-      }
-
-      .attach-note {
-          margin-top: 10px;
-          font-size: 10px;
-          border-top: 1px dashed #999;
-          padding-top: 4px;
           color: #555;
+          margin-bottom: 2px;
+          white-space: nowrap;
+      }
+      .lp-field > label.req { color: #dc3545; }
+      .lp-field input[type="text"],
+      .lp-field select {
+          width: 100% !important;
+          height: 30px !important;
+          box-sizing: border-box !important;
+          padding: 0 8px;
+      }
+      .lp-field input[readonly] { background: #f5f5f5; color: #888; }
+      .lp-field textarea {
+          width: 100% !important;
+          /* flex-basis 를 auto 로 둬야 손으로 끌어 바꾼 높이가 유지된다 (1 이면 무시됨) */
+          flex: 1 1 auto;
+          min-height: 66px;
+          max-height: 300px;
+          resize: vertical !important;
+          box-sizing: border-box;
+          padding: 4px 8px;
+          line-height: 1.4;
+          font-family: inherit;
+          font-size: inherit;
+      }
+      .lp-pair { display: flex; gap: 4px; }
+      .lp-pair input.code { flex: 0 0 64px; width: 64px !important; }
+      .lp-pair input.main { flex: 1; min-width: 0; }
+      .lp-clt-add { flex: 0 0 auto; padding: 0 10px; border: 1px solid #c8ced6; background: #fff; border-radius: 4px;
+          font-size: 12px; color: #333; cursor: pointer; white-space: nowrap; }
+      .lp-clt-add:hover { background: #f2f4f7; }
+
+      /* ── 거래처 등록 팝업 : 급여명세서 발송 팝업과 같은 잉크·괘선 계열 ──
+         PopupDraggable 은 body 아래에 붙으므로 변수 대신 값을 직접 쓴다. */
+      .cr-pop { font-size: 13px; color: #1B2430; text-align: left; display: flex; flex-direction: column; height: 100%; }
+      .cr-pop > section { flex: 1 1 auto; min-height: 0; overflow: visible; padding: 16px 18px; }
+      .cr-pop .cr-note {
+          background: #EDF1F4; border: 1px solid #CBD3DB; border-left: 4px solid #8A99A8;
+          padding: 9px 12px; margin: 0 0 14px; font-size: 12.5px; line-height: 1.6; color: #45566A;
+      }
+      .cr-pop .cr-note b { color: #1B2430; }
+      .cr-pop .fld { margin-bottom: 14px; }
+      .cr-pop .fld:last-child { margin-bottom: 0; }
+      .cr-pop .fld > label.k {
+          display: block; margin-bottom: 5px;
+          font-size: 12px; font-weight: 600; color: #45566A; letter-spacing: .5px;
+      }
+      .cr-pop .fld > label.k em { font-style: normal; color: #9E2A20; }
+      .cr-pop .fld > label.k .opt { font-weight: normal; color: #8A99A8; }
+      .cr-pop .fld .hint { margin-top: 4px; font-size: 11.5px; color: #8A99A8; }
+      .cr-pop select {
+          width: 100%; max-width: none; height: 34px; padding: 0 28px 0 10px; box-sizing: border-box;
+          border: 1px solid #C0CAD3; border-radius: 0; font-family: inherit; font-size: 13px; color: #1B2430;
+      }
+      .cr-pop select:focus-visible { outline: 2px solid #24466F; outline-offset: 1px; border-color: #24466F; }
+      .cr-pop input[type=text] {
+          width: 100%; max-width: none; height: 34px; padding: 0 10px; box-sizing: border-box;
+          border: 1px solid #C0CAD3; border-radius: 0; background: #fff;
+          font-family: inherit; font-size: 13px; color: #1B2430;
+      }
+      .cr-pop input[type=text]::placeholder { color: #8A99A8; }
+      .cr-pop input[type=text]:focus-visible { outline: 2px solid #24466F; outline-offset: 1px; border-color: #24466F; }
+      .cr-pop .popup-button {
+          flex: 0 0 auto; display: flex; justify-content: flex-end; gap: 8px;
+          padding: 12px 18px; border-top: 1px solid #CBD3DB; background: #fff;
+      }
+      .cr-pop .popup-button .btn-popup {
+          height: 34px !important; min-width: 0 !important; padding: 0 20px !important;
+          border: 1px solid #8A99A8 !important; border-radius: 2px !important;
+          background: #fff !important; color: #1B2430 !important; box-shadow: none !important;
+          font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: .5px; cursor: pointer;
+      }
+      .cr-pop .popup-button .btn-popup span { color: inherit !important; }
+      .cr-pop .popup-button .btn-popup.solid { background: #24466F !important; border-color: #24466F !important; color: #fff !important; }
+      .cr-pop .btn-popup:hover { filter: brightness(.94); }
+      .cr-pop .btn-popup:focus-visible { outline: 2px solid #24466F; outline-offset: 2px; }
+      .lp-pair input.disp { flex: 0 0 auto; min-width: 90px; max-width: 220px; }
+      .lp-amt { text-align: right; }
+      .span2 { grid-column: span 2; }
+      .span4 { grid-column: span 4; }
+      .row2  { grid-row: span 2; }
+
+      /* ── 화면 높이 고정 해제 (이 화면만) ──
+         layout_page 는 .layout-contents 를 100vh 로 고정하고, 탭 영역(.tab-wrap / .tab-contents / section)이
+         그 안에서 flex 로 줄어들게 한다. 전표 등록 탭은 내용이 길어 아래가 잘리므로
+         이 화면에서는 높이를 내용만큼 늘리고 페이지 전체가 스크롤되게 한다.
+         전표 목록 탭의 그리드는 높이(540px)가 고정이라 영향이 없다. */
+      /* layout.css 의 .layout-contents { padding: 20px 30px 30px } 하단 30px 가 회색 여백으로 남는다 */
+      .layout-contents {
+          height: auto !important;
+          min-height: 100vh;
+          padding-bottom: 8px !important;
+      }
+      .layout-contents .tab-wrap,
+      .layout-contents .tab-wrap > div,
+      .layout-contents .tab-contents,
+      .layout-contents section.tab-item {
+          flex: 0 0 auto !important;
+          height: auto !important;
+          max-height: none !important;
+          min-height: 0;
+          overflow: visible !important;
       }
 
-      /* ════════════════════════════════════════
-         결의양식2 (printType=3,4) 전용 스타일
-         ════════════════════════════════════════ */
-      .gy2-apv-table {
-          border-collapse: collapse;
+      /* ── 전표 목록 탭일 때만 : 페이지 스크롤 없이 그리드가 남는 높이를 채운다 (2026-11-18) ──
+         전표 등록 탭은 내용이 길어 위 규칙대로 페이지 스크롤을 쓰고,
+         전표 목록 탭에서는 body 에 slip-list-mode 를 달아 화면 높이에 고정한다. */
+      html.slip-list-mode, body.slip-list-mode { height: 100%; overflow: hidden !important; }
+      body.slip-list-mode .layout-contents {
+          height: 100vh !important;
+          min-height: 0;
+          overflow: hidden;
       }
-      .gy2-apv-table td {
-          border: 1px solid #333;
-          text-align: center;
-          font-size: 10px;
-          padding: 0;
+      body.slip-list-mode .layout-contents .tab-wrap,
+      body.slip-list-mode .layout-contents .tab-wrap > div,
+      body.slip-list-mode .layout-contents .tab-contents {
+          flex: 1 1 auto !important;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+          overflow: hidden !important;
       }
-      .gy2-apv-table .apv-title {
-          padding: 3px 14px;
-          border-bottom: 1px solid #333;
-          font-size: 10px;
-          font-weight: 700;
-          background: #f0f0f0;
+      body.slip-list-mode .layout-contents section#tab1 {
+          flex: 1 1 auto !important;
+          display: flex !important;
+          flex-direction: column;
+          min-height: 0;
+          overflow: hidden !important;
       }
-      .gy2-apv-table .apv-sign { height: 16mm; width: 20mm; }
-
-      .gy2-main { width: 100%; border-collapse: collapse; border: 1.5px solid #333; }
-      .gy2-main td {
-          border: 1px solid #555;
-          vertical-align: middle;
-          font-size: 10px;
-          padding: 4px 6px;
+      body.slip-list-mode #divList {
+          flex: 1 1 auto;
+          display: flex;
+          flex-direction: column;
+          min-height: 200px;          /* 창이 아주 작아도 이만큼은 보인다 */
       }
-      .gy2-title-cell {
-          font-size: 17px; font-weight: bold;
-          letter-spacing: 5px; text-align: center;
-          padding: 6px 10px;
-      }
-      .gy2-kamok-label {
-          text-align: center;
-          writing-mode: vertical-lr;
-          text-orientation: upright;
-          letter-spacing: 4px;
-          font-size: 10px;
-          width: 10mm;
-      }
-      .gy2-kamok-sub { text-align: center; width: 10mm; font-size: 10px; background: #f5f5f5; font-weight: 700; }
-      .gy2-date-label { text-align: center; font-size: 10px; width: 12mm; background: #f5f5f5; font-weight: 700; }
-      .gy2-date-val { text-align: center; font-size: 10px; }
-      .gy2-ilgeum-row td { font-size: 11px; font-weight: bold; padding: 5px 10px; }
-      .gy2-naeyeok-label {
-          writing-mode: vertical-lr;
-          text-orientation: upright;
-          letter-spacing: 8px;
-          text-align: center;
-          font-size: 10px; width: 10mm;
-      }
-      .gy2-remark-cell {
-          min-height: 55mm; vertical-align: top;
-          padding: 7px 8px; font-size: 10px;
-          line-height: 1.7; white-space: pre-wrap;
-      }
-      .gy2-bigo-label {
-          writing-mode: vertical-lr; text-orientation: upright;
-          letter-spacing: 8px; text-align: center;
-          font-size: 10px; width: 10mm;
-      }
-      .gy2-bigo-cell { min-height: 18mm; vertical-align: top; }
-
-      /* ── 인쇄 미디어 ─────────────────────────────── */
-      @media print {
-          body { background: #fff; }
-          #preview { padding: 0; gap: 0; }
-          .doc-page {
-              border: none;
-              box-shadow: none;
-              width: 100%;
-              min-height: auto;
-              padding: 8mm 10mm;
-              page-break-after: always;
-          }
-          .doc-page:last-child { page-break-after: avoid; }
+      body.slip-list-mode #theGrid_slip_list {
+          flex: 1 1 auto;
+          height: auto !important;    /* 고정 540px 대신 남는 높이 */
+          min-height: 0;
       }
 
-      /* ── 전체 배율 조정 (화면·인쇄 공통) ───────── */
-      .doc-page { padding: 18mm 20mm; }
-
-      .doc-page, .doc-page td, .doc-page th,
-      .doc-page span, .doc-page div, .doc-page em {
-          font-size: 12px !important;
-          line-height: 1.7 !important;
+      /* ── 검색 영역 ── */
+      .search-wrap {
+          flex-wrap: wrap;
+          justify-content: flex-start;
+          align-items: flex-end;
+          gap: 12px 16px;
       }
-      .doc-page .doc-title,
-      .doc-page [style*="font-size:17px"],
-      .doc-page [style*="font-size:20px"] { font-size: 24px !important; }
-
-      .doc-page td:not([style*="padding:0"]),
-      .doc-page th:not([style*="padding:0"]) { padding: 7px 9px; }
-
-      .doc-page td[style*="padding:0"] > div:last-child { height: 56px !important; }
-      /* rowspan 이 걸린 칸 중 '과목' · '구분' 같은 라벨은 한 줄로 둔다.
-         다만 관(accnm) · 목(it2nm) 처럼 실제 내용이 들어가는 왼쪽정렬 칸(.l)까지
-         nowrap 이 되면 '수익사업운영비(영리사업)' 처럼 공백 없는 한글이
-         칸 경계를 넘어 옆 칸까지 흘러나간다.
-         한글은 공백에서만 줄바꿈하므로 break-all 을 함께 줘야 글자 단위로 끊긴다.
-         (.lg-table td 에 이미 break-all 이 있지만 아래 규칙이 더 구체적이라 덮인다) */
-      .doc-page td[rowspan]:not(.l) { white-space: nowrap; }
-      .doc-page td[rowspan].l {
-          white-space: normal;
-          word-break: break-all;
-          word-wrap: break-word;      /* PDF 다운로드(openhtmltopdf) 대응 */
-          overflow-wrap: break-word;
+      .search-wrap #search_datetype { width: 120px; min-width: 0; margin-right: 8px; }
+      .search-wrap #searchfrdate,
+      .search-wrap #searchtodate { width: 140px; min-width: 0; }
+      .search-wrap #search_tiosec {
+          width: 110px;
+          min-width: 0;
       }
-
-      /* ── 인쇄 (반드시 마지막) ──────────────────── */
-      @page { size: A4; margin: 0; }   /* 브라우저 기본 여백 제거 */
-
-      @media print {
-          body { background: #fff; }
-          #preview { padding: 0; gap: 0; }
-          .doc-page {
-              border: none;
-              box-shadow: none;
-              width: 210mm;
-              min-height: auto;
-              padding: 12mm 14mm;      /* 인쇄용 여백은 여기서 결정 */
-              page-break-after: always;
-          }
-          .doc-page:last-child { page-break-after: avoid; }
-
-          /* 결재란·헤더 회색 배경이 인쇄에도 나오도록 */
-          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .search-wrap #search_sbuject,
+      .search-wrap #search_remark {
+          width: 180px;
+          min-width: 0;
+      }
+      .search-wrap #search_amtfr,
+      .search-wrap #search_amtto {
+          width: 120px;
+          min-width: 0;
+          padding-right: 26px;
       }
   </style>
-</head>
-<body>
-
-<div id="preview">
-  <!-- ════════ 전표별 반복 ════════ -->
-  <th:block th:each="slip, slipStat : ${slipList}">
-
-    <!-- ════════ printType 1,7 : 전표(산출내역) ════════ -->
-    <th:block th:if="${printType == '1' or printType == '7'}">
-      <div class="doc-page">
-
-        <!-- ── 상단 바 : 기관명 / 페이지 ── -->
-        <div class="lg-topbar">
-          <span th:text="'[' + ${slip.spjangnm} + ']'"></span>
-          <span th:text="'페이지 : ' + ${slipStat.index + 1} + ' (' + ${slipList.size()} + ')'"></span>
-        </div>
-
-        <!-- ── 전표 본문 프레임 ── -->
-        <div class="lg-frame">
-
-          <!-- 결재란 (우측 상단, printType=1만) -->
-          <table class="lg-apv" th:if="${printType == '1'}">
-            <tr>
-              <th:block th:each="apv : ${approverList}">
-                <td>
-                  <div class="apv-h" th:text="${apv.name}"></div>
-                  <div class="apv-b apv-mark" th:classappend="${apv.cro} ? 'apv-cro'"><span class="apv-jun" th:if="${apv.jun}">전결</span></div>
-                </td>
-              </th:block>
-            </tr>
-          </table>
-
-          <!-- 표제 -->
-          <div class="lg-title"
-               th:text="${slip.tiosec == '1' ? '세 입 전 표' :
-                          slip.tiosec == '2' ? '세 출 전 표' : '대 체 전 표'}">
-          </div>
-
-          <!-- 일자 -->
-          <div class="lg-meta" th:text="'전 표 일 자 : ' + ${slip.spdate}"></div>
-          <div class="lg-meta"
-               th:with="rd=${slip.regdate == null ? '' : #strings.trim(slip.regdate)}">
-            <span th:if="${#strings.length(rd) >= 8}"
-                  th:text="'작 성 일 자 : ' + ${#strings.substring(rd,0,4)} + '&#160;년&#160;'
-                                          + ${#strings.substring(rd,4,6)} + '&#160;월&#160;'
-                                          + ${#strings.substring(rd,6,8)} + '&#160;일'"></span>
-            <span th:unless="${#strings.length(rd) >= 8}">작 성 일 자 :&#160;&#160;&#160;&#160;&#160;&#160;년&#160;&#160;&#160;&#160;월&#160;&#160;&#160;&#160;일</span>
-          </div>
-
-          <div class="lg-clear"></div>
-
-          <!-- 제목 / 증빙구분 -->
-          <div class="lg-subject">
-            <span th:text="'제&#160;&#160;&#160;&#160;&#160;&#160;목 : ' + ${slip.subject}"></span>
-            <span th:text="'증 빙 구 분 : ' + ${slip.spoccu}"></span>
-          </div>
-
-          <!-- ── 차변/대변 내역 ── -->
-          <table class="lg-table">
-            <colgroup>
-              <col style="width:8%"/>   <!-- 구분 -->
-              <col style="width:17%"/>  <!-- 관   -->
-              <col style="width:22%"/>  <!-- 항   -->
-              <col style="width:16%"/>  <!-- 목   -->
-              <col style="width:7%"/>   <!-- 재원 -->
-              <col style="width:15%"/>  <!-- 차변 -->
-              <col style="width:15%"/>  <!-- 대변 -->
-            </colgroup>
-
-            <tr>
-              <th rowspan="2">구분</th>
-              <th colspan="4">과&#160;&#160;&#160;&#160;&#160;&#160;목</th>
-              <th rowspan="2">차변</th>
-              <th rowspan="2">대변</th>
-            </tr>
-            <tr>
-              <th>관</th>
-              <th>항</th>
-              <th>목</th>
-              <th>재원</th>
-            </tr>
-
-            <!-- 라인을 SQL 순서 그대로 출력 (구분 → 관 → 항 → 라인 순번). 원본 d_aa009_bill2_og01 과 같은 순서.
-                 예전에는 차변 i번 · 대변 i번을 번갈아 찍어서 자산(보통예금) 줄이 비용 줄 사이에 끼었다. -->
-            <th:block th:each="d : ${slip.lines}">
-              <tr>
-                <td rowspan="2" th:text="${d.upnm}"></td>
-                <td rowspan="2" class="l" th:text="${d.accnm}"></td>
-                <td class="l" th:text="${d.it1nm}"></td>
-                <td rowspan="2" class="l" th:text="${d.it2nm}"></td>
-                <td class="mssec" th:text="${d.mssec}"></td>
-                <td class="r" th:text="${d.side == 'D' ? #numbers.formatInteger(d.dramt, 0, 'COMMA') : '0'}"></td>
-                <td class="r" th:text="${d.side == 'C' ? #numbers.formatInteger(d.cramt, 0, 'COMMA') : '0'}"></td>
-              </tr>
-              <tr>
-                <td class="l sub"
-                    th:text="${#strings.isEmpty(slip.banknm) ? '' : slip.banknm + ' : ' + slip.accnum}"></td>
-                <td colspan="3" class="l sub" th:text="${d.summy}"></td>
-              </tr>
-            </th:block>
-
-            <!-- 합계 -->
-            <tr class="lg-total">
-              <td colspan="5">합&#160;&#160;&#160;&#160;&#160;&#160;계</td>
-              <td class="r" th:text="${#numbers.formatInteger(slip.amt, 0, 'COMMA')}"></td>
-              <td class="r" th:text="${#numbers.formatInteger(slip.amt, 0, 'COMMA')}"></td>
-            </tr>
-          </table>
-
-          <!-- ── 적요 ── -->
-          <div class="lg-remark">
-            <div th:text="${slip.subject}"></div>
-            <div th:text="${slip.remark}"></div>
-          </div>
-
-          <!-- 결재란 하단 (printType=7) -->
-          <th:block th:if="${printType == '7'}">
-            <table class="lg-apv" style="float:none; margin:10px 0 0;">
-              <tr>
-                <th:block th:each="apv : ${approverList}">
-                  <td>
-                    <div class="apv-h" th:text="${apv.name}"></div>
-                    <div class="apv-b apv-mark" th:classappend="${apv.cro} ? 'apv-cro'"><span class="apv-jun" th:if="${apv.jun}">전결</span></div>
-                  </td>
-                </th:block>
-              </tr>
-            </table>
-          </th:block>
-
-        </div>
-
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>전표입력</h2>
+        <a class="bookmark toggle" title="북마크">
+          내 메뉴
+        </a>
       </div>
-    </th:block>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>입금관리</li>
+        <li>전표입력</li>
+      </ul>
+    </div>
+    <div class="tab-wrap">
+      <ul class="tab-links">
+        <li>
+          <a href="#tab1" title="전표 목록">전표 목록</a>
+        </li>
+        <li>
+          <a href="#tab2" title="전표 등록">전표 등록</a>
+        </li>
+      </ul>
+      <div class="tab-contents">
+        <!--전표 목록-->
+        <section class="tab-item" id="tab1">
+          <div class="section-top">
+            <div class="search-wrap">
+              <dl>
+                <dt>
+                  <label for="search_datetype">
+                    조회 기간<span class="eq"></span>
+                  </label>
+                </dt>
+                <dd>
+                  <div class="srch-box">
+                    <select id="search_datetype" name="search_datetype">
+                      <option value="spdate">전표일자</option>
+                      <option value="upd">최종수정일</option>
+                    </select>
+                    <input id="searchfrdate" name="searchfrdate" type="date"/>
+                    <span class="slow_sign">~</span>
+                    <input id="searchtodate" name="searchtodate" type="date"/>
+                  </div>
+                </dd>
+              </dl>
 
-    <!-- ════════════════════════════════════════════════════════
-           printType 2 : 결의양식1 ─ 지출결의서 (table 기반)
-           ════════════════════════════════════════════════════════ -->
-    <th:block th:if="${printType == '2'}">
-      <div class="doc-page">
+              <dl>
+                <dt>
+                  <label>
+                    재원구분
+                  </label>
+                </dt>
+                <dd>
+                  <select class="form-control2" id="mssec" name="mssec">
+                  </select>
+                </dd>
+              </dl>
 
-        <!-- 기관명 상단 -->
-        <div style="font-size:12px; font-weight:700; margin-bottom:5px;"
-             th:text="${slip.spjangnm}"></div>
+              <dl>
+                <dt>
+                  <label>
+                    구분
+                  </label>
+                </dt>
+                <dd>
+                  <select id="search_tiosec" name="search_tiosec">
+                    <option value="">전체</option>
+                    <option value="1">세입</option>
+                    <option value="2">세출</option>
+                    <option value="3">대체</option>
+                  </select>
+                </dd>
+              </dl>
 
-        <!-- 제목 -->
-        <div style="text-align:center; margin-bottom:4px;">
-          <span style="font-size:20px; font-weight:800; letter-spacing:10px;
-                       border:1.5px solid #333; padding:4px 20px;">지 출 결 의 서</span>
-        </div>
+              <dl>
+                <dt>
+                  <label>
+                    제목
+                  </label>
+                </dt>
+                <dd>
+                  <input id="search_sbuject" name="search_sbuject" placeholder="제목을 입력하세요" type="text"/>
+                </dd>
+              </dl>
 
-        <!-- 서식번호(재원) -->
-        <div style="text-align:right; font-size:10px; margin-bottom:4px;">
-          [&#160;&#160;<span th:text="${slip.mssec != null ? slip.mssec : '자체'}"></span>&#160;&#160;]
-        </div>
+              <dl>
+                <dt>
+                  <label>
+                    비고
+                  </label>
+                </dt>
+                <dd>
+                  <input id="search_remark" name="search_remark" placeholder="비고를 입력하세요" type="text"/>
+                </dd>
+              </dl>
 
-        <!-- ════ 메인 테이블 (좌측 | 중앙 | 우측 결재란) ════ -->
-        <table style="width:100%; border-collapse:collapse; border:1.5px solid #333;">
-          <tr>
+              <dl>
+                <dt>
+                  <label>
+                    금액구간
+                  </label>
+                </dt>
+                <dd>
+                  <div class="srch-box">
+                    <input id="search_amtfr" name="search_amtfr" placeholder="최소"
+                           type="text" style="text-align:right;"/>
+                    <span class="slow_sign">~</span>
+                    <input id="search_amtto" name="search_amtto" placeholder="최대"
+                           type="text" style="text-align:right;"/>
+                  </div>
+                </dd>
+              </dl>
 
-            <!-- ① 좌측: 일금(한자) + 원정 + 금액 + 거래처 -->
-            <td style="width:26mm; border-right:1.5px solid #333; vertical-align:top; padding:0;">
-              <table style="width:100%; border-collapse:collapse; height:100%;">
-                <tr>
-                  <td style="text-align:center; padding:6px 2px; font-size:10px; letter-spacing:4px; vertical-align:top;">
-                    일<br/>금
-                  </td>
-                </tr>
-                <tr>
-                  <td style="text-align:center; font-size:13px; letter-spacing:2px; vertical-align:middle;
-           padding:4px 2px;
-           white-space:pre;
-           line-height:1.8;
-           font-family:'HangeuljaeMin4', 'NanumMyeongjo-Bold', sans-serif;"
-                      th:text="${slip.amtHanja != null ? slip.amtHanja : ''}"></td>
-                </tr>
-                <tr>
-                  <td style="border-top:1.5px solid #333; text-align:center; padding:4px 2px; vertical-align:top;">
-                    <div style="font-size:10px; letter-spacing:4px;">원<br/>정</div>
-                    <div style="font-size:11px; font-weight:bold; margin-top:4px;"
-                         th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></div>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="border-top:1px solid #555; text-align:center; padding:4px 2px; font-size:10px;">
-                    거래처
-                  </td>
-                </tr>
-                <tr>
-                  <td style="text-align:center; padding:4px 2px; font-size:10px; word-break:break-all;"
-                      th:text="${slip.cltnm != null ? slip.cltnm : ''}"></td>
-                </tr>
-              </table>
-            </td>
+              <dl>
+                <dt>&nbsp;</dt>
+                <dd>
+                  <li>
+                    <button class="btn btn-delete" id="btnSearch" title="검색" type="button">
+                      <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
+                      검색
+                    </button>
+                  </li>
+                </dd>
+              </dl>
 
-            <!-- ② 중앙: 정보 + 적요 + 하단 -->
-            <td style="border-right:1.5px solid #333; vertical-align:top; padding:0;">
+            </div>
+            <div class="button-wrap">
+              <ul>
+                <li class="right_align rpt" style="margin-right: 5px">
+                  <a class="btn btn-edit" id="btnSlipPrint" title="전표출력">
+                    <img alt="추가 아이콘" th:src="@{/images/icon/ico-edit.svg}">
+                    전표 출력
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="grid-guide-box">
+            ※ 전표 목록을 더블클릭하면 [전표 등록] 탭에서 상세 내역을 수정·삭제할 수 있습니다.   ※ 단축키 조회:F4
+          </div>
+          <div class="grid_box" id="divList">
+            <div id="theGrid_slip_list" style="height: 540px;"></div>
+          </div>
+        </section>
 
-              <!-- 정보 테이블 -->
-              <table style="width:100%; border-collapse:collapse; font-size:10px;">
-
-                <!-- 년도 세출부 -->
-                <tr>
-                  <td colspan="2" style="border-bottom:1px solid #555; padding:4px 6px; text-align:center;">
-                    <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년 세출부
-                  </td>
-                </tr>
-
-                <!-- 과목: 관(accnm) -->
-                <tr>
-                  <td style="width:13mm; border-right:1px solid #555; border-bottom:1px solid #555;
-                             text-align:center; padding:4px 2px; vertical-align:middle;"
-                      rowspan="3">과<br/>목</td>
-                  <td style="border-bottom:1px solid #555; padding:4px 6px; text-align:center;"
-                      th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].accnm : ''}"></td>
-                </tr>
-
-                <!-- 과목: 항(it1nm) -->
-                <tr>
-                  <td style="border-bottom:1px solid #555; padding:4px 6px; text-align:center;"
-                      th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it1nm : ''}"></td>
-                </tr>
-
-                <!-- 과목: 차변/대변 it2nm -->
-                <tr>
-                  <td style="border-bottom:1px solid #555; padding:0;">
-                    <table style="width:100%; border-collapse:collapse;">
-                      <tr>
-                        <td style="width:50%; border-right:1px solid #555; padding:3px 6px; font-size:10px;">
-                          차변&#160;|&#160;
-                          <span th:text="${slip.drcr == '1' or slip.drcr == 'D'
-                            ? (not #lists.isEmpty(slip.debit) ? slip.debit[0].it2nm : '')
-                            : ''}"></span>
-                        </td>
-                        <td style="width:50%; padding:3px 6px; font-size:10px;">
-                          대변&#160;|&#160;
-                          <span th:text="${slip.drcr == '2'
-                            ? (not #lists.isEmpty(slip.credit) ? slip.credit[0].it2nm : '')
-                            : ''}"></span>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- 발의 -->
-                <tr>
-                  <td style="border-right:1px solid #555; border-bottom:1px solid #555;
-                             text-align:center; padding:4px 2px;">발&#160;의</td>
-                  <td style="border-bottom:1px solid #555; padding:4px 6px; text-align:center;">
-                    <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
-                    <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
-                    <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
-                  </td>
-                </tr>
-
-                <!-- 지출일 -->
-                <tr>
-                  <td style="border-right:1px solid #555; border-bottom:1px solid #555;
-                             text-align:center; padding:4px 2px;">지출일</td>
-                  <td style="border-bottom:1px solid #555; padding:4px 6px; text-align:center;">
-                    년&#160;&#160;&#160;&#160;월&#160;&#160;&#160;&#160;일
-                  </td>
-                </tr>
-
-                <!-- 기장필 + 번호 -->
-                <tr>
-                  <td style="border-right:1px solid #555; border-bottom:1px solid #555;
-                             text-align:center; padding:4px 2px;">기장필</td>
-                  <td style="border-bottom:1px solid #555; padding:0;">
-                    <table style="width:100%; border-collapse:collapse;">
-                      <tr>
-                        <td style="padding:3px 8px; font-size:10px;">
-                          <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
-                          <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
-                          <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
-                        </td>
-                        <td style="border-left:1px solid #555; text-align:center;
-                                   padding:2px 3px; width:8mm; font-size:9px;">번호</td>
-                        <td style="text-align:center; width:18mm; padding:2px 4px; font-size:10px;"
-                            th:text="${slip.spnum}"></td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- 사업명 -->
-                <tr>
-                  <td style="border-right:1px solid #555; border-bottom:1px solid #555;
-                             text-align:center; padding:4px 2px;">사업명</td>
-                  <td style="border-bottom:1px solid #555; padding:4px 6px;"
-                      th:text="${slip.subject != null ? slip.subject : ''}"></td>
-                </tr>
-
-                <!-- 카드 정보 -->
-                <tr>
-                  <td style="border-right:1px solid #555; border-bottom:1px solid #555;
-                             text-align:center; padding:4px 2px;">카드</td>
-                  <td style="border-bottom:1px solid #555; padding:4px 6px;">
-                    <th:block th:if="${slip.cardnm != null and !#strings.isEmpty(slip.cardnm)}">
-                      <span th:text="${slip.cardnm}"></span>
-                      <th:block th:if="${slip.cardnum != null and !#strings.isEmpty(slip.cardnum)}">
-                        &#160;:&#160;<span th:text="${slip.cardnum}"></span>
-                      </th:block>
-                    </th:block>
-                  </td>
-                </tr>
-
-                <!-- 계좌 정보 -->
-                <tr>
-                  <td style="border-right:1px solid #555; border-bottom:1px solid #555;
-                             text-align:center; padding:4px 2px;">계좌</td>
-                  <td style="border-bottom:1px solid #555; padding:4px 6px;">
-                    <th:block th:if="${slip.banknm != null and !#strings.isEmpty(slip.banknm)}">
-                      <span th:text="${slip.banknm}"></span>
-                      <th:block th:if="${slip.accnum != null and !#strings.isEmpty(slip.accnum)}">
-                        &#160;:&#160;<span th:text="${slip.accnum}"></span>
-                      </th:block>
-                    </th:block>
-                  </td>
-                </tr>
-
-              </table>
-
-              <!-- 적요 헤더 -->
-              <table style="width:100%; border-collapse:collapse;">
-                <tr>
-                  <td style="border-bottom:1px solid #555; border-top:1px solid #555;
-                             text-align:center; padding:4px 6px; font-size:10px;">
-                    적&#160;&#160;&#160;&#160;&#160;요
-                  </td>
-                </tr>
-              </table>
-
-              <!-- 적요 내용 -->
-              <div style="min-height:55mm; padding:7px 7px 7px 7px; font-size:10px;
-                          line-height:1.7; white-space:pre-wrap; vertical-align:top;
-                          border-bottom:1.5px solid #333;"><span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
-                <br/>- 이 하 여 백 -
+        <!--전표 등록-->
+        <section class="tab-item" id="tab2" style="padding:0 15px 16px !important;">
+          <div class="section">
+            <div class="title-wrap">
+            </div>
+            <div class="button-wrap" style="border-top:none; display:flex; flex-direction:row; align-items:center; justify-content:space-between;">
+              <ul style="display:flex; gap:5px;">
+                <li>
+                  <a class="btn btn-excell" id="Newbtn" title="신규등록">
+                    <img alt="등록 아이콘" th:src="@{/images/icon/ico-plus.svg}">
+                    신규등록
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-edit" id="btnSave" title="저장">
+                    <img alt="저장 아이콘" th:src="@{/images/icon/ico-save.svg}">
+                    저장
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-delete" id="btnDelete" title="삭제">
+                    <img alt="엑셀 아이콘" th:src="@{/images/icon/ico-delete.svg}">
+                    삭제
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-excell" id="capy" title="전표복사">
+                    <img alt="등록 아이콘" th:src="@{/images/icon/ico-plus.svg}">
+                    전표복사
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-excell" id="btnChangeSpdate" title="전표일자변경">
+                    <img alt="변경 아이콘" th:src="@{/images/icon/ico-edit.svg}">
+                    전표일자변경
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-edit" id="btnSlipPrint2" title="전표출력">
+                    <img alt="출력 아이콘" th:src="@{/images/icon/ico-edit.svg}">
+                    전표 출력
+                  </a>
+                </li>
+              </ul>
+              <div class="grid-guide-box" style="margin-bottom:0;">
+                ※ 단축키  조회: F4 / 신규: Insert / 저장: F6 / 삭제: F7
               </div>
+            </div>
+            <form id="CategoryForm" style="display:flex; align-items:flex-start; gap:0;">
+              <div class="table-wrap" style="flex:1; min-width:0;">
+                <table class="view-table" id="selectedData">
+                  <caption>전표 등록 테이블</caption>
+                  <colgroup>
+                    <col style="width:6%">
+                    <col style="width:13%">
+                    <col style="width:6%">
+                    <col style="width:13%">
+                    <col style="width:6%">
+                    <col style="width:13%">
+                    <col style="width:4%">
+                    <col style="width:4%">
+                    <col style="width:6%">
+                    <col style="width:13%">
+                    <col style="width:6%">
+                    <col style="width:10%">
+                  </colgroup>
 
-              <!-- 하단: 증빙 + 감사 + 관리번호 -->
-              <table style="width:100%; border-collapse:collapse;">
+                  <tr>
+                    <th><label for="spdate">전표일자</label></th>
+                    <td><input class="wp100" id="spdate" name="spdate" type="date"/></td>
+
+                    <th><label for="spnum">전표번호</label></th>
+                    <td>
+                      <div style="display:flex; align-items:center; gap:4px;">
+                        <input class="wp100" id="spnum" name="spnum" readonly type="text"/>
+                        <a class="btn in_btn plus" id="spnum_btn">변경</a>
+                      </div>
+                    </td>
+
+                    <th><label for="tiosec">입출구분</label></th>
+                    <td>
+                      <select class="wp100" id="tiosec" name="tiosec">
+                        <option value="1">세입</option>
+                        <option value="2" selected>세출</option>
+                        <option value="3">대체</option>
+                      </select>
+                    </td>
+
+                    <th style="text-align:center; padding:0 2px;"><label for="cashyn">현금</label></th>
+                    <td style="text-align:center; padding:0 2px;">
+                      <input id="cashyn" name="cashyn" type="checkbox"/>
+                    </td>
+
+                    <th><label for="busipur">사업구분</label></th>
+                    <td>
+                      <select class="wp100" id="busipur" name="busipur">
+                        <option value="1">고유목적</option>
+                        <option value="2">수익</option>
+                        <option value="3">공통</option>
+                      </select>
+                    </td>
+
+                    <th><label for="spoccu">증빙구분</label></th>
+                    <td>
+                      <select class="wp100" id="spoccu" name="spoccu">
+                        <option value="AA">전표일반</option>
+                        <option value="I1">매출세금계산서</option>
+                        <option value="I2">매입세금계산서</option>
+                        <option value="I3">매출계산서</option>
+                        <option value="I4">매입계산서</option>
+                        <option value="I5">매출카드</option>
+                        <option value="I6">매입카드</option>
+                        <option value="I7">매출기타</option>
+                        <option value="I8">기타원천징수</option>
+                      </select>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th><label for="readate">작성일자</label></th>
+                    <td><input class="wp100" id="readate" name="readate" type="date"/></td>
+
+                    <th><label for="inputdate">최종수정일</label></th>
+                    <td><input class="wp100" id="inputdate" name="inputdate" readonly type="text"/></td>
+
+                    <td colspan="8"></td>
+                  </tr>
+
+                  <tr>
+                    <th><label for="subject">제목</label></th>
+                    <td colspan="11">
+                      <input class="wp100" id="subject" name="subject" placeholder="제목" type="text"/>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <th><label for="busicd">사업명</label></th>
+                    <td colspan="10" style="overflow:visible;">
+                      <div style="display:flex; gap:10px; align-items:center; width:100%;">
+                        <input id="bsdate" name="bsdate" type="hidden"/>
+                        <input id="bseccd" name="bseccd" type="hidden"/>
+                        <input id="busicd" name="busicd" placeholder="사업코드" readonly
+                               style="width:90px !important; flex-shrink:0;" type="text"/>
+                        <input id="businame" name="businame" placeholder="사업명"
+                               style="flex:1; min-width:0;  width: 600px !important;" type="text"/>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <th><label for="remark">비고</label></th>
+                    <td colspan="11" style="padding:0 !important;">
+                      <div style="display:flex; align-items:stretch; gap:0;">
+
+                        <textarea class="wp100" id="remark" name="remark"
+                                  placeholder="비고"
+                                  style="flex:0 0 70%; height:120px; resize:none;
+                       border:none; border-right:1px solid #dee2e6;
+                       padding:6px 8px; font-size:inherit;
+                       box-sizing:border-box;"></textarea>
+
+                        <div style="flex:0 0 30%; border-left:1px solid #dee2e6;">
+                          <table class="view-table" style="width:100%; margin:0; height:100%; table-layout:fixed;">
+                            <colgroup>
+                              <col style="width:40%">
+                              <col style="width:60%">
+                            </colgroup>
+                            <tbody>
+                            <tr>
+                              <th style="text-align:center; white-space:nowrap;">차변</th>
+                              <td style="padding:0 8px;">
+                                <input id="sum_dramt" readonly type="text" value="0" tabindex="-1"
+                                       style="width:100%; text-align:right; border:none;
+                        background:transparent; font-size:inherit;
+                        font-weight:600; color:#333;"/>
+                              </td>
+                            </tr>
+                            <tr>
+                              <th style="text-align:center; white-space:nowrap;">대변</th>
+                              <td style="padding:0 8px;">
+                                <input id="sum_cramt" readonly type="text" value="0" tabindex="-1"
+                                       style="width:100%; text-align:right; border:none;
+                        background:transparent; font-size:inherit;
+                        font-weight:600; color:#333;"/>
+                              </td>
+                            </tr>
+                            <tr>
+                              <th style="text-align:center; white-space:nowrap;">차액</th>
+                              <td style="padding:0 8px;">
+                                <input id="sum_diff" readonly type="text" value="0" tabindex="-1"
+                                       style="width:100%; text-align:right; border:none;
+                        background:transparent; font-size:inherit;
+                        font-weight:700;" />
+                              </td>
+                            </tr>
+                            </tbody>
+                          </table>
+                        </div>
+
+                      </div>
+                    </td>
+                  </tr>
+
+                </table>
+              </div>
+            </form>
+
+            <!-- ── 분개 라인 : 목록 ── -->
+            <div class="line-toolbar">
+              <ul>
+                <li>
+                  <a class="btn btn-excell" id="addSlipLine" title="행 추가">
+                    <img alt="추가 아이콘" th:src="@{/images/icon/ico-plus.svg}">
+                    행 추가
+                  </a>
+                </li>
+                <li>
+                  <a class="btn btn-delete" id="delSlipLine" title="선택 행 삭제">
+                    <img alt="삭제 아이콘" th:src="@{/images/icon/ico-delete.svg}">
+                    행 삭제
+                  </a>
+                </li>
+              </ul>
+              <span class="hint">행을 클릭하면 아래에서 수정합니다. 목록에서 ↑↓ 로 행 이동, Enter 로 입력 시작</span>
+            </div>
+
+            <div class="line-list-wrap" id="lineListWrap" tabindex="0">
+              <table id="slipLineTable">
+                <caption style="display:none">분개 라인</caption>
+                <colgroup>
+                  <col style="width:5%">
+                  <col style="width:11%">
+                  <col style="width:5%">
+                  <col style="width:12%">
+                  <col style="width:10%">
+                  <col style="width:21%">
+                  <col style="width:6%">
+                  <col style="width:9%">
+                  <col style="width:9%">
+                  <col style="width:12%">
+                </colgroup>
+                <thead>
                 <tr>
-                  <td style="padding:5px 8px; font-size:10px; vertical-align:middle;">
-                    상기 금액의 지출 증빙서는 이 면에 첨부합니다.
-                  </td>
+                  <th>코드</th>
+                  <th>관명(계정)</th>
+                  <th>차대</th>
+                  <th>항</th>
+                  <th>목</th>
+                  <th>산출내역</th>
+                  <th>재원</th>
+                  <th>차변금액</th>
+                  <th>대변금액</th>
+                  <th>거래처·카드·계좌</th>
                 </tr>
+                </thead>
+                <tbody id="slipLineTbody"></tbody>
               </table>
+            </div>
 
-            </td>
+            <!-- ── 분개 라인 : 선택 행 입력 영역 ── -->
+            <div class="line-panel" id="linePanel">
+              <div class="lp-head">
+                <span id="lpTitle">1행 입력</span>
+                <span class="hint">Enter 다음 칸 · 산출내역 줄바꿈 Shift+Enter · 거래처·카드·계좌는 비어 있으면 Enter 로 건너뛰고, F2 로 전체 목록 조회</span>
+              </div>
+              <div class="lp-grid">
+                <div class="lp-field span2">
+                  <label for="pnl_accnm">관명(계정)</label>
+                  <div class="lp-pair">
+                    <input class="code" id="pnl_acccd" placeholder="코드" readonly tabindex="-1" type="text"/>
+                    <input class="main" id="pnl_accnm" placeholder="관명 입력 후 Enter" type="text"/>
+                    <input id="pnl_acnflag" type="hidden"/>
+                    <input id="pnl_acccltflag" type="hidden"/>
+                  </div>
+                </div>
+                <div class="lp-field">
+                  <label for="pnl_drcr">차대</label>
+                  <select id="pnl_drcr">
+                    <option value="1">차변</option>
+                    <option value="2">대변</option>
+                  </select>
+                </div>
+                <div class="lp-field">
+                  <label for="pnl_it1nm">항</label>
+                  <input id="pnl_it1cd" type="hidden"/>
+                  <input id="pnl_it1nm" placeholder="항" type="text"/>
+                </div>
+                <div class="lp-field">
+                  <label for="pnl_it2nm">목</label>
+                  <input id="pnl_it2cd" type="hidden"/>
+                  <input id="pnl_it2nm" placeholder="목" type="text"/>
+                </div>
+                <div class="lp-field">
+                  <label for="pnl_mssecnm">재원</label>
+                  <input id="pnl_msseccd" type="hidden"/>
+                  <input id="pnl_mssecnm" placeholder="재원" type="text"/>
+                </div>
+                <div class="lp-field">
+                  <label for="pnl_dramt">차변금액</label>
+                  <input class="lp-amt" id="pnl_dramt" placeholder="0" type="text"/>
+                </div>
+                <div class="lp-field">
+                  <label for="pnl_cramt">대변금액</label>
+                  <input class="lp-amt" id="pnl_cramt" placeholder="0" type="text"/>
+                </div>
 
-            <!-- ③ 우측: 결재란 -->
-            <td style="width:18mm; vertical-align:top; padding:0;">
-              <table style="width:100%; border-collapse:collapse; height:100%;">
-                <th:block th:each="apv, apvStat : ${approverList}">
-                  <tr>
-                    <td th:style="'text-align:center; font-size:9px; padding:3px; background:#f0f0f0; font-weight:700;' + (!apvStat.last ? 'border-bottom:1px solid #555;' : '')"
-                        th:text="${apv.name}"></td>
-                  </tr>
-                  <tr>
-                    <td class="apv-mark" th:classappend="${apv.cro} ? 'apv-cro'" th:style="'height:40mm;' + (!apvStat.last ? 'border-bottom:1px solid #555;' : '')"><span class="apv-jun" th:if="${apv.jun}">전결</span></td>
-                  </tr>
-                </th:block>
-              </table>
-            </td>
+                <div class="lp-field span4 row2">
+                  <label for="pnl_summy">산출내역</label>
+                  <textarea id="pnl_summy" placeholder="산출내역 (Shift+Enter 줄바꿈)" rows="3"></textarea>
+                </div>
+                <div class="lp-field span4">
+                  <label for="pnl_cltnm">거래처</label>
+                  <input id="pnl_cltcd" type="hidden"/>
+                  <input id="pnl_cltflag" type="hidden"/>
+                  <div class="lp-pair">
+                    <input class="main" id="pnl_cltnm" placeholder="거래처명 입력 후 Enter" type="text"/>
+                    <button class="lp-clt-add" id="btnCltAdd" title="거래처 신규 등록 (구분: 공통)" type="button">+ 등록</button>
+                  </div>
+                </div>
+                <div class="lp-field span2">
+                  <label for="pnl_cardnum">카드</label>
+                  <div class="lp-pair">
+                    <input id="pnl_cardcd" type="hidden"/>
+                    <input class="disp" id="pnl_cardnmdisp" placeholder="카드명" readonly tabindex="-1" type="text"/>
+                    <input class="main" id="pnl_cardnum" placeholder="카드번호" type="text"/>
+                  </div>
+                </div>
+                <div class="lp-field span2">
+                  <label for="pnl_banknum" id="lblBank">계좌</label>
+                  <div class="lp-pair">
+                    <input id="pnl_bankcd" type="hidden"/>
+                    <input class="disp" id="pnl_banknmdisp" placeholder="은행" readonly tabindex="-1" type="text"/>
+                    <input class="main" id="pnl_banknum" placeholder="계좌번호" type="text"/>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-          </tr>
-        </table><!-- /메인 테이블 -->
-
-        <!-- 기관명 하단 -->
-        <div style="text-align:center; font-size:12px; font-weight:700;
-                    margin-top:6px; letter-spacing:2px;"
-             th:text="${slip.spjangnm}"></div>
-
+          </div>
+        </section>
       </div>
-    </th:block>
+    </div>
+  </div>
 
-    <!-- ════════════════════════════════════════════════════════
-          printType 3 : 결의양식2(하단) ─ 결재란이 본문 아래 (table 기반)
-          ════════════════════════════════════════════════════════ -->
-    <th:block th:if="${printType == '3'}">
-      <div class="doc-page">
+  <!--사업 팝업-->
+  <script id="businmTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup">
+        <section class="section">
+            <div id="BusinessGrid" style="height:350px; display:block;"></div>
+        </section>
+    </div>
+  </script>
 
-        <!-- ════ 메인 테이블 ════ -->
-        <table style="width:100%; border-collapse:collapse; border:1.5px solid #333;">
+  <!-- 관명 팝업 -->
+  <script id="accnmTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup">
+        <section class="section">
+            <div id="AccGrid" style="height:350px; display:block;"></div>
+        </section>
+    </div>
+  </script>
 
-          <!-- 제목 + 재원 -->
-          <tr>
-            <td style="font-size:17px; font-weight:bold; letter-spacing:5px; text-align:center;
-                       padding:6px 10px; border:1px solid #555;" colspan="3">
-              지 출 결 의 서
-            </td>
-            <td style="text-align:center; font-size:10px; width:14mm; border:1px solid #555;">
-              재&#160;원
-            </td>
-            <td style="text-align:center; font-size:10px; font-weight:700; border:1px solid #555;"
-                colspan="2"
-                th:text="${slip.mssec != null ? slip.mssec : '자체'}"></td>
-          </tr>
+  <!-- 항명 팝업 -->
+  <script id="it1Template" type="text/x-tmpl">
+    <div class="content_wrap popup">
+        <section class="section">
+            <div id="It1Grid" style="height:350px; display:block;"></div>
+        </section>
+    </div>
+  </script>
 
-          <!-- 년도 세출부 + No -->
-          <tr>
-            <td style="text-align:center; font-size:11px; font-weight:700;
-                       border:1px solid #555; padding:4px 6px;" colspan="3">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span>
-              년도&#160;&#160;세&#160;&#160;출&#160;&#160;부
-            </td>
-            <td style="text-align:center; font-style:italic; font-size:10px;
-                       width:14mm; border:1px solid #555;"><em>No.</em></td>
-            <td style="text-align:center; font-size:10px; border:1px solid #555;" colspan="2"
-                th:text="${slip.setnum != null and !#strings.isEmpty(slip.setnum) ? slip.setnum : slip.spnum}"></td>
-          </tr>
+  <!-- 목명 팝업 -->
+  <script id="it2Template" type="text/x-tmpl">
+    <div class="content_wrap popup">
+        <section class="section">
+            <div id="It2Grid" style="height:350px; display:block;"></div>
+        </section>
+    </div>
+  </script>
 
-          <!-- 과목: 관(accnm) + 발의 -->
-          <tr>
-            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
-                       letter-spacing:4px; font-size:10px; width:10mm;
-                       border:1px solid #555; padding:4px 2px;"
-                rowspan="3">과<br/>목</td>
-            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">관</td>
-            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;"
-                th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].accnm : ''}"></td>
-            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">발&#160;의</td>
-            <td style="text-align:center; font-size:10px; border:1px solid #555;
-                       padding:4px 6px;" colspan="2">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
-              <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
-            </td>
-          </tr>
+  <!-- 재원 팝업 -->
+  <script id="mssecTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup">
+      <section class="section">
+        <div id="MssecGrid" style="height:300px; display:block;"></div>
+      </section>
+    </div>
+  </script>
 
-          <!-- 과목: 항(it1nm) + 수입 -->
-          <tr>
-            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">항</td>
-            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;"
-                th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it1nm : ''}"></td>
-            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">수&#160;입</td>
-            <td style="text-align:center; font-size:10px; border:1px solid #555;
-                       padding:4px 6px;" colspan="2"
-                th:text="${slip.tiosec == '1' ? #strings.substring(slip.spdate, 0, 4) + ' 년 세입부' : ''}"></td>
-          </tr>
-
-          <!-- 과목: 목(it2nm) + 기장 -->
-          <tr>
-            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">목</td>
-            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;"
-                th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it2nm : ''}"></td>
-            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">기&#160;장</td>
-            <td style="text-align:center; font-size:10px; border:1px solid #555;
-                       padding:4px 6px;" colspan="2">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
-              <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
-            </td>
-          </tr>
-
-          <!-- 일금 -->
-          <tr>
-            <td style="font-size:11px; font-weight:bold; padding:5px 10px;
-                       border:1px solid #555;" colspan="3">
-              일&#160;금&#160;&#160;
-              <span th:text="${slip.amtKorean != null ? slip.amtKorean : ''}"></span>
-              &#160;&#160;원정
-            </td>
-            <td style="text-align:right; font-size:11px; font-weight:bold;
-                       padding:5px 10px; border:1px solid #555;" colspan="3">
-              (&#160;<span th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></span>&#160;)
-            </td>
-          </tr>
-
-          <!-- 내역 -->
-          <tr>
-            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
-                       letter-spacing:8px; font-size:10px; width:10mm;
-                       border:1px solid #555; padding:4px 2px;">내<br/>역</td>
-            <td style="vertical-align:top; padding:7px 8px; font-size:10px;
-                       line-height:1.7; white-space:pre-wrap; min-height:55mm;
-                       border:1px solid #555;" colspan="5"><span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
-              <br/>- 이 하 여 백 -
-            </td>
-          </tr>
-
-          <!-- 비고 -->
-          <tr>
-            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
-                       letter-spacing:8px; font-size:10px; width:10mm;
-                       border:1px solid #555; padding:4px 2px; min-height:18mm;">비<br/>고</td>
-            <td style="min-height:18mm; border:1px solid #555;" colspan="5"></td>
-          </tr>
-
-        </table>
-
-        <!-- 기관명 -->
-        <div style="text-align:center; font-size:12px; font-weight:700;
-                    margin-top:6px; letter-spacing:2px;"
-             th:text="${slip.spjangnm}"></div>
-
-        <!-- 결재란 하단 -->
-        <table style="border-collapse:collapse; margin-top:8px;">
-          <tr>
-            <th:block th:each="apv, apvStat : ${approverList}">
-              <td style="border:1px solid #333; text-align:center; padding:0; width:100px;">
-                <div style="background:#f0f0f0; border-bottom:1px solid #333;
-              padding:3px 14px; font-size:10px; font-weight:700;"
-                     th:text="${apv.name}"></div>
-                <div class="apv-mark" style="height:16mm; width:100px;" th:classappend="${apv.cro} ? 'apv-cro'"><span class="apv-jun" th:if="${apv.jun}">전결</span></div>
-              </td>
-            </th:block>
-          </tr>
-        </table>
-
+  <!-- 첨부파일 팝업 -->
+  <script id="fileUploadTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup">
+      <section class="section">
+        <div id="fileUploadInnerDiv"></div>
+      </section>
+      <div class="popup-button">
+        <button type="button" class="btn-popup y_write_auth" id="btn_file_save"><span>저장</span></button>
+        <button type="button" class="btn-popup" id="modal-close-button"><span>닫기</span></button>
       </div>
-    </th:block>
+    </div>
+  </script>
 
-    <!-- ════════════════════════════════════════════════════════
-           printType 4 : 결의양식2(상단) ─ 결재란이 본문 위 (table 기반)
-           ════════════════════════════════════════════════════════ -->
-    <th:block th:if="${printType == '4'}">
-      <div class="doc-page">
-
-        <!-- 결재란 상단 -->
-        <table style="border-collapse:collapse; margin-bottom:8px;">
-          <tr>
-            <th:block th:each="apv, apvStat : ${approverList}">
-              <td style="border:1px solid #333; text-align:center; padding:0; width:100px;">
-                <div style="background:#f0f0f0; border-bottom:1px solid #333;
-              padding:3px 14px; font-size:10px; font-weight:700;"
-                     th:text="${apv.name}"></div>
-                <div class="apv-mark" style="height:16mm; width:100px;" th:classappend="${apv.cro} ? 'apv-cro'"><span class="apv-jun" th:if="${apv.jun}">전결</span></div>
-              </td>
-            </th:block>
-          </tr>
-        </table>
-
-        <!-- ════ 메인 테이블 ════ -->
-        <table style="width:100%; border-collapse:collapse; border:1.5px solid #333;">
-
-          <!-- 제목 + 재원 -->
-          <tr>
-            <td style="font-size:17px; font-weight:bold; letter-spacing:5px; text-align:center;
-                       padding:6px 10px; border:1px solid #555;" colspan="3">
-              지 출 결 의 서
-            </td>
-            <td style="text-align:center; font-size:10px; width:14mm; border:1px solid #555;">
-              재&#160;원
-            </td>
-            <td style="text-align:center; font-size:10px; font-weight:700; border:1px solid #555;"
-                colspan="2"
-                th:text="${slip.mssec != null ? slip.mssec : '자체'}"></td>
-          </tr>
-
-          <!-- 년도 세출부 + No -->
-          <tr>
-            <td style="text-align:center; font-size:11px; font-weight:700;
-                       border:1px solid #555; padding:4px 6px;" colspan="3">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span>
-              년도&#160;&#160;세&#160;&#160;출&#160;&#160;부
-            </td>
-            <td style="text-align:center; font-style:italic; font-size:10px;
-                       width:14mm; border:1px solid #555;"><em>No.</em></td>
-            <td style="text-align:center; font-size:10px; border:1px solid #555;" colspan="2"
-                th:text="${slip.setnum != null and !#strings.isEmpty(slip.setnum) ? slip.setnum : slip.spnum}"></td>
-          </tr>
-
-          <!-- 과목: 관(accnm) + 발의 -->
-          <tr>
-            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
-                       letter-spacing:4px; font-size:10px; width:10mm;
-                       border:1px solid #555; padding:4px 2px;"
-                rowspan="3">과<br/>목</td>
-            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">관</td>
-            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;"
-                th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].accnm : ''}"></td>
-            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">발&#160;의</td>
-            <td style="text-align:center; font-size:10px; border:1px solid #555;
-                       padding:4px 6px;" colspan="2">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
-              <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
-            </td>
-          </tr>
-
-          <!-- 과목: 항(it1nm) + 수입 -->
-          <tr>
-            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">항</td>
-            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;"
-                th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it1nm : ''}"></td>
-            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">수&#160;입</td>
-            <td style="text-align:center; font-size:10px; border:1px solid #555;
-                       padding:4px 6px;" colspan="2"
-                th:text="${slip.tiosec == '1' ? #strings.substring(slip.spdate, 0, 4) + ' 년 세입부' : ''}"></td>
-          </tr>
-
-          <!-- 과목: 목(it2nm) + 기장 -->
-          <tr>
-            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">목</td>
-            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;"
-                th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it2nm : ''}"></td>
-            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">기&#160;장</td>
-            <td style="text-align:center; font-size:10px; border:1px solid #555;
-                       padding:4px 6px;" colspan="2">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
-              <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
-            </td>
-          </tr>
-
-          <!-- 일금 -->
-          <tr>
-            <td style="font-size:11px; font-weight:bold; padding:5px 10px;
-                       border:1px solid #555;" colspan="3">
-              일&#160;금&#160;&#160;
-              <span th:text="${slip.amtKorean != null ? slip.amtKorean : ''}"></span>
-              &#160;&#160;원정
-            </td>
-            <td style="text-align:right; font-size:11px; font-weight:bold;
-                       padding:5px 10px; border:1px solid #555;" colspan="3">
-              (&#160;<span th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></span>&#160;)
-            </td>
-          </tr>
-
-          <!-- 내역 -->
-          <tr>
-            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
-                       letter-spacing:8px; font-size:10px; width:10mm;
-                       border:1px solid #555; padding:4px 2px;">내<br/>역</td>
-            <td style="vertical-align:top; padding:7px 8px; font-size:10px;
-                       line-height:1.7; white-space:pre-wrap; min-height:55mm;
-                       border:1px solid #555;" colspan="5"><span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
-              <br/>- 이 하 여 백 -
-            </td>
-          </tr>
-
-          <!-- 비고 -->
-          <tr>
-            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
-                       letter-spacing:8px; font-size:10px; width:10mm;
-                       border:1px solid #555; padding:4px 2px; min-height:18mm;">비<br/>고</td>
-            <td style="min-height:18mm; border:1px solid #555;" colspan="5"></td>
-          </tr>
-
-        </table>
-
-        <!-- 기관명 -->
-        <div style="text-align:center; font-size:12px; font-weight:700;
-                    margin-top:6px; letter-spacing:2px;"
-             th:text="${slip.spjangnm}"></div>
-
+  <!-- 전표 복사: 새 일자 입력 팝업 -->
+  <script id="copyDateTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup">
+      <section class="section" style="padding:20px;">
+        <p style="margin:0 0 12px; font-size:13px; color:#555;">
+          선택한 전표(<span id="copyTargetSpnum"></span>)를 아래 일자로 복사합니다.
+        </p>
+        <dl style="display:flex; align-items:center; gap:10px;">
+          <dt><label for="copyNewSpdate" style="white-space:nowrap;">새 전표일자</label></dt>
+          <dd>
+            <input type="date" id="copyNewSpdate" name="copyNewSpdate" style="width:200px;"/>
+          </dd>
+        </dl>
+      </section>
+      <div class="popup-button">
+        <button type="button" class="btn-popup" id="btnCopyConfirm"><span>복사</span></button>
+        <button type="button" class="btn-popup" id="btnCopyCancel"><span>닫기</span></button>
       </div>
-    </th:block>
+    </div>
+  </script>
 
-    <!-- ════════════════════════════════════════════════════════
-         printType 5 : 결의양식3 (세출입결의서) (table 기반)
-         ════════════════════════════════════════════════════════ -->
-    <th:block th:if="${printType == '5'}">
-      <div class="doc-page">
-
-        <!-- 결재란 상단 -->
-        <table style="border-collapse:collapse; margin-bottom:8px;">
-          <tr>
-            <th:block th:each="apv, apvStat : ${approverList}">
-              <td style="border:1px solid #333; text-align:center; padding:0; width:100px;">
-                <div style="background:#f0f0f0; border-bottom:1px solid #333;
-              padding:3px 14px; font-size:10px; font-weight:700;"
-                     th:text="${apv.name}"></div>
-                <div class="apv-mark" style="height:16mm; width:100px;" th:classappend="${apv.cro} ? 'apv-cro'"><span class="apv-jun" th:if="${apv.jun}">전결</span></div>
-              </td>
-            </th:block>
-          </tr>
-        </table>
-
-        <!-- ════ 메인 테이블 ════ -->
-        <table style="width:100%; border-collapse:collapse; border:1.5px solid #333;">
-
-          <!-- 제목 + 재원 -->
-          <tr>
-            <td style="font-size:17px; font-weight:bold; letter-spacing:5px; text-align:center;
-                       padding:6px 10px; border:1px solid #555;" colspan="4">
-              지 출 결 의 서
-            </td>
-            <td style="text-align:center; font-size:10px; width:12mm; border:1px solid #555;">
-              재&#160;원
-            </td>
-            <td style="text-align:center; font-size:10px; font-weight:700; border:1px solid #555;"
-                th:text="${slip.mssec != null ? slip.mssec : '자체'}"></td>
-          </tr>
-
-          <!-- 년도 세출/세입부 + No -->
-          <tr>
-            <td style="text-align:center; font-size:11px; font-weight:700;
-                       border:1px solid #555; padding:4px 6px;" colspan="4"
-                th:text="${slip.tiosec == '1'
-                      ? #strings.substring(slip.spdate,0,4) + ' 년도 세 입 부'
-                      : #strings.substring(slip.spdate,0,4) + ' 년도 세 출 부'}"></td>
-            <td style="text-align:center; font-style:italic; font-size:10px;
-                       border:1px solid #555;"><em>No.</em></td>
-            <td style="text-align:center; font-size:10px; border:1px solid #555;"
-                th:text="${slip.setnum != null and !#strings.isEmpty(slip.setnum) ? slip.setnum : slip.spnum}"></td>
-          </tr>
-
-          <!-- 과목: 관(accnm) + 기장 -->
-          <tr>
-            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
-                       letter-spacing:4px; font-size:10px; width:10mm;
-                       border:1px solid #555; padding:4px 2px;"
-                rowspan="2">과<br/>목</td>
-            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">관</td>
-            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;" colspan="2"
-                th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].accnm : ''}"></td>
-            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">기&#160;장</td>
-            <td style="text-align:center; font-size:10px; border:1px solid #555; padding:4px 6px;">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
-              <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
-            </td>
-          </tr>
-
-          <!-- 과목: 항(it1nm) + 작성 -->
-          <tr>
-            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">항</td>
-            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;" colspan="2"
-                th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it1nm : ''}"></td>
-            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">작&#160;성</td>
-            <td style="text-align:center; font-size:10px; border:1px solid #555; padding:4px 6px;">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
-              <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
-            </td>
-          </tr>
-
-          <!-- 제목 -->
-          <tr>
-            <td style="text-align:center; font-size:10px; font-weight:700; background:#f5f5f5;
-                       width:12mm; border:1px solid #555; padding:4px 2px;">제&#160;&#160;목</td>
-            <td style="text-align:left; padding:4px 8px; font-size:10px;
-                       border:1px solid #555;" colspan="5"
-                th:text="${slip.subject != null ? slip.subject : ''}"></td>
-          </tr>
-
-          <!-- 일금 -->
-          <tr>
-            <td style="text-align:center; font-size:10px; font-weight:700; background:#f5f5f5;
-                       border:1px solid #555; padding:4px 2px;">일&#160;&#160;금</td>
-            <td style="font-size:11px; font-weight:bold; padding:5px 10px;
-                       border:1px solid #555;" colspan="5">
-              <span th:text="${slip.amtKorean != null ? slip.amtKorean : ''}"></span>
-              &#160;원정&#160;&#160;
-              (&#160;<span th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></span>&#160;원)
-            </td>
-          </tr>
-
-          <!-- 비고(적요) -->
-          <tr>
-            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
-                       letter-spacing:4px; font-size:10px; width:10mm;
-                       border:1px solid #555; padding:4px 2px;">비<br/>고</td>
-            <td style="vertical-align:top; padding:7px 8px; font-size:10px;
-                       line-height:1.7; white-space:pre-wrap; min-height:40mm;
-                       border:1px solid #555;" colspan="5"><span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
-              <br/>- 이 하 여 백 -
-            </td>
-          </tr>
-
-        </table>
-
-        <!-- 아래와 같이 지급 문구 -->
-        <div style="font-size:10px; margin:8px 0 4px;">
-          아래와 같이 지급하고자 하오니 재가하여 주시기 바랍니다.
+  <!-- 거래처 신규 등록 팝업 -->
+  <script id="cltRegTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup cr-pop">
+      <section class="section">
+        <div class="cr-note">코드는 자동으로 매겨집니다.</div>
+        <div class="fld">
+          <label class="k" for="regClttype">구분 <em>*</em></label>
+          <select id="regClttype">
+            <option value="3" selected>공통</option>
+            <option value="1">매입처</option>
+            <option value="2">매출처</option>
+          </select>
         </div>
-
-        <!-- 명세 테이블 -->
-        <table style="width:100%; border-collapse:collapse; font-size:10px;">
-          <thead>
-          <tr style="background:#f0f0f0;">
-            <th style="border:1px solid #555; padding:4px; text-align:center; width:12mm;">재&#160;원</th>
-            <th style="border:1px solid #555; padding:4px; text-align:center; width:20mm;">항&#160;&#160;목</th>
-            <th style="border:1px solid #555; padding:4px; text-align:center;">내&#160;&#160;역</th>
-            <th style="border:1px solid #555; padding:4px; text-align:center; width:22mm;">금&#160;&#160;액</th>
-            <th style="border:1px solid #555; padding:4px; text-align:center; width:20mm;">지&#160;급&#160;처</th>
-            <th style="border:1px solid #555; padding:4px; text-align:center; width:18mm;">결제방법</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr th:each="entry : ${slip.debit}">
-            <td style="border:1px solid #555; padding:4px; text-align:center;"
-                th:text="${slip.mssec != null ? slip.mssec : ''}"></td>
-            <td style="border:1px solid #555; padding:4px; text-align:center;"
-                th:text="${entry.it2nm != null ? entry.it2nm : ''}"></td>
-            <td style="border:1px solid #555; padding:4px; white-space:pre-line;"
-                th:text="${entry.summy != null ? entry.summy : ''}"></td>
-            <td style="border:1px solid #555; padding:4px; text-align:right;"
-                th:text="${#numbers.formatInteger(slip.tiosec == '1' ? entry.cramt : entry.dramt, 1, 'COMMA')}"></td>
-            <td style="border:1px solid #555; padding:4px; text-align:center;"
-                th:text="${entry.cltnm != null ? entry.cltnm : ''}"></td>
-            <td style="border:1px solid #555; padding:4px; text-align:center;"
-                th:text="${slip.cardnm != null and !#strings.isEmpty(slip.cardnm)
-                            ? slip.cardnm : (slip.banknm != null ? slip.banknm : '')}"></td>
-          </tr>
-          <!-- 계 행 -->
-          <tr>
-            <td colspan="3" style="border:1px solid #555; padding:4px;
-                                     text-align:center; font-weight:700;">계</td>
-            <td style="border:1px solid #555; padding:4px; text-align:right; font-weight:700;"
-                th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></td>
-            <td colspan="2" style="border:1px solid #555;"></td>
-          </tr>
-          </tbody>
-        </table>
-
-        <!-- 기관명 -->
-        <div style="text-align:center; font-size:15px; font-weight:700;
-                    margin-top:10px; letter-spacing:2px;"
-             th:text="${slip.spjangnm}"></div>
-
-      </div>
-    </th:block>
-
-    <!-- ════════════════════════════════════════════════════════
-           printType 6 : 대체결의서 (table 기반)
-           ════════════════════════════════════════════════════════ -->
-    <th:block th:if="${printType == '6'}">
-      <div class="doc-page">
-
-        <!-- 결재란 상단 -->
-        <table style="border-collapse:collapse; margin-bottom:8px;">
-          <tr>
-            <th:block th:each="apv, apvStat : ${approverList}">
-              <td style="border:1px solid #333; text-align:center; padding:0; width:100px;">
-                <div style="background:#f0f0f0; border-bottom:1px solid #333;
-              padding:3px 14px; font-size:10px; font-weight:700;"
-                     th:text="${apv.name}"></div>
-                <div class="apv-mark" style="height:16mm; width:100px;" th:classappend="${apv.cro} ? 'apv-cro'"><span class="apv-jun" th:if="${apv.jun}">전결</span></div>
-              </td>
-            </th:block>
-          </tr>
-        </table>
-
-        <!-- ════ 메인 테이블 ════ -->
-        <table style="width:100%; border-collapse:collapse; border:1.5px solid #333;">
-
-          <!-- 제목 + 재원 -->
-          <tr>
-            <td style="font-size:17px; font-weight:bold; letter-spacing:5px; text-align:center;
-                       padding:6px 10px; border:1px solid #555;" colspan="4">
-              지 출 결 의 서
-            </td>
-            <td style="text-align:center; font-size:10px; width:12mm; border:1px solid #555;">
-              재&#160;원
-            </td>
-            <td style="text-align:center; font-size:10px; font-weight:700; border:1px solid #555;"
-                th:text="${slip.mssec != null ? slip.mssec : '자체'}"></td>
-          </tr>
-
-          <!-- 년도 세출/세입부 + No -->
-          <tr>
-            <td style="text-align:center; font-size:11px; font-weight:700;
-                       border:1px solid #555; padding:4px 6px;" colspan="4"
-                th:text="${slip.tiosec == '1'
-                      ? #strings.substring(slip.spdate,0,4) + ' 년도 세 입 부'
-                      : #strings.substring(slip.spdate,0,4) + ' 년도 세 출 부'}"></td>
-            <td style="text-align:center; font-style:italic; font-size:10px;
-                       border:1px solid #555;"><em>No.</em></td>
-            <td style="text-align:center; font-size:10px; border:1px solid #555;"
-                th:text="${slip.setnum != null and !#strings.isEmpty(slip.setnum) ? slip.setnum : slip.spnum}"></td>
-          </tr>
-
-          <!-- 과목: 관(accnm) + 기장 -->
-          <tr>
-            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
-                       letter-spacing:4px; font-size:10px; width:10mm;
-                       border:1px solid #555; padding:4px 2px;"
-                rowspan="2">과<br/>목</td>
-            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">관</td>
-            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;" colspan="2"
-                th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].accnm : ''}"></td>
-            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">기&#160;장</td>
-            <td style="text-align:center; font-size:10px; border:1px solid #555; padding:4px 6px;">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
-              <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
-            </td>
-          </tr>
-
-          <!-- 과목: 항(it1nm) + 작성 -->
-          <tr>
-            <td style="text-align:center; width:10mm; font-size:10px; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">항</td>
-            <td style="font-size:10px; border:1px solid #555; padding:4px 6px;" colspan="2"
-                th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it1nm : ''}"></td>
-            <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">작&#160;성</td>
-            <td style="text-align:center; font-size:10px; border:1px solid #555; padding:4px 6px;">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
-              <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
-            </td>
-          </tr>
-
-          <!-- 제목 -->
-          <tr>
-            <td style="text-align:center; font-size:10px; font-weight:700; background:#f5f5f5;
-                       width:12mm; border:1px solid #555; padding:4px 2px;">제&#160;&#160;목</td>
-            <td style="text-align:left; padding:4px 8px; font-size:10px;
-                       border:1px solid #555;" colspan="5"
-                th:text="${slip.subject != null ? slip.subject : ''}"></td>
-          </tr>
-
-          <!-- 일금 -->
-          <tr>
-            <td style="text-align:center; font-size:10px; font-weight:700; background:#f5f5f5;
-                       border:1px solid #555; padding:4px 2px;">일&#160;&#160;금</td>
-            <td style="font-size:11px; font-weight:bold; padding:5px 10px;
-                       border:1px solid #555;" colspan="5">
-              <span th:text="${slip.amtKorean != null ? slip.amtKorean : ''}"></span>
-              &#160;원정&#160;&#160;
-              (&#160;<span th:text="${#numbers.formatInteger(slip.amt, 1, 'COMMA')}"></span>&#160;원)
-            </td>
-          </tr>
-
-          <!-- 비고(적요) -->
-          <tr>
-            <td style="text-align:center; writing-mode:vertical-lr; text-orientation:upright;
-                       letter-spacing:4px; font-size:10px; width:10mm;
-                       border:1px solid #555; padding:4px 2px;">비<br/>고</td>
-            <td style="vertical-align:top; padding:7px 8px; font-size:10px;
-                       line-height:1.7; white-space:pre-wrap; min-height:40mm;
-                       border:1px solid #555;" colspan="5"><span th:text="${slip.remark != null and !#strings.isEmpty(slip.remark) ? slip.remark : ''}"></span>
-              <br/>- 이 하 여 백 -
-            </td>
-          </tr>
-
-        </table>
-
-        <!-- 아래와 같이 지급 문구 -->
-        <div style="font-size:10px; margin:8px 0 4px;">
-          아래와 같이 지급하고자 하오니 재가하여 주시기 바랍니다.
+        <div class="fld">
+          <label class="k" for="regCltnm">거래처명 <em>*</em></label>
+          <input type="text" id="regCltnm" maxlength="40" placeholder="상호"/>
         </div>
-
-        <!-- 명세 테이블 -->
-        <table style="width:100%; border-collapse:collapse; font-size:10px;">
-          <thead>
-          <tr style="background:#f0f0f0;">
-            <th style="border:1px solid #555; padding:4px; text-align:center; width:12mm;">재&#160;원</th>
-            <th style="border:1px solid #555; padding:4px; text-align:center; width:20mm;">항&#160;&#160;목</th>
-            <th style="border:1px solid #555; padding:4px; text-align:center;">내&#160;&#160;역</th>
-            <th style="border:1px solid #555; padding:4px; text-align:center; width:22mm;">금&#160;&#160;액</th>
-            <th style="border:1px solid #555; padding:4px; text-align:center; width:20mm;">지&#160;급&#160;처</th>
-            <th style="border:1px solid #555; padding:4px; text-align:center; width:18mm;">결제방법</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr th:each="entry : ${slip.debit}">
-            <td style="border:1px solid #555; padding:4px; text-align:center;"
-                th:text="${slip.mssec != null ? slip.mssec : ''}"></td>
-            <td style="border:1px solid #555; padding:4px; text-align:center;"
-                th:text="${entry.it2nm != null ? entry.it2nm : ''}"></td>
-            <td style="border:1px solid #555; padding:4px; white-space:pre-line;"
-                th:text="${entry.summy != null ? entry.summy : ''}"></td>
-            <!-- 금액: dramt가 0이면 cramt 표시 -->
-            <td style="border:1px solid #555; padding:4px; text-align:right;"
-                th:if="${entry.dramt != null and entry.dramt != 0}"
-                th:text="${#numbers.formatInteger(entry.dramt, 1, 'COMMA')}"></td>
-            <td style="border:1px solid #555; padding:4px; text-align:right;"
-                th:unless="${entry.dramt != null and entry.dramt != 0}"
-                th:text="${#numbers.formatInteger(entry.cramt, 1, 'COMMA')}"></td>
-            <td style="border:1px solid #555; padding:4px; text-align:center;"
-                th:text="${entry.cltnm != null ? entry.cltnm : ''}"></td>
-            <td style="border:1px solid #555; padding:4px; text-align:center;"
-                th:text="${slip.cardnm != null and !#strings.isEmpty(slip.cardnm)
-                            ? slip.cardnm : (slip.banknm != null ? slip.banknm : '')}"></td>
-          </tr>
-          <!-- 계 행 -->
-          <tr>
-            <td colspan="3" style="border:1px solid #555; padding:4px;
-                                     text-align:center; font-weight:700;">계</td>
-            <td style="border:1px solid #555; padding:4px; text-align:right; font-weight:700;"
-                th:if="${slip.debit[0].dramt != null and slip.debit[0].dramt != 0}"
-                th:text="${#numbers.formatInteger(slip.debit[0].dramt, 1, 'COMMA')}"></td>
-            <td style="border:1px solid #555; padding:4px; text-align:right; font-weight:700;"
-                th:unless="${slip.debit[0].dramt != null and slip.debit[0].dramt != 0}"
-                th:text="${#numbers.formatInteger(slip.debit[0].cramt, 1, 'COMMA')}"></td>
-            <td colspan="2" style="border:1px solid #555;"></td>
-          </tr>
-          </tbody>
-        </table>
-
-        <!-- 기관명 -->
-        <div th:if="${slip.spjangnm != null}"
-             style="text-align:center; font-size:12px; font-weight:700;
-                    margin-top:6px; letter-spacing:2px;"
-             th:text="${slip.spjangnm}"></div>
-
+        <div class="fld">
+          <label class="k" for="regSaupnum">사업자번호 <span class="opt">(선택)</span></label>
+          <input type="text" id="regSaupnum" maxlength="12" placeholder="숫자 10자리"/>
+          <div class="hint">입력하면 이미 등록된 번호인지 확인합니다.</div>
+        </div>
+        <div class="fld">
+          <label class="k" for="regPrenm">대표자 <span class="opt">(선택)</span></label>
+          <input type="text" id="regPrenm" maxlength="30"/>
+        </div>
+      </section>
+      <div class="popup-button">
+        <button type="button" class="btn-popup" id="btnCltRegCancel"><span>닫기</span></button>
+        <button type="button" class="btn-popup solid" id="btnCltRegSave"><span>등록</span></button>
       </div>
-    </th:block>
+    </div>
+  </script>
 
-  </th:block><!-- /slipList each -->
-</div>
+  <!-- 전표일자 변경 팝업 -->
+  <script id="spdateChangeTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup">
+      <section class="section" style="padding:20px;">
+        <p style="margin:0 0 12px; font-size:13px; color:#555;">
+          전표번호 <span id="chgTargetSpnum"></span> 의 전표일자를 변경합니다.
+        </p>
+        <dl style="display:flex; align-items:center; gap:10px;">
+          <dt><label for="chgNewSpdate" style="white-space:nowrap;">전표일자</label></dt>
+          <dd>
+            <input type="date" id="chgNewSpdate" name="chgNewSpdate" style="width:200px;"/>
+          </dd>
+        </dl>
+        <p style="margin:12px 0 0; font-size:12px; color:#888;">
+          해당 일자에 같은 전표번호가 이미 있으면 번호가 자동으로 재채번됩니다.
+        </p>
+      </section>
+      <div class="popup-button">
+        <button type="button" class="btn-popup" id="btnSpdateConfirm"><span>변경</span></button>
+        <button type="button" class="btn-popup" id="btnSpdateCancel"><span>닫기</span></button>
+      </div>
+    </div>
+  </script>
 
-</body>
-</html>
+  <!-- 전표번호 변경 팝업 -->
+  <script id="spnumChangeTemplate" type="text/x-tmpl">
+    <div class="content_wrap popup">
+      <section class="section">
+        <div id="SpnumGrid" style="height:350px; display:block;"></div>
+      </section>
+    </div>
+  </script>
+
+</th:block>
+<th:block layout:fragment="scripts">
+  <th:block th:replace="common/ax5_uploader :: ax5_uploader"></th:block>
+  <th:block th:replace="common/popup_company.html :: popup_company"></th:block>
+  <th:block th:replace="common/popup_account :: popup_account" />
+  <script th:src="@{/js/cycle/AccountInputHandler.js}"></script>
+  <th:block th:replace="common/popup_card :: popup_card" />
+  <script th:src="@{/js/cycle/CardInputHandler.js}"></script>
+  <script type="text/javascript">
+   // 분개 라인 한 건의 필드 ↔ 하단 입력칸 id
+   const LINE_FIELD_IDS = {
+    acccd: 'pnl_acccd',
+    accnm: 'pnl_accnm',
+    acnflag: 'pnl_acnflag',
+    acccltflag: 'pnl_acccltflag',
+    drcr: 'pnl_drcr',
+    it1cd: 'pnl_it1cd',
+    it1nm: 'pnl_it1nm',
+    it2cd: 'pnl_it2cd',
+    it2nm: 'pnl_it2nm',
+    msseccd: 'pnl_msseccd',
+    mssecnm: 'pnl_mssecnm',
+    summy: 'pnl_summy',
+    cltcd: 'pnl_cltcd',
+    cltflag: 'pnl_cltflag',
+    cltnm: 'pnl_cltnm',
+    cardcd: 'pnl_cardcd',
+    cardnum: 'pnl_cardnum',
+    cardnm: 'pnl_cardnmdisp',
+    bankcd: 'pnl_bankcd',
+    accnum: 'pnl_banknum',
+    banknm: 'pnl_banknmdisp',
+   };
+
+   const escHtml = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+    c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+   const toNum = v => parseFloat(String(v == null ? '' : v).replace(/,/g, '')) || 0;
+
+   class SlipStatusPage {
+    constructor() {
+     this.url = '/api/account_management/slip_status';
+     this.entry_url = '/api/account_management/slip_entry'
+     this.grid = null;
+     this.viewData = new wijmo.collections.CollectionView();
+     this.uploader = null;
+     this.currentSlipId = null;
+     this.mssecOptions = null;
+     this.lines = [];      // 분개 라인 데이터 (화면 목록은 이 배열을 그리기만 한다)
+     this.sel = -1;        // 선택된 라인 index
+     this.init();
+    }
+
+    init() {
+     let _this = this;
+
+     _this.initLineEditor();
+     _this.resetLines();
+
+     _this.grid = new wijmo.grid.FlexGrid('#theGrid_slip_list', {
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      showMarquee: true,
+      allowSorting: 'MultiColumn',
+      selectionMode: wijmo.grid.SelectionMode.Cell,
+      isReadOnly: false,
+      imeEnabled: true,
+      frozenColumns: 2,
+      formatItem: (s, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+        e.cell.style.textAlign = 'center';
+       }
+       if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+        const col = s.columns[e.col];
+        if (col.binding === 'tiosec') {
+         const val = e.cell.textContent.trim();
+         if (val === '세입') {
+          e.cell.style.color = 'red';
+         } else if (val === '세출') {
+          e.cell.style.color = 'black';
+         } else if (val === '대체') {
+          e.cell.style.color = 'green';
+         } else {
+          e.cell.style.color = '';
+         }
+        } else {
+         e.cell.style.color = '';
+        }
+       }
+      },
+      columns: [
+       {
+        binding: 'selected',
+        header: '인쇄',
+        width: 50,
+        align: 'center',
+        dataType: wijmo.DataType.Boolean,
+        isReadOnly: false
+       },
+       {binding: 'setnum', header: '관리번호', width: 100, align: 'center', visible: false, isReadOnly: true},
+       {binding: 'spdate', header: '전표일자', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'spnum', header: '전표번호', width: 80, align: 'center', isReadOnly: true},
+       {binding: 'tiosec', header: '구분', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'amt', header: '금액', width: 150, align: 'right', format: 'n0', isReadOnly: true},
+       {binding: 'it2nm', header: '목', width: 120, align: 'center', isReadOnly: true},
+       {binding: 'subject', header: '제목', width: 300, align: 'left', isReadOnly: true},
+       {binding: 'businm', header: '사업명', width: 250, align: 'left', isReadOnly: true},
+       {binding: 'buiscd_cnt', header: '회차', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'fixflag', header: '확정', width: 80, align: 'center', isReadOnly: true},
+       {binding: 'mssec', header: '재원', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'appgubun', header: '결재상태', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'apppernm', header: '작성자', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'spoccu', header: '증빙구분', width: 100, align: 'center', isReadOnly: true},
+       {binding: 'banknm', header: '은행', width: 200, align: 'center', isReadOnly: true},
+       {binding: 'cltnm', header: '거래처', width: 150, align: 'center', isReadOnly: true},
+       {binding: 'cardnm', header: '카드', width: 150, align: 'center', isReadOnly: true},
+      ],
+      itemsSource: this.viewData,
+     });
+     new FlexGridContextMenu(this.grid);
+     _this.grid.downloadFileName = '전표내역';
+
+     _this.grid.columnFooters.rows.push(new wijmo.grid.GroupRow());
+
+     const apvDtColIndex = _this.grid.columns.findIndex(c => c.binding === 'spdate');
+     if (apvDtColIndex > -1) {
+      _this.grid.columnFooters.setCellData(0, apvDtColIndex, '합계');
+     }
+
+     const buySumCol = _this.grid.columns.getColumn('amt');
+     if (buySumCol) {
+      buySumCol.aggregate = wijmo.Aggregate.Sum;
+     }
+
+     // ── 그리드 더블클릭 → 전표 등록 탭으로 이동 + 데이터 바인딩 ──
+     _this.grid.hostElement.addEventListener('dblclick', function () {
+      const items = _this.grid.selectedItems;
+      if (!items || items.length === 0) return;
+
+      const selected = items[0];
+      $('a[href="#tab2"]').trigger('click');
+      setTimeout(() => {
+       _this.bindToTab2Form(selected);
+      }, 100);
+     });
+    }//init
+
+    // ════════════════════════════════════════════════════════
+    //  분개 라인 : 데이터 / 목록 / 하단 입력 영역
+    // ════════════════════════════════════════════════════════
+
+    emptyLine(drcr = '1') {
+     return {
+      spseq: '', acccd: '', accnm: '', acnflag: '', acccltflag: '', drcr: drcr,
+      it1cd: '', it1nm: '', it2cd: '', it2nm: '',
+      msseccd: '', mssecnm: '', summy: '',
+      dramt: 0, cramt: 0,
+      cltcd: '', cltflag: '', cltnm: '',
+      cardcd: '', cardnum: '', cardnm: '',
+      bankcd: '', accnum: '', banknm: '',
+     };
+    }
+
+    // 차변 → 대변 순으로 정렬 (같은 차대 안에서는 입력 순서 유지). 원본 전표처럼 대변이 아래로 모인다.
+    sortLinesByDrcr() {
+     this.lines = this.lines
+     .map((l, i) => ({l: l, i: i}))
+     .sort((a, b) => ((a.l.drcr === '2') - (b.l.drcr === '2')) || (a.i - b.i))
+     .map(x => x.l);
+    }
+
+    resetLines() {
+     this.lines = [this.emptyLine('1'), this.emptyLine('2')];
+     this.sel = -1;
+     this.renderLines();
+     this.selectLine(0, false);
+     this.calcSum();
+    }
+
+    // 목록 한 행 HTML
+    rowHtml(l, i) {
+     const isCr = l.drcr === '2';
+     const fmt = n => (n ? Number(n).toLocaleString() : '0');
+
+     // 산출내역: 목록에는 첫 줄만, 여러 줄이면 … 표시. 전체는 마우스 오버로 본다.
+     const summyLines = String(l.summy || '').split(/\r?\n/);
+     const summyShow = summyLines[0] + (summyLines.length > 1 ? ' …' : '');
+
+     // 거래처·카드·계좌 요약
+     const parts = [];
+     if (l.cltnm) parts.push(l.cltnm);
+     if (l.cardnm || l.cardnum) parts.push(((l.cardnm || '') + ' ' + (l.cardnum || '')).trim());
+     if (l.banknm || l.accnum) parts.push(((l.banknm || '') + ' ' + (l.accnum || '')).trim());
+     const needBank = l.acnflag === '1' && !l.bankcd;
+     const detail = needBank ? '계좌 필수' : parts.join(' · ');
+
+     return `<tr class="${isCr ? 'cr' : 'dr'}${i === this.sel ? ' sel' : ''}" data-idx="${i}">`
+      + `<td class="c">${escHtml(l.acccd)}</td>`
+      + `<td title="${escHtml(l.accnm)}">${escHtml(l.accnm)}</td>`
+      + `<td class="c drcr">${isCr ? '대변' : '차변'}</td>`
+      + `<td title="${escHtml(l.it1nm)}">${escHtml(l.it1nm)}</td>`
+      + `<td title="${escHtml(l.it2nm)}">${escHtml(l.it2nm)}</td>`
+      + `<td title="${escHtml(l.summy)}">${escHtml(summyShow)}</td>`
+      + `<td class="c">${escHtml(l.mssecnm)}</td>`
+      + `<td class="r${l.dramt ? '' : ' zero'}">${fmt(l.dramt)}</td>`
+      + `<td class="r${l.cramt ? '' : ' zero'}">${fmt(l.cramt)}</td>`
+      + `<td class="${needBank ? 'warn' : ''}" title="${escHtml(parts.join(' · '))}">${escHtml(detail)}</td>`
+      + `</tr>`;
+    }
+
+    renderLines() {
+     $('#slipLineTbody').html(this.lines.map((l, i) => this.rowHtml(l, i)).join(''));
+    }
+
+    renderRow(i) {
+     const $tr = $(`#slipLineTbody tr[data-idx="${i}"]`);
+     if ($tr.length) $tr.replaceWith(this.rowHtml(this.lines[i], i));
+    }
+
+    // 행 선택 → 하단 입력 영역에 표시
+    selectLine(i, focus = true) {
+     if (i < 0 || i >= this.lines.length) return;
+     this.sel = i;
+     const $rows = $('#slipLineTbody tr');
+     $rows.removeClass('sel');
+     const $tr = $rows.filter(`[data-idx="${i}"]`).addClass('sel');
+     if ($tr.length) $tr[0].scrollIntoView({block: 'nearest'});
+
+     this.loadPanel();
+     if (focus) {
+      setTimeout(() => $('#pnl_accnm').focus().select(), 30);
+     }
+    }
+
+    loadPanel() {
+     const l = this.lines[this.sel];
+     if (!l) return;
+     Object.keys(LINE_FIELD_IDS).forEach(k => {
+      $('#' + LINE_FIELD_IDS[k]).val(l[k] == null ? '' : l[k]);
+     });
+     $('#pnl_dramt').val(l.dramt ? Number(l.dramt).toLocaleString() : '0');
+     $('#pnl_cramt').val(l.cramt ? Number(l.cramt).toLocaleString() : '0');
+     this.applyPanelDrcr();
+     this.refreshPanelHead();
+     this.fitDetailDisp();
+    }
+
+    refreshPanelHead() {
+     const l = this.lines[this.sel];
+     if (!l) return;
+     const isCr = l.drcr === '2';
+     $('#lpTitle').text(`${this.sel + 1}행 입력 (${isCr ? '대변' : '차변'})`);
+     $('#linePanel').toggleClass('is-credit', isCr);
+
+     const isBankReq = l.acnflag === '1';
+     $('#lblBank').toggleClass('req', isBankReq).text(isBankReq ? '계좌 (필수)' : '계좌');
+    }
+
+    // 차대 선택에 따라 반대쪽 금액칸을 잠근다
+    applyPanelDrcr() {
+     const isCr = $('#pnl_drcr').val() === '2';
+     const $dr = $('#pnl_dramt');
+     const $cr = $('#pnl_cramt');
+     if (isCr) {
+      $cr.prop('readonly', false);
+      $dr.prop('readonly', true).val('0');
+     } else {
+      $dr.prop('readonly', false);
+      $cr.prop('readonly', true).val('0');
+     }
+    }
+
+    // 하단 입력 영역 → 선택 라인 데이터 반영
+    syncPanel() {
+     const l = this.lines[this.sel];
+     if (!l) return;
+     Object.keys(LINE_FIELD_IDS).forEach(k => {
+      l[k] = $('#' + LINE_FIELD_IDS[k]).val() || '';
+     });
+     l.dramt = toNum($('#pnl_dramt').val());
+     l.cramt = toNum($('#pnl_cramt').val());
+     this.renderRow(this.sel);
+     this.refreshPanelHead();
+     this.fitDetailDisp();
+     this.calcSum();
+    }
+
+    activeAmountInput() {
+     return $('#pnl_drcr').val() === '2' ? $('#pnl_cramt') : $('#pnl_dramt');
+    }
+
+    addLine(drcr = '1', copyPrev = false) {
+     const l = this.emptyLine(drcr);
+     // 차변은 대변보다 위에 넣는다 (첫 대변 행 바로 앞). 대변은 맨 아래.
+     const firstCr = this.lines.findIndex(x => x.drcr === '2');
+     const at = (drcr !== '2' && firstCr >= 0) ? firstCr : this.lines.length;
+     if (copyPrev && this.lines.length) {
+      // 바로 위 행(같은 쪽의 마지막 행)의 항 · 목 · 재원을 이어받는다
+      const prev = this.lines[at > 0 ? at - 1 : 0];
+      ['it1cd', 'it1nm', 'it2cd', 'it2nm', 'msseccd', 'mssecnm'].forEach(k => l[k] = prev[k] || '');
+     }
+     this.lines.splice(at, 0, l);
+     this.sel = -1;
+     this.renderLines();
+     this.selectLine(at, true);
+    }
+
+    deleteLine() {
+     if (this.sel < 0) return;
+     if (this.lines.length <= 2) {
+      // 최소 두 줄(차변·대변)은 남기고 내용만 비운다
+      this.lines[this.sel] = this.emptyLine(this.lines[this.sel].drcr);
+      this.renderRow(this.sel);
+      this.selectLine(this.sel, false);
+     } else {
+      this.lines.splice(this.sel, 1);
+      const next = Math.min(this.sel, this.lines.length - 1);
+      this.sel = -1;
+      this.renderLines();
+      this.selectLine(next, false);
+     }
+     this.calcSum();
+    }
+
+    // 다음 행으로 (없으면 새 행 추가)
+    goNextLine() {
+     this.syncPanel();
+     const next = this.sel + 1;
+     if (next < this.lines.length) {
+      this.copyItemFields(this.sel, next);
+      this.renderRow(next);
+      this.selectLine(next, true);
+     } else {
+      this.addLine('1', true);
+     }
+    }
+
+    // 앞 행 → 대상 행으로 항/목/재원 복사 (대상이 비어 있을 때만)
+    copyItemFields(fromIdx, toIdx) {
+     const from = this.lines[fromIdx];
+     const to = this.lines[toIdx];
+     if (!from || !to) return;
+     [
+      {disp: 'it1nm', code: 'it1cd'},
+      {disp: 'it2nm', code: 'it2cd'},
+      {disp: 'mssecnm', code: 'msseccd'},
+     ].forEach(({disp, code}) => {
+      if ((to[disp] || '').trim() !== '') return;
+      to[disp] = from[disp] || '';
+      to[code] = from[code] || '';
+     });
+    }
+
+    focusAfterCard() {
+     if ($('#pnl_acnflag').val() === '1') {
+      setTimeout(() => $('#pnl_banknum').focus().select(), 50);
+     } else {
+      this.goNextLine();
+     }
+    }
+
+    // 카드명·은행명 표시칸 폭을 글자 길이에 맞춘다 (90px ~ 220px)
+    fitDispWidth(el) {
+     if (!el) return;
+     const text = el.value || '';
+     el.title = text;
+     if (!text) {
+      el.style.setProperty('width', '90px', 'important');
+      return;
+     }
+
+     if (!this._measureCtx) {
+      this._measureCtx = document.createElement('canvas').getContext('2d');
+     }
+     const cs = getComputedStyle(el);
+     this._measureCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+     const textW = this._measureCtx.measureText(text).width;
+     const extra = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0)
+      + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0) + 6;
+     const w = Math.min(Math.max(Math.ceil(textW + extra), 90), 220);
+     el.style.setProperty('width', w + 'px', 'important');
+    }
+
+    fitDetailDisp() {
+     this.fitDispWidth(document.getElementById('pnl_cardnmdisp'));
+     this.fitDispWidth(document.getElementById('pnl_banknmdisp'));
+    }
+
+    // 하단 입력 영역 이벤트 (한 번만 바인딩)
+    initLineEditor() {
+     let _this = this;
+     const $panel = $('#linePanel');
+
+     // ── 목록: 클릭 선택 / 키보드 이동 ──
+     $('#slipLineTbody').on('click', 'tr', function () {
+      _this.selectLine(Number($(this).attr('data-idx')), false);
+      $('#lineListWrap').focus();
+     });
+     $('#lineListWrap').on('keydown', function (e) {
+      if (e.target !== this) return;
+      if (e.key === 'ArrowDown') {
+       e.preventDefault();
+       _this.selectLine(Math.min(_this.sel + 1, _this.lines.length - 1), false);
+      } else if (e.key === 'ArrowUp') {
+       e.preventDefault();
+       _this.selectLine(Math.max(_this.sel - 1, 0), false);
+      } else if (e.key === 'Enter') {
+       e.preventDefault();
+       $('#pnl_accnm').focus().select();
+      }
+     });
+
+     $('#addSlipLine').on('click', () => _this.addLine('1', true));
+     $('#delSlipLine').on('click', () => _this.deleteLine());
+
+     // ── 입력칸 변경 → 데이터 반영 ──
+     $panel.on('input change', 'input, select, textarea', function (e) {
+      const id = this.id;
+      if (id === 'pnl_drcr' && e.type === 'change') {
+       _this.applyPanelDrcr();
+       // 차대를 바꾸면 그 행을 제자리(차변 위 · 대변 아래)로 옮기고 계속 선택해 둔다
+       _this.syncPanel();
+       const cur = _this.lines[_this.sel];
+       _this.sortLinesByDrcr();
+       const idx = _this.lines.indexOf(cur);
+       _this.sel = -1;
+       _this.renderLines();
+       _this.selectLine(idx, false);
+       return;
+      }
+      if (id === 'pnl_cltnm' && e.type === 'input') {
+       // 이름을 고치면 이전에 고른 거래처 코드는 더 이상 맞지 않는다
+       $('#pnl_cltcd').val('');
+       $('#pnl_cltflag').val('');
+      }
+      if (id === 'pnl_cltnm' && $(this).val().trim() === '') {
+       $('#pnl_cltcd').val('');
+       $('#pnl_cltflag').val('');
+      }
+      if (id === 'pnl_accnm' && $(this).val().trim() === '') {
+       $('#pnl_acccd').val('');
+       $('#pnl_acnflag').val('');
+       $('#pnl_acccltflag').val('');
+      }
+      _this.syncPanel();
+     });
+
+     // ── 금액칸: 포커스 시 콤마 제거, 입력 중 천단위 콤마 ──
+     $('#pnl_dramt, #pnl_cramt')
+     .on('focus', function () {
+      if ($(this).prop('readonly')) return;
+      const raw = $(this).val().replace(/,/g, '');
+      $(this).val(raw === '0' ? '' : raw);
+     })
+     .on('keyup', function (e) {
+      if (e.key === 'Enter') return;
+      _this.formatNumberInput($(this).val(), this);
+     })
+     .on('blur', function () {
+      const n = toNum($(this).val());
+      $(this).val(n ? n.toLocaleString() : '0');
+      _this.syncPanel();
+     });
+
+     // ── Enter 이동 (카드·계좌는 아래에서 따로 처리) ──
+     $panel.on('keydown', 'input, select, textarea', function (e) {
+      const id = this.id;
+
+      // F2 : 거래처·카드·계좌 전체 목록
+      if (e.key === 'F2') {
+       if (id === 'pnl_cltnm') {
+        e.preventDefault();
+        _this.openCltPopup('');
+       }
+       if (id === 'pnl_cardnum') {
+        e.preventDefault();
+        _this.openCardPopup();
+       }
+       if (id === 'pnl_banknum') {
+        e.preventDefault();
+        _this.openBankPopup();
+       }
+       return;
+      }
+
+      if (e.key !== 'Enter') return;
+      if (id === 'pnl_cardnum' || id === 'pnl_banknum') return;
+      if (id === 'pnl_summy' && e.shiftKey) return;   // 산출내역 줄바꿈
+      e.preventDefault();
+
+      switch (id) {
+       case 'pnl_accnm':
+        _this.searchAccnm();
+        break;
+       case 'pnl_drcr':
+        $('#pnl_it1nm').focus().select();
+        break;
+       case 'pnl_it1nm':
+        _this.searchIt1nm();
+        break;
+       case 'pnl_it2nm':
+        _this.searchIt2nm();
+        break;
+       case 'pnl_summy':
+        $('#pnl_mssecnm').focus().select();
+        break;
+       case 'pnl_mssecnm':
+        _this.searchMssec();
+        break;
+       case 'pnl_dramt':
+       case 'pnl_cramt':
+        $(this).trigger('blur');
+        $('#pnl_cltnm').focus().select();
+        break;
+       case 'pnl_cltnm': {
+        const kw = $(this).val().trim();
+        if (kw === '' || $('#pnl_cltcd').val()) {
+         $('#pnl_cardnum').focus().select();   // 비었거나 이미 고른 거래처면 건너뜀
+        } else {
+         _this.lookupClient(kw);
+        }
+        break;
+       }
+      }
+     });
+
+     // ── 카드 : 비어 있으면 Enter 로 건너뛴다 (핸들러보다 먼저 바인딩해야 가로챌 수 있다) ──
+     $('#pnl_cardnum').on('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      if ($(this).val().trim() === '') {
+       e.preventDefault();
+       e.stopImmediatePropagation();
+       _this.focusAfterCard();
+      }
+     });
+     CardInputHandler.bind({
+      cardnumSelector: '#pnl_cardnum',
+      cardnmSelector: '#pnl_cardnmdisp',
+      cardidSelector: '#pnl_cardcd',
+      minLength: 0,
+      onComplete: function (item) {
+       if (item) {
+        $('#pnl_cardnum').val(item.cardnum || '');
+        $('#pnl_cardcd').val(item.cardid || '');
+        $('#pnl_cardnmdisp').val(item.cardnm || item.cardName || '');
+       }
+       _this.syncPanel();
+       _this.focusAfterCard();
+      }
+     });
+
+     // ── 계좌 : 비어 있으면 Enter 로 다음 행 (계좌 필수 계정은 막는다) ──
+     $('#pnl_banknum').on('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      if ($(this).val().trim() === '') {
+       e.preventDefault();
+       e.stopImmediatePropagation();
+       if ($('#pnl_acnflag').val() === '1') {
+        Alert.alert('', '이 계정은 계좌 입력이 필수입니다.');
+        return;
+       }
+       _this.goNextLine();
+      }
+     });
+     AccountInputHandler.bind({
+      accnumSelector: '#pnl_banknum',
+      banknmSelector: '#pnl_banknmdisp',
+      bankidSelector: '#pnl_bankcd',
+      minLength: 0,
+      onSelect: function () {
+       _this.syncPanel();
+       _this.goNextLine();
+      }
+     });
+    }
+
+    // ── 거래처 / 카드 / 계좌 팝업 ──
+    openCltPopup(keyword) {
+     let _this = this;
+     const poppage = new PopCompComponent();
+     poppage.show(function (item) {
+      $('#pnl_cltnm').val(item.compname || '');
+      $('#pnl_cltcd').val(item.compcode || '');
+      $('#pnl_cltflag').val(item.cltflag || '');
+      _this.syncPanel();
+      setTimeout(() => $('#pnl_cardnum').focus().select(), 200);
+     }, keyword);
+    }
+
+    // ── 거래처 신규 등록 (구분: 공통) — 등록하면 현재 라인에 바로 넣는다 ──
+    openCltRegister(prefill) {
+     let _this = this;
+     if (_this.sel < 0 || !_this.lines[_this.sel]) {
+      Alert.alert('', '거래처를 넣을 분개 라인을 먼저 선택하세요.');
+      return;
+     }
+     if (_this.cltRegPopup) {
+      _this.cltRegPopup.close();
+      _this.cltRegPopup = null;
+     }
+
+     const $content = $(tmpl('cltRegTemplate', {}));
+     _this.cltRegPopup = new PopupDraggable('거래처 등록');
+     _this.cltRegPopup.open({width: 420, height: 500, $content});
+
+     setTimeout(() => {
+      // 거래처칸에 쳐 둔 이름(아직 코드가 없는 경우)을 그대로 가져온다
+      if (prefill != null) $content.find('#regCltnm').val(prefill);
+      else if (!$('#pnl_cltcd').val()) $content.find('#regCltnm').val($('#pnl_cltnm').val().trim());
+      $content.find('#regCltnm').focus();
+
+      const closePop = () => {
+       if (_this.cltRegPopup) {
+        _this.cltRegPopup.close();
+        _this.cltRegPopup = null;
+       }
+      };
+
+      $content.find('#btnCltRegSave').on('click', function () {
+       const cltnm = $content.find('#regCltnm').val().trim();
+       const saupnum = $content.find('#regSaupnum').val().replace(/[^0-9]/g, '');
+       if (!cltnm) {
+        Alert.alert('', '거래처명을 입력하세요.');
+        return;
+       }
+       if (saupnum && saupnum.length !== 10) {
+        Alert.alert('', '사업자번호는 숫자 10자리입니다.');
+        return;
+       }
+
+       _this.saveClient({
+        cltnm: cltnm, saupnum: saupnum, prenm: $content.find('#regPrenm').val().trim(),
+        clttype: $content.find('#regClttype').val()
+       }, closePop);
+      });
+      $content.find('#regCltnm, #regSaupnum, #regPrenm').on('keydown', function (e) {
+       if (e.key === 'Enter') {
+        e.preventDefault();
+        $content.find('#btnCltRegSave').click();
+       }
+      });
+      $content.find('#btnCltRegCancel').on('click', closePop);
+     }, 50);
+    }
+
+    // 거래처 등록 요청 → 성공하면 현재 라인에 넣고 카드칸으로 넘어간다
+    saveClient(data, onSaved) {
+     let _this = this;
+     AjaxUtil.postJsonData(_this.url + '/client/save', data, function (result) {
+      if (result && result.success) {
+       if (typeof onSaved === 'function') onSaved();
+       $('#pnl_cltnm').val(result.data.cltnm);
+       $('#pnl_cltcd').val(result.data.cltcd);
+       $('#pnl_cltflag').val('');
+       _this.syncPanel();
+       Alert.alert('', `거래처가 등록되었습니다. (${result.data.cltcd} ${result.data.cltnm})`, function () {
+        setTimeout(() => $('#pnl_cardnum').focus().select(), 100);
+       });
+      } else {
+       Alert.alert('', result?.message || '거래처 등록 중 오류가 발생했습니다.');
+      }
+     });
+    }
+
+    // 거래처칸 Enter : 검색 결과가 있으면 선택 팝업, 하나도 없으면 공통으로 바로 등록할지 묻는다.
+    lookupClient(kw) {
+     let _this = this;
+     AjaxUtil.getAsyncData('/api/popup/search_Comp', {compCode: '', compName: kw, business_number: ''}, function (res) {
+      // 조회가 실패하면 예전처럼 선택 팝업을 연다
+      if (!res || res.success === false || !Array.isArray(res.data)) {
+       _this.openCltPopup(kw);
+       return;
+      }
+      const list = res.data;
+      if (list.length > 0) {
+       _this.openCltPopup(kw);
+      } else {
+       Alert.confirm('', `'${kw}' 거래처가 없습니다.\n공통 거래처로 바로 등록할까요?`, function () {
+        _this.saveClient({cltnm: kw, saupnum: '', prenm: '', clttype: '3'});
+       });
+      }
+     });
+    }
+
+    openCardPopup() {
+     let _this = this;
+     const poppage = new PopCardComponent();
+     poppage.show(function (item) {
+      $('#pnl_cardnum').val(item.cardnum || '');
+      $('#pnl_cardcd').val(item.cardid || '');
+      $('#pnl_cardnmdisp').val(item.cardnm || item.cardName || '');
+      _this.syncPanel();
+      _this.focusAfterCard();
+     }, '');
+    }
+
+    openBankPopup() {
+     let _this = this;
+     const poppage = new PopAccountComponent();
+     poppage.show(function (item) {
+      $('#pnl_banknum').val(item.accountNumber || '');
+      $('#pnl_banknmdisp').val(item.BankName || '');
+      $('#pnl_bankcd').val(item.bankId || '');
+      _this.syncPanel();
+      _this.goNextLine();
+     }, '');
+    }
+
+    // ── 목록형 선택 팝업 공통 (관·항·목·재원) ──
+    pickPopup(key, title, templateId, gridSelector, columns, dataList, onPick, width = 700, height = 420) {
+     let _this = this;
+     const popKey = key + 'Popup';
+     const gridKey = key + 'Grid';
+
+     if (_this[popKey]) {
+      _this[popKey].close();
+      _this[popKey] = null;
+     }
+
+     _this[popKey] = new PopupDraggable(title);
+     _this[popKey].open({width: width, height: height, $content: $(tmpl(templateId, {}))});
+
+     _this[gridKey] = new wijmo.grid.FlexGrid(gridSelector, {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: columns,
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+     _this[gridKey].keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const pick = function () {
+      const g = _this[gridKey];
+      if (!g) return;
+      const sel = g.selection;
+      if (!sel || sel.row < 0) return;
+      const item = g.rows[sel.row].dataItem;
+      if (_this[popKey]) {
+       _this[popKey].close();
+       _this[popKey] = null;
+      }
+      _this[gridKey] = null;
+      onPick(item);
+     };
+
+     setTimeout(function () {
+      const g = _this[gridKey];
+      if (g && g.rows.length > 0) {
+       g.select(0, 0);
+       g.focus();
+      }
+     }, 50);
+
+     _this[gridKey].hostElement.addEventListener('dblclick', pick);
+     _this[gridKey].hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       pick();
+      }
+     });
+    }
+
+    // ── 관명(계정) ──
+    searchAccnm() {
+     let _this = this;
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/findAccnm',
+      {accnm: $('#pnl_accnm').val(), type: 'account'},
+      function (res) {
+       const list = res.data || [];
+       if (list.length === 0) {
+        Alert.alert('', '관 조회 결과가 없습니다.');
+        return;
+       }
+       _this.pickPopup('acc', '관 조회', 'accnmTemplate', '#AccGrid', [
+        {binding: 'acccd', header: '관코드', width: 100, align: 'center'},
+        {binding: 'accnm', header: '관명', width: '*', align: 'left'},
+        {binding: 'acnflag', header: '계좌필수여부', visible: false}
+       ], list, item => {
+        $('#pnl_acccd').val(item.acccd || '');
+        $('#pnl_accnm').val(item.accnm || '');
+        $('#pnl_acnflag').val(item.acnflag || '');
+        $('#pnl_acccltflag').val(item.cltflag || '');
+        _this.syncPanel();
+        setTimeout(() => $('#pnl_drcr').focus(), 50);
+       });
+      }
+     );
+    }
+
+    // ── 항 ──
+    searchIt1nm() {
+     let _this = this;
+     const tiosec = $('#tiosec').val();
+     if (!tiosec) {
+      Alert.alert('', '입출구분을 먼저 선택하세요.');
+      $('#tiosec').focus();
+      return;
+     }
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/findIt1nm',
+      {it1nm: $('#pnl_it1nm').val(), tiosec: tiosec},
+      function (res) {
+       const list = res.data || [];
+       if (list.length === 0) {
+        Alert.alert('', '항 조회 결과가 없습니다.');
+        return;
+       }
+       _this.pickPopup('it1', '항 조회', 'it1Template', '#It1Grid', [
+        {binding: 'it1cd', header: '항코드', width: 100, align: 'center'},
+        {binding: 'it1nm', header: '항명', width: '*', align: 'left'}
+       ], list, item => {
+        $('#pnl_it1cd').val(item.it1cd || '');
+        $('#pnl_it1nm').val(item.it1nm || '');
+        _this.syncPanel();
+        setTimeout(() => $('#pnl_it2nm').focus().select(), 50);
+       });
+      }
+     );
+    }
+
+    // ── 목 ──
+    searchIt2nm() {
+     let _this = this;
+     const tiosec = $('#tiosec').val();
+     if (!tiosec) {
+      Alert.alert('', '입출구분을 먼저 선택하세요.');
+      $('#tiosec').focus();
+      return;
+     }
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/findIt2nm',
+      {it2nm: $('#pnl_it2nm').val(), tiosec: tiosec},
+      function (res) {
+       const list = res.data || [];
+       if (list.length === 0) {
+        Alert.alert('', '목 조회 결과가 없습니다.');
+        return;
+       }
+       _this.pickPopup('it2', '목 조회', 'it2Template', '#It2Grid', [
+        {binding: 'it2cd', header: '목코드', width: 100, align: 'center'},
+        {binding: 'it2nm', header: '목명', width: '*', align: 'left'}
+       ], list, item => {
+        $('#pnl_it2cd').val(item.it2cd || '');
+        $('#pnl_it2nm').val(item.it2nm || '');
+        _this.syncPanel();
+        setTimeout(() => $('#pnl_summy').focus().select(), 50);
+       });
+      }
+     );
+    }
+
+    // ── 재원 ──
+    searchMssec() {
+     const _this = this;
+     const open = list => {
+      _this.pickPopup('mssec', '재원 조회', 'mssecTemplate', '#MssecGrid', [
+       {binding: 'value', header: '코드', width: 100, align: 'center'},
+       {binding: 'text', header: '재원명', width: '*', align: 'left'}
+      ], list, item => {
+       $('#pnl_msseccd').val(item.value || '');
+       $('#pnl_mssecnm').val(item.text || '');
+       _this.syncPanel();
+       setTimeout(() => _this.activeAmountInput().focus().select(), 50);
+      }, 400, 350);
+     };
+
+     if (_this.mssecOptions && _this.mssecOptions.length > 0) {
+      open(_this.mssecOptions);
+      return;
+     }
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/mssec', {},
+      function (res) {
+       const list = res.data || [];
+       if (list.length === 0) {
+        Alert.alert('', '재원 목록이 없습니다.');
+        return;
+       }
+       _this.mssecOptions = list;
+       open(list);
+      }
+     );
+    }
+
+    searchMainData() {
+     let _this = this;
+     let url = this.url + '/read';
+     let start = $('#searchfrdate').val();
+     let end = $('#searchtodate').val();
+
+     const cleanAmt = v => (v == null ? '' : String(v)).replace(/[^0-9.\-]/g, '').trim();
+
+     let data = {
+      'start': start,
+      'end': end,
+      mssec: $('#mssec').val(),
+      tiosec: $('#search_tiosec').val(),
+      sbuject: $('#search_sbuject').val(),
+      remark: $('#search_remark').val(),
+      amtFrom: cleanAmt($('#search_amtfr').val()),
+      amtTo: cleanAmt($('#search_amtto').val()),
+      dateType: $('#search_datetype').val(),
+     };
+     let fnsuccess = function (result) {
+      if (result != null && result.success) {
+       _this.viewData.sourceCollection = result.data;
+      } else {
+       console.log('전표입력현황 read 오류');
+      }
+     }
+
+     AjaxUtil.getAsyncData(url, data, fnsuccess);
+    }
+
+    // 전표 출력 팝업 열기
+    showPrintSelectPopup(keysParam) {
+     let _this = this;
+     if (!document.getElementById('html2pdf-script')) {
+      const script = document.createElement('script');
+      script.id = 'html2pdf-script';
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+      document.head.appendChild(script);
+     }
+
+     const existing = document.getElementById('slip-print-overlay');
+     if (existing) existing.remove();
+
+     let keys = keysParam;
+     if (!keys) {
+      const selectedItems = _this.viewData.sourceCollection.filter(r => r.selected);
+      keys = selectedItems.map(r => r.spdate.replace(/-/g, '') + r.spnum).join(',');
+     }
+
+     fetch(withCtx(`/api/account_management/slip_status/print?printType=1&keys=${encodeURIComponent(keys)}`))
+     .then(r => r.json())
+     .then(d => {
+      if (d.data?.length > 0) {
+       console.log('첫번째 전표:', d.data[0]);
+      }
+     });
+
+     const css = `
+        #slip-print-overlay {
+            position:fixed; inset:0; background:rgba(0,0,0,.5);
+            z-index:10000; display:flex; align-items:center; justify-content:center;
+        }
+        #slip-print-popup {
+            width:88vw; max-width:1100px; height:88vh;
+            background:#fff; border-radius:12px;
+            box-shadow:0 24px 48px rgba(0,0,0,.2);
+            display:flex; flex-direction:column; overflow:hidden;
+        }
+        #slip-print-popup .sp-head {
+            display:flex; align-items:center; justify-content:space-between;
+            padding:14px 20px; border-bottom:1px solid #e5e7eb; flex-shrink:0;
+        }
+        #slip-print-popup .sp-body { flex:1; overflow:hidden; }
+        /* 직접 입력한 결재칸마다 전결 · 사선 고르기 */
+        #slip-print-popup .sp-flags { display:none; flex-wrap:wrap; align-items:center; gap:6px 10px;
+            padding:8px 16px; border-bottom:1px solid #e5e7eb; background:#f9fafb; font-size:12px; color:#374151; }
+        #slip-print-popup .sp-flags.on { display:flex; }
+        #slip-print-popup .sp-flags .lb { color:#6b7280; margin-right:4px; }
+        #slip-print-popup .sp-flags .chip { display:inline-flex; align-items:center; gap:8px;
+            border:1px solid #d1d5db; border-radius:4px; background:#fff; padding:3px 8px; }
+        #slip-print-popup .sp-flags .chip b { font-weight:700; color:#111827; }
+        #slip-print-popup .sp-flags label { display:inline-flex; align-items:center; gap:3px; margin:0; cursor:pointer; font-weight:400; }
+        #slip-print-popup .sp-flags input[type=checkbox] {
+            -webkit-appearance:auto !important; appearance:auto !important; width:14px !important; height:14px !important;
+            min-width:14px !important; margin:0 !important; padding:0 !important; border:0 !important; background:none !important;
+            box-shadow:none !important; accent-color:#1a56db; }
+        #slip-print-popup .sp-flags input[type=checkbox]::before,
+        #slip-print-popup .sp-flags input[type=checkbox]::after { content:none !important; display:none !important; }
+        #slip-print-popup .sp-body iframe { width:100%; height:100%; border:none; }
+    `;
+     let styleEl = document.getElementById('slip-print-style');
+     if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = 'slip-print-style';
+      document.head.appendChild(styleEl);
+     }
+     styleEl.textContent = css;
+
+     const overlay = document.createElement('div');
+     overlay.id = 'slip-print-overlay';
+
+     const popup = document.createElement('div');
+     popup.id = 'slip-print-popup';
+     popup.innerHTML = `
+        <div class="sp-head">
+            <span style="font-size:18px;font-weight:700;color:#111;">전표 출력 미리보기</span>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <select id="spPrintType"
+                    style="padding:-1px 10px;border:1px solid #ddd;border-radius:4px;">
+                    <option value="1">전표(산출내역)</option>
+                    <option value="2">결의양식1</option>
+                    <option value="3">결의양식2(하단)</option>
+                    <option value="4">결의양식2(상단)</option>
+                    <option value="5">결의양식3(세입세출)</option>
+                    <option value="6">결의양식3(대체)</option>
+                    <option value="7">전표(산출내역):하단결재</option>
+                </select>
+                <input id="spApprovers" type="text" value=""
+                    placeholder="예) 담당,팀장,사무국장 (비우면 설정값)"
+                    title="결재란 직급을 쉼표(,)로 구분해 순서대로 입력하세요. Enter로 바로 반영됩니다."
+                    style="padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:12px;width:260px;"/>
+                <button id="spApproversClear" type="button" title="설정값으로 되돌리기"
+                    style="padding:6px 8px;background:#fff;color:#6b7280;border:1px solid #ddd;
+                           border-radius:4px;font-size:12px;cursor:pointer;">
+                    초기화
+                </button>
+                <button id="spRefreshBtn"
+                    style="padding:6px 10px;background:#6b7280;color:#fff;
+                           border:none;border-radius:4px;font-size:13px;cursor:pointer;">
+                    갱신
+                </button>
+                <button id="spPrintBtn"
+                style="padding:6px 18px;background:#1a56db;color:#fff;
+                       border:none;border-radius:4px;font-size:13px;
+                       font-weight:700;cursor:pointer;">
+                인쇄
+            </button>
+            <button id="spDownloadBtn"
+                style="padding:6px 18px;background:#059669;color:#fff;
+                       border:none;border-radius:4px;font-size:13px;
+                       font-weight:700;cursor:pointer;">
+                PDF 저장
+            </button>
+
+            <button id="spCloseBtn"
+                style="background:none;border:none;font-size:20px;
+                       color:#9ca3af;cursor:pointer;line-height:1;padding:4px;">✕
+            </button>
+            </div>
+        </div>
+        <div class="sp-flags" id="spApvFlags"></div>
+        <div class="sp-body">
+            <iframe id="spIframe" style="width:100%;height:100%;border:none;"></iframe>
+        </div>
+    `;
+
+     overlay.appendChild(popup);
+     document.body.appendChild(overlay);
+
+     const savedPrintType = sessionStorage.getItem('slip_print_type');
+     if (savedPrintType) {
+      document.getElementById('spPrintType').value = savedPrintType;
+     }
+     const savedApprovers = sessionStorage.getItem('slip_print_approvers');
+     if (savedApprovers) {
+      document.getElementById('spApprovers').value = savedApprovers;
+     }
+
+     // 직접 입력한 결재칸의 전결(J) · 사선(C) — 칸 순서대로 { j, c }
+     let apvFlags = [];
+     try {
+      apvFlags = JSON.parse(sessionStorage.getItem('slip_print_apvflags') || '[]') || [];
+     } catch (e) {
+      apvFlags = [];
+     }
+
+     const apvNames = function () {
+      return (document.getElementById('spApprovers').value || '')
+      .split(',').map(s => s.trim()).filter(s => s !== '');
+     };
+
+     // 서버로 보내는 값 : "담당,팀장:J,사무국장:C" (J 전결, C 사선)
+     const getApprovers = function () {
+      const names = apvNames();
+      const v = names.map((n, i) => {
+       const f = apvFlags[i] || {};
+       const t = (f.j ? 'J' : '') + (f.c ? 'C' : '');
+       return t ? n + ':' + t : n;
+      }).join(',');
+      if (names.length) {
+       sessionStorage.setItem('slip_print_approvers', names.join(','));
+       sessionStorage.setItem('slip_print_apvflags', JSON.stringify(apvFlags.slice(0, names.length)));
+      } else {
+       sessionStorage.removeItem('slip_print_approvers');
+       sessionStorage.removeItem('slip_print_apvflags');
+      }
+      return v;
+     };
+
+     // 갱신 후 : 입력한 칸마다 [전결] [사선] 체크를 보여준다
+     const renderApvFlags = function () {
+      const box = document.getElementById('spApvFlags');
+      const names = apvNames();
+      if (!names.length) {
+       box.classList.remove('on');
+       box.innerHTML = '';
+       return;
+      }
+      const esc = v => String(v).replace(/[&<>"']/g, c => ({
+       '&': '&amp;',
+       '<': '&lt;',
+       '>': '&gt;',
+       '"': '&quot;',
+       "'": '&#39;'
+      }[c]));
+      box.innerHTML = '<span class="lb">결재칸 표시</span>' + names.map((n, i) => {
+       const f = apvFlags[i] || {};
+       return '<span class="chip"><b>' + esc(n) + '</b>'
+        + '<label><input type="checkbox" data-i="' + i + '" data-k="j"' + (f.j ? ' checked' : '') + '/>전결</label>'
+        + '<label><input type="checkbox" data-i="' + i + '" data-k="c"' + (f.c ? ' checked' : '') + '/>사선</label></span>';
+      }).join('');
+      box.classList.add('on');
+     };
+
+     document.getElementById('spApvFlags').addEventListener('change', function (e) {
+      const t = e.target;
+      if (!t || t.type !== 'checkbox') return;
+      const i = +t.dataset.i;
+      apvFlags[i] = Object.assign({}, apvFlags[i] || {}, {[t.dataset.k]: t.checked});
+      renderPreview(document.getElementById('spPrintType').value);
+     });
+
+     function renderPreview(printType) {
+      const approvers = getApprovers();
+      renderApvFlags();
+      const url = `${_this.url}/print?printType=${printType}&keys=${encodeURIComponent(keys)}&approvers=${encodeURIComponent(approvers)}`;
+      document.getElementById('spIframe').src = withCtx(url);
+     }
+
+     renderPreview(document.getElementById('spPrintType').value);
+
+     document.getElementById('spPrintType').addEventListener('change', function () {
+      sessionStorage.setItem('slip_print_type', this.value);
+      renderPreview(this.value);
+     });
+
+     document.getElementById('spRefreshBtn').addEventListener('click', function () {
+      renderPreview(document.getElementById('spPrintType').value);
+     });
+
+     document.getElementById('spApprovers').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       renderPreview(document.getElementById('spPrintType').value);
+      }
+     });
+
+     document.getElementById('spApproversClear').addEventListener('click', function () {
+      document.getElementById('spApprovers').value = '';
+      apvFlags = [];
+      renderPreview(document.getElementById('spPrintType').value);
+     });
+
+     document.getElementById('spCloseBtn').addEventListener('click', function () {
+      overlay.remove();
+     });
+
+     document.getElementById('spDownloadBtn').addEventListener('click', function () {
+      const printType = document.getElementById('spPrintType').value;
+      const approvers = getApprovers();
+      const url = withCtx(`${_this.url}/print/pdf?printType=${printType}&keys=${encodeURIComponent(keys)}&approvers=${encodeURIComponent(approvers)}`);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+     });
+
+     document.getElementById('spPrintBtn').addEventListener('click', function () {
+      const iframe = document.getElementById('spIframe');
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+     });
+
+     overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) overlay.remove();
+     });
+    }
+
+    //==== 전표 등록 ====
+
+    toDateInput(v) {
+     const d = (v == null ? '' : String(v)).replace(/[^0-9]/g, '');
+     if (d.length < 8) return '';
+     return d.substring(0, 4) + '-' + d.substring(4, 6) + '-' + d.substring(6, 8);
+    }
+
+    bindToTab2Form(item) {
+     let _this = this;
+
+     _this.resetForm();
+     _this.currentSlipId = item.spnum;
+
+     $('#spdate').val(item.spdate);
+     $('#spnum').val(item.spnum);
+
+     const tiosecMap = {'세입': '1', '세출': '2', '대체': '3'};
+     $('#tiosec').val(tiosecMap[item.tiosec] || '');
+
+     $('#readate').val(_this.toDateInput(item.regdate) || getNowDate());
+     $('#subject').val(item.subject || '');
+     $('#remark').val(item.remark || '');
+     $('#busicd').val(item.busicd || '');
+     $('#businame').val(item.businm || '');
+     $('#bsdate').val(item.bsdate || '');
+     $('#bseccd').val(item.bseccd || '');
+     $('#inputdate').val(item.inputdate || '');
+     $('#cashyn').prop('checked', item.cashyn === '1' || item.cashyn === true);
+
+     _this.fetchSlipHeader(item.spdate, item.spnum);
+     _this.fetchSlipLines(item.spdate, item.spnum);
+    }
+
+    fetchSlipHeader(spdate, spnum) {
+     let _this = this;
+     const spdateFmt = (spdate || '').replace(/-/g, '');
+
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/getHeader',
+      {spdate: spdateFmt, spnum: spnum},
+      function (res) {
+       if (!res || !res.success || !res.data) return;
+       const h = Array.isArray(res.data) ? res.data[0] : res.data;
+       if (!h) return;
+       $('#inputdate').val(h.inputdate || '');
+       if (h.regdate) $('#readate').val(_this.toDateInput(h.regdate));
+      }
+     );
+    }
+
+    // ── 분개 라인 서버 조회 → 라인 데이터 ──
+    fetchSlipLines(spdate, spnum) {
+     let _this = this;
+     const spdateFmt = (spdate || '').replace(/-/g, '');
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/getLines',
+      {spdate: spdateFmt, spnum: spnum},
+      function (res) {
+       if (!res || !res.success || !res.data || res.data.length === 0) return;
+
+       _this.lines = res.data.map(function (line) {
+        const l = _this.emptyLine(line.drcr || '1');
+        l.spseq = line.spseq || '';
+        l.acccd = line.acccd || '';
+        l.accnm = line.accnm || '';
+        l.acnflag = line.acnflag || '';
+        l.acccltflag = line.acccltflag || '';
+        l.it1cd = line.it1cd || '';
+        l.it1nm = line.it1nm || '';
+        l.it2cd = line.it2cd || '';
+        l.it2nm = line.it2nm || '';
+        l.summy = line.summy || '';
+        l.msseccd = line.mssec || line.msseccd || '';
+        l.mssecnm = line.mssecnm || '';
+        l.dramt = Number(line.dramt) || 0;
+        l.cramt = Number(line.cramt) || 0;
+        l.cltnm = line.cltnm || '';
+        l.cltcd = line.cltcd || '';
+        l.cardnum = line.cardnum || '';
+        l.cardcd = line.cardcd || '';
+        l.cardnm = line.cardnm || '';
+        l.accnum = line.accnum || '';
+        l.bankcd = line.bankcd || '';
+        l.banknm = line.banknm || '';
+        return l;
+       });
+       _this.sortLinesByDrcr();
+
+       _this.sel = -1;
+       _this.renderLines();
+       _this.selectLine(0, false);
+       _this.calcSum();
+      }
+     );
+    }
+
+    // ── 사업명 팝업 ──
+    searchBusim() {
+     let _this = this;
+     let busim = $('#businame').val();
+
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/findBusim',
+      {busim: busim},
+      function (res) {
+       let list = res.data || [];
+       if (!list || list.length === 0) {
+        Alert.alert('', '사업 조회 결과가 없습니다.');
+        return;
+       }
+       _this.showBusimPopup(list);
+      }
+     );
+    }
+
+    showBusimPopup(dataList) {
+     let _this = this;
+
+     if (_this.busimPopup) {
+      _this.busimPopup.close();
+      _this.busimPopup = null;
+     }
+
+     let content = tmpl('businmTemplate', {});
+     _this.busimPopup = new PopupDraggable('사업 조회');
+     _this.busimPopup.open({width: 700, height: 420, $content: $(content)});
+
+     _this.businessGrid = new wijmo.grid.FlexGrid('#BusinessGrid', {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: [
+       {binding: 'bsdate', header: '사업코드1', width: 90, align: 'center'},
+       {binding: 'bseccd', header: '사업코드2', width: 90, align: 'center'},
+       {binding: 'buiscd', header: '사업코드', width: 90, align: 'center'},
+       {binding: 'busim', header: '사업명', width: '*', align: 'left'}
+      ],
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+     _this.businessGrid.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const selectBusim = function () {
+      let sel = _this.businessGrid.selection;
+      if (!sel || sel.row < 0) return;
+      let item = _this.businessGrid.rows[sel.row].dataItem;
+      _this.applyBusimData(item);
+      _this.busimPopup.close();
+      _this.busimPopup = null;
+      _this.businessGrid = null;
+     };
+
+     setTimeout(function () {
+      if (_this.businessGrid && _this.businessGrid.rows.length > 0) {
+       _this.businessGrid.select(0, 0);
+       _this.businessGrid.focus();
+      }
+     }, 50);
+
+     _this.businessGrid.hostElement.addEventListener('dblclick', selectBusim);
+     _this.businessGrid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectBusim();
+      }
+     });
+    }
+
+    applyBusimData(item) {
+     $('#busicd').val(item.buiscd || '');
+     $('#businame').val(item.busim || '');
+     $('#bsdate').val(item.bsdate || '');
+     $('#bseccd').val(item.bseccd || '');
+
+     setTimeout(() => $('#remark').focus(), 50);
+    }
+
+    setUploader(id) {
+     let _this = this;
+     let accept_files = 'hwp,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,gif,png,txt,zip,pdf';
+
+     _this.uploader = new ax5FileUploadClass('fileUploadInnerDiv', id, {
+      table_name: 'SLIP',
+      attach_name: 'basic',
+      accept_files: accept_files,
+      multiple: true,
+      max_count: 5,
+      file_size: 20,
+      manual_upload: true,
+      upload_callback: function (param) {
+       return;
+      },
+      delete_callback: function (param) {
+       return;
+      },
+      file_click_callback: function (file_id) {
+       return;
+      },
+      can_write: userinfo.can_write(),
+     });
+    }
+
+    formatNumberInput(val, target) {
+     const raw = (val == null ? '' : String(val));
+     const negative = raw.trim().charAt(0) === '-';
+     let cleaned = raw.replace(/[^0-9]/g, '');
+     let formatted = cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+     if (negative) formatted = '-' + formatted;
+     $(target).val(formatted);
+    }
+
+    calcSum() {
+     const totalDr = this.lines.reduce((s, l) => s + (Number(l.dramt) || 0), 0);
+     const totalCr = this.lines.reduce((s, l) => s + (Number(l.cramt) || 0), 0);
+     const diff = totalDr - totalCr;
+
+     $('#sum_dramt').val(totalDr.toLocaleString());
+     $('#sum_cramt').val(totalCr.toLocaleString());
+     $('#sum_diff').val(diff.toLocaleString());
+     $('#sum_diff').css('color', diff === 0 ? '#198754' : '#dc3545');
+    }
+
+    resetForm() {
+     document.getElementById('CategoryForm').reset();
+     this.resetLines();
+     this.currentSlipId = null;
+     $('#spdate').val(getNowDate());
+     $('#readate').val(getNowDate());
+     $('#inputdate').val('');
+    }
+
+    //전표 저장
+    saveSlip() {
+     let _this = this;
+
+     // 입력 중이던 값까지 반영
+     _this.syncPanel();
+
+     // 대변이 아래로 가도록 정렬해서 그 순서로 저장한다 (화면도 같은 순서로 다시 그린다)
+     _this.sortLinesByDrcr();
+     _this.sel = -1;
+     _this.renderLines();
+
+     const spdate = $('#spdate').val();
+     const spnum = $('#spnum').val();
+     const tiosec = $('#tiosec').val();
+     const busipur = $('#busipur').val();
+     const spoccu = $('#spoccu').val();
+     const cashyn = $('#cashyn').is(':checked') ? '1' : '0';
+     const subject = $('#subject').val();
+     const remark = $('#remark').val();
+     const busicd = $('#busicd').val();
+     const businame = $('#businame').val();
+     const bsdate = $('#bsdate').val();
+     const bseccd = $('#bseccd').val();
+     const readate = $('#readate').val();
+
+     if (!spdate) {
+      Alert.alert('', '전표일자를 입력하세요.');
+      $('#spdate').focus();
+      return;
+     }
+     if (!readate) {
+      Alert.alert('', '작성일자를 입력하세요.');
+      $('#readate').focus();
+      return;
+     }
+     if (!tiosec) {
+      Alert.alert('', '입출구분을 선택하세요.');
+      $('#tiosec').focus();
+      return;
+     }
+     if (!subject) {
+      Alert.alert('', '제목을 입력하세요.');
+      $('#subject').focus();
+      return;
+     }
+
+     // ── 분개 라인 수집·검증 ──
+     const lines = [];
+     for (let i = 0; i < _this.lines.length; i++) {
+      const l = _this.lines[i];
+      const dramt = Number(l.dramt) || 0;
+      const cramt = Number(l.cramt) || 0;
+
+      // 관명도 없고 금액도 0 이면 입력하지 않은 행
+      if (!l.acccd && dramt === 0 && cramt === 0) continue;
+
+      if (!l.acccd) {
+       _this.selectLine(i, false);
+       Alert.alert('', `${i + 1}번째 행의 관명(계정)을 입력하세요.`);
+       $('#pnl_accnm').focus();
+       return;
+      }
+      if (dramt === 0 && cramt === 0) {
+       _this.selectLine(i, false);
+       Alert.alert('', `${i + 1}번째 행의 금액을 입력하세요.`);
+       _this.activeAmountInput().focus();
+       return;
+      }
+      if (l.acnflag === '1' && !l.bankcd) {
+       _this.selectLine(i, false);
+       Alert.alert('', `${i + 1}번째 행은 계좌 입력이 필수입니다.`);
+       $('#pnl_banknum').focus();
+       return;
+      }
+      if (l.acccltflag === '1' && !l.cltcd) {
+       _this.selectLine(i, false);
+       Alert.alert('', `${i + 1}번째 행은 거래처 입력이 필수입니다.`);
+       $('#pnl_cltnm').focus();
+       return;
+      }
+
+      lines.push({
+       spseq: l.spseq, acccd: l.acccd, accnm: l.accnm, drcr: l.drcr,
+       it1cd: l.it1cd, it1nm: l.it1nm, it2cd: l.it2cd, it2nm: l.it2nm,
+       summy: l.summy, dramt: dramt, cramt: cramt,
+       msseccd: l.msseccd, mssecnm: l.mssecnm, lineSeq: i + 1,
+       cltcd: l.cltcd || '', cardnum: l.cardnum || '', bankcd: l.bankcd || ''
+      });
+     }
+
+     if (lines.length === 0) {
+      Alert.alert('', '분개 라인을 1건 이상 입력하세요.');
+      return;
+     }
+
+     const totalDr = lines.reduce((s, l) => s + l.dramt, 0);
+     const totalCr = lines.reduce((s, l) => s + l.cramt, 0);
+
+     if (totalDr !== totalCr) {
+      Alert.alert('', `차변 합계(${totalDr.toLocaleString()})와 대변 합계(${totalCr.toLocaleString()})가 일치하지 않습니다.`);
+      return;
+     }
+
+     const payload = {
+      spdate, spnum, tiosec, busipur, spoccu,
+      cashyn, subject, remark, readate,
+      busicd, businame, bsdate, bseccd,
+      lines
+     };
+
+     const url = _this.entry_url + '/save';
+
+     AjaxUtil.postJsonData(url, payload, function (result) {
+      if (result && result.success) {
+       Alert.alert('', '저장되었습니다.', function () {
+        if (result.data?.spnum) {
+         $('#spnum').val(result.data.spnum);
+         _this.currentSlipId = result.data.spnum;
+        }
+        // 화면을 비우지 않고 저장한 전표를 그대로 둔다.
+        // 서버에 저장된 값(전표번호 · 라인 순번 · 최종수정일)으로 다시 읽어 와 이어서 수정할 수 있게 한다.
+        const sd = $('#spdate').val(), sn = $('#spnum').val();
+        if (sd && sn) {
+         _this.fetchSlipHeader(sd, sn);
+         _this.fetchSlipLines(sd, sn);
+        }
+        _this.searchMainData();   // 목록만 새로 고친다 (탭은 그대로)
+       });
+      } else {
+       const msg = result?.message || '저장 중 오류가 발생했습니다.';
+       Alert.alert('', msg);
+      }
+     });
+
+    } // saveSlip
+
+    DeleteSlip() {
+     let _this = this;
+
+     const spdate = $('#spdate').val();
+     const spnum = $('#spnum').val();
+
+     if (!spnum) {
+      Alert.alert('', '삭제할 전표가 없습니다. 먼저 전표를 선택하세요.');
+      return;
+     }
+
+     Alert.confirm('', '선택한 전표를 삭제하시겠습니까?', function () {
+      const payload = {spdate, spnum};
+      const url = _this.entry_url + '/delete';
+
+      AjaxUtil.postJsonData(url, payload, function (result) {
+       if (result && result.success) {
+        Alert.alert('', '삭제되었습니다.', function () {
+         _this.resetForm();
+         _this.searchMainData();
+        });
+       } else {
+        const msg = result?.message || '삭제 중 오류가 발생했습니다.';
+        Alert.alert('', msg);
+       }
+      });
+     });
+
+    }//DeleteSlip
+
+    copySlip() {
+     let _this = this;
+
+     const spdate = $('#spdate').val();
+     const spnum = $('#spnum').val();
+
+     if (!spnum) {
+      Alert.alert('', '복사할 전표가 없습니다. 먼저 전표를 선택하세요.');
+      return;
+     }
+
+     if (_this.copyPopup) {
+      _this.copyPopup.close();
+      _this.copyPopup = null;
+     }
+
+     let content = tmpl('copyDateTemplate', {});
+     let $content = $(content);
+     _this.copyPopup = new PopupDraggable('전표 복사');
+     _this.copyPopup.open({width: 360, height: 200, $content});
+
+     setTimeout(() => {
+      $content.find('#copyTargetSpnum').text(spnum);
+      $content.find('#copyNewSpdate').val(getNowDate());
+
+      $content.find('#btnCopyConfirm').on('click', function () {
+       const newSpdate = $content.find('#copyNewSpdate').val();
+       if (!newSpdate) {
+        Alert.alert('', '복사할 일자를 입력하세요.');
+        return;
+       }
+
+       const payload = {spdate, spnum, newSpdate};
+       const url = _this.entry_url + '/copy';
+
+       AjaxUtil.postJsonData(url, payload, function (result) {
+        if (result && result.success) {
+         _this.copyPopup.close();
+         _this.copyPopup = null;
+         Alert.alert('', '복사되었습니다.', function () {
+          _this.resetForm();
+          _this.searchMainData();
+         });
+        } else {
+         const msg = result?.message || '복사 중 오류가 발생했습니다.';
+         Alert.alert('', msg);
+        }
+       });
+      });
+
+      $content.find('#btnCopyCancel').on('click', function () {
+       _this.copyPopup.close();
+       _this.copyPopup = null;
+      });
+     }, 50);
+
+    }//copySlip
+
+    changeSpdate() {
+     let _this = this;
+
+     const spdate = $('#spdate').val();
+     const spnum = $('#spnum').val();
+
+     if (!spnum) {
+      Alert.alert('', '변경할 전표가 없습니다. 먼저 전표를 선택하세요.');
+      return;
+     }
+
+     if (_this.spdatePopup) {
+      _this.spdatePopup.close();
+      _this.spdatePopup = null;
+     }
+
+     let content = tmpl('spdateChangeTemplate', {});
+     let $content = $(content);
+     _this.spdatePopup = new PopupDraggable('전표일자변경');
+     _this.spdatePopup.open({width: 380, height: 240, $content});
+
+     setTimeout(() => {
+      $content.find('#chgTargetSpnum').text(spnum);
+      $content.find('#chgNewSpdate').val(spdate);
+
+      const doChange = function () {
+       const newSpdate = $content.find('#chgNewSpdate').val();
+
+       if (!newSpdate) {
+        Alert.alert('', '변경할 전표일자를 입력하세요.');
+        return;
+       }
+       if (newSpdate === spdate) {
+        Alert.alert('', '현재 전표일자와 동일합니다.');
+        return;
+       }
+
+       const payload = {
+        spdate: (spdate || '').replace(/-/g, ''),
+        spnum: spnum,
+        newSpdate: (newSpdate || '').replace(/-/g, '')
+       };
+       const url = _this.entry_url + '/changeSpdate';
+
+       AjaxUtil.postJsonData(url, payload, function (result) {
+        if (result && result.success) {
+         _this.spdatePopup.close();
+         _this.spdatePopup = null;
+
+         const resSpdate = result.data?.spdate || payload.newSpdate;
+         const resSpnum = result.data?.spnum || spnum;
+         const shown = resSpdate.length === 8
+          ? resSpdate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')
+          : resSpdate;
+
+         let msg = '전표일자가 변경되었습니다.';
+         if (resSpnum !== spnum) {
+          msg += '\n전표번호가 ' + spnum + ' → ' + resSpnum + ' 으로 재채번되었습니다.';
+         }
+
+         Alert.alert('', msg, function () {
+          $('#spdate').val(shown);
+          $('#spnum').val(resSpnum);
+          _this.currentSlipId = resSpnum;
+          _this.searchMainData();
+         });
+        } else {
+         const msg = result?.message || '전표일자 변경 중 오류가 발생했습니다.';
+         Alert.alert('', msg);
+        }
+       });
+      };
+
+      $content.find('#btnSpdateConfirm').on('click', doChange);
+      $content.find('#chgNewSpdate').on('keydown', function (e) {
+       if (e.key === 'Enter') {
+        e.preventDefault();
+        doChange();
+       }
+      });
+
+      $content.find('#btnSpdateCancel').on('click', function () {
+       _this.spdatePopup.close();
+       _this.spdatePopup = null;
+      });
+
+      $content.find('#chgNewSpdate').focus();
+     }, 50);
+
+    }//changeSpdate
+
+    changeSpnum() {
+     let _this = this;
+
+     const spdate = $('#spdate').val();
+     const spnum = $('#spnum').val();
+     const spdateFmt = (spdate || '').replace(/-/g, '');
+     if (!spnum) {
+      Alert.alert('', '변경할 전표가 없습니다. 먼저 전표를 선택하세요.');
+      return;
+     }
+
+     AjaxUtil.getAsyncData(
+      _this.entry_url + '/availableSpnums',
+      {spdate: spdateFmt},
+      function (res) {
+       const list = res.data || [];
+       if (list.length === 0) {
+        Alert.alert('', '사용 가능한 전표번호가 없습니다.');
+        return;
+       }
+       _this.showSpnumPopup(list, spdate, spnum);
+      }
+     );
+    }
+
+    showSpnumPopup(dataList, spdate, oldSpnum) {
+     let _this = this;
+
+     if (_this.spnumPopup) {
+      _this.spnumPopup.close();
+      _this.spnumPopup = null;
+     }
+
+     let content = tmpl('spnumChangeTemplate', {});
+     _this.spnumPopup = new PopupDraggable('전표번호 변경');
+     _this.spnumPopup.open({width: 400, height: 420, $content: $(content)});
+
+     _this.spnumGrid = new wijmo.grid.FlexGrid('#SpnumGrid', {
+      isReadOnly: true,
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      columns: [
+       {binding: 'spnum', header: '사용 가능한 전표번호', width: '*', align: 'center'}
+      ],
+      itemsSource: new wijmo.collections.CollectionView(dataList)
+     });
+     _this.spnumGrid.keyActionEnter = wijmo.grid.KeyAction.None;
+
+     const selectSpnum = function () {
+      let sel = _this.spnumGrid.selection;
+      if (!sel || sel.row < 0) return;
+      let item = _this.spnumGrid.rows[sel.row].dataItem;
+      const newSpnum = item.spnum;
+
+      const payload = {spdate, spnum: oldSpnum, newSpnum};
+      const url = _this.entry_url + '/changeSpnum';
+
+      AjaxUtil.postJsonData(url, payload, function (result) {
+       if (result && result.success) {
+        _this.spnumPopup.close();
+        _this.spnumPopup = null;
+        _this.spnumGrid = null;
+        Alert.alert('', '전표번호가 변경되었습니다.', function () {
+         $('#spnum').val(newSpnum);
+         _this.currentSlipId = newSpnum;
+         _this.searchMainData();
+        });
+       } else {
+        const msg = result?.message || '전표번호 변경 중 오류가 발생했습니다.';
+        Alert.alert('', msg);
+       }
+      });
+     };
+
+     setTimeout(function () {
+      if (_this.spnumGrid && _this.spnumGrid.rows.length > 0) {
+       _this.spnumGrid.select(0, 0);
+       _this.spnumGrid.focus();
+      }
+     }, 50);
+
+     _this.spnumGrid.hostElement.addEventListener('dblclick', selectSpnum);
+     _this.spnumGrid.hostElement.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+       e.preventDefault();
+       e.stopPropagation();
+       selectSpnum();
+      }
+     });
+    }//showSpnumPopup
+
+   }//SlipStatusPage
+
+   let page = null;
+
+   $(document).ready(function (e) {
+    page = new SlipStatusPage();
+
+    let fr = new Date();
+    fr.setDate(1);
+    fr.setMonth(fr.getMonth());
+
+    $('#searchfrdate').val(CommonUtil.formatYYYYMMDD(fr));
+    $('#searchtodate').val(getNowDate());
+    $('#spdate').val(getNowDate());
+    $('#readate').val(getNowDate());
+
+    AjaxUtil.fillSelectOptions($('#mssec'), 'mssec', 'all', false);
+
+    page.searchMainData();
+
+    $('#search_amtfr, #search_amtto').on('keyup', function () {
+     page.formatNumberInput($(this).val(), this);
+    });
+
+    $('#search_sbuject, #search_remark, #search_amtfr, #search_amtto').on('keydown', function (e) {
+     if (e.key === 'Enter') {
+      e.preventDefault();
+      page.searchMainData();
+     }
+    });
+
+    $('#btnSearch').on('click', function () {
+     page.searchMainData();
+    });
+
+    // 거래처 신규 등록 (구분: 공통)
+    $('#btnCltAdd').on('click', function () {
+     page.openCltRegister();
+    });
+
+    $('#btnSlipPrint').on('click', function () {
+     const selectedItems = page.viewData.sourceCollection?.filter(r => r.selected);
+     if (!selectedItems || selectedItems.length === 0) {
+      Alert.alert('', '출력할 전표를 선택(체크)해주세요.');
+      return;
+     }
+     page.showPrintSelectPopup();
+    });
+
+    $('#btnSlipPrint2').on('click', function () {
+     const spdate = $('#spdate').val();
+     const spnum = $('#spnum').val();
+
+     if (!spnum) {
+      Alert.alert('', '저장된 전표가 없습니다. 전표를 조회하거나 저장한 뒤 출력하세요.');
+      return;
+     }
+
+     const keys = spdate.replace(/-/g, '') + spnum;
+     page.showPrintSelectPopup(keys);
+    });
+
+    $('#btnFileUpload').on('click', function () {
+     let content = tmpl('fileUploadTemplate', {});
+     let $content = $(content);
+     let modalContainer = new PopupDraggable('첨부파일');
+     modalContainer.open({width: 900, height: 310, $content});
+
+     setTimeout(function () {
+      page.setUploader();
+      page.uploader.mode = 'active';
+
+      $content.find('#btn_file_save').on('click', function () {
+       if (page.uploader) {
+        page.uploader.uploadNow(page.currentSlipId, function () {
+         Alert.alert('', '저장되었습니다.');
+         modalContainer.close();
+        });
+       }
+      });
+     }, 100);
+    });
+
+    $('#businame').on('keydown', function (e) {
+     if (e.key === 'Enter') {
+      e.preventDefault();
+      page.searchBusim();
+     }
+    });
+
+    $('#btnSave').on('click', function () {
+     page.saveSlip();
+    });
+
+    $('#Newbtn').on('click', function () {
+     page.resetForm();
+    });
+
+    $('#btnDelete').on('click', function () {
+     page.DeleteSlip();
+    });
+
+    $('#capy').on('click', function () {
+     page.copySlip();
+    });
+
+    $('#spnum_btn').on('click', function () {
+     page.changeSpnum();
+    });
+
+    $('#btnChangeSpdate').on('click', function () {
+     page.changeSpdate();
+    });
+
+    $(document).on('keydown', function (e) {
+     switch (e.key) {
+      case 'F4':
+       e.preventDefault();
+       page.searchMainData();
+       break;
+      case 'F6':
+       e.preventDefault();
+       page.saveSlip();
+       break;
+      case 'F7':
+       e.preventDefault();
+       page.DeleteSlip();
+       break;
+      case 'Insert':
+       e.preventDefault();
+       page.resetForm();
+       break;
+     }
+    });
+
+   });
+  </script>
+  <script type="text/javascript">
+   // 전표 목록 탭이 보일 때만 slip-list-mode (그리드가 화면 높이에 맞춰 늘고 줄어든다)
+   (function () {
+    function syncSlipListMode() {
+     const listOn = $('#tab1').is(':visible');
+     $('html, body').toggleClass('slip-list-mode', listOn);
+     if (listOn) {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+     }
+     try {
+      wijmo.Control.invalidateAll();
+     } catch (e) {
+     }
+    }
+
+    $(document).on('click', '.tab-links a', function () {
+     setTimeout(syncSlipListMode, 0);
+    });
+    $(window).on('resize.sliplist', function () {
+     if ($('body').hasClass('slip-list-mode')) {
+      try {
+       wijmo.Control.invalidateAll();
+      } catch (e) {
+      }
+     }
+    });
+    $(function () {
+     setTimeout(syncSlipListMode, 0);
+     setTimeout(syncSlipListMode, 300);
+    });
+    // 목록 더블클릭 등으로 코드에서 탭을 바꿀 때도 맞춘다
+    const mo = new MutationObserver(function () {
+     syncSlipListMode();
+    });
+    $(function () {
+     const t1 = document.getElementById('tab1'), t2 = document.getElementById('tab2');
+     [t1, t2].forEach(el => {
+      if (el) mo.observe(el, {attributes: true, attributeFilter: ['class', 'style']});
+     });
+    });
+   })();
+  </script>
+
+</th:block>
