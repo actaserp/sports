@@ -1,0 +1,602 @@
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
+  <style>
+      /* 급여명세서(payslip)와 같은 잉크·괘선 계열. 공용 .btn 을 쓰지 않는다. */
+      :root {
+          --ms-ink:   #1B2430;
+          --ms-label: #45566A;
+          --ms-mute:  #8A99A8;
+          --ms-rule:  #CBD3DB;
+          --ms-frame: #8A99A8;
+          --ms-band:  #EDF1F4;
+          --ms-band2: #DCE3E9;
+          --ms-value: #24466F;
+          --ms-alert: #9E2A20;
+      }
+      .ms-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+      .ms-top .ms-cdt { display: flex; align-items: center; gap: 6px; }
+      .ms-top .ms-cdt label { font-size: 12.5px; color: var(--ms-label); white-space: nowrap; }
+      .ms-top .ms-cdt input {
+          width: 220px; max-width: none; height: 34px; padding: 0 10px; box-sizing: border-box;
+          border: 1px solid #C0CAD3; border-radius: 0; font-size: 13px; color: var(--ms-ink);
+      }
+      .ms-top .ms-cdt input:focus-visible { outline: 2px solid var(--ms-value); outline-offset: 1px; }
+      .ms-actions { margin-left: auto; display: flex; gap: 6px; }
+
+      .ms-btn {
+          display: inline-flex; align-items: center; justify-content: center;
+          height: 34px; padding: 0 16px; min-width: 0;
+          border: 1px solid var(--ms-frame); border-radius: 2px; background: #fff; color: var(--ms-ink);
+          font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: .5px; cursor: pointer; white-space: nowrap;
+      }
+      .ms-btn:hover { background: var(--ms-band); border-color: var(--ms-value); }
+      .ms-btn:focus-visible { outline: 2px solid var(--ms-value); outline-offset: 2px; }
+      .ms-btn.solid { background: var(--ms-value); border-color: var(--ms-value); color: #fff; }
+      .ms-btn.solid:hover { background: #1D3A5F; }
+      .ms-btn.accent { border-color: var(--ms-alert); color: var(--ms-alert); }
+      .ms-btn.accent:hover { background: #FBF0EE; }
+
+      .ms-note { font-size: 12px; color: var(--ms-mute); margin: 0 0 6px; }
+      .ms-wrap { border: 1px solid var(--ms-rule); background: #fff; overflow: auto; }
+      /* 화면 높이를 끝까지 쓴다 — 목록이 남는 높이를 채우고 편집칸은 아래에 붙는다 */
+      .layout-contents { padding-bottom: 8px !important; }
+      .layout-contents > .section { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding-bottom: 0; margin-bottom: 0; }
+      .bp-pane.on { display: flex !important; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+      .bp-pane > .ms-wrap { flex: 1 1 auto; min-height: 140px; max-height: none !important; }
+      .bp-split { flex: 1 1 auto; min-height: 0; }
+      .bp-split > .l, .bp-split > .r { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+      .bp-split .ms-wrap { flex: 1 1 auto; min-height: 140px; }
+      .bp-form { flex: 0 0 auto; }
+      table.ms-list { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 13px; color: var(--ms-ink); }
+      table.ms-list th {
+          position: sticky; top: 0; z-index: 1; background: var(--ms-band); color: var(--ms-label);
+          font-weight: 600; height: 34px; padding: 0 8px; border-bottom: 1px solid var(--ms-rule);
+          border-right: 1px solid var(--ms-rule); text-align: center; white-space: nowrap;
+      }
+      table.ms-list td { height: 34px; padding: 0; border-bottom: 1px solid #E4E9EE; border-right: 1px solid #E4E9EE; }
+      table.ms-list th:last-child, table.ms-list td:last-child { border-right: 0; }
+      table.ms-list td.code { text-align: center; color: var(--ms-label); padding: 0 8px; }
+      table.ms-list td input {
+          width: 100%; max-width: none; height: 33px; padding: 0 8px; box-sizing: border-box;
+          border: 0; border-radius: 0; background: transparent; font-size: 13px; color: var(--ms-ink);
+      }
+      table.ms-list td input.r { text-align: right; }
+      table.ms-list td input:focus { outline: 2px solid var(--ms-value); outline-offset: -2px; background: #fff; }
+      table.ms-list tr.sel td { background: #EAF1F8; }
+      table.ms-list tr.dirty td.code::after { content: ' ●'; color: #8A5A00; font-size: 9px; }
+      table.ms-list tr.new td.code { color: var(--ms-mute); font-style: italic; }
+      .ms-top .ms-cdt input.yy { width: 70px; text-align: center; }
+      .ms-top .ms-cdt select {
+          width: 180px; max-width: none; height: 34px; padding: 0 28px 0 10px; box-sizing: border-box;
+          border: 1px solid #C0CAD3; border-radius: 0; font-size: 13px; color: var(--ms-ink);
+      }
+      /* 탭 : 공용 button 스타일(둥근 테두리 · 파란 포커스)을 덮고, 페이지 색(잉크·괘선)에 맞춘 밑줄형 */
+      .bp-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--ms-rule); margin: 4px 0 10px; }
+      .bp-tabs button {
+          height: 36px !important; min-width: 0 !important; padding: 0 22px !important; margin: 0 0 -1px 0 !important;
+          border: 0 !important; border-bottom: 2px solid transparent !important; border-radius: 0 !important;
+          background: transparent !important; box-shadow: none !important; outline: none;
+          color: var(--ms-label) !important; font-size: 13px !important; font-weight: 600 !important; letter-spacing: .5px;
+          cursor: pointer; line-height: 1 !important;
+      }
+      .bp-tabs button:hover { color: var(--ms-ink) !important; background: var(--ms-band) !important; }
+      .bp-tabs button.on { color: var(--ms-value) !important; border-bottom-color: var(--ms-value) !important; }
+      .bp-tabs button:focus-visible { outline: 2px solid var(--ms-value) !important; outline-offset: -2px; }
+      .bp-pane { display: none; }
+      .bp-pane.on { display: block; }
+      .bp-split { display: flex; gap: 12px; align-items: stretch; }
+      .bp-split > .l { flex: 1 1 55%; min-width: 0; }
+      .bp-split > .r { flex: 1 1 45%; min-width: 0; }
+      .bp-sub { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+      .bp-sub h3 { margin: 0; font-size: 13px; color: var(--ms-label); font-weight: 600; }
+      table.ms-list tr[data-i] { cursor: pointer; }
+      /* 사업명 · 장소 : 왼쪽 정렬, 길면 줄을 바꿔 다 보이게 (잘리지 않게) */
+      table.ms-list td.t {
+          padding: 6px 8px; height: auto; text-align: left !important;
+          white-space: normal !important; word-break: keep-all; overflow-wrap: anywhere;
+          overflow: visible !important; text-overflow: clip !important; line-height: 1.35;
+      }
+      table.ms-list td.c { text-align: center !important; vertical-align: middle; }
+      /* 이월 체크박스 : 칸 가운데 */
+      table.ms-list td.c input.bp-native { display: inline-block !important; margin: 0 auto !important; float: none !important; }
+      table.ms-list td.r { text-align: right; padding: 0 8px; }
+
+      /* 편집칸 (원본 dw_2) */
+      .bp-form { border: 1px solid var(--ms-rule); background: #fff; margin-top: 12px; }
+      .bp-form .hd { background: var(--ms-band); border-bottom: 1px solid var(--ms-rule); padding: 8px 12px;
+          font-size: 13px; font-weight: 600; color: var(--ms-label); }
+      .bp-form .bd { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 16px; padding: 14px 12px; }
+      .bp-form .fld label.k { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 600; color: var(--ms-label); }
+      .bp-form .fld label.k em { font-style: normal; color: var(--ms-alert); }
+      .bp-form .fld.w2 { grid-column: span 2; }
+      .bp-form .fld input[type=text], .bp-form .fld input[type=date], .bp-form .fld input[type=number] {
+          width: 100%; max-width: none; height: 34px; padding: 0 10px; box-sizing: border-box;
+          border: 1px solid #C0CAD3; border-radius: 0; font-size: 13px; color: var(--ms-ink); background: #fff;
+      }
+      .bp-form .fld input[readonly] { background: var(--ms-band); color: var(--ms-label); }
+      .bp-form .fld input:focus-visible { outline: 2px solid var(--ms-value); outline-offset: 1px; }
+      .bp-form .yn { display: flex; gap: 16px; height: 34px; align-items: center; }
+      .bp-form .yn label, table.ms-list td.yn label { display: inline-flex; align-items: center; gap: 5px; margin: 0; cursor: pointer; font-weight: 400; }
+
+      /* 라디오·체크 — bank_account .ba-type 방식 : 네이티브 모양, 전역 가상요소 제거 */
+      .bp-native {
+          -webkit-appearance: auto !important; -moz-appearance: auto !important; appearance: auto !important;
+          flex: 0 0 16px !important; width: 16px !important; height: 16px !important;
+          min-width: 16px !important; max-width: 16px !important; min-height: 16px !important;
+          margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important;
+          background: none !important; box-shadow: none !important; accent-color: #24466F; vertical-align: middle !important;
+      }
+      .bp-native::before, .bp-native::after { content: none !important; display: none !important; }
+      table.ms-list .ms-empty { text-align: center; color: var(--ms-mute); padding: 24px 0; height: auto; }
+  </style>
+
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>사업계획등록</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>기초코드</li>
+        <li>사업계획등록</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <!-- 조회줄 (원본 d_tb_x0002_h) -->
+      <div class="ms-top">
+        <div class="ms-cdt"><label for="bpYyyy">사업년도</label><input class="yy" id="bpYyyy" maxlength="4" inputmode="numeric" type="text"/></div>
+        <div class="ms-cdt"><label for="bpBseccd">사업구분</label><select id="bpBseccd"></select></div>
+        <div class="ms-cdt"><label for="bpKeyword">사업명칭</label><input id="bpKeyword" placeholder="코드 또는 사업명" type="text"/></div>
+        <div class="ms-cdt"><label for="bpSyyyy">이월년도</label><input class="yy" id="bpSyyyy" maxlength="4" inputmode="numeric" type="text"/></div>
+        <div class="ms-actions">
+          <button class="ms-btn solid" id="btnBpSearch" title="조회 (F4)" type="button">조회</button>
+          <button class="ms-btn" id="btnBpNew" type="button">신규</button>
+          <button class="ms-btn" id="btnBpSave" title="저장 (Ctrl+S)" type="button">저장</button>
+          <button class="ms-btn accent" id="btnBpDelete" type="button">삭제</button>
+          <button class="ms-btn" id="btnBpPrint" type="button">인쇄</button>
+          <button class="ms-btn" id="btnBpCarry" type="button">자료이월</button>
+          <button class="ms-btn" id="btnBpAll" type="button">전체선택</button>
+        </div>
+      </div>
+
+      <div class="bp-tabs">
+        <button class="on" data-tab="1" type="button">사업등록</button>
+        <button data-tab="2" type="button">회차등록</button>
+      </div>
+
+      <!-- 사업등록 : 목록(d_tb_x0002_1) + 편집칸(dw_2) -->
+      <div class="bp-pane on" id="bpPane1">
+        <p class="ms-note">행을 누르면 아래에서 고칠 수 있습니다. 이월할 사업은 '이월'에 체크한 뒤 [자료이월]을 누르세요.</p>
+        <div class="ms-wrap">
+          <table class="ms-list">
+            <colgroup><col style="width:70px"><col><col style="width:110px"><col style="width:110px"><col style="width:22%"><col style="width:90px"><col style="width:60px"></colgroup>
+            <thead><tr><th>코드</th><th>사업명</th><th>시작</th><th>종료</th><th>장소</th><th>참가인원</th><th>이월</th></tr></thead>
+            <tbody id="bpBody"><tr><td class="ms-empty" colspan="7">불러오는 중…</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="bp-form">
+          <div class="hd" id="bpFormTitle">신규 사업</div>
+          <div class="bd">
+            <div class="fld"><label class="k">코드</label><input id="fBusicd" placeholder="저장할 때 매겨집니다" readonly type="text"/></div>
+            <div class="fld w2"><label class="k" for="fBusinm">사업명 <em>*</em></label><input id="fBusinm" maxlength="100" type="text"/></div>
+            <div class="fld"><label class="k">사용여부</label>
+              <div class="yn">
+                <label><input class="bp-native" name="fUseyn" type="radio" value="1"/> 예</label>
+                <label><input class="bp-native" name="fUseyn" type="radio" value="0"/> 아니오</label>
+              </div>
+            </div>
+            <div class="fld"><label class="k" for="fFrdate">시작</label><input id="fFrdate" type="date"/></div>
+            <div class="fld"><label class="k" for="fTodate">종료</label><input id="fTodate" type="date"/></div>
+            <div class="fld"><label class="k" for="fPlace">장소</label><input id="fPlace" maxlength="50" type="text"/></div>
+            <div class="fld"><label class="k" for="fEntno">참가인원</label><input id="fEntno" maxlength="100" type="text"/></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 회차등록 : 사업(d_tb_x0002_3) + 회차(d_tb_x0002_cnt) -->
+      <div class="bp-pane" id="bpPane2">
+        <div class="bp-split">
+          <div class="l">
+            <div class="bp-sub"><h3>사업</h3></div>
+            <div class="ms-wrap">
+              <table class="ms-list">
+                <colgroup><col style="width:70px"><col><col style="width:110px"><col style="width:110px"></colgroup>
+                <thead><tr><th>코드</th><th>사업명</th><th>시작</th><th>종료</th></tr></thead>
+                <tbody id="bpBody2"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="r">
+            <div class="bp-sub">
+              <h3 id="cntTitle">회차</h3>
+              <div style="display:flex; gap:6px;">
+                <button class="ms-btn" id="btnCntAdd" type="button">행추가</button>
+                <button class="ms-btn accent" id="btnCntDel" type="button">행삭제</button>
+              </div>
+            </div>
+            <div class="ms-wrap">
+              <table class="ms-list">
+                <colgroup><col style="width:80px"><col><col style="width:110px"></colgroup>
+                <thead><tr><th>코드</th><th>회차명칭</th><th>사용</th></tr></thead>
+                <tbody id="cntBody"><tr><td class="ms-empty" colspan="3">왼쪽에서 사업을 고르세요.</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   class BusinessPlanPage {
+    constructor() {
+     this.url = '/api/basecode/business_plan';
+     this.rows = [];          // 사업 목록 (+ selchk)
+     this.sel = -1;           // 사업등록 탭에서 고른 행
+     this.formDirty = false;
+     this.sel2 = -1;          // 회차등록 탭 왼쪽에서 고른 행
+     this.cnt = [];           // 회차 {seq, cntname, useyn, _new, _dirty}
+     this.cntSel = -1;
+     this.tab = 1;
+     this.spjangnm = '';
+    }
+
+    esc(v) {
+     return String(v == null ? '' : v).replace(/[&<>"']/g,
+      c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    }
+    d8(v) { const s = String(v || '').replace(/[^0-9]/g, ''); return s.length === 8 ? s.slice(0, 4) + '-' + s.slice(4, 6) + '-' + s.slice(6) : ''; }
+    cntDirty() { return this.cnt.some(c => c._dirty || (c._new && String(c.cntname || '').trim())); }
+
+    // 원본 closequery / ue_retrieve 앞 : 바뀐 자료가 있으면 저장할지 묻는다
+    confirmLeave(next) {
+     const dirty = this.tab === 1 ? this.formDirty : this.cntDirty();
+     if (!dirty) { next(); return; }
+     Alert.confirm('확인', '변경된 자료가 있습니다.\n저장하시겠습니까?',
+      () => (this.tab === 1 ? this.save(next) : this.saveCnt(next)),
+      () => { this.formDirty = false; this.cnt.forEach(c => c._dirty = false); next(); });
+    }
+
+    loadSections(done) {
+     AjaxUtil.getAsyncData(this.url + '/sections', {}, res => {
+      const list = (res && res.data) || [];
+      $('#bpBseccd').html(list.map(x => '<option value="' + this.esc(x.bseccd) + '">' + this.esc(x.bsecnm) + '</option>').join(''));
+      if (done) done();
+     });
+    }
+
+    search() {
+     const yyyy = $('#bpYyyy').val().trim();
+     if (!/^\d{4}$/.test(yyyy)) { Alert.alert('', '사업년도를 4자리로 입력하세요.'); return; }
+     AjaxUtil.getAsyncData(this.url + '/read', {yyyy: yyyy, bseccd: $('#bpBseccd').val() || '', keyword: $('#bpKeyword').val().trim()}, res => {
+      if (!res || res.success === false) { Alert.alert('', (res && res.message) || '조회 중 오류가 발생했습니다.'); return; }
+      this.spjangnm = res.message || '';
+      this.rows = (res.data || []).map(r => Object.assign(r, {selchk: '0'}));
+      this.renderList();
+      this.renderList2();
+      if (this.rows.length > 0) this.pick(this._afterSave != null ? this._afterSave : 0);
+      else this.newForm();
+      this._afterSave = null;
+      this.sel2 = -1; this.cnt = []; this.renderCnt();
+     });
+    }
+
+    renderList() {
+     const $b = $('#bpBody');
+     if (this.rows.length === 0) { $b.html('<tr><td class="ms-empty" colspan="7">자료가 없습니다. [신규]로 추가하세요.</td></tr>'); return; }
+     $b.html(this.rows.map((r, i) => '<tr data-i="' + i + '"' + (i === this.sel ? ' class="sel"' : '') + '>'
+      + '<td class="code">' + this.esc(r.busicd) + '</td><td class="t">' + this.esc(r.businm) + '</td>'
+      + '<td class="c">' + this.d8(r.frdate) + '</td><td class="c">' + this.d8(r.todate) + '</td>'
+      + '<td class="t">' + this.esc(r.place) + '</td><td class="r">' + this.esc(r.entno) + '</td>'
+      + '<td class="c"><input class="bp-native chk" type="checkbox"' + (r.selchk === '1' ? ' checked' : '') + '/></td></tr>').join(''));
+    }
+
+    renderList2() {
+     const $b = $('#bpBody2');
+     if (this.rows.length === 0) { $b.html('<tr><td class="ms-empty" colspan="4">자료가 없습니다.</td></tr>'); return; }
+     $b.html(this.rows.map((r, i) => '<tr data-i="' + i + '"' + (i === this.sel2 ? ' class="sel"' : '') + '>'
+      + '<td class="code">' + this.esc(r.busicd) + '</td><td class="t">' + this.esc(r.businm) + '</td>'
+      + '<td class="c">' + this.d8(r.frdate) + '</td><td class="c">' + this.d8(r.todate) + '</td></tr>').join(''));
+    }
+
+    // 목록 행 → 편집칸
+    pick(i) {
+     const r = this.rows[i];
+     if (!r) return;
+     this.sel = i;
+     $('#bpBody tr').removeClass('sel');
+     $('#bpBody tr[data-i="' + i + '"]').addClass('sel');
+     $('#bpFormTitle').text('사업 수정 — ' + r.busicd);
+     $('#fBusicd').val(r.busicd); $('#fBusinm').val(r.businm || '');
+     $('#fFrdate').val(this.d8(r.frdate)); $('#fTodate').val(this.d8(r.todate));
+     $('#fPlace').val(r.place || ''); $('#fEntno').val(r.entno || '');
+     $('input[name="fUseyn"][value="' + (String(r.useyn) === '0' ? '0' : '1') + '"]').prop('checked', true);
+     this.formDirty = false;
+    }
+
+    // 원본 ue_new : 편집칸을 비우고 연도·사업구분은 조회줄 값, 사용여부 1
+    newForm() {
+     this.sel = -1;
+     $('#bpBody tr').removeClass('sel');
+     $('#bpFormTitle').text('신규 사업');
+     $('#fBusicd, #fBusinm, #fFrdate, #fTodate, #fPlace, #fEntno').val('');
+     $('input[name="fUseyn"][value="1"]').prop('checked', true);
+     this.formDirty = false;
+     $('#fBusinm').focus();
+    }
+
+    save(after) {
+     const yyyy = $('#bpYyyy').val().trim(), bseccd = $('#bpBseccd').val();
+     const cur = this.sel >= 0 ? this.rows[this.sel] : null;
+     const data = {
+      bsdate: cur ? cur.bsdate : yyyy, bseccd: cur ? cur.bseccd : bseccd, busicd: $('#fBusicd').val(),
+      businm: $('#fBusinm').val().trim(), frdate: $('#fFrdate').val(), todate: $('#fTodate').val(),
+      place: $('#fPlace').val().trim(), entno: $('#fEntno').val().trim(),
+      useyn: $('input[name="fUseyn"]:checked').val() || '1'
+     };
+     if (!data.businm) { Alert.alert('확인', '사업명을 입력하세요.'); $('#fBusinm').focus(); return; }
+     if (data.frdate && data.todate && data.frdate > data.todate) {
+      Alert.alert('확인', '사업기간이 올바르지 않습니다.'); $('#fFrdate').focus(); return;
+     }
+     AjaxUtil.postJsonData(this.url + '/save', data, res => {
+      if (res && res.success) {
+       this.formDirty = false;
+       if (typeof after === 'function') { after(); return; }
+       Alert.alert('', '자료가 저장되었습니다.');
+       // 원본 : 다시 조회하고 마지막 행으로 — 웹은 방금 저장한 사업을 다시 고른다
+       const code = res.data && res.data.busicd;
+       this._afterSaveCode = code;
+       this.searchKeep(code);
+      } else {
+       Alert.alert('확인', (res && res.message) || '자료 저장 중 오류가 발생하였습니다.');
+      }
+     });
+    }
+
+    searchKeep(code) {
+     const yyyy = $('#bpYyyy').val().trim();
+     AjaxUtil.getAsyncData(this.url + '/read', {yyyy: yyyy, bseccd: $('#bpBseccd').val() || '', keyword: $('#bpKeyword').val().trim()}, res => {
+      this.rows = ((res && res.data) || []).map(r => Object.assign(r, {selchk: '0'}));
+      this.renderList(); this.renderList2();
+      const i = this.rows.findIndex(r => r.busicd === code);
+      if (i >= 0) this.pick(i); else if (this.rows.length) this.pick(this.rows.length - 1); else this.newForm();
+     });
+    }
+
+    remove() {
+     const r = this.sel >= 0 ? this.rows[this.sel] : null;
+     if (!r) { Alert.alert('', '삭제할 사업을 목록에서 고르세요.'); return; }
+     Alert.confirm('삭제', '계획코드 : ' + r.busicd + ' / 계획명칭 : ' + (r.businm || '') + '\n삭제하시겠습니까?', () => {
+      AjaxUtil.postJsonData(this.url + '/delete', {bsdate: r.bsdate, bseccd: r.bseccd, busicd: r.busicd}, res => {
+       if (res && res.success) { this.formDirty = false; this.search(); }
+       else Alert.alert('확인', (res && res.message) || '삭제 중 오류가 발생했습니다.');
+      });
+     });
+    }
+
+    // 자료이월 : 이월 체크한 사업을 이월년도로 복사
+    carry() {
+     if (this.rows.length === 0) return;
+     const syyyy = $('#bpSyyyy').val().trim();
+     if (!syyyy) { Alert.alert('확인', '이월년도를 입력하세요'); $('#bpSyyyy').focus(); return; }
+     if (!/^\d{4}$/.test(syyyy)) { Alert.alert('확인', '이월년도를 4자리로 입력하세요'); $('#bpSyyyy').focus(); return; }
+     const picked = this.rows.filter(r => r.selchk === '1');
+     if (picked.length === 0) { Alert.alert('확인', '이월이 되지 않았습니다.'); return; }
+     Alert.confirm('자료이월', picked.length + '건을 ' + syyyy + '년으로 이월하시겠습니까?', () => {
+      AjaxUtil.postJsonData(this.url + '/carry', {syyyy: syyyy, rows: picked}, res => {
+       if (res && res.success) Alert.alert('확인', (res.data || 0) > 0 ? res.data + '건이 이월되었습니다.' : '이월이 되지 않았습니다.');
+       else Alert.alert('확인', (res && res.message) || '이월 중 오류가 발생했습니다.');
+      });
+     });
+    }
+
+    // 전체선택 : 첫 행이 꺼져 있으면 모두 켜고, 켜져 있으면 모두 끈다
+    toggleAll() {
+     if (this.rows.length === 0) return;
+     const v = this.rows[0].selchk === '0' ? '1' : '0';
+     this.rows.forEach(r => r.selchk = v);
+     this.renderList();
+    }
+
+    // ── 회차등록 ──
+    pick2(i) {
+     const r = this.rows[i];
+     if (!r) return;
+     this.sel2 = i;
+     $('#bpBody2 tr').removeClass('sel');
+     $('#bpBody2 tr[data-i="' + i + '"]').addClass('sel');
+     $('#cntTitle').text('회차 — ' + r.busicd + ' ' + (r.businm || ''));
+     AjaxUtil.getAsyncData(this.url + '/cnt/read', {bsdate: r.bsdate, bseccd: r.bseccd, busicd: r.busicd}, res => {
+      this.cnt = (res && res.data) || [];
+      this.cntSel = this.cnt.length ? 0 : -1;
+      this.renderCnt();
+     });
+    }
+
+    renderCnt() {
+     const $b = $('#cntBody');
+     if (this.sel2 < 0) { $b.html('<tr><td class="ms-empty" colspan="3">왼쪽에서 사업을 고르세요.</td></tr>'); return; }
+     if (this.cnt.length === 0) { $b.html('<tr><td class="ms-empty" colspan="3">회차가 없습니다. [행추가]로 추가하세요.</td></tr>'); return; }
+     $b.html(this.cnt.map((c, i) => '<tr data-i="' + i + '" class="' + (i === this.cntSel ? 'sel ' : '') + (c._dirty ? 'dirty ' : '') + (c._new ? 'new' : '') + '">'
+      + '<td class="code">' + (c._new ? '자동' : this.esc(c.seq)) + '</td>'
+      + '<td><input data-k="cntname" value="' + this.esc(c.cntname) + '"/></td>'
+      + '<td class="c"><input class="bp-native" data-k="useyn" type="checkbox"' + (String(c.useyn) !== '0' ? ' checked' : '') + '/></td></tr>').join(''));
+    }
+
+    saveCnt(after) {
+     const r = this.rows[this.sel2];
+     if (!r) { if (typeof after === 'function') after(); return; }
+     const list = this.cnt.filter(c => c._new ? String(c.cntname || '').trim() : c._dirty)
+     .map(c => ({seq: c._new ? '' : c.seq, cntname: c.cntname, useyn: c.useyn}));
+     if (list.length === 0) { if (typeof after === 'function') after(); else Alert.alert('', '저장할 변경 내용이 없습니다.'); return; }
+     AjaxUtil.postJsonData(this.url + '/cnt/save', {bsdate: r.bsdate, bseccd: r.bseccd, busicd: r.busicd, rows: list}, res => {
+      if (res && res.success) {
+       if (typeof after === 'function') after();
+       else { Alert.alert('', '자료가 저장되었습니다.'); this.pick2(this.sel2); }
+      } else Alert.alert('확인', (res && res.message) || '자료 저장 중 오류가 발생하였습니다.');
+     });
+    }
+
+    // 행추가 : 원본처럼 먼저 저장한 뒤 새 회차 행 (사용 체크)
+    addCnt() {
+     if (this.sel2 < 0) { Alert.alert('', '왼쪽에서 사업을 고르세요.'); return; }
+     const add = () => {
+      this.cnt.push({seq: '', cntname: '', useyn: '1', _new: true});
+      this.cntSel = this.cnt.length - 1;
+      this.renderCnt();
+      $('#cntBody tr[data-i="' + this.cntSel + '"] input[data-k="cntname"]').focus();
+     };
+     if (this.cntDirty()) {
+      this.saveCnt(() => {
+       const r = this.rows[this.sel2];
+       AjaxUtil.getAsyncData(this.url + '/cnt/read', {bsdate: r.bsdate, bseccd: r.bseccd, busicd: r.busicd}, res => {
+        this.cnt = (res && res.data) || [];
+        add();
+       });
+      });
+     } else add();
+    }
+
+    delCnt() {
+     const c = this.cnt[this.cntSel];
+     if (!c) return;
+     if (c._new) { this.cnt.splice(this.cntSel, 1); this.cntSel = Math.min(this.cntSel, this.cnt.length - 1); this.renderCnt(); return; }
+     const r = this.rows[this.sel2];
+     Alert.confirm('확인', '코드 : ' + c.seq + '  - 삭제하시겠습니까?', () => {
+      AjaxUtil.postJsonData(this.url + '/cnt/delete', {bsdate: r.bsdate, bseccd: r.bseccd, busicd: r.busicd, seq: c.seq}, res => {
+       if (res && res.success) { Alert.alert('확인', '삭제되었습니다'); this.pick2(this.sel2); }
+       else Alert.alert('확인', (res && res.message) || '삭제 중 오류가 발생했습니다.');
+      });
+     });
+    }
+
+    // 원본 d_tb_x0002_print : 세출항(사업계획)
+    print() {
+     if (this.rows.length === 0) { Alert.alert('', '출력할 자료가 없습니다.'); return; }
+     const now = new Date(), p2 = n => (n < 10 ? '0' : '') + n;
+     const ts = now.getFullYear() + '-' + p2(now.getMonth() + 1) + '-' + p2(now.getDate()) + ' ' + p2(now.getHours()) + ':' + p2(now.getMinutes());
+     const yyyy = $('#bpYyyy').val().trim(), secnm = $('#bpBseccd option:selected').text();
+     const sub = yyyy === '0000' ? secnm : yyyy + '년 ' + secnm;
+     const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>세출항(사업계획)</title><style>'
+      + '@page{size:A4 portrait;margin:12mm} body{font-family:"맑은 고딕",sans-serif;color:#000;margin:0}'
+      + 'h1{text-align:center;font-size:26px;letter-spacing:4px;margin:0 0 6px} .sub{font-size:14px;margin-bottom:14px}'
+      + '.hd{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}'
+      + 'table{width:100%;border-collapse:collapse} thead{display:table-header-group}'
+      + 'th,td{border:1px solid #000;padding:4px 6px;font-size:12px} th{font-weight:normal}'
+      + 'td.c{text-align:center} td.r{text-align:right}</style></head><body>'
+      + '<h1>세출항(사업계획)</h1><div class="sub">' + this.esc(sub) + '</div>'
+      + '<div class="hd"><span>' + this.esc(this.spjangnm) + '</span><span>출력일시 : ' + ts + '</span></div>'
+      + '<table><thead><tr><th style="width:7%">코드</th><th>사업계획명칭</th><th colspan="2" style="width:26%">사업기간</th><th style="width:24%">장소</th><th style="width:8%">인원</th></tr></thead><tbody>'
+      + this.rows.map(r => '<tr><td class="c">' + this.esc(r.busicd) + '</td><td>' + this.esc(r.businm) + '</td><td class="c">'
+       + this.d8(r.frdate) + '</td><td class="c">' + this.d8(r.todate) + '</td><td>' + this.esc(r.place) + '</td><td class="r">'
+       + this.esc(r.entno) + '</td></tr>').join('')
+      + '</tbody></table></body></html>';
+     const w = window.open('', '_blank', 'width=900,height=700');
+     if (!w) { Alert.alert('', '팝업이 차단되어 인쇄창을 열 수 없습니다.'); return; }
+     w.document.open(); w.document.write(html); w.document.close(); w.focus();
+     setTimeout(() => w.print(), 300);
+    }
+   }
+
+   let page = null;
+   $(document).ready(function () {
+    page = new BusinessPlanPage();
+    $('#bpYyyy').val(String(new Date().getFullYear()));   // 연도가 비면 올해
+    page.loadSections(() => page.search());
+
+    $('#btnBpSearch').on('click', () => page.confirmLeave(() => page.search()));
+    $('#bpKeyword, #bpYyyy').on('keydown', e => {
+     if (e.key === 'Enter') {
+      e.preventDefault();
+      $('#btnBpSearch').click();
+     }
+    });
+    // 원본 dw_condi itemchanged : 사업구분을 바꾸면 바로 조회
+    $('#bpBseccd').on('change', () => page.confirmLeave(() => page.search()));
+    $('#btnBpNew').on('click', () => {
+     page.showTab(1);
+     page.confirmLeave(() => page.newForm());
+    });
+    $('#btnBpSave').on('click', () => (page.tab === 1 ? page.save() : page.saveCnt()));
+    $('#btnBpDelete').on('click', () => {
+     if (page.tab === 1) page.remove(); else page.delCnt();
+    });
+    $('#btnBpPrint').on('click', () => page.print());
+    $('#btnBpCarry').on('click', () => page.carry());
+    $('#btnBpAll').on('click', () => page.toggleAll());
+    $('#btnCntAdd').on('click', () => page.addCnt());
+    $('#btnCntDel').on('click', () => page.delCnt());
+
+    page.showTab = function (n) {
+     this.tab = n;
+     $('.bp-tabs button').removeClass('on').filter('[data-tab="' + n + '"]').addClass('on');
+     $('.bp-pane').removeClass('on');
+     $('#bpPane' + n).addClass('on');
+    };
+    $('.bp-tabs button').on('click', function () {
+     const n = +$(this).data('tab');
+     if (n === page.tab) return;
+     page.confirmLeave(() => page.showTab(n));
+    });
+
+    // 사업등록 목록
+    $('#bpBody').on('click', 'tr[data-i]', function (e) {
+     if ($(e.target).is('input.chk')) return;
+     const i = +$(this).data('i');
+     if (i === page.sel) return;
+     page.confirmLeave(() => page.pick(i));
+    });
+    $('#bpBody').on('change', 'input.chk', function () {
+     const i = +$(this).closest('tr').data('i');
+     page.rows[i].selchk = this.checked ? '1' : '0';
+    });
+    $('#fBusinm, #fFrdate, #fTodate, #fPlace, #fEntno, input[name="fUseyn"]').on('input change', () => page.formDirty = true);
+
+    // 회차등록
+    $('#bpBody2').on('click', 'tr[data-i]', function () {
+     const i = +$(this).data('i');
+     if (i === page.sel2) return;
+     page.confirmLeave(() => page.pick2(i));
+    });
+    $('#cntBody').on('input change', 'input', function () {
+     const i = +$(this).closest('tr').data('i');
+     const c = page.cnt[i];
+     if (!c) return;
+     const k = $(this).data('k');
+     c[k] = this.type === 'checkbox' ? (this.checked ? '1' : '0') : $(this).val();
+     if (!c._new) {
+      c._dirty = true;
+      $(this).closest('tr').addClass('dirty');
+     }
+    });
+    $('#cntBody').on('focusin click', 'tr[data-i]', function () {
+     page.cntSel = +$(this).data('i');
+     $('#cntBody tr').removeClass('sel');
+     $(this).addClass('sel');
+    });
+
+    $(document).on('keydown', function (e) {
+     if (e.key === 'F4') {
+      e.preventDefault();
+      $('#btnBpSearch').click();
+     }
+     if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+      e.preventDefault();
+      $('#btnBpSave').click();
+     }
+    });
+    window.addEventListener('beforeunload', function (e) {
+     if (page && (page.formDirty || page.cntDirty())) {
+      e.preventDefault();
+      e.returnValue = '';
+     }
+    });
+   });
+  </script>
+</th:block>
+</html>

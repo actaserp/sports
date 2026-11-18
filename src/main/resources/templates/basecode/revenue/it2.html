@@ -1,0 +1,315 @@
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
+  <style>
+      /* 급여명세서(payslip)와 같은 잉크·괘선 계열. 공용 .btn 을 쓰지 않는다. */
+      :root {
+          --ms-ink:   #1B2430;
+          --ms-label: #45566A;
+          --ms-mute:  #8A99A8;
+          --ms-rule:  #CBD3DB;
+          --ms-frame: #8A99A8;
+          --ms-band:  #EDF1F4;
+          --ms-band2: #DCE3E9;
+          --ms-value: #24466F;
+          --ms-alert: #9E2A20;
+      }
+      .ms-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+      .ms-top .ms-cdt { display: flex; align-items: center; gap: 6px; }
+      .ms-top .ms-cdt label { font-size: 12.5px; color: var(--ms-label); white-space: nowrap; }
+      .ms-top .ms-cdt input {
+          width: 220px; max-width: none; height: 34px; padding: 0 10px; box-sizing: border-box;
+          border: 1px solid #C0CAD3; border-radius: 0; font-size: 13px; color: var(--ms-ink);
+      }
+      .ms-top .ms-cdt input:focus-visible { outline: 2px solid var(--ms-value); outline-offset: 1px; }
+      .ms-actions { margin-left: auto; display: flex; gap: 6px; }
+
+      .ms-btn {
+          display: inline-flex; align-items: center; justify-content: center;
+          height: 34px; padding: 0 16px; min-width: 0;
+          border: 1px solid var(--ms-frame); border-radius: 2px; background: #fff; color: var(--ms-ink);
+          font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: .5px; cursor: pointer; white-space: nowrap;
+      }
+      .ms-btn:hover { background: var(--ms-band); border-color: var(--ms-value); }
+      .ms-btn:focus-visible { outline: 2px solid var(--ms-value); outline-offset: 2px; }
+      .ms-btn.solid { background: var(--ms-value); border-color: var(--ms-value); color: #fff; }
+      .ms-btn.solid:hover { background: #1D3A5F; }
+      .ms-btn.accent { border-color: var(--ms-alert); color: var(--ms-alert); }
+      .ms-btn.accent:hover { background: #FBF0EE; }
+
+      .ms-note { font-size: 12px; color: var(--ms-mute); margin: 0 0 6px; }
+      .ms-wrap { border: 1px solid var(--ms-rule); background: #fff; overflow: auto; }
+      /* 화면 높이를 끝까지 쓴다 — layout_page 의 .layout-contents(100vh, flex 세로) 안에서 남는 높이를 표가 채운다 */
+      .layout-contents { padding-bottom: 8px !important; }
+      .layout-contents > .section { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding-bottom: 0; margin-bottom: 0; }
+      .layout-contents > .section > .ms-wrap { flex: 1 1 auto; min-height: 120px; max-height: none !important; }
+
+      table.ms-list { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 13px; color: var(--ms-ink); }
+      table.ms-list th {
+          position: sticky; top: 0; z-index: 1; background: var(--ms-band); color: var(--ms-label);
+          font-weight: 600; height: 34px; padding: 0 8px; border-bottom: 1px solid var(--ms-rule);
+          border-right: 1px solid var(--ms-rule); text-align: center; white-space: nowrap;
+      }
+      table.ms-list td { height: 34px; padding: 0; border-bottom: 1px solid #E4E9EE; border-right: 1px solid #E4E9EE; }
+      table.ms-list th:last-child, table.ms-list td:last-child { border-right: 0; }
+      table.ms-list td.code { text-align: center; color: var(--ms-label); padding: 0 8px; }
+      table.ms-list td input {
+          width: 100%; max-width: none; height: 33px; padding: 0 8px; box-sizing: border-box;
+          border: 0; border-radius: 0; background: transparent; font-size: 13px; color: var(--ms-ink);
+      }
+      table.ms-list td input.r { text-align: right; }
+      table.ms-list td input:focus { outline: 2px solid var(--ms-value); outline-offset: -2px; background: #fff; }
+      table.ms-list tr.sel td { background: #EAF1F8; }
+      table.ms-list tr.dirty td.code::after { content: ' ●'; color: #8A5A00; font-size: 9px; }
+      table.ms-list tr.new td.code { color: var(--ms-mute); font-style: italic; }
+      table.ms-list td.yn { padding: 0 10px; white-space: nowrap; }
+      table.ms-list td.yn label { display: inline-flex; align-items: center; gap: 5px; margin: 0 14px 0 0; cursor: pointer; font-weight: 400; }
+      /* 라디오 — bank_account .ba-type 방식 : 네이티브 모양, 전역 가상요소 제거 */
+      table.ms-list td.yn input[type="radio"] {
+          -webkit-appearance: auto !important; -moz-appearance: auto !important; appearance: auto !important;
+          flex: 0 0 16px !important; width: 16px !important; height: 16px !important;
+          min-width: 16px !important; max-width: 16px !important; min-height: 16px !important;
+          margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important;
+          background: none !important; box-shadow: none !important; accent-color: #24466F;
+      }
+      table.ms-list td.yn input[type="radio"]::before,
+      table.ms-list td.yn input[type="radio"]::after { content: none !important; display: none !important; }
+      table.ms-list td input.cd { text-align: center; }
+      table.ms-list .ms-empty { text-align: center; color: var(--ms-mute); padding: 24px 0; height: auto; }
+  </style>
+
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>세입목등록</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>기초코드</li>
+        <li>세입목등록</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <div class="ms-top">
+        <div class="ms-cdt">
+          <label for="msKeyword">목명</label>
+          <input id="msKeyword" placeholder="목코드 또는 목명" type="text"/>
+        </div>
+        <div class="ms-actions">
+          <button class="ms-btn solid" id="btnMsSearch" title="조회 (F4)" type="button">조회</button>
+          <button class="ms-btn" id="btnMsNew" type="button">신규</button>
+          <button class="ms-btn" id="btnMsSave" title="저장 (Ctrl+S)" type="button">저장</button>
+          <button class="ms-btn accent" id="btnMsDelete" type="button">삭제</button>
+          <button class="ms-btn" id="btnMsPrint" type="button">인쇄</button>
+          <button class="ms-btn" id="btnMsExcel" type="button">엑셀</button>
+        </div>
+      </div>
+
+      <p class="ms-note">새 행의 목코드를 비워 두면 저장할 때 자동으로 매겨집니다(3자리). 표에서 바로 고친 뒤 [저장]을 누르세요.</p>
+      <div class="ms-wrap">
+        <table class="ms-list">
+          <colgroup>
+            <col style="width:130px"><col><col style="width:200px">
+          </colgroup>
+          <thead>
+          <tr><th>목코드</th><th>목명</th><th>사용여부</th></tr>
+          </thead>
+          <tbody id="msBody">
+          <tr><td class="ms-empty" colspan="3">불러오는 중…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   class MssecPage {
+    constructor() {
+     this.url = '/api/basecode/revenue_subitem';
+     this.rows = [];     // {it2cd, it2nm, useyn, _dirty, _new}
+     this.sel = -1;
+    }
+
+    esc(v) {
+     return String(v == null ? '' : v).replace(/[&<>"']/g,
+      c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    }
+
+    isDirty() { return this.rows.some(r => r._dirty || (r._new && String(r.it2nm || '').trim())); }
+
+    // 원본 closequery : 바뀐 자료가 있으면 저장할지 묻는다. next() 는 저장 안 함/저장 후 이어서 할 일
+    confirmLeave(next) {
+     if (!this.isDirty()) { next(); return; }
+     Alert.confirm('확인', '변경된 자료가 있습니다.\n저장하시겠습니까?', () => this.save(next), () => next());
+    }
+
+    render() {
+     const $b = $('#msBody');
+     if (this.rows.length === 0) {
+      $b.html('<tr><td class="ms-empty" colspan="3">자료가 없습니다. [신규]로 추가하세요.</td></tr>');
+      return;
+     }
+     $b.html(this.rows.map((r, i) => {
+      const on = String(r.useyn) !== '0';
+      return '<tr data-i="' + i + '" class="' + (i === this.sel ? 'sel ' : '') + (r._dirty ? 'dirty ' : '') + (r._new ? 'new' : '') + '">'
+       + (r._new
+        ? '<td><input class="cd" data-k="it2cd" maxlength="3" inputmode="numeric" placeholder="자동" value="' + this.esc(r.it2cd) + '"/></td>'
+        : '<td class="code">' + this.esc(r.it2cd) + '</td>')
+       + '<td><input data-k="it2nm" maxlength="100" value="' + this.esc(r.it2nm) + '"/></td>'
+       + '<td class="yn"><label><input type="radio" data-k="useyn" name="yn' + i + '" value="1"' + (on ? ' checked' : '') + '/> 예</label>'
+       + '<label><input type="radio" data-k="useyn" name="yn' + i + '" value="0"' + (on ? '' : ' checked') + '/> 아니오</label></td>'
+       + '</tr>';
+     }).join(''));
+    }
+
+    search() {
+     const _this = this;
+     AjaxUtil.getAsyncData(this.url + '/read', {keyword: $('#msKeyword').val().trim()}, function (res) {
+      _this.rows = (res && res.data) || [];
+      _this.spjangnm = (res && res.message) || '';
+      _this.sel = _this.rows.length > 0 ? 0 : -1;
+      _this.render();
+     });
+    }
+
+    // 원본 ue_new : 맨 아래에 행을 붙이고(사용여부 1) 목명 칸으로
+    addRow() {
+     this.rows.push({it2cd: '', it2nm: '', useyn: '1', _new: true});
+     this.sel = this.rows.length - 1;
+     this.render();
+     $('#msBody tr[data-i="' + this.sel + '"] input[data-k="it2nm"]').focus();
+     const w = $('.ms-wrap')[0]; w.scrollTop = w.scrollHeight;
+    }
+
+    save(after) {
+     const _this = this;
+     const rows = this.rows
+     .filter(r => r._new ? String(r.it2nm || '').trim() : r._dirty)
+     .map(r => ({_new: r._new ? '1' : '', it2cd: String(r.it2cd || '').trim(), it2nm: r.it2nm, useyn: r.useyn}));
+     if (rows.length === 0) {
+      if (typeof after === 'function') after(); else Alert.alert('', '저장할 변경 내용이 없습니다.');
+      return;
+     }
+     for (const r of rows) {
+      if (r._new && r.it2cd && !/^\d{1,3}$/.test(r.it2cd)) {
+       Alert.alert('', '목코드는 3자리 이하 숫자로 입력하세요. 비워 두면 자동으로 매겨집니다.');
+       return;
+      }
+     }
+     AjaxUtil.postJsonData(this.url + '/save', {rows: rows}, function (res) {
+      if (res && res.success) {
+       Alert.alert('성공', '저장되었습니다.', function () {
+        if (typeof after === 'function') after(); else _this.search();
+       });
+      } else {
+       Alert.alert('', (res && res.message) || '저장 중 오류가 발생했습니다.');
+      }
+     });
+    }
+
+    remove() {
+     const _this = this;
+     const r = this.rows[this.sel];
+     if (!r) { Alert.alert('', '삭제할 행을 선택하세요.'); return; }
+     if (r._new) {           // 저장 전 새 행은 그냥 뺀다
+      this.rows.splice(this.sel, 1);
+      this.sel = Math.min(this.sel, this.rows.length - 1);
+      this.render();
+      return;
+     }
+     Alert.confirm('삭제', '목코드 : ' + r.it2cd + ' / 목명칭 : ' + (r.it2nm || '') + '\n삭제하시겠습니까?', function () {
+      AjaxUtil.postJsonData(_this.url + '/delete', {it2cd: r.it2cd}, function (res) {
+       if (res && res.success) {
+        const keep = _this.sel;
+        _this.rows.splice(keep, 1);
+        _this.sel = Math.min(keep, _this.rows.length - 1);
+        _this.render();
+       } else {
+        Alert.alert('확인', (res && res.message) || '삭제 중 오류가 발생했습니다.');
+       }
+      });
+     });
+    }
+
+    // 원본 d_tb_x0004_print : 제목 / 사업장명 · 출력일시 / 세입목코드·세입목명칭·사용여부 / 페이지
+    print() {
+     const list = this.rows.filter(r => !r._new);
+     if (list.length === 0) { Alert.alert('', '출력할 자료가 없습니다.'); return; }
+     const now = new Date(), p2 = n => (n < 10 ? '0' : '') + n;
+     const ts = now.getFullYear() + '-' + p2(now.getMonth() + 1) + '-' + p2(now.getDate()) + ' ' + p2(now.getHours()) + ':' + p2(now.getMinutes());
+     const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>세입목</title><style>'
+      + '@page{size:A4 portrait;margin:12mm 12mm 16mm} body{font-family:"맑은 고딕",sans-serif;color:#000;margin:0}'
+      + 'h1{text-align:center;font-size:26px;letter-spacing:10px;margin:0 0 18px}'
+      + '.hd{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}'
+      + 'table{width:100%;border-collapse:collapse} thead{display:table-header-group}'
+      + 'th,td{border:1px solid #000;padding:4px 6px;font-size:12px} th{font-weight:normal}'
+      + 'td.c{text-align:center} td.r{text-align:right}'
+      + '.pg{position:fixed;bottom:0;left:0;font-size:11px} .pg::after{content:"페이지 : " counter(page)}'
+      + '</style></head><body>'
+      + '<h1>세입목</h1><div class="hd"><span>' + this.esc(this.spjangnm || '') + '</span><span>출력일시 : ' + ts + '</span></div>'
+      + '<table><thead><tr><th style="width:18%">세입목코드</th><th>세입목명칭</th><th style="width:12%">사용여부</th></tr></thead><tbody>'
+      + list.map(r => '<tr><td>' + this.esc(r.it2cd) + '</td><td>' + this.esc(r.it2nm) + '</td><td class="c">' + this.esc(r.useyn) + '</td></tr>').join('')
+      + '</tbody></table><div class="pg"></div></body></html>';
+     const w = window.open('', '_blank', 'width=900,height=700');
+     if (!w) { Alert.alert('', '팝업이 차단되어 인쇄창을 열 수 없습니다.'); return; }
+     w.document.open(); w.document.write(html); w.document.close(); w.focus();
+     setTimeout(() => w.print(), 300);
+    }
+   }
+
+   // 엑셀 : 조회된 자료를 CSV(엑셀에서 바로 열림)로 받는다
+   MssecPage.prototype.excel = function () {
+    const list = this.rows.filter(r => !r._new);
+    if (list.length === 0) { Alert.alert('', '내려받을 자료가 없습니다.'); return; }
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const head = ['세입목코드', '세입목명칭', '사용여부'];
+    const csv = '\ufeff' + [head].concat(list.map(r => [r.it2cd, r.it2nm, r.useyn]))
+    .map(a => a.map(q).join(',')).join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}));
+    a.download = '세입목.csv'; document.body.appendChild(a); a.click(); a.remove();
+   };
+
+   let page = null;
+   $(document).ready(function () {
+    page = new MssecPage();
+    page.search();
+
+    $('#btnMsSearch').on('click', () => page.confirmLeave(() => page.search()));
+    $('#msKeyword').on('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#btnMsSearch').click(); } });
+    $('#btnMsNew').on('click', () => page.addRow());
+    $('#btnMsSave').on('click', () => page.save());
+    $('#btnMsDelete').on('click', () => page.remove());
+    $('#btnMsPrint').on('click', () => page.print());
+    $('#btnMsExcel').on('click', () => page.excel());
+
+    // 표 입력 → 데이터 반영
+    $('#msBody').on('input change', 'input', function () {
+     const i = +$(this).closest('tr').data('i');
+     const r = page.rows[i];
+     if (!r) return;
+     if (this.type === 'radio' && !this.checked) return;
+     r[$(this).data('k')] = $(this).val();
+     if (!r._new) { r._dirty = true; $(this).closest('tr').addClass('dirty'); }
+    });
+    $('#msBody').on('focusin click', 'tr[data-i]', function () {
+     page.sel = +$(this).data('i');
+     $('#msBody tr').removeClass('sel');
+     $(this).addClass('sel');
+    });
+
+    $(document).on('keydown', function (e) {
+     if (e.key === 'F4') { e.preventDefault(); $('#btnMsSearch').click(); }
+     if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) { e.preventDefault(); page.save(); }
+    });
+    // 저장하지 않고 탭/창을 닫으려 하면 브라우저 확인창
+    window.addEventListener('beforeunload', function (e) {
+     if (page && page.isDirty()) { e.preventDefault(); e.returnValue = ''; }
+    });
+   });
+  </script>
+</th:block>
+</html>

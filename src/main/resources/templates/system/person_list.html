@@ -1,0 +1,489 @@
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml">
+<head>
+  <style>
+      .wj-header {
+          text-align: center !important;
+      }
+  </style>
+</head>
+
+<th:block layout:fragment="content">
+  <style>
+      input[type="radio"]:checked:after {
+          margin-left: 3px;
+          margin-top: 3px;
+      }
+  </style>
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>사원관리</h2>
+        <a title="북마크" class="bookmark toggle">
+          내 메뉴
+        </a>
+      </div>
+      <ul class="page-navi">
+        <li><img th:src="@{/images/icon/ico-nav-home.svg}" alt="홈아이콘"></li>
+        <li>인사관리</li>
+        <li>사원관리</li>
+      </ul>
+    </div>
+
+    <div style="display: flex; gap: 5px">
+      <!-- 좌측 : 검색 + 목록 그리드 -->
+      <section class="section" style="width: 50%;">
+        <div class="section-top">
+          <div class="search-wrap">
+            <dl>
+              <dt>
+                <label for="searchPernm">성명</label>
+              </dt>
+              <dd>
+                <div class="srch-box">
+                  <input class="form-control2" type="text" id="searchPernm" name="searchPernm" placeholder="성명" style="width:150px"/>
+                </div>
+              </dd>
+            </dl>
+            <dl>
+              <dt>
+                <label for="searchRetire">재직여부</label>
+              </dt>
+              <dd>
+                <select class="form-control2" id="searchRetire" name="searchRetire" style="width:120px">
+                  <option value="">전체</option>
+                  <option value="0" selected>재직</option>
+                  <option value="1">퇴사</option>
+                </select>
+              </dd>
+            </dl>
+            <dl>
+              <dt>&nbsp;</dt>
+              <dd>
+                <li>
+                  <a class="btn btn-delete" title="검색" id="btnSearch">
+                    <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘">
+                    검색
+                  </a>
+                </li>
+              </dd>
+            </dl>
+          </div>
+        </div>
+        <div class="container-fluid">
+          <p id="selectedItem"></p>
+          <div id="theGrid"></div>
+        </div>
+      </section>
+
+      <!-- 우측 : 상세 폼 -->
+      <section style="width: 50%;">
+        <div class="section">
+          <div class="title-wrap"></div>
+          <div class="button-wrap" style="border-top:none; display:flex; justify-content:flex-end;
+          align-items:center; min-height:70px;">
+            <ul style="display:flex; gap:4px; list-style:none; padding:0; margin:0; min-height:32px;">
+              <li>
+                <a class="btn btn-excell" title="신규등록" id="Newbtn">
+                  <img th:src="@{/images/icon/ico-plus.svg}" alt="등록 아이콘">
+                  신규등록
+                </a>
+              </li>
+              <li>
+                <a class="btn btn-edit" id="btnSave" title="저장">
+                  <img th:src="@{/images/icon/ico-save.svg}" alt="저장 아이콘">
+                  저장
+                </a>
+              </li>
+              <li>
+                <a class="btn btn-delete" title="삭제" id="btnDelete">
+                  <img th:src="@{/images/icon/ico-delete.svg}" alt="삭제 아이콘">
+                  삭제
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <form id="EmployeeForm">
+            <div class="table-wrap">
+              <table class="view-table" id="selectedData">
+                <caption>사원정보 테이블</caption>
+                <colgroup>
+                  <col class="wp20">
+                  <col class="wauto">
+                  <col class="wp20">
+                  <col class="wauto">
+                </colgroup>
+                <tbody>
+                <tr>
+                  <th><label for="f_perid">사번</label></th>
+                  <td>
+                    <input type="text" id="f_perid" name="perid" class="wp100" placeholder="자동채번" readonly/>
+                  </td>
+                  <th><label for="f_pernm">성명</label></th>
+                  <td>
+                    <input type="text" id="f_pernm" name="pernm" class="wp100" placeholder="성명" maxlength="30"/>
+                  </td>
+                </tr>
+                <tr>
+                  <th><label for="f_sexM">성별</label></th>
+                  <td>
+                    <label><input type="radio" id="f_sexM" name="sex" value="1"/> 남</label>
+                    <label style="margin-left: 30px;"><input type="radio" id="f_sexF" name="sex" value="2"/> 여</label>
+                  </td>
+                  <th><label for="f_birthday">생년월일</label></th>
+                  <td>
+                    <input type="date" id="f_birthday" name="birthday" class="wp100"/>
+                  </td>
+                </tr>
+                <tr>
+                  <th><label for="f_rnum">주민번호</label></th>
+                  <td>
+                    <input type="text" id="f_rnum" name="rnum" class="wp100" placeholder="주민번호" maxlength="13"/>
+                  </td>
+                  <th><label for="f_retireY">재직여부</label></th>
+                  <td>
+                    <label><input type="radio" id="f_retireY" name="retireflag" value="0"/> 재직</label>
+                    <label style="margin-left: 30px;"><input type="radio" id="f_retireN" name="retireflag" value="1"/> 퇴사</label>
+                  </td>
+                </tr>
+                <tr>
+                  <th><label for="f_divicd">부서코드</label></th>
+                  <td>
+                    <input type="text" id="f_divicd" name="divicd" class="wp100" placeholder="부서코드" maxlength="8"/>
+                  </td>
+                  <th><label for="f_divinm">부서명</label></th>
+                  <td>
+                    <input type="text" id="f_divinm" name="divinm" class="wp100" placeholder="부서명" maxlength="40"/>
+                  </td>
+                </tr>
+                <tr>
+                  <th><label for="f_clacd">직급코드</label></th>
+                  <td>
+                    <input type="text" id="f_clacd" name="clacd" class="wp100" placeholder="직급코드" maxlength="3"/>
+                  </td>
+                  <th><label for="f_clanm">직급명</label></th>
+                  <td>
+                    <input type="text" id="f_clanm" name="clanm" class="wp100" placeholder="직급명" maxlength="40"/>
+                  </td>
+                </tr>
+                <tr>
+                  <th><label for="f_entdate">입사일</label></th>
+                  <td>
+                    <input type="date" id="f_entdate" name="entdate" class="wp100"/>
+                  </td>
+                  <th><label for="f_retiredate">퇴사일</label></th>
+                  <td>
+                    <input type="date" id="f_retiredate" name="retiredate" class="wp100"/>
+                  </td>
+                </tr>
+                <tr>
+                  <th><label for="f_telnum">전화번호</label></th>
+                  <td>
+                    <input type="text" id="f_telnum" name="telnum" class="wp100" placeholder="전화번호" maxlength="30"/>
+                  </td>
+                  <th><label for="f_handphone">휴대전화</label></th>
+                  <td>
+                    <input type="text" id="f_handphone" name="handphone" class="wp100" placeholder="휴대전화" maxlength="20"/>
+                  </td>
+                </tr>
+                <tr>
+                  <th><label for="f_email">이메일</label></th>
+                  <td colspan="3">
+                    <input type="text" id="f_email" name="email" class="wp100" placeholder="이메일" maxlength="30"/>
+                  </td>
+                </tr>
+                <tr>
+                  <th><label for="f_bankcd">은행코드</label></th>
+                  <td>
+                    <input type="text" id="f_bankcd" name="bankcd" class="wp100" placeholder="은행코드" maxlength="2"/>
+                  </td>
+                  <th><label for="f_banknm">은행명</label></th>
+                  <td>
+                    <input type="text" id="f_banknm" name="banknm" class="wp100" placeholder="은행명" maxlength="50"/>
+                  </td>
+                </tr>
+                <tr>
+                  <th><label for="f_accnum">계좌번호</label></th>
+                  <td colspan="3">
+                    <input type="text" id="f_accnum" name="accnum" class="wp100" placeholder="계좌번호" maxlength="20"/>
+                  </td>
+                </tr>
+                <tr>
+                  <th><label for="f_zipcd">우편번호</label></th>
+                  <td>
+                    <input type="text" id="f_zipcd" name="zipcd" class="wp100" placeholder="우편번호" maxlength="6"/>
+                  </td>
+                  <th><label for="f_zipadres">주소</label></th>
+                  <td>
+                    <input type="text" id="f_zipadres" name="zipadres" class="wp100" placeholder="주소" maxlength="90"/>
+                  </td>
+                </tr>
+                <tr>
+                  <th><label for="f_adres">상세주소</label></th>
+                  <td colspan="3">
+                    <input type="text" id="f_adres" name="adres" class="wp100" placeholder="상세주소" maxlength="90"/>
+                  </td>
+                </tr>
+                <tr>
+                  <th><label for="f_remark">비고</label></th>
+                  <td colspan="3">
+                    <input type="text" id="f_remark" name="remark" class="wp100" placeholder="비고" maxlength="90"/>
+                  </td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+  </div>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   class EmployeePage {
+    constructor() {
+     this.grid = null;
+     this.viewData = new wijmo.collections.CollectionView();
+     this.url = '/api/hr/PersonList';
+     this.init();
+    }
+
+    init() {
+     let _this = this;
+     this.grid = new wijmo.grid.FlexGrid('#theGrid', {
+      selectionMode: wijmo.grid.SelectionMode.Row,
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false,
+      showMarquee: true,
+      isReadOnly: true,
+      formatItem: (sender, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) {
+        e.cell.style.textAlign = 'center';
+       }
+       if (e.panel.cellType === wijmo.grid.CellType.Cell) {
+        const item = sender.rows[e.row].dataItem;
+        if (item && item.retireflag === '1') e.cell.style.color = '#999';
+       }
+      },
+      columns: [
+       {binding: 'perid',       header: '사번',     width: 90,  align: 'center'},
+       {binding: 'pernm',       header: '성명',     width: 110, align: 'center'},
+       {binding: 'sexnm',       header: '성별',     width: 60,  align: 'center'},
+       {binding: 'divinm',      header: '부서',     width: 130, align: 'left'},
+       {binding: 'clanm',       header: '직급',     width: 100, align: 'left'},
+       {binding: 'entdate_fmt', header: '입사일',   width: 110, align: 'center'},
+       {binding: 'handphone',   header: '휴대전화', width: 130, align: 'center'},
+       {binding: 'retirenm',    header: '재직여부', width: 90,  align: 'center'},
+      ],
+      itemsSource: this.viewData,
+     });
+
+     new FlexGridContextMenu(this.grid);
+     this.grid.downloadFileName = '사원목록';
+
+     this.grid.hostElement.addEventListener('dblclick', (e) => {
+      const ht = this.grid.hitTest(e);
+      if (ht.cellType === wijmo.grid.CellType.Cell) {
+       const item = this.grid.selectedItems[0];
+       if (item && item.perid) _this.loadDetail(item.perid);
+      }
+     });
+
+     $('#searchPernm').on('keypress', function (e) {
+      if (e.keyCode === 13) _this.searchMainData();
+     });
+    }//init
+
+    searchMainData() {
+     let _this = this;
+     let url = this.url + '/read';
+     let data = {
+      pernm: $('#searchPernm').val(),
+      retire: $('#searchRetire').val()
+     };
+     AjaxUtil.getAsyncData(url, data, function (result) {
+      if (result != null) {
+       _this.viewData = new wijmo.collections.CollectionView(result.data || []);
+       _this.grid.itemsSource = _this.viewData;
+      }
+     });
+    }
+
+    toDateInput(v) {
+     let s = String(v || '').replace(/[^0-9]/g, '');
+     if (s.length !== 8) return '';
+     return s.substring(0,4) + '-' + s.substring(4,6) + '-' + s.substring(6,8);
+    }
+
+    loadDetail(perid) {
+     let _this = this;
+     AjaxUtil.getAsyncData(this.url + '/readOne', {perid: perid}, function (res) {
+      if (!res || !res.data) {
+       Alert.alert('', '사원 정보를 불러오지 못했습니다.');
+       return;
+      }
+      const d = res.data;
+      const setV = (id, v) => { $('#' + id).val(v == null ? '' : v); };
+
+      setV('f_perid', d.perid);
+      $('#f_perid').prop('readonly', true);
+      setV('f_pernm', d.pernm);
+      setV('f_rnum', d.rnum);
+      setV('f_birthday', _this.toDateInput(d.birthday));
+      setV('f_divicd', d.divicd);
+      setV('f_divinm', d.divinm);
+      setV('f_clacd', d.clacd);
+      setV('f_clanm', d.clanm);
+      setV('f_entdate', _this.toDateInput(d.entdate));
+      setV('f_retiredate', _this.toDateInput(d.retiredate || d.rtdate));
+      setV('f_telnum', d.telnum);
+      setV('f_handphone', d.handphone);
+      setV('f_email', d.email);
+      setV('f_bankcd', d.bankcd);
+      setV('f_banknm', d.banknm);
+      setV('f_accnum', d.accnum);
+      setV('f_zipcd', d.zipcd);
+      setV('f_zipadres', d.zipadres);
+      setV('f_adres', d.adres);
+      setV('f_remark', d.remark);
+
+      $('input[name="sex"]').prop('checked', false);
+      $('input[name="sex"][value="' + (d.sex || '') + '"]').prop('checked', true);
+      $('input[name="retireflag"]').prop('checked', false);
+      $('input[name="retireflag"][value="' + (d.retireflag === '1' ? '1' : '0') + '"]').prop('checked', true);
+     });
+    }
+
+    collectForm() {
+     const g = id => $('#' + id).val() || '';
+     return {
+      perid: g('f_perid'),
+      pernm: g('f_pernm'),
+      sex: $('input[name="sex"]:checked').val() || '',
+      birthday: g('f_birthday').replace(/-/g, ''),
+      rnum: g('f_rnum'),
+      retireflag: $('input[name="retireflag"]:checked').val() || '0',
+      divicd: g('f_divicd'),
+      divinm: g('f_divinm'),
+      clacd: g('f_clacd'),
+      clanm: g('f_clanm'),
+      entdate: g('f_entdate').replace(/-/g, ''),
+      retiredate: g('f_retiredate').replace(/-/g, ''),
+      telnum: g('f_telnum'),
+      handphone: g('f_handphone'),
+      email: g('f_email'),
+      bankcd: g('f_bankcd'),
+      banknm: g('f_banknm'),
+      accnum: g('f_accnum'),
+      zipcd: g('f_zipcd'),
+      zipadres: g('f_zipadres'),
+      adres: g('f_adres'),
+      remark: g('f_remark')
+     };
+    }
+
+    saveMainData() {
+     let _this = this;
+     let data = _this.collectForm();
+     if (!data.pernm || data.pernm.trim() === '') {
+      Alert.alert('', '성명을 입력해주세요.');
+      return;
+     }
+     Alert.confirm('', '저장하시겠습니까?', function () {
+      $.ajax({
+       url: _this.url + '/save',
+       type: 'POST',
+       contentType: 'application/json',
+       data: JSON.stringify(data),
+       headers: { 'X-CSRF-Token': $('[name=_csrf]').val() },
+       success: function (result) {
+        if (result && result.success) {
+         Alert.alert('', result.message || '저장되었습니다.');
+         _this.resetForm();
+         _this.searchMainData();
+        } else {
+         Alert.alert('', (result && result.message) || '저장에 실패했습니다.');
+        }
+       },
+       error: function (xhr) {
+        Alert.alert('에러', '서버 오류 발생: ' + xhr.statusText);
+       }
+      });
+     });
+    }
+
+    deleteMainData() {
+     let _this = this;
+     let perid = $('#f_perid').val();
+     if (!perid) { Alert.alert('', '삭제할 사원을 선택해주세요.'); return; }
+     Alert.confirm('', '삭제하시겠습니까?', function () {
+      $.ajax({
+       url: _this.url + '/delete',
+       type: 'POST',
+       contentType: 'application/json',
+       data: JSON.stringify({perid: perid}),
+       headers: { 'X-CSRF-Token': $('[name=_csrf]').val() },
+       success: function (result) {
+        if (result && result.success) {
+         Alert.alert('', result.message || '삭제되었습니다.');
+         _this.resetForm();
+         _this.searchMainData();
+        } else {
+         Alert.alert('', (result && result.message) || '삭제에 실패했습니다.');
+        }
+       },
+       error: function (xhr) {
+        Alert.alert('에러', '서버 오류 발생: ' + xhr.statusText);
+       }
+      });
+     });
+    }
+
+    resetForm() {
+     $('#EmployeeForm')[0].reset();
+     $('input[name="sex"]').prop('checked', false);
+     $('input[name="retireflag"][value="0"]').prop('checked', true);
+     $('#f_perid').val('').prop('readonly', true);
+     AjaxUtil.getAsyncData(this.url + '/nextPerid', {}, function (res) {
+      if (res && res.data) $('#f_perid').val(res.data);
+     });
+    }
+
+   }//EmployeePage
+
+   let page = null;
+
+   $(document).ready(function () {
+    page = new EmployeePage();
+
+    page.searchMainData();
+
+    $('#btnSearch').click(function (e) {
+     e.preventDefault();
+     page.searchMainData();
+    });
+
+    $('#Newbtn').click(function (e) {
+     e.preventDefault();
+     page.resetForm();
+    });
+
+    $('#btnSave').click(function (e) {
+     e.preventDefault();
+     page.saveMainData();
+    });
+
+    $('#btnDelete').click(function (e) {
+     e.preventDefault();
+     page.deleteMainData();
+    });
+
+    $(document).on('keydown', function (ev) {
+     if (ev.key === 'F4') { ev.preventDefault(); page.searchMainData(); }
+    });
+   });
+  </script>
+</th:block>
+</html>

@@ -1,0 +1,533 @@
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
+  <style>
+      /* 팔레트는 급여명세서·전표 인쇄 화면과 같은 계열을 쓴다.
+         :root 여야 한다. .layout-contents 에 걸면 팝업 안에서 var() 가 빈 값이 된다. */
+      :root {
+          --db-ink:   #1B2430;
+          --db-label: #45566A;
+          --db-mute:  #8A99A8;
+          --db-rule:  #DDE3E9;
+          --db-frame: #C0CAD3;
+          --db-band:  #F2F5F7;
+          --db-navy:  #24466F;
+          --db-alert: #B02418;
+          --db-ok:    #1F6B3A;
+          --db-warn:  #8A5A00;
+          --db-in:    #2F6E4E;   /* 세입 */
+          --db-out:   #5C7CA6;   /* 세출 */
+      }
+
+      .db-wrap { font-size: 13px; line-height: 1.5; color: var(--db-ink); }
+
+      /* 프로젝트 공용 CSS 에 .num 이 이미 있어 숫자마다 알약 배지가 붙는다.
+         클래스명을 db-num 으로 바꾸고, 혹시 다른 공용 규칙이 걸려도
+         이 화면 안에서는 배경·테두리가 안 생기도록 눌러 둔다. */
+      .db-wrap .db-num {
+          font-variant-numeric: tabular-nums;
+          background: none; border: 0; border-radius: 0;
+          color: inherit; box-shadow: none;
+      }
+      /* display · padding 초기화는 인라인 요소에만 건다.
+         td 에 걸면 셀이 table-cell 을 잃고 표가 무너진다. */
+      .db-wrap span.db-num,
+      .db-wrap b.db-num,
+      .db-wrap div.db-num {
+          display: inline; padding: 0; min-width: 0; line-height: inherit;
+      }
+      .db-wrap .db-panel span,
+      .db-wrap .db-panel b,
+      .db-wrap .db-todo span { background: none; box-shadow: none; }
+
+      .db-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+      .db-top select {
+          height: 32px; padding: 0 10px; font-family: inherit; font-size: 13px;
+          border: 1px solid var(--db-frame); border-radius: 2px; background: #fff;
+      }
+      .db-top select:focus-visible { outline: 2px solid var(--db-navy); outline-offset: 2px; }
+      .db-top .asof { color: var(--db-mute); font-size: 12.5px; }
+      .db-top .spin { display: none; color: var(--db-label); font-size: 12.5px; }
+      .db-wrap.loading .db-top .spin { display: inline; }
+
+      /* 일부 조회 실패 안내 */
+      .db-warn {
+          display: none; margin-bottom: 14px; padding: 7px 11px;
+          border-left: 3px solid var(--db-warn); background: #FBF6EC;
+          color: var(--db-warn); font-size: 12.5px;
+      }
+      .db-warn.on { display: block; }
+
+      /* ── 손대야 할 것 ─────────────────────────────────── */
+      .db-todo {
+          display: flex; flex-wrap: wrap;
+          background: #fff; border: 1px solid var(--db-frame); margin-bottom: 16px;
+      }
+      .db-todo > a {
+          flex: 1 1 0; min-width: 170px;
+          padding: 12px 16px; text-decoration: none; color: inherit;
+          border-right: 1px solid var(--db-rule);
+          display: flex; align-items: baseline; gap: 9px;
+      }
+      .db-todo > a:last-child { border-right: none; }
+      .db-todo > a:hover { background: var(--db-band); }
+      .db-todo > a:focus-visible { outline: 2px solid var(--db-navy); outline-offset: -2px; }
+      .db-todo > a { flex-direction: column; align-items: flex-start; gap: 4px; }
+      .db-todo .n { font-size: 21px; font-weight: 700; line-height: 1.15; }
+      .db-todo .t { font-size: 12.5px; color: var(--db-label); }
+      .db-todo .in  .n { color: var(--db-in); }
+      .db-todo .out .n { color: var(--db-out); }
+      .db-todo .zero .n, .db-todo .zero .t { color: var(--db-mute); font-weight: 400; }
+      .db-todo .hot .n { color: var(--db-alert); }
+
+      /* ── 판 ───────────────────────────────────────────── */
+      /* 판을 2열 균등으로 통일한다. 2fr:1fr 처럼 폭이 다르면
+         표 너비가 제각각이라 화면이 어수선해진다.
+         align-items: stretch 라 한 줄에 놓인 두 판의 높이가 같아진다. */
+      .db-grid {
+          display: grid; gap: 16px; align-items: stretch;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      /* 12개월 막대처럼 가로가 필요한 판은 두 칸을 다 쓴다 */
+      .db-grid .full { grid-column: 1 / -1; }
+      @media (max-width: 1100px) {
+          .db-grid { grid-template-columns: 1fr; }
+          .db-grid .full { grid-column: auto; }
+      }
+
+      /* 내용이 적은 판도 옆 판 높이를 따라가게 한다 */
+      .db-panel {
+          background: #fff; border: 1px solid var(--db-frame);
+          display: flex; flex-direction: column; min-width: 0;
+      }
+      .db-panel .body { flex: 1 1 auto; }
+      .db-panel > h3 {
+          margin: 0; padding: 10px 14px; font-size: 13.5px; font-weight: 700; letter-spacing: .5px;
+          border-bottom: 1px solid var(--db-frame); background: var(--db-band);
+          display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+      }
+      /* 어느 화면의 숫자인지 밝혀 둔다 */
+      .db-panel > h3 .side { font-size: 12px; font-weight: 400; color: var(--db-label); white-space: nowrap; }
+      .db-panel .body { padding: 14px; }
+
+      .db-wrap table { width: 100%; border-collapse: collapse; }
+      .db-wrap th, .db-wrap td { padding: 7px 6px; border-bottom: 1px solid var(--db-rule); text-align: left; }
+      .db-wrap th { color: var(--db-label); font-weight: 600; font-size: 12px; border-bottom: 1px solid var(--db-frame); }
+      .db-wrap td.n, .db-wrap th.n { text-align: right; }
+      .db-wrap tbody tr:last-child td { border-bottom: none; }
+      .db-wrap tfoot td { border-top: 1px solid var(--db-frame); border-bottom: none; font-weight: 700; padding-top: 9px; }
+      .db-sub { display: block; color: var(--db-mute); font-size: 11.5px; }
+      .db-neg { color: var(--db-alert); }
+      .db-none { color: var(--db-mute); padding: 16px 2px; font-size: 12.5px; }
+
+      /* 칸 안의 목록이 길어져도 판이 늘어나 화면이 무너지지 않게 한다.
+         판마다 높이를 맞춰 두면 옆 판과 어긋나지 않는다. */
+      .db-scroll { max-height: 288px; overflow-y: auto; overscroll-behavior: contain; }
+      .db-scroll table { margin: 0; }
+      /* 스크롤해도 머리행은 남아 있어야 어느 칸인지 안다 */
+      .db-scroll thead th {
+          position: sticky; top: 0; z-index: 1;
+          background: #fff; box-shadow: inset 0 -1px 0 var(--db-frame);
+      }
+      /* 합계행은 고정하지 않는다. 고정하면 마지막 데이터 행 위에 얹혀 겹쳐 보인다. */
+
+      /* 이름 칸이 길어져도 금액 칸을 밀어내지 않게 한다 */
+      .db-scroll td:first-child { word-break: break-word; }
+      .db-scroll th.n, .db-scroll td.n { white-space: nowrap; }
+      .db-scroll::-webkit-scrollbar { width: 8px; }
+      .db-scroll::-webkit-scrollbar-thumb { background: var(--db-frame); border-radius: 4px; }
+      .db-scroll::-webkit-scrollbar-track { background: var(--db-band); }
+
+      /* 계좌 목록은 길어질 수 있어 조금 더 준다 */
+      .db-scroll.tall { max-height: 380px; }
+
+      /* ── 월별 막대 ────────────────────────────────────── */
+      .db-legend { display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+          color: var(--db-label); font-size: 12px; margin-bottom: 12px; }
+      .db-legend span { display: flex; align-items: center; gap: 6px; }
+      .db-legend i { width: 11px; height: 11px; display: inline-block; }
+      .db-legend i.in  { background: var(--db-in); }
+      .db-legend i.out { background: var(--db-out); }
+
+      .db-months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px; align-items: end; }
+      .db-mo { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+      .db-mo .pair { display: flex; gap: 3px; align-items: flex-end; height: 118px; }
+      .db-mo .pair b { width: 12px; display: block; min-height: 1px; }
+      .db-mo .pair b.in  { background: var(--db-in); }
+      .db-mo .pair b.out { background: var(--db-out); }
+      .db-mo .lb { color: var(--db-label); font-size: 11.5px; }
+      .db-mo.none .pair { border-bottom: 1px solid var(--db-rule); }
+
+      /* ── 재원 ─────────────────────────────────────────── */
+      .db-src { display: flex; justify-content: space-between; align-items: baseline;
+          padding: 9px 0; border-bottom: 1px solid var(--db-rule); }
+      .db-src:last-child { border-bottom: none; }
+      .db-src .k { color: var(--db-label); }
+      .db-src .v { text-align: right; font-weight: 600; font-size: 14px; }
+
+      /* ── 급여 ─────────────────────────────────────────── */
+      .db-kv { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--db-rule); }
+      .db-kv:last-of-type { border-bottom: none; }
+      .db-kv .k { color: var(--db-label); }
+      .db-kv .v { font-weight: 600; }
+      .db-kv .v.ng { color: var(--db-alert); }
+      .db-kv .v.ok { color: var(--db-ok); }
+
+      /* 카드 판 상단 요약 한 줄 */
+      .db-step { display: flex; gap: 24px; flex-wrap: wrap; padding-bottom: 10px;
+          border-bottom: 1px solid var(--db-rule); margin-bottom: 10px; color: var(--db-label); }
+      .db-step b { margin-left: 6px; font-weight: 700; }
+      .db-step b.ng { color: var(--db-alert); }
+      .db-step b.ok { color: var(--db-ok); }
+
+      .db-foot { margin-top: 14px; padding-top: 11px; border-top: 1px solid var(--db-rule);
+          color: var(--db-label); font-size: 12.5px; }
+      .db-more {
+          display: inline-block; margin-top: 12px; color: var(--db-navy);
+          font-size: 12.5px; font-weight: 600; text-decoration: none;
+          border-bottom: 1px solid currentColor; padding-bottom: 1px;
+      }
+      .db-more:hover { color: #17304F; }
+  </style>
+
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>대시보드</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>대시보드</li>
+      </ul>
+    </div>
+
+    <div class="db-wrap" id="dbWrap">
+
+      <div class="db-top">
+        <select id="dbYear" th:attr="data-year=${year}"></select>
+        <span class="asof" id="dbAsOf" th:text="${today} ?: ''"></span>
+        <span class="spin">불러오는 중…</span>
+      </div>
+
+      <div class="db-warn" id="dbWarn"></div>
+
+      <nav class="db-todo" id="dbTodo"></nav>
+
+      <div class="db-grid">
+
+        <!-- 12개월 막대라 가로가 필요하다. 두 칸을 다 쓴다. -->
+        <section class="db-panel full">
+          <h3>월별 세입·세출<span class="side">세입내역서 · 세출내역서 기준</span></h3>
+          <div class="body">
+            <p class="db-legend">
+              <span><i class="in"></i> 세입</span>
+              <span><i class="out"></i> 세출</span>
+              <span style="color:var(--db-mute)">이월 분개는 빼고 셉니다.</span>
+            </p>
+            <div class="db-months" id="dbMonths"></div>
+            <p class="db-foot" id="dbMonthFoot"></p>
+          </div>
+        </section>
+
+        <section class="db-panel">
+          <h3>재원별 세입·세출<span class="side">세입내역서 · 세출내역서 기준</span></h3>
+          <div class="body" id="dbFund"></div>
+        </section>
+
+        <section class="db-panel">
+          <h3>관별 수지<span class="side">계정과목 단위</span></h3>
+          <div class="body" id="dbAccount"></div>
+        </section>
+
+        <section class="db-panel">
+          <h3>최근 전표<span class="side">전표입력</span></h3>
+          <div class="body" id="dbRecent"></div>
+        </section>
+
+        <section class="db-panel">
+          <h3>이번 달 급여<span class="side">급여명세서 발송</span></h3>
+          <div class="body" id="dbPayroll"></div>
+        </section>
+
+        <!-- 카드는 0 건이 정상 상태다. 판을 크게 잡을 이유가 없어 한 줄로 둔다. -->
+        <section class="db-panel full">
+          <h3>전표 없는 카드 사용<span class="side">카드내역</span></h3>
+          <div class="body" id="dbCard"></div>
+        </section>
+
+      </div>
+
+    </div>
+  </div>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   class ERPDashboardPage {
+    constructor() {
+     this.url = '/api/dashboard';
+     this.initYears();
+     this.bind();
+    }
+
+    /** 회계연도 선택. 올해부터 4년 전까지. */
+    initYears() {
+     const cur = Number($('#dbYear').data('year')) || new Date().getFullYear();
+     const $s = $('#dbYear').empty();
+     for (let y = cur; y >= cur - 4; y--) {
+      $s.append('<option value="' + y + '">' + y + '년</option>');
+     }
+     $s.val(String(cur));
+    }
+
+    bind() {
+     const _this = this;
+     $('#dbYear').on('change', function () { _this.load(); });
+
+     // 모델에 today 가 안 실려 와도 'null 기준' 이 보이지 않게 한다
+     const $as = $('#dbAsOf');
+     const t = ($as.text() || '').trim();
+     $as.text((t && t !== 'null' ? t : new Date().toLocaleDateString('ko-KR')) + ' 기준');
+    }
+
+    busy(on) { $('#dbWrap').toggleClass('loading', !!on); }
+
+    load() {
+     const _this = this;
+     _this.busy(true);
+
+     AjaxUtil.getAsyncData(_this.url + '/data', { year: $('#dbYear').val() }, function (result) {
+      _this.busy(false);
+      if (!result || !result.success || !result.data) {
+       Alert.alert('', (result && result.message) || '대시보드를 불러오지 못했습니다.');
+       return;
+      }
+      const d = result.data;
+
+      // 실패한 판만 알린다. 나머지는 그대로 그린다.
+      const keys = Object.keys(d.failed || {});
+      $('#dbWarn').toggleClass('on', keys.length > 0)
+      .text(keys.length ? '불러오지 못한 항목: ' + keys.join(', ') : '');
+
+      _this.drawTodo(d);
+      _this.drawFund(d.fundSource || []);
+      _this.drawRecent(d.recentSlips || []);
+      _this.drawMonths(d.monthly || []);
+      _this.drawPayroll(d.payroll);
+      _this.drawAccount(d.account || []);
+      _this.drawCard(d.noSlipCardList || [], d);
+     });
+    }
+
+    // ── 손대야 할 것 ───────────────────────────────────
+    drawTodo(d) {
+     const pay = d.payroll || {};
+     const months = d.monthly || [];
+
+     // 자료가 있는 마지막 달을 이번 달로 본다.
+     // 오늘이 9월이어도 9월 전표가 아직 없으면 8월을 보여 주는 게 맞다.
+     let cur = null;
+     months.forEach(function (m) { if (m.hasData) cur = m; });
+
+     const notSent = Math.max((pay.total || 0) - (pay.sent || 0), 0);
+     const label = cur ? cur.month + '월' : '이번 달';
+
+     const items = [
+      // 왼쪽 둘은 규모, 오른쪽 둘은 손댈 것. 성격이 달라 순서를 섞지 않는다.
+      { cls: 'in',  v: ERPDashboardPage.won(cur ? cur.income : 0),  t: label + ' 세입' },
+      { cls: 'out', v: ERPDashboardPage.won(cur ? cur.expense : 0), t: label + ' 세출' },
+      { cls: (d.noSlipCard || 0) === 0 ? 'zero' : 'hot',
+       v: (d.noSlipCard || 0) + '건', t: '전표 없는 카드 사용',
+       href: '/account_management/card_history' },
+      { cls: notSent === 0 ? 'zero' : 'hot',
+       v: notSent + '명', t: '명세서 못 받은 직원',
+       href: '/payslip/payslip' }
+     ];
+
+     let html = '';
+     items.forEach(function (it) {
+      // 0 이면 조용해진다. 빨간 0 은 아무 뜻이 없다.
+      const inner = '<span class="n db-num">' + it.v + '</span>' +
+       '<span class="t">' + it.t + '</span>';
+      html += it.href
+       ? '<a class="' + it.cls + '" href="' + it.href + '">' + inner + '</a>'
+       : '<a class="' + it.cls + '">' + inner + '</a>';
+     });
+     $('#dbTodo').html(html);
+    }
+
+    // ── 재원별 세입·세출 ───────────────────────────────
+    drawFund(rows) {
+     if (!rows.length) {
+      $('#dbFund').html('<div class="db-none">재원이 지정된 전표가 없습니다.</div>');
+      return;
+     }
+     let ti = 0, te = 0;
+     let html = '<div class="db-scroll"><table><thead><tr><th>재원</th>' +
+      '<th class="n">세입</th><th class="n">세출</th><th class="n">순액</th>' +
+      '</tr></thead><tbody>';
+     rows.forEach(function (r) {
+      const inc = Number(r.income || 0), exp = Number(r.expense || 0);
+      ti += inc; te += exp;
+      html += '<tr><td>' + ERPDashboardPage.esc(r.mssecnm || r.mssec) + '</td>' +
+       '<td class="n db-num">' + ERPDashboardPage.won(inc) + '</td>' +
+       '<td class="n db-num">' + ERPDashboardPage.won(exp) + '</td>' +
+       '<td class="n db-num' + (inc - exp < 0 ? ' db-neg' : '') + '">' +
+       ERPDashboardPage.won(inc - exp) + '</td></tr>';
+     });
+     html += '</tbody><tfoot><tr><td>합계</td>' +
+      '<td class="n db-num">' + ERPDashboardPage.won(ti) + '</td>' +
+      '<td class="n db-num">' + ERPDashboardPage.won(te) + '</td>' +
+      '<td class="n db-num' + (ti - te < 0 ? ' db-neg' : '') + '">' +
+      ERPDashboardPage.won(ti - te) + '</td></tr></tfoot></table></div>' +
+      '<p class="db-foot">재원이 다르면 남은 돈이 있어도 목적 외로 못 씁니다.</p>';
+     $('#dbFund').html(html);
+    }
+
+    // ── 최근 전표 ──────────────────────────────────────
+    drawRecent(rows) {
+     if (!rows.length) {
+      $('#dbRecent').html('<div class="db-none">이 연도에 등록된 전표가 없습니다.</div>');
+      return;
+     }
+     let html = '<div class="db-scroll"><table><thead><tr><th>일자</th><th>제목</th>' +
+      '<th class="n">금액</th></tr></thead><tbody>';
+     rows.forEach(function (r) {
+      const unfixed = String(r.fixflag || '') === '미확정';
+      html += '<tr><td class="db-num">' + ERPDashboardPage.esc(r.spdate) + '</td>' +
+       '<td>' + ERPDashboardPage.esc(r.subject || '(제목 없음)') +
+       '<span class="db-sub">' + ERPDashboardPage.esc(r.tiosec) +
+       (unfixed ? ' · 미확정' : '') + '</span></td>' +
+       '<td class="n db-num">' + ERPDashboardPage.won(r.amt) + '</td></tr>';
+     });
+     html += '</tbody></table></div>' +
+      '<a class="db-more" href="/account_management/slip_status">전표입력에서 보기</a>';
+     $('#dbRecent').html(html);
+    }
+
+    // ── 월별 세입·세출 ─────────────────────────────────
+    drawMonths(rows) {
+     const H = 118;
+     let max = 0;
+     rows.forEach(function (r) { max = Math.max(max, r.income || 0, r.expense || 0); });
+     const px = v => (max > 0 && v > 0) ? Math.max(Math.round(v / max * H), 2) : 0;
+
+     let html = '';
+     rows.forEach(function (r) {
+      const none = !r.hasData;
+      html += '<div class="db-mo' + (none ? ' none' : '') + '"><div class="pair">' +
+       (none ? '' :
+        '<b class="in"  style="height:' + px(r.income)  + 'px" title="세입 ' + ERPDashboardPage.won(r.income)  + '"></b>' +
+        '<b class="out" style="height:' + px(r.expense) + 'px" title="세출 ' + ERPDashboardPage.won(r.expense) + '"></b>') +
+       '</div><span class="lb">' + r.month + '월</span></div>';
+     });
+     $('#dbMonths').html(html);
+
+     let top = null;
+     rows.forEach(function (r) { if (r.hasData && (!top || r.expense > top.expense)) top = r; });
+     $('#dbMonthFoot').html(top && top.expense > 0
+      ? top.month + '월 세출이 가장 큽니다. <b>' + ERPDashboardPage.won(top.expense) + '</b>'
+      : '이 연도에 등록된 전표가 없습니다.');
+    }
+
+    // ── 급여 ───────────────────────────────────────────
+    drawPayroll(p) {
+     if (!p) {
+      $('#dbPayroll').html('<div class="db-none">확정된 급여 회차가 없습니다.</div>');
+      return;
+     }
+     const notSent = Math.max((p.total || 0) - (p.sent || 0), 0);
+     const ym = String(p.paybasic || '');
+     const ymText = ym.length >= 6 ? ym.substring(0, 4) + '년 ' + ym.substring(4, 6) + '월' : ym;
+
+     let html = '';
+     html += ERPDashboardPage.kv('귀속월', ymText, '');
+     html += ERPDashboardPage.kv('급여 계산', '완료 · ' + p.total + '명', 'ok');
+     html += ERPDashboardPage.kv('명세서 발송', p.sent + '명 / ' + p.total + '명', notSent > 0 ? '' : 'ok');
+     html += ERPDashboardPage.kv('메일주소 없는 직원', (p.noEmail || 0) + '명', p.noEmail > 0 ? 'ng' : 'ok');
+     html += ERPDashboardPage.kv('근태 미입력', (p.noAttendance || 0) + '명', p.noAttendance > 0 ? '' : 'ok');
+     html += ERPDashboardPage.kv('지급 총액', ERPDashboardPage.won(p.netSum), '');
+     html += '<a class="db-more" href="/payslip/payslip">급여명세서 발송</a>';
+     $('#dbPayroll').html(html);
+    }
+
+    // ── 관별 수지 ──────────────────────────────────────
+    drawAccount(rows) {
+     if (!rows.length) {
+      $('#dbAccount').html('<div class="db-none">이 연도에 세입·세출 전표가 없습니다.</div>');
+      return;
+     }
+     let ti = 0, te = 0;
+     let html = '<div class="db-scroll"><table><thead><tr><th>관</th><th class="n">세입</th>' +
+      '<th class="n">세출</th></tr></thead><tbody>';
+     rows.forEach(function (r) {
+      ti += Number(r.income || 0);
+      te += Number(r.expense || 0);
+      html += '<tr><td>' + ERPDashboardPage.esc(r.accnm || r.acccd) + '</td>' +
+       '<td class="n db-num">' + (Number(r.income) ? ERPDashboardPage.won(r.income) : '—') + '</td>' +
+       '<td class="n db-num">' + (Number(r.expense) ? ERPDashboardPage.won(r.expense) : '—') + '</td></tr>';
+     });
+     html += '</tbody><tfoot><tr><td>합계</td>' +
+      '<td class="n db-num">' + ERPDashboardPage.won(ti) + '</td>' +
+      '<td class="n db-num">' + ERPDashboardPage.won(te) + '</td></tr></tfoot></table></div>' +
+      '<a class="db-more" href="/settlement/Expensestatement">세출내역서</a>';
+     $('#dbAccount').html(html);
+    }
+
+    // ── 전표 없는 카드 사용 ────────────────────────────
+    drawCard(rows, d) {
+     // 카드는 전표 생성 → 지급전표 발행 두 단계다. 앞 단계만 보면 다 됐다고 착각한다.
+     const step = '<div class="db-step">' +
+      '<span>전표 생성 전 <b class="' + ((d.noSlipCard || 0) ? 'ng' : 'ok') + '">' +
+      (d.noSlipCard || 0) + '건</b></span>' +
+      '<span>지급전표 미발행 <b class="' + ((d.unpaidCard || 0) ? 'ng' : 'ok') + '">' +
+      (d.unpaidCard || 0) + '건</b></span></div>';
+
+     if (!rows.length) {
+      $('#dbCard').html(step +
+       '<div class="db-none">전표가 안 붙은 카드 사용이 없습니다.</div>');
+     } else {
+      let html = '<div class="db-scroll"><table><thead><tr><th>일자</th><th>가맹점</th>' +
+       '<th class="n">승인금액</th></tr></thead><tbody>';
+      rows.forEach(function (r) {
+       html += '<tr><td class="db-num">' + ERPDashboardPage.esc(r.apv_dt) + '</td>' +
+        '<td>' + ERPDashboardPage.esc(r.mest_nm) +
+        '<span class="db-sub">' + ERPDashboardPage.esc(r.card_no) + '</span></td>' +
+        '<td class="n db-num">' + ERPDashboardPage.won(r.buy_sum) + '</td></tr>';
+      });
+      html = step + html + '</tbody></table></div>' +
+       '<p class="db-foot">오래 둘수록 어느 사업 것인지 기억이 흐려집니다.</p>' +
+       '<a class="db-more" href="/account_management/card_history">카드내역에서 전표 만들기</a>';
+      $('#dbCard').html(html);
+     }
+
+    }
+
+    // ── 유틸 ───────────────────────────────────────────
+    static won(v) {
+     const n = Number(v || 0);
+     return isNaN(n) ? '0' : n.toLocaleString('ko-KR');
+    }
+
+    static kv(k, v, cls) {
+     return '<div class="db-kv"><span class="k">' + k + '</span>' +
+      '<span class="v ' + (cls || '') + '">' + v + '</span></div>';
+    }
+
+    static esc(s) {
+     return String(s == null ? '' : s)
+     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+   }
+
+   $(document).ready(function () {
+    const page = new ERPDashboardPage();
+    page.load();
+
+    $(document).on('keydown', function (ev) {
+     if (ev.key === 'F4') { ev.preventDefault(); page.load(); }
+    });
+   });
+  </script>
+</th:block>
+</html>

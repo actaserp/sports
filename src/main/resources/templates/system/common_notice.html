@@ -1,0 +1,363 @@
+<!--
+  시스템관리 > 전체공지 관리 — 운영사(superuser) 전용. 2026-11-13
+  * 모든 거래처 또는 지정한 거래처에게 공지를 올린다. 저장 위치: 마스터 DB common_notice
+  * 거래처 사용자는 로그인 팝업으로 본다 (index.html). 오늘 하루 안보기 / 다시 안보기는 계정별로 저장
+  * 본문은 일반 글(줄바꿈 유지). 첨부파일 여러 개, 1개당 20MB
+  * API  /api/system/common_notice/list · detail · tenants · save · delete · deleteFile
+-->
+<html layout:decorate="~{layout_page}" xmlns:layout="http://www.w3.org/1999/xhtml">
+<head>
+  <style>
+      .cn-wrap { display: flex; gap: 20px; align-items: flex-start; }
+      .cn-left { flex: 1 1 55%; min-width: 0; }
+      .cn-right { flex: 1 1 45%; min-width: 380px; }
+
+      .cn-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+      .cn-bar input[type=text] { width: 240px; }
+      .cn-bar .right { margin-left: auto; display: flex; gap: 6px; }
+
+      table.cn-list { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; }
+      table.cn-list th { background: #edeff5; height: 34px; border: 1px solid #d5d9e0; font-weight: 700; text-align: center; }
+      table.cn-list td { height: 32px; padding: 2px 8px; border: 1px solid #ebebeb;
+          white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.3; }
+      table.cn-list td.c { text-align: center; white-space: nowrap; }
+      table.cn-list tbody tr { cursor: pointer; }
+      table.cn-list tbody tr:hover td { background: #f5f8ff; }
+      table.cn-list tbody tr.on td { background: #e8efff; }
+      .cn-tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; }
+      .cn-tag.all { background: #e6f4ea; color: #1e6b34; }
+      .cn-tag.sel { background: #fff3db; color: #8a5a00; }
+      .cn-tag.live { background: #e8efff; color: #2f5cff; }
+      .cn-tag.end { background: #f1f1f1; color: #888; }
+      .cn-empty { text-align: center; color: #888; padding: 40px 0 !important; }
+
+      .cn-form { border: 1px solid #dee2e6; border-radius: 6px; padding: 16px; background: #fff; }
+      .cn-form h3 { font-size: 16px; margin: 0 0 12px; }
+      .cn-form .fld { margin-bottom: 12px; }
+      .cn-form .fld > label.k { display: block; font-weight: 700; font-size: 13px; color: #4d4d4d; margin-bottom: 4px; }
+      .cn-form input[type=text], .cn-form input[type=date], .cn-form textarea { width: 100%; box-sizing: border-box; }
+      .cn-form textarea { height: 220px; resize: vertical; line-height: 1.6; padding: 8px; }
+      .cn-form .row { display: flex; gap: 8px; align-items: center; }
+      .cn-form .row > input[type=date] { width: 160px; }
+      .cn-hint { font-size: 12px; color: #6B7688; margin-top: 4px; line-height: 1.5; }
+
+      /* 라디오 · 체크: 기본 모양 (프로젝트 규칙 — bank_account .ba-type 과 같게) */
+      .cn-opt { display: inline-flex; align-items: center; gap: 6px; margin-right: 18px; cursor: pointer; white-space: nowrap; font-size: 14px; }
+      .cn-opt input[type=radio], .cn-opt input[type=checkbox] {
+          position: static !important; appearance: auto !important; -webkit-appearance: auto !important;
+          width: 16px; height: 16px; margin: 0; opacity: 1 !important; }
+      .cn-opt input[type=radio]::before, .cn-opt input[type=radio]::after,
+      .cn-opt input[type=checkbox]::before, .cn-opt input[type=checkbox]::after { content: none !important; display: none !important; }
+
+      .cn-targets { max-height: 220px; overflow-y: auto; border: 1px solid #DDE3E9; border-radius: 4px; }
+      .cn-targets label { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid #EEF1F4;
+          cursor: pointer; font-size: 13px; }
+      .cn-targets label:last-child { border-bottom: 0; }
+      .cn-targets .k { color: #6B7688; margin-left: auto; }
+      .cn-targets input[type=checkbox] { position: static !important; appearance: auto !important; -webkit-appearance: auto !important;
+          width: 16px; height: 16px; margin: 0; opacity: 1 !important; }
+      .cn-targets input[type=checkbox]::before, .cn-targets input[type=checkbox]::after { content: none !important; display: none !important; }
+
+      .cn-files { margin-top: 6px; }
+      .cn-files div { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 3px 0; }
+      .cn-files a { color: #2f5cff; }
+      .cn-files button { border: 1px solid #e0b4ae; background: #fff; color: #c0392b; border-radius: 4px; font-size: 12px; padding: 1px 8px; cursor: pointer; }
+      .cn-foot { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; }
+  </style>
+</head>
+
+<th:block layout:fragment="content">
+  <div class="layout-contents">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>전체공지 관리</h2>
+        <a title="북마크" class="bookmark toggle">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img th:src="@{/images/icon/ico-nav-home.svg}" alt="홈아이콘"></li>
+        <li>시스템관리</li>
+        <li>전체공지 관리</li>
+      </ul>
+    </div>
+
+    <section class="section">
+      <div class="cn-wrap">
+        <!-- 목록 -->
+        <div class="cn-left">
+          <div class="cn-bar">
+            <input type="text" id="cnKeyword" placeholder="제목 · 내용 찾기"/>
+            <button type="button" class="btn btn-delete" id="btnCnSearch">
+              <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘"> 조회
+            </button>
+            <div class="right">
+              <button type="button" class="btn-default" id="btnCnNew" style="height:36px; padding:0 16px;">신규</button>
+            </div>
+          </div>
+          <table class="cn-list">
+            <colgroup><col style="width:60px"><col><col style="width:190px"><col style="width:100px"><col style="width:70px"></colgroup>
+            <thead><tr><th>번호</th><th>제목</th><th>게시 기간</th><th>대상</th><th>상태</th></tr></thead>
+            <tbody id="cnBody"><tr><td class="cn-empty" colspan="5">불러오는 중...</td></tr></tbody>
+          </table>
+        </div>
+
+        <!-- 작성 · 수정 -->
+        <div class="cn-right">
+          <form class="cn-form" id="cnForm" autocomplete="off" onsubmit="return false;">
+            <h3 id="cnFormTitle">새 전체공지</h3>
+            <input type="hidden" id="cnId"/>
+
+            <div class="fld">
+              <label class="k" for="cnTitle">제목</label>
+              <input type="text" id="cnTitle" maxlength="200"/>
+            </div>
+
+            <div class="fld">
+              <label class="k">게시 기간</label>
+              <div class="row">
+                <input type="date" id="cnFrom"/> ~ <input type="date" id="cnTo"/>
+              </div>
+              <div style="margin-top:8px">
+                <label class="cn-opt"><input type="checkbox" id="cnPopup" checked/> 로그인 때 팝업으로 띄우기</label>
+              </div>
+            </div>
+
+            <div class="fld">
+              <label class="k">받을 거래처</label>
+              <label class="cn-opt"><input type="radio" name="cnTarget" value="Y" checked/> 모든 거래처</label>
+              <label class="cn-opt"><input type="radio" name="cnTarget" value="N"/> 지정한 거래처만</label>
+              <div id="cnTargetBox" style="display:none; margin-top:8px">
+                <input type="text" id="cnTargetFilter" placeholder="거래처 이름 · 코드 찾기" style="margin-bottom:6px"/>
+                <div class="cn-targets" id="cnTargets">불러오는 중...</div>
+                <div class="cn-hint" id="cnTargetCnt"></div>
+              </div>
+            </div>
+
+            <div class="fld">
+              <label class="k" for="cnContent">내용</label>
+              <textarea id="cnContent" placeholder="줄바꿈은 그대로 보입니다."></textarea>
+            </div>
+
+            <div class="fld">
+              <label class="k" for="cnFiles">첨부파일</label>
+              <!-- 공통 CSS 가 input 을 감싸 버려서, 실제 파일 칸은 숨기고 버튼으로 연다 -->
+              <input type="file" id="cnFiles" multiple style="display:none"/>
+              <div class="row">
+                <button type="button" class="btn-default" id="btnCnPick" style="height:32px; padding:0 14px;">파일 선택</button>
+                <span class="cn-hint" style="margin:0">여러 개를 고를 수 있습니다. 1개당 20MB까지. 저장할 때 올라갑니다.</span>
+              </div>
+              <div class="cn-files" id="cnPicked"></div>
+              <div class="cn-files" id="cnSavedFiles"></div>
+            </div>
+
+            <div class="cn-foot">
+              <button type="button" class="btn-default" id="btnCnDelete" style="height:36px; padding:0 16px; display:none">삭제</button>
+              <button type="button" class="btn-edit btn-default" id="btnCnSave" style="height:36px; width:115px;">저장</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+  </div>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script type="text/javascript">
+   (function () {
+    const URL = '/api/system/common_notice';
+    const csrf = $("[name=_csrf]").val();
+    let tenants = [];          // [{db_key, spjangnm}]
+    let checked = new Set();   // 지정 거래처 db_key
+    let currentId = null;
+
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g,
+     c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    const ymd = d => (d && d.length >= 8) ? d.substring(0, 4) + '-' + d.substring(4, 6) + '-' + d.substring(6, 8) : (d || '');
+    const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 10);
+    const fmtSize = b => !b ? '' : b < 1024 ? b + 'B' : b < 1048576 ? (b / 1024).toFixed(1) + 'KB' : (b / 1048576).toFixed(1) + 'MB';
+
+    function fail(res) {
+     if (res && res.success === false) { Alert.alert('', res.message || '처리하지 못했습니다.'); return true; }
+     return false;
+    }
+
+    // ── 목록 ──
+    function search() {
+     $.get(URL + '/list', {keyword: $('#cnKeyword').val()}).done(function (res) {
+      if (fail(res)) return;
+      const rows = res.data || [];
+      const t = today().replace(/-/g, '');
+      if (!rows.length) { $('#cnBody').html('<tr><td class="cn-empty" colspan="5">등록된 전체공지가 없습니다.</td></tr>'); return; }
+      $('#cnBody').html(rows.map(r => {
+       const live = r.from_date <= t && r.to_date >= t;
+       const target = r.target_all === 'Y' ? '<span class="cn-tag all">모든 거래처</span>'
+        : '<span class="cn-tag sel">' + r.target_cnt + '곳</span>';
+       const state = live ? '<span class="cn-tag live">게시 중</span>'
+        : (r.to_date < t ? '<span class="cn-tag end">종료</span>' : '<span class="cn-tag end">예정</span>');
+       return '<tr data-id="' + r.id + '"' + (r.id === currentId ? ' class="on"' : '') + '>'
+        + '<td class="c">' + r.id + '</td>'
+        + '<td>' + esc(r.title) + (r.file_cnt > 0 ? ' 📎' : '') + (r.popup_yn === 'Y' ? '' : ' <span style="color:#888;font-size:12px">(팝업 안 함)</span>') + '</td>'
+        + '<td class="c">' + ymd(r.from_date) + ' ~ ' + ymd(r.to_date) + '</td>'
+        + '<td class="c">' + target + '</td>'
+        + '<td class="c">' + state + '</td></tr>';
+      }).join(''));
+     });
+    }
+
+    // ── 거래처 목록 ──
+    function renderTargets() {
+     const q = ($('#cnTargetFilter').val() || '').trim().toLowerCase();
+     const rows = tenants.filter(t => !q || (t.spjangnm || '').toLowerCase().includes(q) || (t.db_key || '').toLowerCase().includes(q));
+     if (!rows.length) { $('#cnTargets').text(tenants.length ? '찾는 거래처가 없습니다.' : '거래처가 없습니다.'); }
+     else {
+      $('#cnTargets').empty();
+      rows.forEach(t => {
+       const $cb = $('<input type="checkbox">').prop('checked', checked.has(t.db_key))
+       .on('change', function () { this.checked ? checked.add(t.db_key) : checked.delete(t.db_key); countTargets(); });
+       $('<label>').append($cb).append($('<span>').text(t.spjangnm || ''))
+       .append($('<span class="k">').text(t.db_key)).appendTo('#cnTargets');
+      });
+     }
+     countTargets();
+    }
+    function countTargets() { $('#cnTargetCnt').text('선택 ' + checked.size + '곳'); }
+    function toggleTargetBox() { $('#cnTargetBox').toggle($('input[name=cnTarget]:checked').val() === 'N'); }
+
+    // ── 폼 ──
+    function resetForm() {
+     currentId = null;
+     $('#cnFormTitle').text('새 전체공지');
+     $('#cnId').val('');
+     $('#cnTitle').val('');
+     $('#cnContent').val('');
+     const t = today(), plus = new Date(Date.now() + 7 * 86400000 - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 10);
+     $('#cnFrom').val(t);
+     $('#cnTo').val(plus);
+     $('#cnPopup').prop('checked', true);
+     $('input[name=cnTarget][value=Y]').prop('checked', true);
+     checked = new Set();
+     $('#cnTargetFilter').val('');
+     $('#cnFiles').val('');
+     $('#cnPicked').empty();
+     $('#cnSavedFiles').empty();
+     $('#btnCnDelete').hide();
+     toggleTargetBox();
+     renderTargets();
+     $('#cnBody tr').removeClass('on');
+    }
+
+    function renderSavedFiles(files) {
+     $('#cnSavedFiles').html((files || []).map(f =>
+      '<div><a href="' + URL + '/download?file_id=' + f.fileId + '">' + esc(f.fileNm) + '</a>'
+      + ' <span style="color:#9ca3af">' + fmtSize(f.fileSize) + '</span>'
+      + ' <button type="button" data-file="' + f.fileId + '">삭제</button></div>').join(''));
+    }
+
+    function open(id) {
+     $.get(URL + '/detail', {id: id}).done(function (res) {
+      if (fail(res)) return;
+      const d = res.data;
+      if (!d) { Alert.alert('', '공지를 찾을 수 없습니다.'); return; }
+      currentId = d.id;
+      $('#cnFormTitle').text('전체공지 수정 (#' + d.id + ')');
+      $('#cnId').val(d.id);
+      $('#cnTitle').val(d.title || '');
+      $('#cnContent').val(d.content || '');
+      $('#cnFrom').val(ymd(d.from_date));
+      $('#cnTo').val(ymd(d.to_date));
+      $('#cnPopup').prop('checked', d.popup_yn !== 'N');
+      $('input[name=cnTarget][value=' + (d.target_all === 'N' ? 'N' : 'Y') + ']').prop('checked', true);
+      checked = new Set(d.targets || []);
+      $('#cnFiles').val('');
+      $('#cnPicked').empty();
+      renderSavedFiles(d.files);
+      $('#btnCnDelete').show();
+      toggleTargetBox();
+      renderTargets();
+      $('#cnBody tr').removeClass('on').filter('[data-id=' + d.id + ']').addClass('on');
+     });
+    }
+
+    function post(path, data, done) {
+     $.ajax({url: URL + path, type: 'POST', data: data, headers: {'X-CSRF-TOKEN': csrf},
+      success: done, error: xhr => Alert.alert('', '서버 오류: ' + (xhr.status || ''))});
+    }
+
+    function save() {
+     const title = $('#cnTitle').val().trim();
+     const fr = $('#cnFrom').val(), to = $('#cnTo').val();
+     const all = $('input[name=cnTarget]:checked').val();
+     if (!title) { Alert.alert('', '제목을 입력하세요.'); return; }
+     if (!fr || !to) { Alert.alert('', '게시 기간을 입력하세요.'); return; }
+     if (fr > to) { Alert.alert('', '게시 시작일이 종료일보다 늦습니다.'); return; }
+     if (all === 'N' && !checked.size) { Alert.alert('', '공지를 받을 거래처를 하나 이상 고르세요.'); return; }
+     const files = $('#cnFiles')[0].files;
+     for (const f of files) if (f.size > 20 * 1024 * 1024) { Alert.alert('', '20MB를 넘는 파일이 있습니다: ' + f.name); return; }
+
+     const msg = all === 'Y' ? '모든 거래처에 공지합니다. 저장하시겠습니까?' : '선택한 거래처 ' + checked.size + '곳에 공지합니다. 저장하시겠습니까?';
+     Alert.confirm('', msg, function () {
+      const fd = new FormData();
+      if (currentId) fd.append('id', currentId);
+      fd.append('title', title);
+      fd.append('content', $('#cnContent').val());
+      fd.append('from_date', fr);
+      fd.append('to_date', to);
+      fd.append('target_all', all);
+      fd.append('popup_yn', $('#cnPopup').is(':checked') ? 'Y' : 'N');
+      if (all === 'N') checked.forEach(k => fd.append('targets', k));
+      for (const f of files) fd.append('files', f);
+      AjaxUtil.showLoading && AjaxUtil.showLoading();
+      $.ajax({url: URL + '/save', type: 'POST', data: fd, processData: false, contentType: false,
+       headers: {'X-CSRF-TOKEN': csrf},
+       complete: () => AjaxUtil.hideLoading && AjaxUtil.hideLoading(),
+       success: function (res) {
+        if (fail(res)) return;
+        Notify.success('저장되었습니다.');
+        currentId = res.data;
+        search();
+        open(res.data);
+       },
+       error: xhr => Alert.alert('', '서버 오류: ' + (xhr.status || ''))});
+     });
+    }
+
+    $(function () {
+     $('#btnCnSearch').on('click', search);
+     $('#cnKeyword').on('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); search(); } });
+     $('#btnCnNew').on('click', resetForm);
+     $('#btnCnSave').on('click', save);
+     $('#btnCnPick').on('click', () => $('#cnFiles').trigger('click'));
+     $('#cnFiles').on('change', function () {
+      const fs = [...this.files];
+      $('#cnPicked').html(fs.map(f => '<div>올릴 파일 : ' + esc(f.name) + ' <span style="color:#9ca3af">' + fmtSize(f.size) + '</span></div>').join('')
+       + (fs.length ? '<div><button type="button" id="btnCnUnpick">선택 취소</button></div>' : ''));
+     });
+     $(document).on('click', '#btnCnUnpick', () => { $('#cnFiles').val(''); $('#cnPicked').empty(); });
+     $('#btnCnDelete').on('click', function () {
+      if (!currentId) return;
+      Alert.confirm('', '이 전체공지와 첨부파일을 삭제합니다. 거래처 화면에서도 바로 사라집니다. 삭제하시겠습니까?', function () {
+       post('/delete', {id: currentId}, res => { if (fail(res)) return; Notify.success('삭제되었습니다.'); resetForm(); search(); });
+      });
+     });
+     $(document).on('click', '#cnBody tr[data-id]', function () { open(Number($(this).data('id'))); });
+     $(document).on('change', 'input[name=cnTarget]', toggleTargetBox);
+     $(document).on('input', '#cnTargetFilter', renderTargets);
+     $(document).on('click', '#cnSavedFiles button[data-file]', function () {
+      const fid = $(this).data('file');
+      Alert.confirm('', '첨부파일을 삭제하시겠습니까?', function () {
+       post('/deleteFile', {file_id: fid}, res => { if (fail(res)) return; open(currentId); search(); });
+      });
+     });
+
+     $.get(URL + '/tenants').done(function (res) {
+      if (fail(res)) { $('#cnTargets').text('거래처 목록을 불러오지 못했습니다.'); return; }
+      tenants = res.data || [];
+      renderTargets();
+     });
+     resetForm();
+     search();
+    });
+   })();
+  </script>
+</th:block>
+<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+</html>
