@@ -202,9 +202,9 @@ public class CardAssignmentService {
 				if (!isBlank(bizNo)) {
 					try {
 						updateCardPayInfo(custcd, spjangcd, bankCd, bizNo, paydate, paynum);
-						log.info("[카드내역 업데이트 완료] bizNo: {}", bizNo);
+//						log.info("[카드내역 업데이트 완료] bizNo: {}", bizNo);
 					} catch (Exception e) {
-						log.error("[카드내역 업데이트 실패] bizNo: {}", bizNo, e);
+//						log.error("[카드내역 업데이트 실패] bizNo: {}", bizNo, e);
 						throw e;
 					}
 				}
@@ -214,9 +214,9 @@ public class CardAssignmentService {
 			// 3. 대변 저장
 			saveCredit(custcd, spjangcd, spjangnm, paydate, paynum, rowseq, totalAmount, bankAcccd, bankAccnm);
 
-			log.info("========== 지급전표 생성 완료 - 총액: {} ==========", totalAmount);
+//			log.info("========== 지급전표 생성 완료 - 총액: {} ==========", totalAmount);
 			result.success = true;
-			result.message = "지급 전표가 생성되었습니다.";
+//			result.message = "지급 전표가 생성되었습니다.";
 			return result;
 
 		} catch (Exception e) {

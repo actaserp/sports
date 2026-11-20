@@ -1,0 +1,75 @@
+/* ============================================================
+ * ms-page.css — 기초코드·회계 화면 공통 틀 (조회줄 · 버튼 · 탭 · 높이 채우기)
+ * 급여명세서(payslip) 잉크·괘선 계열. 공용 .btn 을 쓰지 않는다.
+ * 모든 규칙은 .ms-page 안에서만 적용 → 다른 화면 CSS 와 겹치지 않는다.
+ *
+ * 사용 : <div class="layout-contents ms-page"> ... </div>
+ * ============================================================ */
+.ms-page {
+    --ms-ink:   #1B2430;
+    --ms-label: #45566A;
+    --ms-mute:  #8A99A8;
+    --ms-rule:  #CBD3DB;
+    --ms-frame: #8A99A8;
+    --ms-band:  #EDF1F4;
+    --ms-band2: #DCE3E9;
+    --ms-value: #24466F;
+    --ms-edit:  #1F5FBF;   /* 고칠 수 있는 칸 머리글 */
+    --ms-alert: #9E2A20;
+}
+
+/* ── 화면 높이 채우기 : 표가 남는 높이를 쓴다 ── */
+.layout-contents.ms-page { padding-bottom: 20px !important; }
+.ms-page > .section { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding-bottom: 0; margin-bottom: 0; }
+.ms-page .ms-fill { flex: 1 1 auto; min-height: 140px; display: flex; flex-direction: column; }
+
+/* ── 조회줄 ── */
+.ms-page .ms-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.ms-page .ms-cdt { display: flex; align-items: center; gap: 6px; }
+.ms-page .ms-cdt > label { font-size: 12.5px; color: var(--ms-label); white-space: nowrap; margin: 0; }
+.ms-page .ms-cdt input[type=text], .ms-page .ms-cdt input[type=date], .ms-page .ms-cdt select {
+    width: 220px; max-width: none; height: 34px; padding: 0 10px; box-sizing: border-box;
+    border: 1px solid #C0CAD3; border-radius: 0; font-size: 13px; color: var(--ms-ink); background-color: #fff;
+}
+.ms-page .ms-cdt select { width: 110px; padding: 0 4px; background-image: none !important; appearance: auto !important; -webkit-appearance: menulist !important; }
+.ms-page .ms-cdt input:focus-visible, .ms-page .ms-cdt select:focus-visible { outline: 2px solid var(--ms-value); outline-offset: 1px; }
+.ms-page .ms-actions { margin-left: auto; display: flex; gap: 6px; }
+
+/* ── 버튼 ── */
+.ms-page .ms-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 34px; padding: 0 16px; min-width: 0; margin: 0;
+    border: 1px solid var(--ms-frame); border-radius: 2px; background: #fff; color: var(--ms-ink);
+    font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: .5px; cursor: pointer; white-space: nowrap; box-shadow: none;
+}
+.ms-page .ms-btn:hover { background: var(--ms-band); border-color: var(--ms-value); }
+.ms-page .ms-btn:focus-visible { outline: 2px solid var(--ms-value); outline-offset: 2px; }
+.ms-page .ms-btn.solid { background: var(--ms-value); border-color: var(--ms-value); color: #fff; }
+.ms-page .ms-btn.solid:hover { background: #1D3A5F; }
+.ms-page .ms-btn.accent { border-color: var(--ms-alert); color: var(--ms-alert); }
+.ms-page .ms-btn.accent:hover { background: #FBF0EE; }
+
+.ms-page .ms-note { font-size: 12px; color: var(--ms-mute); margin: 0 0 6px; }
+
+/* ── 탭 ── */
+.ms-page .ms-tabs { display: flex; border-bottom: 1px solid var(--ms-rule); margin: 4px 0 10px; }
+.ms-page .ms-tabs button {
+    height: 36px; padding: 0 18px; margin: 0 0 -1px; border: 0 !important; border-bottom: 2px solid transparent !important;
+    border-radius: 0 !important; background: transparent !important; box-shadow: none !important;
+    color: var(--ms-label) !important; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.ms-page .ms-tabs button:hover { color: var(--ms-ink) !important; background: var(--ms-band) !important; }
+.ms-page .ms-tabs button.on { color: var(--ms-value) !important; border-bottom-color: var(--ms-value) !important; }
+.ms-page .ms-tabs .ms-tab-info { margin-left: auto; align-self: center; color: var(--ms-value); font-weight: 700; font-size: 13px; padding-right: 4px; }
+
+/* ── 조회줄 체크박스 · 라디오 : 네이티브 모양 (bank_account .ba-type 방식) ── */
+.ms-page .ms-native {
+    -webkit-appearance: auto !important; -moz-appearance: auto !important; appearance: auto !important;
+    flex: 0 0 16px !important; width: 16px !important; height: 16px !important;
+    min-width: 16px !important; max-width: 16px !important; min-height: 16px !important;
+    margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important;
+    background: none !important; box-shadow: none !important; accent-color: var(--ms-value);
+    vertical-align: middle !important; position: static !important; opacity: 1 !important;
+}
+.ms-page .ms-native::before, .ms-page .ms-native::after { content: none !important; display: none !important; }
+.ms-page .ms-chk { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--ms-label); cursor: pointer; margin: 0; font-weight: 400; }
