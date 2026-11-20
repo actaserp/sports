@@ -491,6 +491,7 @@ public class SlipStatusService {
 		String sql = """
 			  SELECT   Z.spdate,
 			            Z.spnum,
+			            Z.regdate,
 			            Z.remark,
 			            Z.acccd,
 			            Z.accnm,
@@ -522,6 +523,7 @@ public class SlipStatusService {
 			   (
 			         SELECT   MAX(a.spdate) AS spdate,
 			                  MAX(a.spnum) AS spnum,
+			                  MAX(a.regdate) AS regdate,
 			                  MAX(a.remark) AS remark,
 			                  MAX(b.acccd) AS acccd,
 			                  MAX(b.accnm) AS accnm,
@@ -621,6 +623,7 @@ public class SlipStatusService {
 			
 			         SELECT   MAX(a.spdate) AS spdate,
 			                  MAX(a.spnum) AS spnum,
+			                  MAX(a.regdate) AS regdate,
 			                  MAX(a.remark) AS remark,
 			                  MAX(b.acccd) AS acccd,
 			                  MAX(b.accnm) AS accnm,

@@ -404,7 +404,7 @@
           </div>
 
           <!-- 일자 -->
-          <div class="lg-meta" th:text="'전 표 일 자 : ' + ${slip.spdate}"></div>
+          <div class="lg-meta" th:text="'전 표 일 자 : ' + ${slip.spdate} + ' / ' + ${slip.spnum}"></div>
           <div class="lg-meta"
                th:with="rd=${slip.regdate == null ? '' : #strings.trim(slip.regdate)}">
             <span th:if="${#strings.length(rd) >= 8}"
@@ -808,7 +808,7 @@
                        font-weight:700; border:1px solid #555; padding:4px 2px;">수&#160;입</td>
             <td style="text-align:center; font-size:10px; border:1px solid #555;
                        padding:4px 6px;" colspan="2"
-                th:text="${slip.tiosec == '1' ? #strings.substring(slip.spdate, 0, 4) + ' 년 세입부' : ''}"></td>
+                th:text="${slip.tiosec == '1' ? #strings.substring(slip.spdate, 0, 4) + ' 년  ' + #strings.substring(slip.spdate, 4, 6) + ' 월  ' + #strings.substring(slip.spdate, 6, 8) + ' 일' : ''}"></td>
           </tr>
 
           <!-- 과목: 목(it2nm) + 기장 -->
@@ -965,7 +965,7 @@
                        font-weight:700; border:1px solid #555; padding:4px 2px;">수&#160;입</td>
             <td style="text-align:center; font-size:10px; border:1px solid #555;
                        padding:4px 6px;" colspan="2"
-                th:text="${slip.tiosec == '1' ? #strings.substring(slip.spdate, 0, 4) + ' 년 세입부' : ''}"></td>
+                th:text="${slip.tiosec == '1' ? #strings.substring(slip.spdate, 0, 4) + ' 년  ' + #strings.substring(slip.spdate, 4, 6) + ' 월  ' + #strings.substring(slip.spdate, 6, 8) + ' 일' : ''}"></td>
           </tr>
 
           <!-- 과목: 목(it2nm) + 기장 -->
@@ -1090,9 +1090,14 @@
             <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
                        font-weight:700; border:1px solid #555; padding:4px 2px;">기&#160;장</td>
             <td style="text-align:center; font-size:10px; border:1px solid #555; padding:4px 6px;">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
-              <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
+              <th:block th:with="rd=${slip['regdate'] == null ? '' : #strings.trim(slip['regdate'])}"><!-- 기장 = 작성일자(regdate), 없으면 빈칸 (원본 결의양식3) -->
+                <th:block th:if="${#strings.length(rd) >= 8}">
+                  <span th:text="${#strings.substring(rd, 0, 4)}"></span> 년&#160;
+                  <span th:text="${#strings.substring(rd, 4, 6)}"></span> 월&#160;
+                  <span th:text="${#strings.substring(rd, 6, 8)}"></span> 일
+                </th:block>
+                <th:block th:unless="${#strings.length(rd) >= 8}">년&#160;&#160;&#160;&#160;월&#160;&#160;&#160;&#160;일</th:block>
+              </th:block>
             </td>
           </tr>
 
@@ -1103,11 +1108,12 @@
             <td style="font-size:10px; border:1px solid #555; padding:4px 6px;" colspan="2"
                 th:text="${not #lists.isEmpty(slip.debit) ? slip.debit[0].it1nm : ''}"></td>
             <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
-                       font-weight:700; border:1px solid #555; padding:4px 2px;">작&#160;성</td>
+                       font-weight:700; border:1px solid #555; padding:4px 2px;" th:utext="${slip.tiosec == '1' ? '수&#160;입' : '지&#160;출'}">지&#160;출</td>
             <td style="text-align:center; font-size:10px; border:1px solid #555; padding:4px 6px;">
               <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
               <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
               <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
+
             </td>
           </tr>
 
@@ -1275,9 +1281,11 @@
             <td style="text-align:center; font-size:10px; width:12mm; background:#f5f5f5;
                        font-weight:700; border:1px solid #555; padding:4px 2px;">작&#160;성</td>
             <td style="text-align:center; font-size:10px; border:1px solid #555; padding:4px 6px;">
-              <span th:text="${#strings.substring(slip.spdate, 0, 4)}"></span> 년&#160;
-              <span th:text="${#strings.substring(slip.spdate, 4, 6)}"></span> 월&#160;
-              <span th:text="${#strings.substring(slip.spdate, 6, 8)}"></span> 일
+              <th:block th:with="wd=${slip['regdate'] != null and #strings.length(#strings.trim(slip['regdate'])) >= 8 ? #strings.trim(slip['regdate']) : slip.spdate}"><!-- 발의·작성 = 작성일자(regdate), 없으면 전표일자 -->
+                <span th:text="${#strings.substring(wd, 0, 4)}"></span> 년&#160;
+                <span th:text="${#strings.substring(wd, 4, 6)}"></span> 월&#160;
+                <span th:text="${#strings.substring(wd, 6, 8)}"></span> 일
+              </th:block>
             </td>
           </tr>
 

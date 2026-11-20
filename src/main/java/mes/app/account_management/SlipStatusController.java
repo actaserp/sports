@@ -460,6 +460,7 @@ public class SlipStatusController {  //전표입력현황
 
 			slip.put("spdate",   row.get("spdate"));
 			slip.put("spnum",    row.get("spnum"));
+			slip.put("regdate",  row.get("regdate"));   // 작성일자 (결의서 발의 · 작성 칸)
 			slip.put("tiosec",   row.get("tiosec"));
 			slip.put("subject",  row.get("subject"));
 			slip.put("remark",   row.get("remark"));
