@@ -206,6 +206,25 @@
       .cr-pop .btn-popup:focus-visible { outline: 2px solid #24466F; outline-offset: 2px; }
       .lp-pair input.disp { flex: 0 0 auto; min-width: 90px; max-width: 220px; }
       .lp-amt { text-align: right; }
+
+      /* ── 글자 자리수(바이트) 표시 : 한글 2 · 영문·숫자 1 ── */
+      .byte-wrap { position: relative; }
+      .byte-cnt { font-size: 11px; color: #8a99a8; font-weight: 400; white-space: nowrap; pointer-events: none; }
+      .byte-cnt.mid    { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); }
+      .byte-cnt.bottom { position: absolute; right: 10px; bottom: 3px; }
+      .byte-cnt.inline { margin-left: 6px; }
+      .byte-cnt.near { color: #b7791f; }
+      .byte-cnt.over { color: #dc3545; font-weight: 700; }
+
+      /* ── 저장 실패 시 문제 칸 표시 (고치기 시작하면 사라진다) ── */
+      #tab2 .inp-err,
+      .lp-field .inp-err {
+          border-color: #dc3545 !important;
+          background: #fff5f5 !important;
+          box-shadow: 0 0 0 2px rgba(220, 53, 69, .18) !important;
+      }
+      #slipLineTable tbody tr.err td { background: #fdecee !important; }
+      #slipLineTable tbody tr.err td:first-child { border-left-color: #dc3545 !important; }
       .span2 { grid-column: span 2; }
       .span4 { grid-column: span 4; }
       .row2  { grid-row: span 2; }
@@ -534,7 +553,11 @@
                   <tr>
                     <th><label for="subject">제목</label></th>
                     <td colspan="11">
-                      <input class="wp100" id="subject" name="subject" placeholder="제목" type="text"/>
+                      <div class="byte-wrap">
+                        <input class="wp100" id="subject" name="subject" placeholder="제목" type="text"
+                               style="padding-right:90px !important;"/>
+                        <span class="byte-cnt mid" data-for="subject"></span>
+                      </div>
                     </td>
                   </tr>
 
@@ -557,12 +580,15 @@
                     <td colspan="11" style="padding:0 !important;">
                       <div style="display:flex; align-items:stretch; gap:0;">
 
-                        <textarea class="wp100" id="remark" name="remark"
-                                  placeholder="비고"
-                                  style="flex:0 0 70%; height:120px; resize:none;
-                       border:none; border-right:1px solid #dee2e6;
-                       padding:6px 8px; font-size:inherit;
-                       box-sizing:border-box;"></textarea>
+                        <div class="byte-wrap" style="flex:0 0 70%; min-width:0;">
+                          <textarea class="wp100" id="remark" name="remark"
+                                    placeholder="비고"
+                                    style="width:100%; height:120px; resize:none; display:block;
+                         border:none; border-right:1px solid #dee2e6;
+                         padding:6px 8px 20px; font-size:inherit;
+                         box-sizing:border-box;"></textarea>
+                          <span class="byte-cnt bottom" data-for="remark"></span>
+                        </div>
 
                         <div style="flex:0 0 30%; border-left:1px solid #dee2e6;">
                           <table class="view-table" style="width:100%; margin:0; height:100%; table-layout:fixed;">
@@ -710,8 +736,8 @@
                 </div>
 
                 <div class="lp-field span4 row2">
-                  <label for="pnl_summy">산출내역</label>
-                  <textarea id="pnl_summy" placeholder="산출내역 (Shift+Enter 줄바꿈)" rows="3"></textarea>
+                  <label for="pnl_summy">산출내역 <span class="byte-cnt inline" data-for="pnl_summy"></span></label>
+                  <textarea id="pnl_summy" placeholder="산출내역 — 한글 45자 · 영문·숫자 90자까지 (Shift+Enter 줄바꿈)" rows="3"></textarea>
                 </div>
                 <div class="lp-field span4">
                   <label for="pnl_cltnm">거래처</label>
@@ -927,6 +953,60 @@
     banknm:  'pnl_banknmdisp',
    };
 
+   // ── 저장 오류 → 화면 항목 ──
+   // 서버(DB) 오류 메시지에 나온 컬럼 이름으로 어느 칸이 문제인지 찾는다.
+   // line: 분개 라인 필드 이름 (없으면 전표 머리 항목), el: 표시·포커스할 입력칸
+   const SAVE_ERR_FIELDS = {
+    spdate:   {label: '전표일자', el: '#spdate'},
+    spnum:    {label: '전표번호', el: '#spnum'},
+    tiosec:   {label: '입출구분', el: '#tiosec'},
+    busipur:  {label: '사업구분', el: '#busipur'},
+    spoccu:   {label: '증빙구분', el: '#spoccu'},
+    cashyn:   {label: '현금', el: '#cashyn'},
+    regdate:  {label: '작성일자', el: '#readate'},
+    readate:  {label: '작성일자', el: '#readate'},
+    subject:  {label: '제목', el: '#subject'},
+    remark:   {label: '비고', el: '#remark'},
+    busicd:   {label: '사업명', el: '#businame'},
+    buiscd:   {label: '사업명', el: '#businame'},
+    busim:    {label: '사업명', el: '#businame'},
+    businm:   {label: '사업명', el: '#businame'},
+    businame: {label: '사업명', el: '#businame'},
+    summy:    {label: '산출내역', line: 'summy', el: '#pnl_summy'},
+    acccd:    {label: '관명(계정)', line: 'acccd', el: '#pnl_accnm'},
+    accnm:    {label: '관명(계정)', line: 'accnm', el: '#pnl_accnm'},
+    it1cd:    {label: '항', line: 'it1cd', el: '#pnl_it1nm'},
+    it1nm:    {label: '항', line: 'it1nm', el: '#pnl_it1nm'},
+    it2cd:    {label: '목', line: 'it2cd', el: '#pnl_it2nm'},
+    it2nm:    {label: '목', line: 'it2nm', el: '#pnl_it2nm'},
+    mssec:    {label: '재원', line: 'msseccd', el: '#pnl_mssecnm'},
+    msseccd:  {label: '재원', line: 'msseccd', el: '#pnl_mssecnm'},
+    dramt:    {label: '차변금액', line: 'dramt', el: '#pnl_dramt'},
+    cramt:    {label: '대변금액', line: 'cramt', el: '#pnl_cramt'},
+    cltcd:    {label: '거래처', line: 'cltcd', el: '#pnl_cltnm'},
+    cardnum:  {label: '카드', line: 'cardnum', el: '#pnl_cardnum'},
+    bankcd:   {label: '계좌', line: 'bankcd', el: '#pnl_banknum'},
+    accnum:   {label: '계좌', line: 'accnum', el: '#pnl_banknum'},
+   };
+
+   // 저장 요청 직전 입력 내용을 잠시 보관한다. 실패 뒤 화면이 다시 열려도(새로고침 · 로그인 만료 등) 되살린다.
+   // ── 저장 자리수 (DB 컬럼 크기, varchar · Korean_Wansung = CP949) ──
+   // varchar 는 바이트로 센다. 한글 등 2바이트, 영문·숫자·기호·줄바꿈 1바이트.
+   const BYTE_LIMITS = {
+    subject:   {max: 200,  label: '제목'},       // TB_AA009.subject  varchar(200)
+    remark:    {max: 1000, label: '비고'},       // TB_AA009.remark   varchar(1000)
+    pnl_summy: {max: 90,   label: '산출내역'},   // TB_AA010.summy    varchar(90) — 한글 45자 (늘리려면 TB_AA010_Trigger_IUD 의 summy 3곳도 함께)
+   };
+   const cp949Bytes = s => {
+    let n = 0;
+    for (const ch of String(s == null ? '' : s)) n += ch.codePointAt(0) <= 0x7F ? 1 : 2;
+    return n;
+   };
+
+   const SLIP_DRAFT_KEY = 'slip_status_draft';
+   const DRAFT_HEADER_IDS = ['spdate', 'spnum', 'tiosec', 'busipur', 'spoccu', 'readate', 'inputdate',
+    'subject', 'remark', 'busicd', 'businame', 'bsdate', 'bseccd'];
+
    const escHtml = s => String(s == null ? '' : s).replace(/[&<>"']/g,
     c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
    const toNum = v => parseFloat(String(v == null ? '' : v).replace(/,/g, '')) || 0;
@@ -942,6 +1022,7 @@
      this.mssecOptions = null;
      this.lines = [];      // 분개 라인 데이터 (화면 목록은 이 배열을 그리기만 한다)
      this.sel = -1;        // 선택된 라인 index
+     this.errLine = null;  // 저장 실패로 표시 중인 라인 (객체)
      this.init();
     }
 
@@ -1088,7 +1169,7 @@
      const needBank = l.acnflag === '1' && !l.bankcd;
      const detail = needBank ? '계좌 필수' : parts.join(' · ');
 
-     return `<tr class="${isCr ? 'cr' : 'dr'}${i === this.sel ? ' sel' : ''}" data-idx="${i}">`
+     return `<tr class="${isCr ? 'cr' : 'dr'}${i === this.sel ? ' sel' : ''}${l === this.errLine ? ' err' : ''}" data-idx="${i}">`
       + `<td class="c">${escHtml(l.acccd)}</td>`
       + `<td title="${escHtml(l.accnm)}">${escHtml(l.accnm)}</td>`
       + `<td class="c drcr">${isCr ? '대변' : '차변'}</td>`
@@ -1137,6 +1218,7 @@
      this.applyPanelDrcr();
      this.refreshPanelHead();
      this.fitDetailDisp();
+     this.updateByteCount('pnl_summy');
     }
 
     refreshPanelHead() {
@@ -1176,6 +1258,7 @@
      this.renderRow(this.sel);
      this.refreshPanelHead();
      this.fitDetailDisp();
+     this.updateByteCount('pnl_summy');
      this.calcSum();
     }
 
@@ -1301,12 +1384,20 @@
       }
      });
 
+     // 전표 머리 칸도 고치기 시작하면 오류 표시를 지운다
+     $('#CategoryForm').on('input change', 'input, select, textarea', function () {
+      _this.clearErrMark(this);
+      if (BYTE_LIMITS[this.id]) _this.updateByteCount(this.id);
+     });
+     _this.updateAllByteCounts();
+
      $('#addSlipLine').on('click', () => _this.addLine('1', true));
      $('#delSlipLine').on('click', () => _this.deleteLine());
 
      // ── 입력칸 변경 → 데이터 반영 ──
      $panel.on('input change', 'input, select, textarea', function (e) {
       const id = this.id;
+      _this.clearErrMark(this);
       if (id === 'pnl_drcr' && e.type === 'change') {
        _this.applyPanelDrcr();
        // 차대를 바꾸면 그 행을 제자리(차변 위 · 대변 아래)로 옮기고 계속 선택해 둔다
@@ -2039,6 +2130,7 @@
      $('#bseccd').val(item.bseccd || '');
      $('#inputdate').val(item.inputdate || '');
      $('#cashyn').prop('checked', item.cashyn === '1' || item.cashyn === true);
+     _this.updateAllByteCounts();
 
      _this.fetchSlipHeader(item.spdate, item.spnum);
      _this.fetchSlipLines(item.spdate, item.spnum);
@@ -2236,11 +2328,195 @@
 
     resetForm() {
      document.getElementById('CategoryForm').reset();
+     this.errLine = null;
+     $('.inp-err').removeClass('inp-err');
      this.resetLines();
      this.currentSlipId = null;
      $('#spdate').val(getNowDate());
      $('#readate').val(getNowDate());
      $('#inputdate').val('');
+     this.updateAllByteCounts();
+    }
+
+    // ════════════════════════════════════════════════════════
+    //  저장 오류 표시 / 입력 내용 보관
+    // ════════════════════════════════════════════════════════
+
+    // 문제 칸에 빨간 테두리 + 포커스. line 을 주면 그 행을 선택하고 목록에서도 표시한다.
+    markError(el, line) {
+     $('.inp-err').removeClass('inp-err');
+     this.errLine = line || null;
+     if (line) {
+      const idx = this.lines.indexOf(line);
+      if (idx >= 0) {
+       this.renderLines();
+       this.selectLine(idx, false);
+      }
+     } else {
+      this.renderLines();
+      if (this.sel >= 0) this.selectLine(this.sel, false);
+     }
+     if (el) {
+      const $el = $(el).addClass('inp-err');
+      setTimeout(() => $el.focus(), 30);
+     }
+    }
+
+    clearErrMark(el) {
+     if (!$(el).hasClass('inp-err')) return;
+     $(el).removeClass('inp-err');
+     if (this.errLine) {
+      this.errLine = null;
+      $('#slipLineTbody tr.err').removeClass('err');
+     }
+    }
+
+    // 자리수 표시 : "48 / 90" (넘으면 빨강, 90% 넘으면 주황)
+    updateByteCount(id) {
+     const lim = BYTE_LIMITS[id];
+     const $c = $(`.byte-cnt[data-for="${id}"]`);
+     if (!lim || !$c.length) return;
+     const n = cp949Bytes($('#' + id).val());
+     let text = `${n.toLocaleString()} / ${lim.max.toLocaleString()}`;
+     if (lim.verbose) {
+      // 바이트만으로는 감이 안 오므로 한글 몇 자가 남았는지 같이 보여 준다
+      const left = lim.max - n;
+      text = left >= 0
+       ? `${n} / ${lim.max}바이트 · 한글 ${Math.floor(left / 2)}자 더 쓸 수 있음`
+       : `${n} / ${lim.max}바이트 · 한글 ${Math.ceil(-left / 2)}자 초과`;
+     }
+     $c.text(text)
+     .attr('title', `저장 가능 ${lim.max}바이트 (한글 2 · 영문·숫자 1)`)
+     .toggleClass('over', n > lim.max)
+     .toggleClass('near', n <= lim.max && n > lim.max * 0.9);
+    }
+
+    updateAllByteCounts() {
+     Object.keys(BYTE_LIMITS).forEach(id => this.updateByteCount(id));
+    }
+
+    // 자리수를 넘으면 안내 문장, 아니면 ''
+    byteOverMsg(id, value, prefix) {
+     const lim = BYTE_LIMITS[id];
+     const n = cp949Bytes(value);
+     if (!lim || n <= lim.max) return '';
+     const over = n - lim.max;
+     return `${prefix || ''}${lim.label}이(가) 너무 깁니다.\n`
+      + `저장 가능 ${lim.max}바이트, 현재 ${n}바이트로 ${over}바이트 넘습니다.\n`
+      + `(한글 2바이트 · 영문·숫자 1바이트 — 한글 기준 약 ${Math.ceil(over / 2)}자를 줄이세요.)`;
+    }
+
+    // 검증에 걸렸을 때: 알림을 닫은 뒤 문제 칸으로 간다
+    failAt(msg, el, line) {
+     this.markError(null, line);
+     Alert.alert('', msg, () => this.markError(el, line));
+    }
+
+    // 서버(DB) 오류 메시지에서 어느 항목 · 몇 번째 행인지 찾아 사용자용 문장으로 바꾼다
+    // sent : 서버로 보낸 라인 순서대로의 화면 라인 객체 (lineSeq - 1 → 라인)
+    explainSaveError(rawMsg, sent) {
+     const msg = String(rawMsg || '');
+
+     // 컬럼 이름 : SQL Server 영문/한글, PostgreSQL
+     const colM = msg.match(/column\s+'([^']+)'/i)
+      || msg.match(/열\s*'([^']+)'/)
+      || msg.match(/column\s+"([^"]+)"/i)
+      || msg.match(/열\s*"([^"]+)"/);
+     const col = colM ? colM[1].toLowerCase() : '';
+     const f = SAVE_ERR_FIELDS[col] || null;
+
+     // 오류 종류
+     let why = '값을 확인하세요.';
+     let kind = '';
+     if (/truncat|잘립|잘림|too long|너무 깁/i.test(msg)) { kind = 'long'; why = '내용이 너무 깁니다. 줄여서 다시 저장하세요.'; }
+     else if (/NULL|null value|비어/i.test(msg))          { kind = 'null'; why = '값이 비어 있습니다. 입력 후 다시 저장하세요.'; }
+     else if (/convert|변환|invalid input|형식/i.test(msg)) { kind = 'conv'; why = '형식이 맞지 않습니다. 숫자·날짜 값을 확인하세요.'; }
+     else if (/duplicate|PRIMARY KEY|UNIQUE|중복/i.test(msg)) { kind = 'dup'; why = '같은 키의 자료가 이미 있습니다. 전표번호·일자를 확인하세요.'; }
+     else if (/foreign key|FOREIGN KEY|참조/i.test(msg))   { kind = 'fk'; why = '등록되지 않은 코드입니다. 목록에서 다시 골라 주세요.'; }
+
+     // 몇 번째 행인가
+     let line = null;
+     if (f && f.line) {
+      // ① 잘린 값이 메시지에 있으면 그 값으로 시작하는 행
+      const tv = msg.match(/Truncated value:\s*'([\s\S]*?)'\.?\s*$/i) || msg.match(/잘린 값:\s*'([\s\S]*?)'/);
+      if (tv && tv[1]) {
+       line = sent.find(l => String(l[f.line] || '').startsWith(tv[1])) || null;
+      }
+      // ② 메시지에 라인 순번이 있으면 (예: lineSeq=3, 3번째 행)
+      if (!line) {
+       const sq = msg.match(/lineSeq\D{0,3}(\d+)/i) || msg.match(/(\d+)\s*번째\s*행/);
+       if (sq) line = sent[Number(sq[1]) - 1] || null;
+      }
+      // ③ 비어 있다는 오류면 그 칸이 빈 첫 행
+      if (!line && kind === 'null') {
+       line = sent.find(l => String(l[f.line] || '').trim() === '') || null;
+      }
+      // ④ 너무 길다는 오류면 그 칸이 가장 긴 행
+      if (!line && kind === 'long') {
+       line = sent.reduce((a, l) => (!a || String(l[f.line] || '').length > String(a[f.line] || '').length) ? l : a, null);
+      }
+     }
+
+     let text;
+     if (f) {
+      const where = f.line
+       ? (line ? `${this.lines.indexOf(line) + 1}번째 행의 [${f.label}]` : `분개 라인의 [${f.label}]`)
+       : `[${f.label}]`;
+      text = `${where} ${why}`;
+     } else if (kind) {
+      text = `저장하지 못했습니다. ${why}`;
+     } else {
+      text = '저장하지 못했습니다.';
+     }
+     if (msg) text += `\n\n(상세: ${msg.length > 300 ? msg.substring(0, 300) + '…' : msg})`;
+     text += '\n\n입력한 내용은 그대로 남아 있습니다.';
+
+     return {text: text, el: f ? f.el : null, line: line};
+    }
+
+    saveDraft() {
+     try {
+      const header = {};
+      DRAFT_HEADER_IDS.forEach(id => header[id] = $('#' + id).val());
+      header.cashyn = $('#cashyn').is(':checked');
+      sessionStorage.setItem(SLIP_DRAFT_KEY, JSON.stringify({
+       at: new Date().toLocaleString(),
+       header: header,
+       lines: this.lines,
+       currentSlipId: this.currentSlipId
+      }));
+     } catch (e) { /* 보관 실패는 무시 (저장 자체와 상관없음) */ }
+    }
+
+    clearDraft() {
+     try { sessionStorage.removeItem(SLIP_DRAFT_KEY); } catch (e) { }
+    }
+
+    // 화면을 열 때 : 저장하지 못한 입력이 남아 있으면 불러올지 묻는다
+    offerDraft() {
+     let _this = this;
+     let d = null;
+     try { d = JSON.parse(sessionStorage.getItem(SLIP_DRAFT_KEY) || 'null'); } catch (e) { d = null; }
+     _this.clearDraft();   // 한 번만 묻는다
+     if (!d || !d.header || !Array.isArray(d.lines)) return;
+
+     const title = d.header.subject ? `'${d.header.subject}'` : '작성 중이던 전표';
+     Alert.confirm('', `저장하지 못한 입력 내용이 있습니다.\n${title} (${d.at})\n\n불러올까요?`, function () {
+      $('a[href="#tab2"]').trigger('click');
+      setTimeout(() => {
+       _this.resetForm();
+       DRAFT_HEADER_IDS.forEach(id => $('#' + id).val(d.header[id] == null ? '' : d.header[id]));
+       $('#cashyn').prop('checked', !!d.header.cashyn);
+       _this.currentSlipId = d.currentSlipId || null;
+       _this.lines = d.lines.map(l => Object.assign(_this.emptyLine(l.drcr || '1'), l));
+       if (_this.lines.length === 0) _this.lines = [_this.emptyLine('1'), _this.emptyLine('2')];
+       _this.sel = -1;
+       _this.renderLines();
+       _this.selectLine(0, false);
+       _this.calcSum();
+       _this.updateAllByteCounts();
+      }, 100);
+     });
     }
 
     //전표 저장
@@ -2251,9 +2527,16 @@
      _this.syncPanel();
 
      // 대변이 아래로 가도록 정렬해서 그 순서로 저장한다 (화면도 같은 순서로 다시 그린다)
+     // 선택해 두었던 행은 정렬 뒤에도 계속 선택 상태로 둔다.
+     // (선택이 풀리면 아래 입력칸을 고쳐도 라인에 반영되지 않아, 저장 실패 뒤 고친 내용이 사라진 것처럼 보인다)
+     const curLine = _this.lines[_this.sel];
      _this.sortLinesByDrcr();
      _this.sel = -1;
+     _this.errLine = null;
+     $('.inp-err').removeClass('inp-err');
      _this.renderLines();
+     const keepIdx = _this.lines.indexOf(curLine);
+     _this.selectLine(keepIdx >= 0 ? keepIdx : 0, false);
 
      const spdate = $('#spdate').val();
      const spnum = $('#spnum').val();
@@ -2269,62 +2552,62 @@
      const bseccd = $('#bseccd').val();
      const readate = $('#readate').val();
 
-     if (!spdate) {
-      Alert.alert('', '전표일자를 입력하세요.');
-      $('#spdate').focus();
-      return;
-     }
-     if (!readate) {
-      Alert.alert('', '작성일자를 입력하세요.');
-      $('#readate').focus();
-      return;
-     }
-     if (!tiosec) {
-      Alert.alert('', '입출구분을 선택하세요.');
-      $('#tiosec').focus();
-      return;
-     }
-     if (!subject) {
-      Alert.alert('', '제목을 입력하세요.');
-      $('#subject').focus();
-      return;
-     }
+     if (!spdate)  return _this.failAt('전표일자를 입력하세요.', '#spdate');
+     if (!readate) return _this.failAt('작성일자를 입력하세요.', '#readate');
+     if (!tiosec)  return _this.failAt('입출구분을 선택하세요.', '#tiosec');
+     if (!subject) return _this.failAt('제목을 입력하세요.', '#subject');
+     const subjectMsg = _this.byteOverMsg('subject', subject);
+     if (subjectMsg) return _this.failAt(subjectMsg, '#subject');
+     const remarkMsg = _this.byteOverMsg('remark', remark);
+     if (remarkMsg) return _this.failAt(remarkMsg, '#remark');
 
      // ── 분개 라인 수집·검증 ──
      const lines = [];
+     const sent = [];   // lines[k] 가 화면의 어느 라인인지 (서버 오류 → 행 찾기)
      for (let i = 0; i < _this.lines.length; i++) {
       const l = _this.lines[i];
       const dramt = Number(l.dramt) || 0;
       const cramt = Number(l.cramt) || 0;
+      const no = `${i + 1}번째 행`;
 
       // 관명도 없고 금액도 0 이면 입력하지 않은 행
-      if (!l.acccd && dramt === 0 && cramt === 0) continue;
+      // 단, 항·목·산출내역 등을 적어 둔 행은 버리지 않고 알려 준다 (말없이 빠지면 저장이 안 된 것처럼 보인다)
+      if (!l.acccd && dramt === 0 && cramt === 0) {
+       const typed = ['accnm', 'summy', 'cltnm', 'cardnum', 'accnum']   // 항·목·재원은 다음 행에 자동으로 복사되므로 보지 않는다
+       .some(k => String(l[k] || '').trim() !== '');
+       if (!typed) continue;
+       return _this.failAt(`${no}에 입력한 내용이 있지만 관명(계정)과 금액이 없습니다.\n관명과 금액을 입력하거나 [행 삭제]로 지우세요.`, '#pnl_accnm', l);
+      }
 
       if (!l.acccd) {
-       _this.selectLine(i, false);
-       Alert.alert('', `${i + 1}번째 행의 관명(계정)을 입력하세요.`);
-       $('#pnl_accnm').focus();
-       return;
+       const hint = l.accnm ? `\n('${l.accnm}' 은(는) 목록에서 고르지 않아 코드가 없습니다. 관명칸에서 Enter 로 골라 주세요.)` : '';
+       return _this.failAt(`${no}의 관명(계정)을 입력하세요.${hint}`, '#pnl_accnm', l);
       }
       if (dramt === 0 && cramt === 0) {
-       _this.selectLine(i, false);
-       Alert.alert('', `${i + 1}번째 행의 금액을 입력하세요.`);
-       _this.activeAmountInput().focus();
-       return;
+       return _this.failAt(`${no}의 ${l.drcr === '2' ? '대변' : '차변'}금액을 입력하세요.`,
+        l.drcr === '2' ? '#pnl_cramt' : '#pnl_dramt', l);
+      }
+      if (l.it1nm && !l.it1cd) {
+       return _this.failAt(`${no}의 항 '${l.it1nm}' 이(가) 목록에서 고른 값이 아닙니다. 항칸에서 Enter 로 골라 주세요.`, '#pnl_it1nm', l);
+      }
+      if (l.it2nm && !l.it2cd) {
+       return _this.failAt(`${no}의 목 '${l.it2nm}' 이(가) 목록에서 고른 값이 아닙니다. 목칸에서 Enter 로 골라 주세요.`, '#pnl_it2nm', l);
+      }
+      if (l.mssecnm && !l.msseccd) {
+       return _this.failAt(`${no}의 재원 '${l.mssecnm}' 이(가) 목록에서 고른 값이 아닙니다. 재원칸에서 Enter 로 골라 주세요.`, '#pnl_mssecnm', l);
       }
       if (l.acnflag === '1' && !l.bankcd) {
-       _this.selectLine(i, false);
-       Alert.alert('', `${i + 1}번째 행은 계좌 입력이 필수입니다.`);
-       $('#pnl_banknum').focus();
-       return;
+       return _this.failAt(`${no}은(는) 계좌 입력이 필수입니다.`, '#pnl_banknum', l);
       }
       if (l.acccltflag === '1' && !l.cltcd) {
-       _this.selectLine(i, false);
-       Alert.alert('', `${i + 1}번째 행은 거래처 입력이 필수입니다.`);
-       $('#pnl_cltnm').focus();
-       return;
+       const hint = l.cltnm ? `\n('${l.cltnm}' 은(는) 등록된 거래처가 아닙니다. 거래처칸에서 Enter 로 고르거나 [+ 등록] 하세요.)` : '';
+       return _this.failAt(`${no}은(는) 거래처 입력이 필수입니다.${hint}`, '#pnl_cltnm', l);
       }
 
+      const summyMsg = _this.byteOverMsg('pnl_summy', l.summy, `${no}의 `);
+      if (summyMsg) return _this.failAt(summyMsg, '#pnl_summy', l);
+
+      sent.push(l);
       lines.push({
        spseq: l.spseq, acccd: l.acccd, accnm: l.accnm, drcr: l.drcr,
        it1cd: l.it1cd, it1nm: l.it1nm, it2cd: l.it2cd, it2nm: l.it2nm,
@@ -2335,16 +2618,16 @@
      }
 
      if (lines.length === 0) {
-      Alert.alert('', '분개 라인을 1건 이상 입력하세요.');
-      return;
+      return _this.failAt('분개 라인을 1건 이상 입력하세요.', '#pnl_accnm', _this.lines[0]);
      }
 
      const totalDr = lines.reduce((s, l) => s + l.dramt, 0);
      const totalCr = lines.reduce((s, l) => s + l.cramt, 0);
 
      if (totalDr !== totalCr) {
-      Alert.alert('', `차변 합계(${totalDr.toLocaleString()})와 대변 합계(${totalCr.toLocaleString()})가 일치하지 않습니다.`);
-      return;
+      const diff = totalDr - totalCr;
+      return _this.failAt(`차변 합계(${totalDr.toLocaleString()})와 대변 합계(${totalCr.toLocaleString()})가 일치하지 않습니다.\n`
+       + `${diff > 0 ? '대변' : '차변'}이 ${Math.abs(diff).toLocaleString()}원 모자랍니다.`);
      }
 
      const payload = {
@@ -2356,8 +2639,12 @@
 
      const url = _this.entry_url + '/save';
 
+     // 요청 전에 입력 내용을 보관 (실패 뒤 화면이 다시 열려도 되살릴 수 있게)
+     _this.saveDraft();
+
      AjaxUtil.postJsonData(url, payload, function (result) {
       if (result && result.success) {
+       _this.clearDraft();
        Alert.alert('', '저장되었습니다.', function () {
         if (result.data?.spnum) {
          $('#spnum').val(result.data.spnum);
@@ -2373,8 +2660,12 @@
         _this.searchMainData();   // 목록만 새로 고친다 (탭은 그대로)
        });
       } else {
-       const msg = result?.message || '저장 중 오류가 발생했습니다.';
-       Alert.alert('', msg);
+       // 실패 : 화면 입력은 건드리지 않는다. 어느 항목 때문인지 찾아서 알려 주고 그 칸으로 간다.
+       const info = _this.explainSaveError(result?.message || result?.error || '', sent);
+       _this.markError(null, info.line);
+       Alert.alert('', info.text, function () {
+        _this.markError(info.el, info.line);
+       });
       }
      });
 
@@ -2670,6 +2961,9 @@
     AjaxUtil.fillSelectOptions($('#mssec'), 'mssec', 'all', false);
 
     page.searchMainData();
+
+    // 저장하지 못한 채 화면이 다시 열렸다면 입력하던 내용을 되살릴지 묻는다
+    page.offerDraft();
 
     $('#search_amtfr, #search_amtto').on('keyup', function () {
      page.formatNumberInput($(this).val(), this);
