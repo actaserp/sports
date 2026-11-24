@@ -84,6 +84,13 @@
                 </dd>
               </dl>
               <dl>
+                <dt><label>계정과목(관)</label></dt>
+                <dd>
+                  <input class="form-control2" id="accnm1" name="accnm1" placeholder="관 (엔터로 검색, 비우면 전체)" />
+                  <input type="hidden" id="acccd1" name="acccd1" />
+                </dd>
+              </dl>
+              <dl>
                 <dt><label>계좌번호</label></dt>
                 <dd>
                   <input class="form-control2" id="ACCNUM" name="ACCNUM" placeholder="계좌번호 (엔터로 검색)" />
@@ -191,6 +198,7 @@
                   <input type="hidden" id="acccd4" name="acccd4" />
                 </dd>
               </dl>
+
               <dl>
                 <dt>&nbsp;</dt>
                 <dd>
@@ -204,7 +212,7 @@
               </dl>
             </div>
           </div>
-          <div class="grid-guide-box">※ 계좌마스터에 등록되지 않은 은행코드를 가진 전표입니다. 더블 클릭 시 전표 팝업이 열립니다.</div>
+          <div class="grid-guide-box">※ 계좌마스터에 등록되지 않은 은행코드(또는 빈 은행코드)를 가진 전표입니다. 더블 클릭 시 전표 팝업이 열립니다.</div>
           <div class="grid_box" id="divErrorSlip">
             <div id="theGrid_error" style="height: 540px;"></div>
           </div>
@@ -316,10 +324,11 @@
       allowSorting: 'MultiColumn',
       selectionMode: wijmo.grid.SelectionMode.Row,
       isReadOnly: true,
-      frozenColumns: 4,
+      frozenColumns: 5,
       formatItem: (s, e) => { if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center'; },
       columns: [
        {binding: 'mssecnm',  header: '재원',     width: 110, align: 'center'},
+       {binding: 'accnm',    header: '관',       width: 130, align: 'left'},
        {binding: 'Bankname', header: '은행명',   width: 130, align: 'left'},
        {binding: 'accnum',   header: '계좌번호', width: 150, align: 'center'},
        {binding: 'it1nm',    header: '계좌명칭', width: 180, align: 'left'},
@@ -337,6 +346,12 @@
      ['bfamt','dramt','cramt','balamt'].forEach(b => {
       const col = _this.summaryGrid.columns.getColumn(b);
       if (col) col.aggregate = wijmo.Aggregate.Sum;
+     });
+
+     // tab1 계좌를 고르면 계좌코드오류전표 조건으로도 쓴다
+     _this.summaryGrid.selectionChanged.addHandler(function (s) {
+      const it = s.selectedItems && s.selectedItems[0];
+      if (it) _this.setErrorTarget(it);
      });
 
      // tab1 계좌 더블클릭 → tab2 이동 + 조회
@@ -359,8 +374,7 @@
       selectionMode: wijmo.grid.SelectionMode.Row,
       isReadOnly: true,
       frozenColumns: 1,
-      showGroups: true,
-      groupHeaderFormat: '{value}',
+      showGroups: false,
       formatItem: (s, e) => { if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center'; },
       columns: [
        {binding: 'it1nm',  header: '계좌명칭', width: 200, align: 'left'},
@@ -385,6 +399,14 @@
        e.cell.style.color = '';
        e.cell.style.fontWeight = '';
 
+       const it = s.rows[e.row] && s.rows[e.row].dataItem;
+       if (it && it._kind && it._kind !== 'row') {
+        const b0 = s.columns[e.col] && s.columns[e.col].binding;
+        if (it._kind === 'acc') { e.cell.style.background = '#dcebfa'; e.cell.style.fontWeight = '600'; }
+        else if (it._kind === 'mon') { e.cell.style.background = '#eef3ff'; e.cell.style.color = '#1a3dbf'; e.cell.style.fontWeight = '600'; }   // 월계 : 파란 글자 · 연한 파랑 바탕
+        else { e.cell.style.background = '#fff8e1'; e.cell.style.color = '#d33'; e.cell.style.fontWeight = '600'; }
+        if (it._kind === 'acc' && b0 !== 'it1nm') e.cell.textContent = '';
+       } else if (e.cell.style.background) { e.cell.style.background = ''; }
        const row = s.rows[e.row];
        if (row instanceof wijmo.grid.GroupRow && row.dataItem == null) {
         const gr = row;
@@ -402,12 +424,14 @@
       }
      });
 
+     _this.showCarryLabel(_this.detailMasterGrid);
+
      // PB 방식 A : tab2 행 더블클릭 → 전표 팝업 (탭 이동/조회 아님)
      _this.detailMasterGrid.hostElement.addEventListener('dblclick', function (e) {
       const ht = _this.detailMasterGrid.hitTest(e);
       if (ht.cellType === wijmo.grid.CellType.Cell) {
        const item = _this.detailMasterGrid.selectedItems[0];
-       if (item) _this.openSlipFromRow(item);
+       if (item && item._kind === 'row') _this.openSlipFromRow(item);
       }
      });
 
@@ -437,6 +461,7 @@
      new FlexGridContextMenu(_this.detailGrid);
      _this.detailGrid.downloadFileName = '일자별내역';
      _this.applyMonthSubtotalStyle(_this.detailGrid);
+     _this.showCarryLabel(_this.detailGrid);
      _this.detailGrid.hostElement.addEventListener('dblclick', function (e) {
       const ht = _this.detailGrid.hitTest(e);
       if (ht.cellType === wijmo.grid.CellType.Cell) {
@@ -498,7 +523,8 @@
       accnum: $('#ACCNUM').val(),
       accid: $('#ACCID').val(),
       bankid: $('#bankid').val(),
-      useyn: $('#useyn1').val()
+      useyn: $('#useyn1').val(),
+      acccd: $('#accnm1').val().trim() ? $('#acccd1').val() : ''
      };
      AjaxUtil.getAsyncData(this.url + '/read', data, function (result) {
       if (result != null && result.success) {
@@ -519,6 +545,7 @@
      $('#acccd2').val(item.acccd || '');
      $('#searchfrdate2').val($('#searchfrdate1').val());
      $('#searchtodate2').val($('#searchtodate1').val());
+     _this.setErrorTarget(item);
 
      _this.activateTab(2);
      _this.searchDetailMaster();
@@ -536,13 +563,49 @@
      };
      AjaxUtil.getAsyncData(this.url + '/readDetailMaster', data, function (result) {
       if (result != null && result.success) {
-       const rows = result.data || [];
-       const cv = new wijmo.collections.CollectionView(rows);
-       cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('accnm')); // 관
-       cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('it1nm')); // 계좌
-       _this.detailMasterGrid.itemsSource = cv;
+       _this.detailMasterGrid.itemsSource = new wijmo.collections.CollectionView(_this.buildMasterRows(result.data || []));
       } else { console.log('상세(tab2) 조회 오류'); }
      });
+    }
+
+    // 원본 d_book14_1 모양으로 줄을 만든다
+    //  관 머리줄 → (계좌) 전일이월 / 일자별 … / 'YYYY-MM월계' → 항소계(계좌) → 계정소계(관)
+    //  계좌명칭은 달마다 첫 줄과 전일이월 줄에만 찍는다
+    buildMasterRows(list) {
+     const out = [];
+     const n = v => Number(v) || 0;
+     let i = 0;
+     while (i < list.length) {
+      const acccd = list[i].acccd;
+      out.push({_kind: 'acc', acccd: acccd, it1cd: '', it1nm: list[i].accnm || ''});
+      let accDr = 0, accCr = 0, accBal = 0;
+      while (i < list.length && list[i].acccd === acccd) {
+       const it1cd = list[i].it1cd, it1nm = list[i].it1nm || '';
+       let itDr = 0, itCr = 0, bal = 0, mon = null, monDr = 0, monCr = 0;
+       const closeMonth = () => {
+        if (mon && mon !== '000000') {
+         out.push({_kind: 'mon', acccd: acccd, it1cd: it1cd, it1nm: '',
+          yymmdd: mon.substring(0, 4) + '-' + mon.substring(4, 6) + '월계', dramt: monDr, cramt: monCr, balamt: null});
+        }
+        monDr = 0; monCr = 0;
+       };
+       while (i < list.length && list[i].acccd === acccd && list[i].it1cd === it1cd) {
+        const r = list[i++];
+        const ym = String(r.yymmdd || '').replace(/[^0-9]/g, '').substring(0, 6);
+        const first = ym !== mon;
+        if (first) { closeMonth(); mon = ym; }
+        monDr += n(r.dramt); monCr += n(r.cramt);
+        itDr += n(r.dramt); itCr += n(r.cramt);
+        bal = n(r.balamt);
+        out.push(Object.assign({}, r, {_kind: 'row', it1nm: first ? it1nm : ''}));
+       }
+       closeMonth();
+       out.push({_kind: 'it1', acccd: acccd, it1cd: it1cd, it1nm: '항소계', yymmdd: '', dramt: itDr, cramt: itCr, balamt: null});   // 원본 출력: 소계 줄은 잔액 칸 비움
+       accDr += itDr; accCr += itCr; accBal += bal;
+      }
+      out.push({_kind: 'sum', acccd: acccd, it1cd: '', it1nm: '계정소계', yymmdd: '', dramt: accDr, cramt: accCr, balamt: null});
+     }
+     return out;
     }
 
     // tab2 행 선택 → tab3 조회
@@ -565,10 +628,36 @@
      rows = rows || [];
      rows = rows.filter(r => {
       const yy = String(r.yymmdd || '');
-      if (yy.endsWith('97') || yy.endsWith('98')) return true;
+      if (yy.endsWith('97') || yy.endsWith('98') || yy === '00000000') return true;   // 전일이월은 늘 보여 준다
       const dr = Number(r.dramt) || 0, cr = Number(r.cramt) || 0;
       return (dr !== 0 || cr !== 0);
      });
+     // 월마다 '월 계'(97) 다음 '누계'(98). 맨 아래 합계 줄도 누계
+     const out = [];
+     let cumDr = 0, cumCr = 0, lastBal = 0, monDr = 0, monCr = 0;
+     rows.forEach(r => {
+      const yy = String(r.yymmdd || '');
+      const sub = yy.endsWith('97') || yy.endsWith('98');
+      if (!sub) {
+       cumDr += Number(r.dramt) || 0; cumCr += Number(r.cramt) || 0;   // 원본 누계는 전일이월을 포함한다
+       if (yy !== '00000000') { monDr += Number(r.dramt) || 0; monCr += Number(r.cramt) || 0; }
+       lastBal = Number(r.balamt) || 0;
+       out.push(r);
+       return;
+      }
+      if (yy.endsWith('98')) return;
+      // 원본 '월 계' 줄 : 그 달 차변 · 대변 합만 (관 · 잔액 칸은 비운다)
+      // 월 계 금액은 화면에 보이는 그 달 전표 줄을 더해 만든다 (원본과 같음).
+      // 서버 월계(97)는 전표 머리(TB_AA009)가 없는 줄까지 더해 원본과 다를 수 있다
+      r.dramt = monDr; r.cramt = monCr; monDr = 0; monCr = 0;
+      r.balamt = null;
+      r.accnm = '';
+      out.push(r);
+      // 월마다 '누계' : 전일이월부터 그 달까지 차변 · 대변 누계와 그 달 말 잔액
+      out.push({yymmdd: yy.substring(0, 6) + '98', spnum: '9999', spseq: '9999', acccd: r.acccd, it1cd: r.it1cd,
+       accnm: '', dramt: cumDr, cramt: cumCr, balamt: null, summy: ''});   // 원본 누계 줄은 잔액 칸이 비어 있다
+     });
+     rows = out;
      grid.itemsSource = rows;
 
      const foot = this.calcFooterExcludeSub(rows);
@@ -577,7 +666,7 @@
      const cSummy = grid.columns.findIndex(c => c.binding === 'summy');
      const cDr = grid.columns.findIndex(c => c.binding === 'dramt');
      const cCr = grid.columns.findIndex(c => c.binding === 'cramt');
-     if (cSummy > -1) cf.setCellData(0, cSummy, '합계');
+     if (cSummy > -1) cf.setCellData(0, cSummy, '합계');   // 전일이월 포함 전체 합
      if (cDr > -1) cf.setCellData(0, cDr, foot.dramt);
      if (cCr > -1) cf.setCellData(0, cCr, foot.cramt);
     }
@@ -593,6 +682,22 @@
      return { dramt: dr, cramt: cr };
     }
 
+    // 전표일자 '00000000' (이월 · 연초~조회시작 전 합) → 원본처럼 '전일이월'
+    // 같은 날 둘째 줄부터는 전표일자를 비운다 (원본처럼 그날 첫 줄에만)
+    showCarryLabel(grid) {
+     grid.formatItem.addHandler(function (s, e) {
+      if (e.panel.cellType !== wijmo.grid.CellType.Cell) return;
+      const col = s.columns[e.col];
+      if (!col || col.binding !== 'yymmdd') return;
+      const item = s.rows[e.row] && s.rows[e.row].dataItem;
+      if (!item) return;
+      const yy = String(item.yymmdd);
+      if (yy === '00000000') { e.cell.textContent = '전일이월'; return; }
+      const prev = e.row > 0 && s.rows[e.row - 1] && s.rows[e.row - 1].dataItem;
+      if (prev && String(prev.yymmdd) === yy) e.cell.textContent = '';
+     });
+    }
+
     applyMonthSubtotalStyle(grid) {
      grid.formatItem.addHandler(function (s, e) {
       if (e.panel.cellType === wijmo.grid.CellType.Cell) {
@@ -605,13 +710,13 @@
        if (!item) return;
        const yy = String(item.yymmdd || '');
        if (yy.endsWith('97') || yy.endsWith('98')) {
-        e.cell.style.color = '#d33';
+        e.cell.style.color = yy.endsWith('98') ? '#d33' : '#1a3dbf';   // 원본 : '월 계' 파랑, '누계' 빨강
         e.cell.style.fontWeight = '600';
         // 비고 칸에 "YYYY-MM월 계" 라벨
         if (s.columns[e.col] && s.columns[e.col].binding === 'summy') {
          const y4 = yy.substring(0, 4);
          const m2 = yy.substring(4, 6);
-         e.cell.textContent = y4 + '-' + m2 + '월 계';
+         e.cell.textContent = yy.endsWith('98') ? '누계' : y4 + '-' + m2 + '월 계';
         }
         // 가짜 전표일자(YYYYMM97) 숨김
         if (s.columns[e.col] && s.columns[e.col].binding === 'yymmdd') {
@@ -803,9 +908,22 @@
      $('#tab' + no).addClass('active');
     }
 
-    // tab4 : 계좌코드오류전표 조회 (관으로만)
+    // tab4 조건 : 집계 내역에서 고른 계좌의 관을 넣어 둔다
+    setErrorTarget(item) {
+     if (!item) return;
+     $('#acccd4').val(item.acccd || '');
+     $('#accnm4').val(item.accnm || '');
+     $('#searchfrdate4').val($('#searchfrdate1').val());
+     $('#searchtodate4').val($('#searchtodate1').val());
+    }
+
+    // tab4 : 계좌코드오류전표 (원본 d_book14_6) — 고른 관의 전표 중 은행코드가 계좌마스터에 없는 줄
     searchErrorSlip() {
      let _this = this;
+     if (!$('#acccd4').val()) {
+      Alert.alert('', '계정과목(관)을 먼저 고르세요.');
+      return;
+     }
      let data = {
       start: $('#searchfrdate4').val(),
       end:   $('#searchtodate4').val(),
@@ -814,6 +932,7 @@
      AjaxUtil.getAsyncData(this.url + '/readErrorSlip', data, function (result) {
       if (result != null && result.success) {
        _this.errorGrid.itemsSource = result.data || [];
+       if (!(result.data || []).length) Alert.alert('확인', '오류전표가 없습니다.');   // 원본과 같은 안내
       } else { console.log('계좌코드오류전표 조회 오류'); }
      });
     }
@@ -859,6 +978,13 @@
     $('#accnm4').on('keydown', function (e) {
      if (e.key === 'Enter') { e.preventDefault(); page.searchAccnm(4); }
     });
+    // tab1 관(계정) : 엔터 → 관 팝업, 비우고 엔터 → 전체로 조회
+    $('#accnm1').on('keydown', function (e) {
+     if (e.key !== 'Enter') return;
+     e.preventDefault();
+     if ($(this).val().trim() === '') { $('#acccd1').val(''); page.searchSummary(); }
+     else page.searchAccnm(1);
+    });
     // tab1 계좌번호 입력 → AccountInputHandler (엔터 시 검색/팝업)
     if (typeof AccountInputHandler !== 'undefined') {
      AccountInputHandler.bind({
@@ -876,7 +1002,7 @@
     // PB 방식 A : tab3 탭 클릭 시 tab2 선택행으로 tab3 조회
     $('.tab-links a[href="#tab3"]').on('click', function () {
      const master = page.detailMasterGrid.selectedItems[0];
-     if (master) page.searchDetailByMaster(master);
+     if (master && master.acccd && master.it1cd) page.searchDetailByMaster(master);
     });
 
     $(document).on('keydown', function (ev) {

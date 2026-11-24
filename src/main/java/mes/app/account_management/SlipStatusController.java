@@ -93,6 +93,7 @@ public class SlipStatusController {  //전표입력현황
 		@RequestParam("printType") String printType,
 		@RequestParam("keys") String keys,
 		@RequestParam(value = "approvers", required = false) String approvers,
+		@RequestParam(value = "fontSize", required = false) Integer fontSize,
 		HttpServletResponse response) throws Exception {
 
 		try {
@@ -189,6 +190,7 @@ public class SlipStatusController {  //전표입력현황
 			Context context = new Context();
 			context.setVariable("slipList", slipList);
 			context.setVariable("printType", printType);
+			context.setVariable("fontSize", fontSize == null ? null : Math.max(10, Math.min(18, fontSize)));   // 출력 글자 크기(px), 없으면 양식 기본 12
 			context.setVariable("approverList", approverList);
 
 			String html = templateEngine.process(
@@ -210,6 +212,7 @@ public class SlipStatusController {  //전표입력현황
 		@RequestParam("printType") String printType,
 		@RequestParam("keys") String keys,
 		@RequestParam(value = "approvers", required = false) String approvers,
+		@RequestParam(value = "fontSize", required = false) Integer fontSize,
 		HttpServletResponse response) throws Exception {
 
 		try {
@@ -269,6 +272,7 @@ public class SlipStatusController {  //전표입력현황
 			Context context = new Context();
 			context.setVariable("slipList", slipList);
 			context.setVariable("printType", printType);
+			context.setVariable("fontSize", fontSize == null ? null : Math.max(10, Math.min(18, fontSize)));   // 출력 글자 크기(px), 없으면 양식 기본 12
 			context.setVariable("approverList", resolveApproverList(approvers));
 
 			String html = templateEngine.process("accountCardManagement/slip_print", context);

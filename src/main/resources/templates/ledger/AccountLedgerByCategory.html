@@ -969,8 +969,9 @@
    $(document).ready(function (e) {
     page = new CategoryLedgerPage();
 
+    // 기준일자: 당해 1월 1일 ~ 오늘 (모든 탭 공통)
     let fr = new Date();
-    fr.setDate(1);
+    fr.setMonth(0, 1);
     let frStr = CommonUtil.formatYYYYMMDD(fr);
     let toStr = getNowDate();
 
@@ -1001,6 +1002,12 @@
       };
      })(i));
     }
+
+    // 기준일자 연동: 한 탭에서 바꾸면 모든 탭에 같은 값 적용
+    $('[id^=searchfrdate], [id^=searchtodate]').on('change', function () {
+     const pre = this.id.replace(/\d+$/, '');
+     $('[id^=' + pre + ']').val($(this).val());
+    });
 
     page.searchMainData(1);
 

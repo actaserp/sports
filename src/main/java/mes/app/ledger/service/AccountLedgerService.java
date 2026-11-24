@@ -56,22 +56,27 @@ public class AccountLedgerService { //계좌별원장
 //   it1cd = bankcd, it1nm = 계좌명(banknm), accnum = 계좌번호
 // ============================================================
 	public Object searchSummary(String start, String end, String accnum,
-															String accid, String bankid, String useyn) {
+															String accid, String bankid, String useyn, String acccd) {
 		MapSqlParameterSource param = buildBaseParam(start, end);
+		// 계정과목(관) — 원본 d_book14_cdt 의 acccd. 비면 전체(계정별로 따로 묶는다)
+		param.addValue("acccd", (acccd == null || acccd.trim().isEmpty()) ? "%" : acccd.trim() + "%");   // 원본: acccd LIKE :as_acccd + '%'
 		// 계좌번호 정확일치. 비어있으면 전체(NULL 처리)
 		boolean hasAccnum = (accnum != null && !accnum.trim().isEmpty());
 		param.addValue("accnum", hasAccnum ? accnum.trim() : null);
 		param.addValue("useyn",  (useyn == null || useyn.trim().isEmpty()) ? "" : useyn.trim());
 
 		String sql = """
-        SELECT A.it1cd, A.it1nm, A.accnum,
+        SELECT A.acccd, MAX(A.accnm) AS accnm, MAX(A.drcr) AS drcr,
+               A.it1cd, A.it1nm, A.accnum,
                MAX(A.useyn) AS useyn,
                MAX(A.sortnum) AS sortnum,
                MAX(A.mssec) AS mssec,
                (SELECT mssecnm FROM tb_x0005 WHERE mssec = MAX(A.mssec)) AS mssecnm,
                MAX(A.Bankname) AS Bankname,
                SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt, SUM(A.bfamt) AS bfamt,
-               SUM(A.bfamt) + SUM(A.dramt) - SUM(A.cramt) AS balamt,
+               -- 잔액 : 계정 성격(차대)에 따라. 차변성 = 전잔 + 차변 - 대변, 대변성 = 전잔 + 대변 - 차변
+               CASE WHEN MAX(A.drcr) = '1' THEN SUM(A.bfamt) + SUM(A.dramt) - SUM(A.cramt)
+                    ELSE SUM(A.bfamt) + SUM(A.cramt) - SUM(A.dramt) END AS balamt,
                STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
                STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
           FROM
@@ -135,8 +140,10 @@ public class AccountLedgerService { //계좌별원장
            AND ( :accnum IS NULL OR C.accnum = :accnum )
         ) A
          WHERE A.useyn LIKE :useyn + '%'
-         GROUP BY A.it1cd, A.it1nm, A.accnum
-         ORDER BY MAX(A.sortnum), A.it1cd
+           AND A.acccd LIKE :acccd
+         -- 계정(관)별로 묶는다. 계정을 섞으면 차변성 · 대변성 금액이 뒤섞여 잔액이 틀어진다
+         GROUP BY A.acccd, A.it1cd, A.it1nm, A.accnum
+         ORDER BY A.acccd, MAX(A.sortnum), A.it1cd
         """;
 		return sqlRunner.getRows(sql, param);
 	}
@@ -157,11 +164,12 @@ public class AccountLedgerService { //계좌별원장
 								ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
 					 END AS yymmdd,
 					 A.acccd, A.accnm, A.it1cd, A.it1nm, A.drcr,
-					 SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt, SUM(A.bfamt) AS bfamt,
-					 CASE WHEN A.drcr = '1'
-								THEN SUM(A.bfamt) + SUM(A.dramt) - SUM(A.cramt)
-								ELSE SUM(A.bfamt) + SUM(A.cramt) - SUM(A.dramt)
-					 END AS balamt,
+					 -- 원본 d_book14_1 과 같이 이월(00000000) 행도 차변 · 대변을 그대로 보여 준다
+					 SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt,
+					 SUM(A.bfamt) AS bfamt,
+					 -- 잔액 : 원본 cumulativeSum(bfamt) — 계정 · 계좌별 일자 누계 (이전에는 차변 · 대변을 한 번 더 더해 두 배가 됐다)
+					 SUM(SUM(A.bfamt)) OVER (PARTITION BY A.acccd, A.it1cd ORDER BY A.yymmdd
+					                         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS balamt,
 					 STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
 					 STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
 				FROM
@@ -324,62 +332,54 @@ public class AccountLedgerService { //계좌별원장
 								ELSE STUFF(STUFF(yymmdd, 5, 0, '-'), 8, 0, '-')
 					 END AS yymmdd,
 					 spnum, spseq, acccd, accnm, it1cd, it1nm, it2nm, summy, drcr,
-					 dramt, cramt, bfamt, banknm, rowseq,
-					 SUM(CASE WHEN RIGHT(yymmdd,2) IN ('97','98') THEN 0
-										WHEN drcr = '1' THEN bfamt + dramt - cramt
-										ELSE bfamt + cramt - dramt END)
-							 OVER (PARTITION BY acccd, it1cd ORDER BY yymmdd, spnum, spseq
+					 dramt, cramt,   -- 원본처럼 전일이월 줄도 차변 · 대변을 그대로 (아래 누계에 포함)
+					 bfamt, banknm, rowseq,
+					 -- 잔액 : bfamt(차대 성격대로 부호가 붙은 금액) 누계. 월계(97 · 98) 행은 빼고 센다
+					 SUM(CASE WHEN RIGHT(yymmdd,2) IN ('97','98') THEN 0 ELSE bfamt END)
+							 OVER (PARTITION BY acccd, it1cd ORDER BY yymmdd, spnum, rowseq, spseq
 										 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS balamt,
 					 CAST(:it1nm AS VARCHAR(50)) AS accnum,
 					 STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
 					 STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
 			FROM base
-		 ORDER BY acccd, it1cd, yymmdd, spnum, spseq
+		 ORDER BY acccd, it1cd, yymmdd, spnum, rowseq, spseq   -- 원본 Sort : acccd, yymmdd, spnum, rowseq
         """;
 		return sqlRunner.getRows(sql, param);
 	}
 
 	// ============================================================
-	// tab4 : 계좌코드오류전표 (TB_AA040에 없는 은행코드 전표)
+	// tab4 : 계좌코드오류전표 (원본 d_book14_6)
+	//   고른 관의 전표 줄 가운데 은행코드가 계좌마스터(TB_AA040)에 없거나 비어 있는 줄
 	// ============================================================
-	public Object selectErrorSlipList(String start, String end, String acccd) {
+	public Object selectErrorSlipList(String start, String end, String acccd, String it1cd) {
 		MapSqlParameterSource param = buildBaseParam(start, end);
-		param.addValue("acccd", (acccd == null) ? "" : acccd.trim());
+		param.addValue("acccd", acccd == null ? "" : acccd.trim());
 
 		String sql = """
-			SELECT 
-						CASE WHEN A.yymmdd = '00000000' THEN '00000000'
-								WHEN RIGHT(A.yymmdd, 2) IN ('97','98') THEN A.yymmdd
-								ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
-					 END AS yymmdd,
-					 A.spnum, A.spseq, A.acccd, A.accnm, A.it1cd, A.it1nm, A.it2nm,
-					 A.summy, A.drcr, A.dramt, A.cramt, A.bfamt, A.banknm, A.rowseq,
-					 STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
-					 STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
-          FROM
-        (
-        SELECT A.spdate AS yymmdd, A.spnum, A.spseq,
-               A.acccd, B.accnm, A.bankcd,
-               (SELECT it1nm FROM VW_X0003 WHERE it1cd = A.it1cd AND tiosec = E.tiosec) AS it1nm,
-               (SELECT it2nm FROM TB_X0004 WHERE it2cd = A.it2cd AND tiosec = E.tiosec) AS it2nm,
-               A.summy, B.drcr, A.dramt, A.cramt,
-               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt,
-               (SELECT banknm FROM TB_AA040 WHERE bank + bankcd = A.bankcd) AS banknm,
-               A.rowseq, A.it1cd
-          FROM TB_AA010 A, TB_AC001 B, TB_AA009 E
-         WHERE A.custcd = B.custcd AND A.acccd = B.acccd
-           AND A.custcd = E.custcd AND A.spjangcd = E.spjangcd
-           AND A.spdate = E.spdate AND A.spnum = E.spnum
-           AND ( A.bankcd NOT IN (SELECT bank + bankcd FROM TB_AA040)
-                 OR A.bankcd IS NULL OR LEN(A.bankcd) = 0 )
-           AND B.spyn = '1' AND A.custcd = :custcd AND A.spjangcd = :spjangcd
-           AND A.spdate BETWEEN :frdate AND :todate
-           AND NOT (A.dramt = 0 AND A.cramt = 0)
-           AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
-        ) A
-         WHERE A.acccd = :acccd
-         ORDER BY A.yymmdd, A.spnum, A.spseq
-        """;
+			SELECT STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-') AS yymmdd,
+			       A.spnum, A.spseq, A.acccd, A.accnm, A.it1cd, A.it1nm, A.it2nm, A.summy, A.drcr,
+			       A.dramt, A.cramt, A.bfamt, A.banknm, A.rowseq
+			  FROM (
+			        SELECT A.spdate AS yymmdd, A.spnum, A.spseq, A.acccd, B.accnm, A.bankcd,
+			               (SELECT it1nm FROM VW_X0003 WHERE it1cd = A.it1cd AND tiosec = E.tiosec) AS it1nm,
+			               (SELECT it2nm FROM TB_X0004 WHERE it2cd = A.it2cd AND tiosec = E.tiosec) AS it2nm,
+			               A.summy, B.drcr, A.dramt, A.cramt,
+			               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt,
+			               (SELECT banknm FROM TB_AA040 WHERE bank + bankcd = A.bankcd) AS banknm,
+			               A.rowseq, A.it1cd
+			          FROM TB_AA010 A, TB_AC001 B, TB_AA009 E
+			         WHERE A.custcd = B.custcd AND A.acccd = B.acccd
+			           AND A.custcd = E.custcd AND A.spjangcd = E.spjangcd
+			           AND A.spdate = E.spdate AND A.spnum = E.spnum
+			           AND (A.bankcd NOT IN (SELECT bank + bankcd FROM TB_AA040) OR A.bankcd IS NULL OR LEN(A.bankcd) = 0)
+			           AND B.spyn = '1' AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+			           AND A.spdate BETWEEN :frdate AND :todate
+			           AND NOT (A.dramt = 0 AND A.cramt = 0)
+			           AND (A.iwolflag <> '1' OR A.iwolflag IS NULL)
+			       ) A
+			 WHERE A.acccd = :acccd
+			 ORDER BY A.yymmdd, A.spnum, A.spseq
+			""";
 		return sqlRunner.getRows(sql, param);
 	}
 

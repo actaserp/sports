@@ -25,9 +25,10 @@ public class AccountLedgerController { // 계좌별원장
 		@RequestParam(value = "accnum", required = false) String accnum,
 		@RequestParam(value = "accid", required = false) String accid,
 		@RequestParam(value = "bankid", required = false) String bankid,
-		@RequestParam(value = "useyn", required = false) String useyn) {
+		@RequestParam(value = "useyn", required = false) String useyn,
+		@RequestParam(value = "acccd", required = false) String acccd) {
 		AjaxResult result = new AjaxResult();
-		result.data = accountLedgerService.searchSummary(start, end, accnum, accid, bankid, useyn);
+		result.data = accountLedgerService.searchSummary(start, end, accnum, accid, bankid, useyn, acccd);
 		return result;
 	}
 
@@ -62,9 +63,10 @@ public class AccountLedgerController { // 계좌별원장
 	public AjaxResult searchErrorSlip(
 		@RequestParam(value = "start") String start,
 		@RequestParam(value = "end") String end,
-		@RequestParam(value = "acccd", required = false) String acccd) {
+		@RequestParam(value = "acccd", required = false) String acccd,
+		@RequestParam(value = "it1cd", required = false) String it1cd) {
 		AjaxResult result = new AjaxResult();
-		result.data = accountLedgerService.selectErrorSlipList(start, end, acccd);
+		result.data = accountLedgerService.selectErrorSlipList(start, end, acccd, it1cd);
 		return result;
 	}
 

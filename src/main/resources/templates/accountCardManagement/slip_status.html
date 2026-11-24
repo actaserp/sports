@@ -1941,6 +1941,13 @@
                     <option value="6">결의양식3(대체)</option>
                     <option value="7">전표(산출내역):하단결재</option>
                 </select>
+                <select id="spFontSize" title="출력 글자 크기"
+                    style="padding:-1px 6px;border:1px solid #ddd;border-radius:4px;">
+                    <option value="">글자 보통</option>
+                    <option value="13">글자 조금 크게</option>
+                    <option value="14">글자 크게</option>
+                    <option value="16">글자 아주 크게</option>
+                </select>
                 <input id="spApprovers" type="text" value=""
                     placeholder="예) 담당,팀장,사무국장 (비우면 설정값)"
                     title="결재란 직급을 쉼표(,)로 구분해 순서대로 입력하세요. Enter로 바로 반영됩니다."
@@ -1987,6 +1994,8 @@
      if (savedPrintType) {
       document.getElementById('spPrintType').value = savedPrintType;
      }
+     const savedFontSize = localStorage.getItem('slip_print_fontsize');
+     if (savedFontSize) document.getElementById('spFontSize').value = savedFontSize;
      const savedApprovers = sessionStorage.getItem('slip_print_approvers');
      if (savedApprovers) {
       document.getElementById('spApprovers').value = savedApprovers;
@@ -2045,7 +2054,7 @@
      function renderPreview(printType) {
       const approvers = getApprovers();
       renderApvFlags();
-      const url = `${_this.url}/print?printType=${printType}&keys=${encodeURIComponent(keys)}&approvers=${encodeURIComponent(approvers)}`;
+      const url = `${_this.url}/print?printType=${printType}&keys=${encodeURIComponent(keys)}&approvers=${encodeURIComponent(approvers)}` + (document.getElementById('spFontSize').value ? '&fontSize=' + document.getElementById('spFontSize').value : '');
       document.getElementById('spIframe').src = withCtx(url);
      }
 
@@ -2054,6 +2063,13 @@
      document.getElementById('spPrintType').addEventListener('change', function () {
       sessionStorage.setItem('slip_print_type', this.value);
       renderPreview(this.value);
+     });
+
+     // 글자 크기 : 이 브라우저에 기억 (다음 출력에도 그대로)
+     document.getElementById('spFontSize').addEventListener('change', function () {
+      if (this.value) localStorage.setItem('slip_print_fontsize', this.value);
+      else localStorage.removeItem('slip_print_fontsize');
+      renderPreview(document.getElementById('spPrintType').value);
      });
 
      document.getElementById('spRefreshBtn').addEventListener('click', function () {
@@ -2080,7 +2096,7 @@
      document.getElementById('spDownloadBtn').addEventListener('click', function () {
       const printType = document.getElementById('spPrintType').value;
       const approvers = getApprovers();
-      const url = withCtx(`${_this.url}/print/pdf?printType=${printType}&keys=${encodeURIComponent(keys)}&approvers=${encodeURIComponent(approvers)}`);
+      const url = withCtx(`${_this.url}/print/pdf?printType=${printType}&keys=${encodeURIComponent(keys)}&approvers=${encodeURIComponent(approvers)}` + (document.getElementById('spFontSize').value ? '&fontSize=' + document.getElementById('spFontSize').value : ''));
 
       const a = document.createElement('a');
       a.href = url;
