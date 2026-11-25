@@ -68,30 +68,14 @@ public class CategoryItemLedgerService {
                 A.acccd, B.accnm, B.drcr,
                 0 AS dramt, 0 AS cramt,
                 CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt
-          FROM TB_AB002 A, TB_AC001 B          -- 원본 d_book10_0 : 연초 이월잔액(TB_AB002, yymm = 연도+'00')
+          FROM TB_AB001 A, TB_AC001 B          -- 원본 : 이월잔액(TB_AB001, 연초 ~ 기준일자 전날)
          WHERE A.custcd   = B.custcd
            AND A.acccd    = B.acccd
            AND B.spyn     = '1'
            AND A.custcd   = :custcd
            AND A.spjangcd = :spjangcd
-           AND A.yymm     = :indate
-           AND NOT (A.dramt = 0 AND A.cramt = 0)
-
-        UNION ALL
-
-        -- 원본 d_book10_0 둘째 블록 : 연초부터 기준일자 전날까지 전표 금액도 전잔액에 넣는다
-        SELECT '00000000' AS yymmdd,
-                A.acccd, B.accnm, B.drcr,
-                0 AS dramt, 0 AS cramt,
-                CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt
-          FROM TB_AA010 A, TB_AC001 B
-         WHERE A.custcd   = B.custcd
-           AND A.acccd    = B.acccd
-           AND B.spyn     = '1'
-           AND A.custcd   = :custcd
-           AND A.spjangcd = :spjangcd
-           AND A.spdate  >= :indate + '00'
-           AND A.spdate  <  :frdate
+           AND A.yymmdd  >= :indate
+           AND A.yymmdd  <  :frdate
            AND NOT (A.dramt = 0 AND A.cramt = 0)
 
         UNION ALL
@@ -123,7 +107,7 @@ public class CategoryItemLedgerService {
 	// ============================================================
 	// tab1 우측 : 관+항 단위 집계  (오른쪽 쿼리)
 	// ============================================================
-	public Object searchItem(String start, String end, String mssec, String acccd, String it1cd) {
+	public Object searchItem(String start, String end, String mssec, String acccd, String it1cd, String busipur) {
 		MapSqlParameterSource param = buildBaseParam(start, end);
 
 		// mssec : 전표블록 A.mssec LIKE (없으면 '%')
@@ -135,8 +119,8 @@ public class CategoryItemLedgerService {
 		// it1cd : LIKE (없으면 전체)
 		param.addValue("it1cd", (it1cd == null || it1cd.trim().isEmpty()) ? "%" : it1cd.trim() + "%");
 
-		// busipur : 입력칸 없음 → 전체
-		param.addValue("busipur", "%");
+		// busipur : 조회줄 사업구분 (비면 전체) — 원본 dw_cdt.busipur
+		param.addValue("busipur", likeOrAll(busipur));
 
 		String sql = """
         SELECT A.acccd, A.accnm, A.it1cd, A.it1nm, A.drcr,
@@ -227,7 +211,7 @@ public class CategoryItemLedgerService {
 	// ============================================================
 // tab2 : 상세내역 (관+항+전표일자 단위) — d_book11_1
 // ============================================================
-	public Object selectItemDetailList(String start, String end, String mssec, String acccd, String it1cd) {
+	public Object selectItemDetailList(String start, String end, String mssec, String acccd, String it1cd, String busipur, String tiosec) {
 		MapSqlParameterSource param = buildBaseParam(start, end);
 
 		// mssec : 2·3번째 전표블록은 A.mssec 조건이 원본엔 없음(주의) → 파라미터만 준비
@@ -238,9 +222,9 @@ public class CategoryItemLedgerService {
 		// it1cd : LIKE (+ '%'). 없으면 전체
 		param.addValue("it1cd", (it1cd == null) ? "" : it1cd.trim());
 		// tiosec : LIKE (+ '%'). 입력칸 없음 → 빈값(=전체)
-		param.addValue("tiosec", "");
+		param.addValue("tiosec", tiosec == null ? "" : tiosec.trim());  // 원본 : 집계에서 고른 항의 구분
 		// busipur : 입력칸 없음 → 전체
-		param.addValue("busipur", "%");
+		param.addValue("busipur", likeOrAll(busipur));  // 원본 dw_cdt.busipur
 
 		String sql = """
         SELECT 
@@ -324,7 +308,7 @@ public class CategoryItemLedgerService {
            AND A.it1cd  LIKE :it1cd  + '%'
            AND A.tiosec LIKE :tiosec + '%'
          GROUP BY A.yymmdd, A.acccd, A.accnm, A.it1cd, A.it1nm, A.drcr, A.tiosec
-         ORDER BY A.acccd, A.it1cd, A.yymmdd
+         ORDER BY A.acccd, A.it1cd, A.it1nm, A.yymmdd
         """;
 
 		return sqlRunner.getRows(sql, param);
@@ -333,7 +317,7 @@ public class CategoryItemLedgerService {
 	// ============================================================
 	// tab3 : 상세내역 (관+항 고정, 전표 단위) — d_book11_2
 	// ============================================================
-	public Object selectDetailList(String start, String end, String acccd,
+	public Object selectDetailList(String start, String end, String acccd, String busipur,
 																 String it1cd, String tiosec, String mssec) {
 		MapSqlParameterSource param = buildBaseParam(start, end);
 
@@ -341,48 +325,29 @@ public class CategoryItemLedgerService {
 		param.addValue("it1cd",  (it1cd  == null) ? "" : it1cd.trim());
 		param.addValue("tiosec", (tiosec == null) ? "" : tiosec.trim());
 		param.addValue("mssec",  (mssec == null || mssec.trim().isEmpty()) ? "%" : mssec.trim());
-		param.addValue("busipur", "%");
+		param.addValue("busipur", likeOrAll(busipur));  // 원본 dw_cdt.busipur
 
+		// 원본 d_book11_2 그대로 : 이월 + 전표 + 월(97) · 누계(98) 행. yymmdd 는 원래 값(yyyymmdd)으로 내려보낸다
 		String sql = """
-        SELECT CASE WHEN A.yymmdd = '00000000' THEN ''
-                    WHEN RIGHT(A.yymmdd, 2) = '98' THEN '소계'
-                    ELSE STUFF(STUFF(A.yymmdd, 5, 0, '-'), 8, 0, '-')
-               END AS yymmdd,
-               A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm,
-               A.summy, A.drcr, A.tiosec,
+        SELECT A.yymmdd, A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm, A.summy, A.drcr, A.tiosec,
                SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt, SUM(A.bfamt) AS bfamt,
-               A.mssec AS mssec,
-               (SELECT mssecnm FROM tb_x0005 WHERE mssec = A.mssec) AS mssecnm,
-               MAX(A.cardnum) AS cardnum, MAX(A.cardnm) AS cardnm,
-               MAX(A.rowseq) AS rowseq,
-               CASE WHEN A.drcr = '1'
-                    THEN SUM(A.bfamt) + SUM(A.dramt) - SUM(A.cramt)
-                    ELSE SUM(A.bfamt) + SUM(A.cramt) - SUM(A.dramt)
-               END AS balamt,
-               STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
-               STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
-          FROM
-        (
-        -- ① 이월 (TB_AB014) : mssec 조건 없음
-        SELECT '00000000' AS yymmdd, '0000' AS spnum,
-               A.acccd, B.accnm, A.it1cd, A.it1nm, '' AS summy, B.drcr, '' AS tiosec,
+               A.mssec, MAX(A.cardnum) AS cardnum, MAX(A.cardnm) AS cardnm, MAX(A.rowseq) AS rowseq,
+               :frdate AS frdate, :todate AS todate
+          FROM (
+        SELECT '00000000' AS yymmdd, '0000' AS spnum, A.acccd, B.accnm, A.it1cd, A.it1nm, '' AS summy, B.drcr, '' AS tiosec,
                A.dramt, A.cramt,
                CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt,
-               '' AS mssec, '' AS cardnum, '' AS cardnm, '0' AS rowseq
+               '' AS mssec, '' AS cardnum, '' AS cardnm, 0 AS rowseq
           FROM TB_AB014 A, TB_AC001 B
          WHERE A.custcd = B.custcd AND A.acccd = B.acccd AND B.spyn = '1'
            AND A.custcd = :custcd AND A.spjangcd = :spjangcd
            AND A.yymm = :indate
            AND LEFT(A.acccd,1) IN ('1','2','3')
            AND NOT (A.dramt = 0 AND A.cramt = 0)
-
         UNION ALL
-
-        -- ② 연초~조회시작 직전 : C.tiosec 기준
-        SELECT '00000000', '0000',
-               A.acccd, B.accnm, A.it1cd, D.it1nm, '', B.drcr, '',
+        SELECT '00000000', '0000', A.acccd, B.accnm, A.it1cd, D.it1nm, '', B.drcr, '',
                A.dramt, A.cramt,
-               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt,
+               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END,
                A.mssec, A.cardnum,
                (SELECT cardnm FROM tb_iz010 WHERE custcd = :custcd AND spjangcd = A.spjangcd AND cardnum = A.cardnum),
                A.rowseq
@@ -398,14 +363,10 @@ public class CategoryItemLedgerService {
            AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
            AND C.tiosec = :tiosec
            AND C.busipur LIKE :busipur
-
         UNION ALL
-
-        -- ③ 조회기간 : A.tiosec 기준
-        SELECT A.spdate, A.spnum,
-               A.acccd, B.accnm, A.it1cd, D.it1nm, A.summy, B.drcr, A.tiosec,
+        SELECT A.spdate, A.spnum, A.acccd, B.accnm, A.it1cd, D.it1nm, A.summy, B.drcr, A.tiosec,
                A.dramt, A.cramt,
-               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt,
+               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END,
                A.mssec, A.cardnum,
                (SELECT cardnm FROM tb_iz010 WHERE custcd = :custcd AND spjangcd = A.spjangcd AND cardnum = A.cardnum),
                A.rowseq
@@ -421,28 +382,20 @@ public class CategoryItemLedgerService {
            AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
            AND A.tiosec = :tiosec
            AND C.busipur LIKE :busipur
-        ) A
+          ) A
          WHERE A.acccd = :acccd AND A.it1cd = :it1cd AND A.tiosec = :tiosec
-         GROUP BY A.yymmdd, A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm,
-                  A.summy, A.drcr, A.mssec, A.tiosec
+         GROUP BY A.yymmdd, A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm, A.summy, A.drcr, A.mssec, A.tiosec
 
         UNION ALL
 
-        -- ④ 계정소계 (98만)
-        SELECT A.yymmdd, A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm,
-               '' AS summy, '' AS drcr, '' AS tiosec,
+        SELECT A.yymmdd, A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm, '', '', '',
                SUM(A.dramt), SUM(A.cramt), SUM(A.bfamt),
-               A.mssec AS mssec,
-               (SELECT mssecnm FROM tb_x0005 WHERE mssec = A.mssec) AS mssecnm,
-               MAX(A.cardnum), MAX(A.cardnm), MAX(A.rowseq),
-               CASE WHEN '' = '1' THEN 0 ELSE 0 END AS balamt,
-               STUFF(STUFF(:frdate,5,0,'-'),8,0,'-'),
-               STUFF(STUFF(:todate,5,0,'-'),8,0,'-')
-          FROM
-        (
-        SELECT LEFT(A.spdate,6) + '98' AS yymmdd, '9999' AS spnum,
-               A.acccd, B.accnm, A.it1cd, D.it1nm,
-               A.dramt, A.cramt,
+               A.mssec, MAX(A.cardnum), MAX(A.cardnm), MAX(A.rowseq),
+               :frdate, :todate
+          FROM (
+        SELECT LEFT(X.spdate, 6) + '97' AS yymmdd, '9999' AS spnum, X.acccd, X.accnm, X.it1cd, X.it1nm,
+               X.dramt, X.cramt, X.bfamt, X.mssec, X.cardnum, X.cardnm, X.rowseq, X.tiosec
+          FROM ( SELECT A.spdate, A.spnum, A.acccd, B.accnm, A.it1cd, D.it1nm, A.dramt, A.cramt,
                CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt,
                A.mssec, A.cardnum,
                (SELECT cardnm FROM tb_iz010 WHERE custcd = :custcd AND spjangcd = A.spjangcd AND cardnum = A.cardnum) AS cardnm,
@@ -456,11 +409,29 @@ public class CategoryItemLedgerService {
            AND A.spdate BETWEEN :frdate AND :todate
            AND ( A.mssec LIKE :mssec OR A.mssec IS NULL )
            AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
-           AND C.busipur LIKE :busipur
-        ) A
+           AND C.busipur LIKE :busipur ) X
+        UNION ALL
+        SELECT LEFT(X.spdate, 6) + '98', '9999', X.acccd, X.accnm, X.it1cd, X.it1nm,
+               X.dramt, X.cramt, X.bfamt, X.mssec, X.cardnum, X.cardnm, X.rowseq, X.tiosec
+          FROM ( SELECT A.spdate, A.spnum, A.acccd, B.accnm, A.it1cd, D.it1nm, A.dramt, A.cramt,
+               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt,
+               A.mssec, A.cardnum,
+               (SELECT cardnm FROM tb_iz010 WHERE custcd = :custcd AND spjangcd = A.spjangcd AND cardnum = A.cardnum) AS cardnm,
+               A.rowseq, A.tiosec
+          FROM TB_AA010 A, TB_AC001 B, TB_AA009 C, VW_X0003 D
+         WHERE A.custcd = B.custcd AND A.acccd = B.acccd
+           AND A.custcd = C.custcd AND A.spjangcd = C.spjangcd
+           AND A.spdate = C.spdate AND A.spnum = C.spnum
+           AND A.it1cd = D.it1cd AND A.tiosec = D.tiosec
+           AND B.spyn = '1' AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.spdate BETWEEN :frdate AND :todate
+           AND ( A.mssec LIKE :mssec OR A.mssec IS NULL )
+           AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
+           AND C.busipur LIKE :busipur ) X
+          ) A
          WHERE A.acccd = :acccd AND A.it1cd = :it1cd AND A.tiosec = :tiosec
          GROUP BY A.yymmdd, A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm, A.mssec, A.tiosec
-         ORDER BY yymmdd, spnum
+         ORDER BY 1, 2, 16
         """;
 
 		return sqlRunner.getRows(sql, param);
@@ -551,6 +522,130 @@ public class CategoryItemLedgerService {
 		return result;
 	}
 
+
+	// ============================================================
+	// 인쇄 : 집계내역 (원본 d_book11_0_print) — 고른 계정의 항별 전잔액 · 차변 · 대변
+	// ============================================================
+	public Object selectPrintSummary(String start, String end, String mssec, String acccd) {
+		MapSqlParameterSource param = buildBaseParam(start, end);
+		param.addValue("mssec", mssec == null ? "" : mssec.trim());
+		param.addValue("acccd", (acccd == null || acccd.trim().isEmpty()) ? "%" : acccd.trim());
+		param.addValue("it1cd", "%");
+		String sql = """
+        SELECT A.acccd, A.accnm, A.it1cd, A.it1nm, A.drcr, A.tiosec,
+               SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt, SUM(A.bfamt) AS bfamt,
+               :frdate AS frdate, :todate AS todate
+          FROM (
+        SELECT '00000000' AS yymmdd, A.acccd, B.accnm, A.it1cd, A.it1nm, B.drcr, '' AS tiosec,
+               0 AS dramt, 0 AS cramt,
+               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt
+          FROM TB_AB014 A, TB_AC001 B
+         WHERE A.custcd = B.custcd AND A.acccd = B.acccd AND B.spyn = '1'
+           AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.yymm = :indate
+           AND LEFT(A.acccd,1) IN ('1','2','3')
+           AND NOT (A.dramt = 0 AND A.cramt = 0)
+        UNION ALL
+        SELECT '00000000', A.acccd, B.accnm, A.it1cd, D.it1nm, B.drcr, '', 0, 0,
+               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END
+          FROM TB_AA010 A, TB_AC001 B, TB_AA009 C, VW_X0003 D
+         WHERE A.custcd = B.custcd AND A.acccd = B.acccd
+           AND A.custcd = C.custcd AND A.spjangcd = C.spjangcd AND A.spdate = C.spdate AND A.spnum = C.spnum
+           AND A.it1cd = D.it1cd AND A.tiosec = D.tiosec
+           AND B.spyn = '1' AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.spdate > :indate + '00' AND A.spdate < :frdate
+           AND A.mssec LIKE :mssec + '%'
+           AND NOT (A.dramt = 0 AND A.cramt = 0)
+           AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
+        UNION ALL
+        SELECT A.spdate, A.acccd, B.accnm, A.it1cd, D.it1nm, B.drcr, C.tiosec, A.dramt, A.cramt, 0
+          FROM TB_AA010 A, TB_AC001 B, TB_AA009 C, VW_X0003 D
+         WHERE A.custcd = B.custcd AND A.acccd = B.acccd
+           AND A.custcd = C.custcd AND A.spjangcd = C.spjangcd AND A.spdate = C.spdate AND A.spnum = C.spnum
+           AND A.it1cd = D.it1cd AND A.tiosec = D.tiosec
+           AND B.spyn = '1' AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.spdate BETWEEN :frdate AND :todate
+           AND A.mssec LIKE :mssec + '%'
+           AND NOT (A.dramt = 0 AND A.cramt = 0)
+           AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
+          ) A
+         WHERE A.acccd LIKE :acccd AND A.it1cd LIKE :it1cd
+         GROUP BY A.acccd, A.accnm, A.it1cd, A.it1nm, A.drcr, A.tiosec
+         ORDER BY A.acccd, A.it1cd
+        """;
+		return sqlRunner.getRows(sql, param);
+	}
+
+	// ============================================================
+	// 인쇄 : 관-항 상세 (원본 d_book11_1_print) — 일자별, 항소계 · 계정소계
+	// ============================================================
+	public Object selectPrintItemDetail(String start, String end, String acccd, String it1cd) {
+		MapSqlParameterSource param = buildBaseParam(start, end);
+		param.addValue("acccd", acccd == null ? "" : acccd.trim());
+		param.addValue("it1cd", it1cd == null ? "" : it1cd.trim());
+		param.addValue("tiosec", "");
+		String sql = """
+        SELECT A.yymmdd, A.acccd, A.accnm, A.it1cd, A.it1nm, A.drcr, A.tiosec,
+               SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt, SUM(A.bfamt) AS bfamt,
+               :frdate AS frdate, :todate AS todate
+          FROM (
+        SELECT '00000000' AS yymmdd, A.acccd, B.accnm, A.it1cd, A.it1nm, B.drcr, '' AS tiosec,
+               A.dramt, A.cramt,
+               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt
+          FROM TB_AB014 A, TB_AC001 B
+         WHERE A.custcd = B.custcd AND A.acccd = B.acccd AND B.spyn = '1'
+           AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.yymm = :indate
+           AND LEFT(A.acccd,1) IN ('1','2','3')
+           AND NOT (A.dramt = 0 AND A.cramt = 0)
+        UNION ALL
+        SELECT '00000000', A.acccd, B.accnm, A.it1cd, D.it1nm, B.drcr, '', A.dramt, A.cramt,
+               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END
+          FROM TB_AA010 A, TB_AC001 B, TB_AA009 C, VW_X0003 D
+         WHERE A.custcd = B.custcd AND A.acccd = B.acccd
+           AND A.custcd = C.custcd AND A.spjangcd = C.spjangcd AND A.spdate = C.spdate AND A.spnum = C.spnum
+           AND A.it1cd = D.it1cd AND C.tiosec = D.tiosec
+           AND B.spyn = '1' AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.spdate > :indate + '00' AND A.spdate < :frdate
+           AND NOT (A.dramt = 0 AND A.cramt = 0)
+           AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
+        UNION ALL
+        SELECT A.spdate, A.acccd, B.accnm, A.it1cd, D.it1nm, B.drcr, C.tiosec, A.dramt, A.cramt,
+               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END
+          FROM TB_AA010 A, TB_AC001 B, TB_AA009 C, VW_X0003 D
+         WHERE A.custcd = B.custcd AND A.acccd = B.acccd
+           AND A.custcd = C.custcd AND A.spjangcd = C.spjangcd AND A.spdate = C.spdate AND A.spnum = C.spnum
+           AND A.it1cd = D.it1cd AND C.tiosec = D.tiosec
+           AND B.spyn = '1' AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.spdate BETWEEN :frdate AND :todate
+           AND NOT (A.dramt = 0 AND A.cramt = 0)
+           AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
+          ) A
+         WHERE A.acccd LIKE :acccd + '%' AND A.it1cd LIKE :it1cd + '%' AND A.tiosec LIKE :tiosec + '%'
+         GROUP BY A.yymmdd, A.acccd, A.accnm, A.it1cd, A.it1nm, A.drcr, A.tiosec
+         ORDER BY A.acccd, A.it1cd, A.it1nm, A.yymmdd
+        """;
+		return sqlRunner.getRows(sql, param);
+	}
+
+	// 인쇄 결재란 (원본 d_confirm_001 : tb_xenv)
+	public Map<String, Object> selectConfirm() {
+		MapSqlParameterSource param = new MapSqlParameterSource().addValue("spjangcd", TenantContext.get());
+		String sql = """
+        SELECT TOP 1 settle1, settle2, settle3, settle4, settle5, settle6, settle7, settle8,
+               setchk1, setchk2, setchk3, setchk4, setchk5, setchk6, setchk7, setchk8,
+               junchk1, junchk2, junchk3, junchk4, junchk5, junchk6, junchk7, junchk8,
+               crolin1, crolin2, crolin3, crolin4, crolin5, crolin6, crolin7, crolin8
+          FROM tb_xenv
+         WHERE spjangcd = :spjangcd
+        """;
+		return sqlRunner.getRow(sql, param);
+	}
+
+	// 인쇄 머리글 : 기관명
+	public Map<String, String> selectOrg() {
+		return getBizInfoBySpjangcd(TenantContext.get());
+	}
 
 	private Map<String, String> getBizInfoBySpjangcd(String spjangcd) {
 		MapSqlParameterSource param = new MapSqlParameterSource().addValue("spjangcd", spjangcd);

@@ -37,9 +37,10 @@ public class CategoryItemLedgerController { //관항별원장
 		@RequestParam(value = "end") String end,
 		@RequestParam(value = "mssec", required = false) String mssec,
 		@RequestParam(value = "acccd", required = false) String acccd,
-		@RequestParam(value = "it1cd", required = false) String it1cd) {
+		@RequestParam(value = "it1cd", required = false) String it1cd,
+		@RequestParam(value = "busipur", required = false) String busipur) {
 		AjaxResult result = new AjaxResult();
-		result.data = categoryItemLedgerService.searchItem(start, end, mssec, acccd, it1cd);
+		result.data = categoryItemLedgerService.searchItem(start, end, mssec, acccd, it1cd, busipur);
 		return result;
 	}
 
@@ -50,9 +51,11 @@ public class CategoryItemLedgerController { //관항별원장
 		@RequestParam(value = "end") String end,
 		@RequestParam(value = "mssec", required = false) String mssec,
 		@RequestParam(value = "acccd", required = false) String acccd,
-		@RequestParam(value = "it1cd", required = false) String it1cd) {
+		@RequestParam(value = "it1cd", required = false) String it1cd,
+		@RequestParam(value = "busipur", required = false) String busipur,
+		@RequestParam(value = "tiosec", required = false) String tiosec) {
 		AjaxResult result = new AjaxResult();
-		result.data = categoryItemLedgerService.selectItemDetailList(start, end, mssec, acccd, it1cd);
+		result.data = categoryItemLedgerService.selectItemDetailList(start, end, mssec, acccd, it1cd, busipur, tiosec);
 		return result;
 	}
 
@@ -64,9 +67,10 @@ public class CategoryItemLedgerController { //관항별원장
 		@RequestParam(value = "acccd", required = false) String acccd,
 		@RequestParam(value = "it1cd", required = false) String it1cd,
 		@RequestParam(value = "tiosec", required = false) String tiosec,
-		@RequestParam(value = "mssec", required = false) String mssec) {
+		@RequestParam(value = "mssec", required = false) String mssec,
+		@RequestParam(value = "busipur", required = false) String busipur) {
 		AjaxResult result = new AjaxResult();
-		result.data = categoryItemLedgerService.selectDetailList(start, end, acccd, it1cd, tiosec, mssec);
+		result.data = categoryItemLedgerService.selectDetailList(start, end, acccd, busipur, it1cd, tiosec, mssec);
 		return result;
 	}
 
@@ -130,6 +134,46 @@ public class CategoryItemLedgerController { //관항별원장
 		@RequestParam(value = "bsdate", required = false) String bsdate) {
 		AjaxResult result = new AjaxResult();
 		result.data = categoryItemLedgerService.selectBusiLedgerList(start, end, mssec, acccd, busipur, bsdate);
+		return result;
+	}
+
+	// 인쇄 머리글 : 기관명
+	@GetMapping("/readOrg")
+	public AjaxResult searchOrg() {
+		AjaxResult result = new AjaxResult();
+		result.data = categoryItemLedgerService.selectOrg();
+		return result;
+	}
+
+	// 인쇄 : 집계내역 (d_book11_0_print)
+	@GetMapping("/readPrintSummary")
+	public AjaxResult searchPrintSummary(
+		@RequestParam(value = "start") String start,
+		@RequestParam(value = "end") String end,
+		@RequestParam(value = "mssec", required = false) String mssec,
+		@RequestParam(value = "acccd", required = false) String acccd) {
+		AjaxResult result = new AjaxResult();
+		result.data = categoryItemLedgerService.selectPrintSummary(start, end, mssec, acccd);
+		return result;
+	}
+
+	// 인쇄 : 관-항 상세 (d_book11_1_print)
+	@GetMapping("/readPrintItemDetail")
+	public AjaxResult searchPrintItemDetail(
+		@RequestParam(value = "start") String start,
+		@RequestParam(value = "end") String end,
+		@RequestParam(value = "acccd", required = false) String acccd,
+		@RequestParam(value = "it1cd", required = false) String it1cd) {
+		AjaxResult result = new AjaxResult();
+		result.data = categoryItemLedgerService.selectPrintItemDetail(start, end, acccd, it1cd);
+		return result;
+	}
+
+	// 인쇄 결재란 (d_confirm_001)
+	@GetMapping("/readConfirm")
+	public AjaxResult searchConfirm() {
+		AjaxResult result = new AjaxResult();
+		result.data = categoryItemLedgerService.selectConfirm();
 		return result;
 	}
 }
