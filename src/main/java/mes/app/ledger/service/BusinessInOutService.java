@@ -145,7 +145,7 @@ public class BusinessInOutService { // 사업별입출현황
 	// tab5 : 세출내역 (tiosec = '2')
 	//   집행:  TB_AA009 + TB_AA010 (Left(acccd,1) = '7')  → amt
 	//   예산:  TB_X0007                                    → price
-	//   그룹:  mssec/acccd/accnm/it1nm/it2nm/businm + bsdate/bseccd/busicd + spdate/spnum
+	//   그룹:  mssec/acccd/accnm/it1nm/it2nm/businm + bsdate/bseccd/busicd (전표 단위 아님)
 	// ============================================================
 	public Object searchOutList(String start, String end,
 															String bsdate, String bseccd, String busicd) {
@@ -164,8 +164,6 @@ public class BusinessInOutService { // 사업별입출현황
                Z.bsdate,
                Z.bseccd,
                Z.busicd,
-               Z.spdate,
-               Z.spnum,
                :spjangnm AS spjangnm,
                STUFF(STUFF(:frdate,5,0,'-'),8,0,'-') AS frdate,
                STUFF(STUFF(:todate,5,0,'-'),8,0,'-') AS todate
@@ -218,9 +216,10 @@ public class BusinessInOutService { // 사업별입출현황
                AND a.bseccd LIKE :bseccd + '%'
                AND a.busicd LIKE :busicd + '%'
           ) Z
+         -- 원본 d_book23_2 : 전표(spdate, spnum) 단위로 나누지 않고 사업 · 재원 · 관 · 항 · 목별 합계
          GROUP BY Z.mssec, Z.acccd, Z.accnm, Z.it1nm, Z.it2nm, Z.businm,
-                  Z.bsdate, Z.bseccd, Z.busicd, Z.spdate, Z.spnum
-         ORDER BY Z.businm, Z.acccd, Z.spdate, Z.spnum
+                  Z.bsdate, Z.bseccd, Z.busicd
+         ORDER BY Z.businm, Z.acccd
         """;
 		return sqlRunner.getRows(sql, param);
 	}

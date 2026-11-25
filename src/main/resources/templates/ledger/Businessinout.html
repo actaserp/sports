@@ -9,13 +9,6 @@
           margin-bottom: 6px;
           color: #333;
       }
-      .bio-cdt .search-wrap { justify-content: flex-start; align-items: flex-end; gap: 12px 16px; }
-      /* 라벨 높이를 맞춘다 — 기준일자의 필수표시(span.eq)가 줄 높이를 바꿔 라벨이 위로 떠 보였다 */
-      .bio-cdt .search-wrap dl dt { height: 18px; line-height: 18px; margin: 0 0 4px; padding: 0; }
-      .bio-cdt .search-wrap dl dt label { display: inline-flex; align-items: center; height: 18px; line-height: 18px; margin: 0; }
-      .bio-cdt .search-wrap dl dt .eq { line-height: 1; vertical-align: middle; }
-      .bio-cdt #searchfrdate, .bio-cdt #searchtodate { width: 140px; }
-      .bio-cdt #businm { width: 260px; max-width: none; }
       .chk-inline { display:inline-flex; align-items:center; gap:4px; font-size:13px; margin-left:8px; }
       /* 라디오·체크 — bank_account.html 의 정산유형(.ba-type)과 같은 방식.
          전역 ui.css 가 ::before/::after 로 동그라미를 다시 그리므로 네이티브 모양으로 되돌리고 가상요소를 지운다. */
@@ -105,42 +98,6 @@
         <li>사업별입출현황</li>
       </ul>
     </div>
-    <!-- 공통 조회조건 : 원본 w_book23 처럼 모든 탭이 같은 기준일자 · 사업명을 쓴다 -->
-    <div class="section-top bio-cdt">
-      <div class="search-wrap">
-        <dl>
-          <dt><label>기준일자<span class="eq"></span></label></dt>
-          <dd>
-            <div class="srch-box">
-              <input id="searchfrdate" name="searchfrdate" type="date"/>
-              <span class="slow_sign">~</span>
-              <input id="searchtodate" name="searchtodate" type="date"/>
-            </div>
-          </dd>
-        </dl>
-        <dl>
-          <dt><label>사업명</label></dt>
-          <dd>
-            <input class="form-control2" id="businm" name="businm" placeholder="사업명 (엔터로 검색)"/>
-            <input type="hidden" id="busicd" name="busicd"/>
-            <input type="hidden" id="bsdate" name="bsdate"/>
-            <input type="hidden" id="bseccd" name="bseccd"/>
-          </dd>
-        </dl>
-        <dl>
-          <dt>&nbsp;</dt>
-          <dd>
-            <li style="display:flex; align-items:center; gap:6px;">
-              <button class="btn btn-delete" id="btnSearch" title="조회 (F4)" type="button">
-                <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
-                조회
-              </button>
-              <button class="btn btn-delete" id="btnPrint" title="인쇄 (F8)" type="button">인쇄</button>
-            </li>
-          </dd>
-        </dl>
-      </div>
-    </div>
     <div class="tab-wrap">
       <ul class="tab-links">
         <li><a href="#tab2" id="tab2Link" title="세입내역">세입내역</a></li>
@@ -154,6 +111,42 @@
 
         <!-- ── 세입내역 (tab2, PB CASE 2, tiosec=1) ── -->
         <section class="tab-item" id="tab2">
+          <!-- 공통 조회조건 : 원본 w_book23 처럼 모든 탭이 같은 기준일자 · 사업명을 쓴다 -->
+          <div class="section-top" id="cdtBox">
+            <div class="search-wrap">
+              <dl>
+                <dt><label>기준일자<span class="eq"></span></label></dt>
+                <dd>
+                  <div class="srch-box">
+                    <input id="searchfrdate" name="searchfrdate" type="date"/>
+                    <span class="slow_sign">~</span>
+                    <input id="searchtodate" name="searchtodate" type="date"/>
+                  </div>
+                </dd>
+              </dl>
+              <dl>
+                <dt><label>사업명</label></dt>
+                <dd>
+                  <input class="form-control2" id="businm" name="businm" placeholder="사업명 (엔터로 검색)"/>
+                  <input type="hidden" id="busicd" name="busicd"/>
+                  <input type="hidden" id="bsdate" name="bsdate"/>
+                  <input type="hidden" id="bseccd" name="bseccd"/>
+                </dd>
+              </dl>
+              <dl>
+                <dt>&nbsp;</dt>
+                <dd>
+                  <li style="display:flex; align-items:center; gap:6px;">
+                    <button class="btn btn-delete" id="btnSearch" title="검색 (F4)" type="button">
+                      <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
+                      검색
+                    </button>
+                    <button class="btn btn-delete" id="btnPrint" title="인쇄 (F8)" type="button">인쇄</button>
+                  </li>
+                </dd>
+              </dl>
+            </div>
+          </div>
           <div class="grid-guide-box">※ 사업명 입력 후 엔터로 검색합니다.
             <label class="chk-inline"><input type="checkbox" id="cbxSlip2" checked/> 더블클릭 시 전표 팝업 열기</label>
             (단축키 조회:F4)
@@ -165,9 +158,8 @@
 
         <!-- ── 세출내역 (tab5, PB CASE 5, tiosec=2) ── -->
         <section class="tab-item" id="tab5">
-          <div class="grid-guide-box">※ 사업명 입력 후 엔터로 검색합니다.
-            <label class="chk-inline"><input type="checkbox" id="cbxSlip5" checked/> 더블클릭 시 전표 팝업 열기</label>
-            (단축키 조회:F4 / 출력:F8)
+          <div class="grid-guide-box">※ 사업명 입력 후 엔터로 검색합니다. 세출내역은 사업 · 재원 · 관 · 항 · 목별 합계입니다. (단축키 조회:F4 / 출력:F8)
+            <input type="checkbox" id="cbxSlip5" style="display:none"/>
           </div>
           <div class="grid_box" id="divDetail">
             <div id="theGrid_detail" style="height: 540px;"></div>
@@ -364,8 +356,8 @@
      _this.bindSlipDblClick(_this.summaryGrid, '#cbxSlip2');
      _this.bindRelatedPick(_this.summaryGrid, '1');
 
-     // tab5 : 세출내역 (tiosec=2) — 전표일자/순번 컬럼 있음
-     _this.detailGrid = _this.buildBudgetGrid('#theGrid_detail', true);
+     // tab5 : 세출내역 (tiosec=2, 원본 d_book23_2) — 전표일자/순번 컬럼 없음 (원본 SQL 도 전표 단위로 나누지 않는다)
+     _this.detailGrid = _this.buildBudgetGrid('#theGrid_detail', false);
      _this.detailGrid.downloadFileName = '세출내역';
      _this.bindSlipDblClick(_this.detailGrid, '#cbxSlip5');
      _this.bindRelatedPick(_this.detailGrid, '2');
@@ -1701,8 +1693,10 @@
      }
     });
 
-    // 탭 클릭 시 자동 조회
+    // 탭 클릭 시 : 조회줄(하나)을 그 탭 맨 위로 옮기고 자동 조회
     $('.tab-links a').on('click', function () {
+     const $t = $($(this).attr('href'));
+     if ($t.length) $t.prepend($('#cdtBox'));
      let no = parseInt($(this).attr('href').replace('#tab', ''), 10);
      if (!isNaN(no)) page.searchMainData(no);
     });
