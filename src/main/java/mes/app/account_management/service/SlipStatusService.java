@@ -1043,4 +1043,58 @@ public class SlipStatusService {
 		return sqlRunner.getRows(sql, param);
 	}
 
+	/**
+	 * 전표 출력 공통 원천 데이터 — 선택한 전표들의 모든 분개 라인을 그대로 가져온다.
+	 * 양식별로 어느 줄을 쓰는지(예산계정 7·5 / 7·5 외 / 전체)와 합계 계산은
+	 * 원본 DW(d_aa009_bill*) 규칙대로 컨트롤러에서 나눈다.
+	 */
+	public List<Map<String, Object>> printSource(String keys) {
+		String spjangcd = TenantContext.get();
+		Map<String, String> bizInfo = getBizInfoBySpjangcd(spjangcd);
+		String custcd = bizInfo.get("custcd");
+
+		MapSqlParameterSource param = new MapSqlParameterSource();
+		param.addValue("as_custcd",   custcd);
+		param.addValue("as_spjangcd", spjangcd);
+		param.addValue("as_keys",     Arrays.asList(keys.split(",")));
+
+		String sql = """
+			SELECT a.spdate, a.spnum, a.tiosec, a.subject, a.remark, a.setnum, a.regdate, a.spoccu,
+			       ISNULL(a.spjangnm, b.spjangnm) AS spjangnm,
+			       (SELECT businm  FROM tb_x0002     WHERE bsdate = a.bsdate AND bseccd = a.bseccd AND busicd = a.busicd) AS businm,
+			       (SELECT cntname FROM TB_X0002_CNT WHERE bsdate = a.bsdate AND bseccd = a.bseccd AND busicd = a.busicd AND seq = a.busicd_cnt) AS cntname,
+			       b.spseq, b.rowseq, b.acccd, b.accnm, b.drcr, b.dramt, b.cramt, b.summy,
+			       b.it1cd, b.it2cd,
+			       (SELECT it1nm FROM VW_X0003 WHERE it1cd = b.it1cd AND tiosec = b.tiosec) AS it1nm,
+			       (SELECT it2nm FROM TB_X0004 WHERE it2cd = b.it2cd AND tiosec = b.tiosec) AS it2nm,
+			       b.mssec,
+			       (SELECT mssecnm FROM tb_x0005 WHERE mssec = b.mssec) AS mssecnm,
+			       (SELECT cltnm FROM tb_xclient WHERE cltcd = b.cltcd) AS cltnm,
+			       (SELECT accnum  FROM TB_AA040 WHERE custcd = a.custcd AND spjangcd = a.spjangcd AND bank + bankcd = b.bankcd) AS accnum,
+			       (SELECT banknm  FROM TB_AA040 WHERE custcd = a.custcd AND spjangcd = a.spjangcd AND bank + bankcd = b.bankcd) AS banknm,
+			       (SELECT cardnum FROM TB_IZ010 WHERE custcd = a.custcd AND spjangcd = a.spjangcd AND cardnum = b.cardnum) AS cardnum,
+			       (SELECT cardnm  FROM TB_IZ010 WHERE custcd = a.custcd AND spjangcd = a.spjangcd AND cardnum = b.cardnum) AS cardnm,
+			       CASE WHEN b.acccd BETWEEN '1000' AND '1999' THEN '자산'
+			            WHEN b.acccd BETWEEN '5600' AND '7999' THEN '비용'
+			            WHEN b.acccd BETWEEN '8300' AND '8499' THEN '비용'
+			            WHEN b.acccd BETWEEN '8650' AND '8699' THEN '비용'
+			            WHEN b.acccd BETWEEN '8750' AND '8799' THEN '비용'
+			            WHEN b.acccd BETWEEN '2000' AND '2999' THEN '부채'
+			            WHEN b.acccd BETWEEN '3000' AND '3999' THEN '자본'
+			            WHEN b.acccd BETWEEN '5000' AND '5599' THEN '수입'
+			            WHEN b.acccd BETWEEN '8000' AND '8299' THEN '수입'
+			            WHEN b.acccd BETWEEN '8500' AND '8649' THEN '수입'
+			            ELSE '기타' END AS upnm
+			  FROM TB_AA009 a
+			  JOIN TB_AA010 b ON a.custcd = b.custcd AND a.spjangcd = b.spjangcd
+			                 AND a.spdate = b.spdate AND a.spnum = b.spnum
+			  JOIN TB_AC001 c ON b.custcd = c.custcd AND b.acccd = c.acccd
+			 WHERE a.custcd   = :as_custcd
+			   AND a.spjangcd = :as_spjangcd
+			   AND a.spdate + a.spnum IN (:as_keys)
+			 ORDER BY a.spdate, a.spnum, b.rowseq, b.spseq
+			""";
+		return sqlRunner.getRows(sql, param);
+	}
+
 }
