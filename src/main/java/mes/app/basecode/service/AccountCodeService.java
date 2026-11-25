@@ -47,7 +47,7 @@ public class AccountCodeService {
 		return list(stext, drcr, dcpl, spyn, useyn, "0000", "9999");
 	}
 
-	/** 범위 조회 — 세입관등록(w_tb_ac001_2)은 5100 ~ 5599 */
+	/** 범위 조회 — 세입관등록(w_tb_ac001_2) 5100 ~ 5599 · 세출관등록(w_tb_ac001_3) 7000 ~ 7999 */
 	public List<Map<String, Object>> list(String stext, String drcr, String dcpl, String spyn, String useyn, String fraccd, String toaccd) {
 		MapSqlParameterSource p = new MapSqlParameterSource()
 																.addValue("custcd", biz().get("custcd"))
@@ -82,7 +82,7 @@ public class AccountCodeService {
 		return save(rows, "0000", "9999");
 	}
 
-	/** 범위 저장 — 범위 밖 코드는 받지 않는다 */
+	/** 범위 저장 (세입관 · 세출관) — 범위 밖 코드는 받지 않는다 */
 	@Transactional
 	public Map<String, Object> save(List<Map<String, Object>> rows, String fraccd, String toaccd) {
 		for (Map<String, Object> r : rows) {
@@ -174,8 +174,7 @@ public class AccountCodeService {
 		return res;
 	}
 
-	/** 삭제 (원본 ue_delete) — 전표 라인(TB_AA010)에 쓰인 계정은 막는다 */
-	/** 세입관 삭제 (원본 w_tb_ac001_2 ue_delete) — 전표계정이 아닌(spyn='0') 계정과 범위 밖 계정은 막는다 */
+	/** 세입관 · 세출관 삭제 (원본 w_tb_ac001_2 · w_tb_ac001_3 ue_delete) — 전표계정이 아닌(spyn='0') 계정과 범위 밖 계정은 막는다 */
 	@Transactional
 	public void deleteInRange(String acccd, String fraccd, String toaccd) {
 		if (acccd.compareTo(fraccd) < 0 || acccd.compareTo(toaccd) > 0)
@@ -189,6 +188,7 @@ public class AccountCodeService {
 		delete(acccd);
 	}
 
+	/** 삭제 (원본 ue_delete) — 전표 라인(TB_AA010)에 쓰인 계정은 막는다 */
 	@Transactional
 	public void delete(String acccd) {
 		MapSqlParameterSource p = new MapSqlParameterSource()

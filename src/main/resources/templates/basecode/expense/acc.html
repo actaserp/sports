@@ -1,0 +1,257 @@
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
+  <!-- 공통 화면 틀 · 공통 표 (위즈모 대신) -->
+  <link rel="stylesheet" th:href="@{/css/common/ms-page.css}"/>
+  <link rel="stylesheet" th:href="@{/css/common/edit-table.css}"/>
+
+  <div class="layout-contents ms-page">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>세출관등록</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>기초코드</li>
+        <li>세출관등록</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <!-- 조회줄 (원본 d_tb_ac001_cdt) -->
+      <div class="ms-top">
+        <div class="ms-cdt"><label for="acStext">계정검색</label><input id="acStext" maxlength="50" placeholder="코드 또는 계정명" type="text"/></div>
+        <div class="ms-cdt"><label for="acDrcr">차대</label>
+          <select id="acDrcr"><option value="">전체</option><option value="1">차변</option><option value="2">대변</option></select></div>
+        <div class="ms-cdt"><label for="acDcpl">대차손익</label>
+          <select id="acDcpl"><option value="">전체</option><option value="1">대차</option><option value="2">손익</option></select></div>
+        <div class="ms-cdt"><label class="ms-chk"><input class="ms-native" id="acSpyn" type="checkbox"/> 전표계정만</label></div>
+        <div class="ms-cdt"><label for="acUseyn">사용</label>
+          <select id="acUseyn"><option value="">전체</option><option value="1" selected>사용</option><option value="0">미사용</option></select></div>
+        <div class="ms-actions">
+          <button class="ms-btn solid" id="btnAcSearch" title="조회 (F4)" type="button">조회</button>
+          <button class="ms-btn y_write_auth" id="btnAcNew" type="button">신규</button>
+          <button class="ms-btn y_write_auth" id="btnAcSave" title="저장 (Ctrl+S)" type="button">저장</button>
+          <button class="ms-btn accent y_write_auth" id="btnAcDelete" type="button">삭제</button>
+          <button class="ms-btn" id="btnAcPrint" type="button">인쇄</button>
+          <button class="ms-btn" id="btnAcExcel" type="button">엑셀</button>
+        </div>
+      </div>
+
+      <div class="ms-tabs">
+        <button class="on" data-tab="1" type="button">계정정보</button>
+        <button data-tab="2" type="button">계정및양식명칭수정</button>
+        <span class="ms-tab-info">세출관 등록가능 계정코드 범위 : 7000 ~ 7999</span>
+      </div>
+      <p class="ms-note">행을 고르고 [신규]를 누르면 그 계정 아래에 같은 설정으로 새 계정이 생깁니다. 표에서 고친 뒤 [저장]을 누르세요.</p>
+
+      <div id="acGrid"></div>
+      <div class="et-foot"><span id="acCount"></span><span class="et-legend">● 고친 행 · <i>새 행</i></span></div>
+    </div>
+  </div>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script th:src="@{/js/common/edit-table.js}"></script>
+  <script type="text/javascript">
+   const DRCR = [{v: '1', n: '차변'}, {v: '2', n: '대변'}];
+   const DCPL = [{v: '1', n: '대차'}, {v: '2', n: '손익'}];
+   const FR = '7000', TO = '7999';
+   const nmOf = (list, v) => (list.find(x => x.v === String(v)) || {}).n || (v == null ? '' : v);
+   const on = v => String(v) === '1';
+
+   // 탭별 칸 (원본 d_tb_ac001_1 · d_tb_ac001_2)
+   const COLS = {
+    1: [
+     {key: 'acccd', header: '계정코드', width: 80, readOnly: true, align: 'center'},
+     {key: 'accnm', header: '계정명칭', width: '1.4*', maxLength: 100},
+     {key: 'uacccd', header: '상위계정', width: 80, maxLength: 4, align: 'center'},
+     {key: 'uaccnm', header: '상위계정명칭', width: '1*', readOnly: true},
+     {key: 'acclv', header: '레벨', width: 55, readOnly: true, align: 'center'},
+     {key: 'drcr', header: '차대', width: 80, type: 'select', options: DRCR},
+     {key: 'dcpl', header: '대손', width: 80, type: 'select', options: DCPL},
+     {key: 'spyn', header: '전표', width: 60, type: 'check'},
+     {key: 'useyn', header: '사용', width: 60, type: 'check'},
+     {key: 'cacccd', header: '차감계정', width: 80, maxLength: 4, align: 'center'},
+     {key: 'caccnm', header: '차감계정명칭', width: '1*', readOnly: true},
+     {key: 'i7000', header: '판관비', width: 70, type: 'check'}
+    ],
+    2: [
+     {key: 'acccd', header: '계정코드', width: 80, readOnly: true, align: 'center'},
+     {key: 'accnm', header: '계정명칭', width: '1.2*', maxLength: 100},
+     {key: 'drcr', header: '차대', width: 80, type: 'select', options: DRCR},
+     {key: 'dcpl', header: '대손', width: 80, type: 'select', options: DCPL},
+     {key: 'spyn', header: '전표', width: 60, type: 'check'},
+     {key: 'formnm', header: '양식명칭', width: '1*', maxLength: 30},
+     {key: 'lossnm', header: '양식명칭(손실)', width: '1*', maxLength: 30}
+    ]
+   };
+
+   class AccPage {
+    constructor() {
+     this.url = '/api/basecode/expense_account';
+     this.spjangnm = '';
+     this.grid = new EditTable('#acGrid', {
+      columns: COLS[1], countEl: '#acCount', saveKey: 'expense_acc_1',
+      emptyText: '자료가 없습니다.',
+      // 원본 itemchanged : 계정명칭을 넣으면 빈 양식명칭에 같은 글자
+      onChange: (r, key) => {
+       if (key === 'accnm' && (!String(r.formnm || '').trim() || r._formAuto)) {
+        r._formAuto = true;
+        this.grid.setValue(r, 'formnm', String(r.accnm || '').substring(0, 30));
+       }
+       if (key === 'formnm') r._formAuto = false;
+      }
+     });
+    }
+
+    isDirty() { return this.grid.hasChanges(); }
+    confirmLeave(next) {
+     if (!this.isDirty()) { next(); return; }
+     Alert.confirm('확인', '변경된 자료가 있습니다.\n저장하시겠습니까?', () => this.save(next), () => next());
+    }
+
+    showTab(n) {
+     const cur = this.grid.current();
+     $('.ms-tabs button').removeClass('on').filter('[data-tab="' + n + '"]').addClass('on');
+     this.grid.opts.saveKey = 'expense_acc_' + n;   // 탭마다 칸 너비 따로 기억
+     this.grid.setColumns(COLS[n]);
+     if (cur) this.grid.select(cur);
+    }
+
+    query() {
+     return {
+      stext: $('#acStext').val().trim(), drcr: $('#acDrcr').val(), dcpl: $('#acDcpl').val(),
+      spyn: $('#acSpyn').is(':checked') ? '1' : '', useyn: $('#acUseyn').val()
+     };
+    }
+
+    search(keepCode) {
+     AjaxUtil.getAsyncData(this.url + '/read', this.query(), res => {
+      if (!res || res.success === false) { Alert.alert('', (res && res.message) || '조회 중 오류가 발생했습니다.'); return; }
+      this.spjangnm = res.message || '';
+      this.grid.setData(res.data || []);
+      if (keepCode) { const r = this.grid.findRow(x => x.acccd === keepCode); if (r) this.grid.select(r); }
+     });
+    }
+
+    // 원본 ue_new : 고른 계정 ~ 그 계정 toaccd(없으면 앞 두 자리+99) 사이 빈 첫 코드, 고른 계정 값 복사
+    addRow() {
+     const base = this.grid.current();
+     if (!base) { Alert.alert('확인', '기준이 될 계정을 먼저 고르세요.'); return; }
+     if (base._new) { Alert.alert('확인', '저장하지 않은 새 계정입니다. 저장한 뒤 [신규]를 누르세요.'); return; }
+     let toaccd = String(base.toaccd || '').trim();
+     if (!/^\d{4}$/.test(toaccd)) toaccd = String(base.acccd).substring(0, 2) + '99';
+     if (toaccd > TO) toaccd = TO;
+     const used = new Set(this.grid.getData().map(r => String(r.acccd)));
+     let code = null, after = base;
+     for (let n = parseInt(base.acccd, 10); n <= parseInt(toaccd, 10); n++) {
+      const cd = String(n).padStart(4, '0');
+      if (!used.has(cd)) { code = cd; break; }
+      after = this.grid.findRow(r => String(r.acccd) === cd) || after;   // 이어진 코드의 마지막 행 아래에
+     }
+     if (!code || code === toaccd) { Alert.alert('확인', '더 이상 신규계정을 생성 할 수 없습니다.'); return; }
+     const copy = Object.assign({}, base);
+     delete copy._dirty; delete copy._formAuto;
+     this.showTab(1);
+     this.grid.addRow(Object.assign(copy, {
+      acccd: code, accnm: '', formnm: '', lossnm: '', delyn: '1', spacc: '0', useyn: '1',
+      fraccd: base.acccd, toaccd: toaccd
+     }), {after: after, focus: 'accnm'});
+    }
+
+    save(after) {
+     const list = this.grid.getChanged();
+     if (!list.length) { if (typeof after === 'function') after(); else Alert.alert('', '저장할 변경 내용이 없습니다.'); return; }
+     const miss = list.find(r => !String(r.accnm || '').trim());
+     if (miss) { Alert.alert('확인', '계정코드 ' + miss.acccd + ' 의 계정명칭을 입력하세요.'); return; }
+     const code = this.grid.current() && this.grid.current().acccd;
+     AjaxUtil.postJsonData(this.url + '/save', {rows: list}, res => {
+      if (res && res.success) {
+       if (typeof after === 'function') { after(); return; }
+       Alert.alert('', '자료가 저장되었습니다.', () => this.search(code));
+      } else Alert.alert('확인', (res && res.message) || '저장 중 오류가 발생했습니다.');
+     });
+    }
+
+    remove() {
+     const r = this.grid.current();
+     if (!r) { Alert.alert('', '삭제할 계정을 고르세요.'); return; }
+     if (r._new) { this.grid.removeRow(r); return; }
+     // 원본 ue_delete : 전표계정이 아니면(spyn='0') 지울 수 없다 (서버에서도 막는다)
+     if (!on(r.spyn)) { Alert.alert('확인', '삭제 할 수 없는 계정입니다.'); return; }
+     Alert.confirm('삭제', '계정코드 : ' + r.acccd + ' / 계정명칭 : ' + (r.accnm || '') + '\n삭제하시겠습니까?', () => {
+      AjaxUtil.postJsonData(this.url + '/delete', {acccd: r.acccd}, res => {
+       if (res && res.success) { this.grid.removeRow(r); Notify.success('자료가 삭제되었습니다.'); }
+       else Alert.alert('확인', (res && res.message) || '삭제 중 오류가 발생했습니다.');
+      });
+     });
+    }
+
+    esc(v) {
+     return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    }
+
+    // 원본 d_tb_ac001_print
+    print() {
+     const list = this.grid.getView().filter(r => !r._new);
+     if (!list.length) { Alert.alert('', '출력할 자료가 없습니다.'); return; }
+     const e = v => this.esc(v), yn = v => on(v) ? '예' : '';
+     const now = new Date(), p2 = n => (n < 10 ? '0' : '') + n;
+     const ts = now.getFullYear() + '-' + p2(now.getMonth() + 1) + '-' + p2(now.getDate()) + ' ' + p2(now.getHours()) + ':' + p2(now.getMinutes());
+     const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>계정과목</title><style>'
+      + '@page{size:A4 landscape;margin:10mm} body{font-family:"맑은 고딕",sans-serif;color:#000;margin:0}'
+      + 'h1{text-align:center;font-size:26px;letter-spacing:8px;margin:0 0 16px}'
+      + '.hd{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}'
+      + 'table{width:100%;border-collapse:collapse} thead{display:table-header-group}'
+      + 'tr.a{page-break-inside:avoid} th,td{border:1px solid #000;padding:3px 5px;font-size:11px} th{font-weight:normal}'
+      + 'td.c{text-align:center} .pg{position:fixed;bottom:0;left:0;font-size:11px} .pg::after{content:"페이지 : " counter(page)}'
+      + '</style></head><body><h1>계정과목</h1>'
+      + '<div class="hd"><span>' + e(this.spjangnm) + '</span><span>출력일시 : ' + ts + '</span></div>'
+      + '<table><thead><tr><th rowspan="2" colspan="2" style="width:20%">계정과목</th><th colspan="2">상위계정과목</th><th style="width:7%">차대구분</th><th style="width:7%">전표계정</th><th rowspan="2" style="width:10%">재원구분</th><th>양식명칭</th></tr>'
+      + '<tr><th colspan="2">차감계정과목</th><th>대손구분</th><th>특별회계</th><th>양식명칭(손실)</th></tr></thead><tbody>'
+      + list.map(r => '<tr class="a"><td rowspan="2" class="c" style="width:5%">' + e(r.acccd) + '</td><td rowspan="2">' + e(r.accnm)
+       + '</td><td class="c" style="width:5%">' + e(r.uacccd) + '</td><td>' + e(r.uaccnm) + '</td><td class="c">' + e(nmOf(DRCR, r.drcr))
+       + '</td><td class="c">' + yn(r.spyn) + '</td><td rowspan="2" class="c">' + e(r.mssec) + '</td><td>' + e(r.formnm) + '</td></tr>'
+       + '<tr class="a"><td class="c">' + e(r.cacccd) + '</td><td>' + e(r.caccnm) + '</td><td class="c">' + e(nmOf(DCPL, r.dcpl))
+       + '</td><td class="c">' + yn(r.spacc) + '</td><td>' + e(r.lossnm) + '</td></tr>').join('')
+      + '</tbody></table><div class="pg"></div></body></html>';
+     const w = window.open('', '_blank', 'width=1100,height=750');
+     if (!w) { Alert.alert('', '팝업이 차단되어 인쇄창을 열 수 없습니다.'); return; }
+     w.document.open(); w.document.write(html); w.document.close(); w.focus();
+     setTimeout(() => w.print(), 300);
+    }
+
+    // 원본 d_tb_ac001_1_exl : 계정정보 탭 칸으로 내려받기
+    excel() {
+     if (!this.grid.getView().some(r => !r._new)) { Alert.alert('', '내보낼 자료가 없습니다.'); return; }
+     this.grid.exportCsv('세출관', COLS[1].filter(c => c.key !== 'i7000'));
+    }
+   }
+
+   let page = null;
+   $(document).ready(function () {
+    page = new AccPage();
+    page.search();
+
+    $('#btnAcSearch').on('click', () => page.confirmLeave(() => page.search()));
+    $('#acStext').on('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#btnAcSearch').click(); } });
+    $('#acDrcr, #acDcpl, #acUseyn, #acSpyn').on('change', () => page.confirmLeave(() => page.search()));
+    $('#btnAcNew').on('click', () => page.addRow());
+    $('#btnAcSave').on('click', () => page.save());
+    $('#btnAcDelete').on('click', () => page.remove());
+    $('#btnAcPrint').on('click', () => page.print());
+    $('#btnAcExcel').on('click', () => page.excel());
+    $('.ms-tabs button').on('click', function () { page.showTab(+$(this).data('tab')); });
+
+    $(document).on('keydown', function (e) {
+     if (e.key === 'F4') { e.preventDefault(); $('#btnAcSearch').click(); }
+     if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) { e.preventDefault(); page.save(); }
+    });
+    window.addEventListener('beforeunload', function (e) {
+     if (page && page.isDirty()) { e.preventDefault(); e.returnValue = ''; }
+    });
+   });
+  </script>
+</th:block>
+</html>

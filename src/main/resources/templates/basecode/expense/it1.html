@@ -1,0 +1,172 @@
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
+  <!-- 공통 화면 틀 · 공통 표 -->
+  <link rel="stylesheet" th:href="@{/css/common/ms-page.css}"/>
+  <link rel="stylesheet" th:href="@{/css/common/edit-table.css}"/>
+
+  <div class="layout-contents ms-page">
+    <div class="page-title-wrap">
+      <div class="left">
+        <h2>세출항등록</h2>
+        <a class="bookmark toggle" title="북마크">내 메뉴</a>
+      </div>
+      <ul class="page-navi">
+        <li><img alt="홈아이콘" th:src="@{/images/icon/ico-nav-home.svg}"></li>
+        <li>기초코드</li>
+        <li>세출항등록</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <div class="ms-top">
+        <div class="ms-cdt">
+          <label for="msKeyword">항명</label>
+          <input id="msKeyword" placeholder="항코드 또는 항명" type="text"/>
+        </div>
+        <div class="ms-actions">
+          <button class="ms-btn solid" id="btnMsSearch" title="조회 (F4)" type="button">조회</button>
+          <button class="ms-btn y_write_auth" id="btnMsNew" type="button">신규</button>
+          <button class="ms-btn y_write_auth" id="btnMsSave" title="저장 (Ctrl+S)" type="button">저장</button>
+          <button class="ms-btn accent y_write_auth" id="btnMsDelete" type="button">삭제</button>
+          <button class="ms-btn" id="btnMsPrint" type="button">인쇄</button>
+          <button class="ms-btn" id="btnMsExcel" type="button">엑셀</button>
+        </div>
+      </div>
+
+      <p class="ms-note">새 행의 항코드를 비워 두면 저장할 때 자동으로 매겨집니다(3자리). 표에서 바로 고친 뒤 [저장]을 누르세요.</p>
+      <div id="msGrid"></div>
+      <div class="et-foot"><span id="msCount"></span><span class="et-legend">● 고친 행 · <i>새 행</i></span></div>
+    </div>
+  </div>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script th:src="@{/js/common/edit-table.js}"></script>
+  <script type="text/javascript">
+   const YN = [{v: '1', n: '예'}, {v: '0', n: '아니오'}];
+
+   class CodePage {
+    constructor() {
+     this.url = '/api/basecode/expense_item';
+     this.title = '세출항';
+     this.spjangnm = '';
+     // 원본 d_tb_x00031_1 : 항코드 · 항명 · 사용여부
+     this.grid = new EditTable('#msGrid', {
+      countEl: '#msCount', saveKey: 'expense_it1',
+      emptyText: '자료가 없습니다. [신규]로 추가하세요.',
+      columns: [
+       {key: 'it1cd', header: '항코드', width: 130, align: 'center', maxLength: 3, placeholder: '자동',
+        readOnly: r => !r._new},                         // 새 행만 코드 입력
+       {key: 'it1nm', header: '항명', width: '1*', maxLength: 100},
+       {key: 'useyn', header: '사용여부', width: 200, type: 'radio', options: YN, sortable: false}
+      ]
+     });
+    }
+
+    isDirty() { return this.grid.getData().some(r => r._dirty || (r._new && String(r.it1nm || '').trim())); }
+
+    // 원본 closequery
+    confirmLeave(next) {
+     if (!this.isDirty()) { next(); return; }
+     Alert.confirm('확인', '변경된 자료가 있습니다.\n저장하시겠습니까?', () => this.save(next), () => next());
+    }
+
+    search() {
+     AjaxUtil.getAsyncData(this.url + '/read', {keyword: $('#msKeyword').val().trim()}, res => {
+      this.spjangnm = (res && res.message) || '';
+      this.grid.setData((res && res.data) || []);
+     });
+    }
+
+    // 원본 ue_new : 맨 아래에 행 (사용여부 '예'), 항명 칸으로
+    addRow() {
+     this.grid.addRow({it1cd: '', it1nm: '', useyn: '1'}, {focus: 'it1nm'});
+    }
+
+    save(after) {
+     // 원본 ue_save : 항명이 빈 새 행은 버린다
+     const rows = this.grid.getChanged()
+     .filter(r => !(r._new && !String(r.it1nm || '').trim()))
+     .map(r => ({_new: r._new || '', it1cd: String(r.it1cd || '').trim(), it1nm: r.it1nm, useyn: r.useyn}));
+     if (!rows.length) { if (typeof after === 'function') after(); else Alert.alert('', '저장할 변경 내용이 없습니다.'); return; }
+     const bad = rows.find(r => r._new && r.it1cd && !/^\d{1,3}$/.test(r.it1cd));
+     if (bad) { Alert.alert('', '항코드는 3자리 이하 숫자로 입력하세요. 비워 두면 자동으로 매겨집니다.'); return; }
+     AjaxUtil.postJsonData(this.url + '/save', {rows: rows}, res => {
+      if (res && res.success) {
+       Alert.alert('성공', '저장되었습니다.', () => { if (typeof after === 'function') after(); else this.search(); });
+      } else Alert.alert('', (res && res.message) || '저장 중 오류가 발생했습니다.');
+     });
+    }
+
+    remove() {
+     const r = this.grid.current();
+     if (!r) { Alert.alert('', '삭제할 행을 선택하세요.'); return; }
+     if (r._new) { this.grid.removeRow(r); return; }       // 저장 전 새 행은 그냥 뺀다
+     Alert.confirm('삭제', '항코드 : ' + r.it1cd + ' / 항명칭 : ' + (r.it1nm || '') + '\n삭제하시겠습니까?', () => {
+      AjaxUtil.postJsonData(this.url + '/delete', {it1cd: r.it1cd}, res => {
+       if (res && res.success) this.grid.removeRow(r);
+       else Alert.alert('확인', (res && res.message) || '삭제 중 오류가 발생했습니다.');
+      });
+     });
+    }
+
+    esc(v) {
+     return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    }
+
+    // 원본 세출항 인쇄 미리보기 : 제목 '세출항(사업계획외)' / 사업장명 / 세출항코드 · 세출항명칭 · 사용여부(코드값) / 페이지
+    print() {
+     const list = this.grid.getView().filter(r => !r._new);
+     if (!list.length) { Alert.alert('', '출력할 자료가 없습니다.'); return; }
+     const now = new Date(), p2 = n => (n < 10 ? '0' : '') + n;
+     const ts = now.getFullYear() + '-' + p2(now.getMonth() + 1) + '-' + p2(now.getDate()) + ' ' + p2(now.getHours()) + ':' + p2(now.getMinutes());
+     const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>세출항(사업계획외)</title><style>'
+      + '@page{size:A4 portrait;margin:12mm 12mm 16mm} body{font-family:"맑은 고딕",sans-serif;color:#000;margin:0}'
+      + 'h1{text-align:center;font-size:26px;letter-spacing:10px;margin:0 0 18px}'
+      + '.hd{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}'
+      + 'table{width:100%;border-collapse:collapse} thead{display:table-header-group}'
+      + 'th,td{border:1px solid #000;padding:4px 6px;font-size:12px} th{font-weight:normal} td.c{text-align:center}'
+      + '.pg{position:fixed;bottom:0;left:0;font-size:11px} .pg::after{content:"페이지 : " counter(page)}'
+      + '</style></head><body>'
+      + '<h1>세출항(사업계획외)</h1><div class="hd"><span>' + this.esc(this.spjangnm) + '</span></div>'
+      + '<table><thead><tr><th style="width:18%">세출항코드</th><th>세출항명칭</th><th style="width:12%">사용여부</th></tr></thead><tbody>'
+      + list.map(r => '<tr><td class="c">' + this.esc(r.it1cd) + '</td><td>' + this.esc(r.it1nm) + '</td><td class="c">' + this.esc(r.useyn) + '</td></tr>').join('')
+      + '</tbody></table><div class="pg"></div></body></html>';
+     const w = window.open('', '_blank', 'width=900,height=700');
+     if (!w) { Alert.alert('', '팝업이 차단되어 인쇄창을 열 수 없습니다.'); return; }
+     w.document.open(); w.document.write(html); w.document.close(); w.focus();
+     setTimeout(() => w.print(), 300);
+    }
+
+    excel() {
+     if (!this.grid.getView().some(r => !r._new)) { Alert.alert('', '내려받을 자료가 없습니다.'); return; }
+     this.grid.exportCsv(this.title, [
+      {key: 'it1cd', header: '세출항코드'}, {key: 'it1nm', header: '세출항명칭'}, {key: 'useyn', header: '사용여부'}
+     ]);
+    }
+   }
+
+   let page = null;
+   $(document).ready(function () {
+    page = new CodePage();
+    page.search();
+
+    $('#btnMsSearch').on('click', () => page.confirmLeave(() => page.search()));
+    $('#msKeyword').on('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#btnMsSearch').click(); } });
+    $('#btnMsNew').on('click', () => page.addRow());
+    $('#btnMsSave').on('click', () => page.save());
+    $('#btnMsDelete').on('click', () => page.remove());
+    $('#btnMsPrint').on('click', () => page.print());
+    $('#btnMsExcel').on('click', () => page.excel());
+
+    $(document).on('keydown', function (e) {
+     if (e.key === 'F4') { e.preventDefault(); $('#btnMsSearch').click(); }
+     if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) { e.preventDefault(); page.save(); }
+    });
+    window.addEventListener('beforeunload', function (e) {
+     if (page && page.isDirty()) { e.preventDefault(); e.returnValue = ''; }
+    });
+   });
+  </script>
+</th:block>
+</html>
