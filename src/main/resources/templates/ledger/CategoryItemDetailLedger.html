@@ -11,7 +11,17 @@
       }
       /* 집계내역 좌우 2분할 */
       .split-wrap { display: flex; gap: 8px; }
-      .split-left  { width: 650px; flex: 0 0 650px; }
+      .split-left  { width: 240px; flex: 0 0 240px; }   /* 원본 d_book10_0_list : 계정과목만 */
+      .chk-inline { display: inline-flex; align-items: center; gap: 6px; height: 30px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+      .chk-inline input[type="checkbox"] {
+          -webkit-appearance: auto !important; -moz-appearance: auto !important; appearance: auto !important;
+          flex: 0 0 16px !important; width: 16px !important; height: 16px !important;
+          min-width: 16px !important; max-width: 16px !important; min-height: 16px !important;
+          margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important;
+          background: none !important; box-shadow: none !important; vertical-align: middle !important; accent-color: #2563eb;
+      }
+      .chk-inline input[type="checkbox"]::before,
+      .chk-inline input[type="checkbox"]::after { content: none !important; display: none !important; }
       .split-right { flex: 1 1 auto; min-width: 0; }
 
       /* ── 전표 팝업 레이아웃 ── */
@@ -67,77 +77,78 @@
     </div>
     <div class="tab-wrap">
       <ul class="tab-links">
-        <li><a href="#tab1" title="집계 내역">집계 내역</a></li>
+        <li><a href="#tab1" title="집계내역">집계내역</a></li>
         <li><a href="#tab2" id="tab2Link" title="상세내역">상세내역</a></li>
-        <li><a href="#tab3" title="상세 내역(재원별)">상세 내역(재원별)</a></li>
-        <li><a href="#tab4" title="상세 내역">상세 내역</a></li>
+        <li><a href="#tab3" title="상세내역(재원별)">상세내역(재원별)</a></li>
+        <li><a href="#tab4" title="상세내역">상세내역</a></li>
       </ul>
       <div class="tab-contents">
 
-        <!-- ── 집계 내역 (tab1) : 좌(관+금액) + 우(항+목) 2분할 ── -->
+        <!-- ── 집계내역 (tab1) : 좌(계정과목, d_book10_0_list) + 우(항·목, d_book12_0) ── -->
         <section class="tab-item" id="tab1">
-          <div class="section-top">
+          <!-- 공통 조회줄 (원본 d_book12_cdt) : 탭을 옮기면 그 탭 맨 위로 옮겨 간다 -->
+          <div class="section-top" id="cdtBox">
             <div class="search-wrap">
               <dl>
                 <dt><label>기준일자<span class="eq"></span></label></dt>
                 <dd>
                   <div class="srch-box">
-                    <input id="searchfrdate1" name="searchfrdate1" type="date"/>
+                    <input id="searchfrdate" name="searchfrdate" type="date"/>
                     <span class="slow_sign">~</span>
-                    <input id="searchtodate1" name="searchtodate1" type="date"/>
+                    <input id="searchtodate" name="searchtodate" type="date"/>
                   </div>
                 </dd>
               </dl>
               <dl>
-                <dt><label>구분</label></dt>
+                <dt><label>계정과목</label></dt>
                 <dd>
-                  <select class="form-control2" id="tiosec1" name="tiosec1" style="width: 100px;">
-                    <option value="1">세입</option>
-                    <option value="2">세출</option>
-                  </select>
+                  <input class="form-control2" id="accnm" name="accnm" placeholder="계정과목 (엔터로 검색)"/>
+                  <input type="hidden" id="acccd" name="acccd"/>
                 </dd>
               </dl>
               <dl>
-                <dt><label>계정과목(관)</label></dt>
-                <dd>
-                  <input class="form-control2" id="accnm1" name="accnm1" placeholder="관 (엔터로 검색)" />
-                  <input type="hidden" id="acccd1" name="acccd1" />
-                </dd>
+                <dt><label>재원</label></dt>
+                <dd><select class="form-control2" id="mssec" name="mssec"></select></dd>
               </dl>
               <dl>
                 <dt><label>항</label></dt>
                 <dd>
-                  <input class="form-control2" id="it1nm1" name="it1nm1" placeholder="항 (엔터로 검색)" />
-                  <input type="hidden" id="it1cd1" name="it1cd1" />
+                  <input class="form-control2" id="it1nm" name="it1nm" placeholder="항 (엔터로 검색)"/>
+                  <input type="hidden" id="it1cd" name="it1cd"/>
                 </dd>
               </dl>
               <dl>
                 <dt><label>목</label></dt>
                 <dd>
-                  <input class="form-control2" id="it2nm1" name="it2nm1" placeholder="목 (엔터로 검색)" />
-                  <input type="hidden" id="it2cd1" name="it2cd1" />
+                  <input class="form-control2" id="it2nm" name="it2nm" placeholder="목 (엔터로 검색)"/>
+                  <input type="hidden" id="it2cd" name="it2cd"/>
                 </dd>
               </dl>
-              <!--<dl>
-                <dt><label>재원</label></dt>
-                <dd>
-                  <select class="form-control2" id="mssec1" name="mssec1"></select>
-                </dd>
-              </dl>-->
               <dl>
                 <dt>&nbsp;</dt>
                 <dd>
+                  <label class="chk-inline" title="체크하면 전체 계정의 상세내역을 상세내역 탭에 조회합니다">
+                    <input type="checkbox" id="chkTotal"/> 총계정상세
+                  </label>
+                </dd>
+              </dl>
+              <dl>
+                <dt>&nbsp;</dt>
+                <dd style="display:flex; align-items:center; gap:6px;">
                   <li>
-                    <button class="btn btn-delete" id="btnSearch1" title="검색" type="button">
+                    <button class="btn btn-delete" id="btnSearch" title="검색" type="button">
                       <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
                       검색
                     </button>
+                  </li>
+                  <li>
+                    <button class="btn btn-delete" id="btnPrint" title="인쇄 (보고 있는 탭)" type="button">인쇄</button>
                   </li>
                 </dd>
               </dl>
             </div>
           </div>
-          <div class="grid-guide-box">※ 왼쪽 계정과목을 선택하면 오른쪽에 항·목별 내역이 표시됩니다. 관·항·목은 엔터로 팝업 검색합니다. (단축키 조회:F4)</div>
+          <div class="grid-guide-box">※ 왼쪽 계정과목을 선택하면 오른쪽에 항·목별 내역이 나옵니다. 계정이나 항·목을 더블클릭하면 상세내역 탭이 조회됩니다. (단축키 조회:F4)</div>
           <div class="split-wrap">
             <div class="split-left">
               <div id="theGrid_acc" style="height: 495px;"></div>
@@ -148,76 +159,15 @@
           </div>
         </section>
 
-        <!-- ── 상세내역 (tab2) : 관→항→목 3단계 그룹 + 소계 (마스터) ── -->
+        <!-- ── 상세내역 (tab2, 원본 d_book12_1) ── -->
         <section class="tab-item" id="tab2">
-          <div class="section-top">
-            <div class="search-wrap">
-              <dl>
-                <dt><label>기준일자<span class="eq"></span></label></dt>
-                <dd>
-                  <div class="srch-box">
-                    <input id="searchfrdate2" name="searchfrdate2" type="date"/>
-                    <span class="slow_sign">~</span>
-                    <input id="searchtodate2" name="searchtodate2" type="date"/>
-                  </div>
-                </dd>
-              </dl>
-              <dl>
-                <dt><label>구분</label></dt>
-                <dd>
-                  <select class="form-control2" id="tiosec2" name="tiosec2">
-                    <option value="1">세입</option>
-                    <option value="2">세출</option>
-                  </select>
-                </dd>
-              </dl>
-              <dl>
-                <dt><label>계정과목(관)</label></dt>
-                <dd>
-                  <input class="form-control2" id="accnm2" name="accnm2" placeholder="관 (엔터로 검색)" />
-                  <input type="hidden" id="acccd2" name="acccd2" />
-                </dd>
-              </dl>
-              <dl>
-                <dt><label>항</label></dt>
-                <dd>
-                  <input class="form-control2" id="it1nm2" name="it1nm2" placeholder="항 (엔터로 검색)" />
-                  <input type="hidden" id="it1cd2" name="it1cd2" />
-                </dd>
-              </dl>
-              <dl>
-                <dt><label>목</label></dt>
-                <dd>
-                  <input class="form-control2" id="it2nm2" name="it2nm2" placeholder="목 (엔터로 검색)" />
-                  <input type="hidden" id="it2cd2" name="it2cd2" />
-                </dd>
-              </dl>
-              <dl>
-                <dt><label>재원</label></dt>
-                <dd>
-                  <select class="form-control2" id="mssec2" name="mssec2"></select>
-                </dd>
-              </dl>
-              <dl>
-                <dt>&nbsp;</dt>
-                <dd>
-                  <li>
-                    <button class="btn btn-delete" id="btnSearch2" title="검색" type="button">
-                      <img alt="검색 아이콘" th:src="@{/images/icon/btn-srch.svg}">
-                      검색
-                    </button>
-                  </li>
-                </dd>
-              </dl>
-            </div>
-          </div>
-          <div class="grid-guide-box">※ 행을 선택하면 상세내역(재원별)·상세내역 탭이 조회됩니다.</div>
+          <div class="grid-guide-box">※ 행을 선택하면 그 목의 상세내역(재원별)·상세내역 탭이 조회됩니다.</div>
           <div class="grid_box" id="divItemDetail">
             <div id="theGrid_item_detail" style="height: 495px;"></div>
           </div>
         </section>
 
-        <!-- ── 상세내역(재원별) (tab3) : 디테일 ── -->
+        <!-- ── 상세내역(재원별) (tab3, 원본 d_book12_2) ── -->
         <section class="tab-item" id="tab3">
           <div class="grid-guide-box">※ 더블 클릭 하시면 전표 팝업이 열립니다.</div>
           <div class="grid_box" id="divDetail3">
@@ -225,7 +175,7 @@
           </div>
         </section>
 
-        <!-- ── 상세내역 (tab4) : 디테일(카드) ── -->
+        <!-- ── 상세내역 (tab4, 원본 d_book12_3) ── -->
         <section class="tab-item" id="tab4">
           <div class="grid-guide-box">※ 더블 클릭 하시면 전표 팝업이 열립니다.</div>
           <div class="grid_box" id="divDetail4">
@@ -318,404 +268,429 @@
 <th:block layout:fragment="scripts">
   <th:block th:replace="common/popup_account :: popup_account" />
   <script type="text/javascript">
-   class CategoryItemDetailLedgerPage {
+   class CategoryItemDetailLedgerPage { //관항목별원장 (원본 w_book12)
     constructor() {
      this.url = '/api/ledger/CategoryItemDetailLedger';
      this.entry_url = '/api/account_management/slip_entry';
-     this.accGrid1 = null;         // tab1 좌 - 관
-     this.itemGrid1 = null;        // tab1 우 - 항+목
-     this.itemDetailGrid = null;   // tab2 - 마스터
+     this.accGrid1 = null;         // tab1 좌 - 계정과목
+     this.itemGrid1 = null;        // tab1 우 - 항·목
+     this.itemDetailGrid = null;   // tab2
      this.detailGrid3 = null;      // tab3 - 재원별
-     this.detailGrid4 = null;      // tab4 - 카드
-     this.mssecOptions = null;
+     this.detailGrid4 = null;      // tab4
      this.tab2Name = '상세내역';
+     this.tab2Key = {acccd: '', it1cd: '', it2cd: ''};
+     this.tab3Key = null;          // tab2 에서 고른 행 (계정·항·목)
+     this.rows3 = []; this.rows4 = [];
      this.init();
+    }
+
+    // 소계 · 머리행 색 (그리드가 셀을 재사용하므로 일반 행은 원래대로 되돌린다)
+    _kindStyle(e, kind) {
+     const st = e.cell.style;
+     st.color = ''; st.fontWeight = ''; st.background = '';
+     if (!kind || kind === 'd') return;
+     if (kind === 'h') { st.background = '#d7ebfb'; st.color = '#222'; return; }
+     if (kind === 'm') { st.color = '#1f4fd1'; st.background = '#eaf3ff'; st.fontWeight = '600'; return; }
+     st.color = '#d33'; st.fontWeight = '600'; st.background = '#fff8ec';
+    }
+
+    _grid(sel, columns, extra) {
+     const _this = this;
+     const g = new wijmo.grid.FlexGrid(sel, Object.assign({
+      headersVisibility: wijmo.grid.HeadersVisibility.Column,
+      autoGenerateColumns: false, allowSorting: false,
+      selectionMode: wijmo.grid.SelectionMode.Row, isReadOnly: true,
+      formatItem: (s, e) => {
+       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) { e.cell.style.textAlign = 'center'; return; }
+       if (e.panel.cellType !== wijmo.grid.CellType.Cell) return;
+       const it = s.rows[e.row].dataItem;
+       _this._kindStyle(e, it && it._kind);
+      },
+      columns: columns,
+     }, extra || {}));
+     new FlexGridContextMenu(g);
+     return g;
     }
 
     init() {
      let _this = this;
 
-     // ══════════════════════════════════════
-     // tab1 좌 : 관(계정과목) + 금액
-     // ══════════════════════════════════════
-     _this.accGrid1 = new wijmo.grid.FlexGrid('#theGrid_acc', {
-      headersVisibility: wijmo.grid.HeadersVisibility.Column,
-      autoGenerateColumns: false,
-      allowSorting: 'MultiColumn',
-      selectionMode: wijmo.grid.SelectionMode.Row,
-      isReadOnly: true,
-      frozenColumns: 1,
-      formatItem: (s, e) => { if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center'; },
-      columns: [
-       {binding: 'accnm',  header: '계정과목', width: 160, align: 'left'},
-       {binding: 'bfamt',  header: '전잔액',   width: 120, align: 'right', format: 'n0'},
-       {binding: 'dramt',  header: '차변금액', width: 120, align: 'right', format: 'n0'},
-       {binding: 'cramt',  header: '대변금액', width: 120, align: 'right', format: 'n0'},
-       {binding: 'balamt', header: '잔액',     width: 120, align: 'right', format: 'n0'},
-      ],
-     });
-     new FlexGridContextMenu(_this.accGrid1);
+     // tab1 좌 : 계정과목 (원본 d_book10_0_list 는 이름만 보인다)
+     _this.accGrid1 = _this._grid('#theGrid_acc', [
+      {binding: 'accnm', header: '계정과목', width: '*', align: 'left'},
+     ]);
      _this.accGrid1.downloadFileName = '계정과목';
-     _this.accGrid1.columnFooters.rows.push(new wijmo.grid.GroupRow());
-     let acIdx = _this.accGrid1.columns.findIndex(c => c.binding === 'accnm');
-     if (acIdx > -1) _this.accGrid1.columnFooters.setCellData(0, acIdx, '합계');
-     ['bfamt','dramt','cramt','balamt'].forEach(b => {
-      const col = _this.accGrid1.columns.getColumn(b);
-      if (col) col.aggregate = wijmo.Aggregate.Sum;
-     });
-
      _this.accGrid1.selectionChanged.addHandler(function () {
-      const master = _this.accGrid1.selectedItems[0];
-      if (master) _this.loadItemsByAcc(master);
+      const m = _this.accGrid1.selectedItems[0];
+      if (m) _this.loadItemsByAcc(m);
+     });
+     _this.accGrid1.hostElement.addEventListener('dblclick', function (e) {
+      if (_this.accGrid1.hitTest(e).cellType !== wijmo.grid.CellType.Cell) return;
+      const m = _this.accGrid1.selectedItems[0];
+      if (m) _this.goToDetail({acccd: m.acccd, it1cd: '', it2cd: ''}, m.accnm || '');
      });
 
-     // ══════════════════════════════════════
-     // tab1 우 : 항+목별 내역
-     // ══════════════════════════════════════
-     _this.itemGrid1 = new wijmo.grid.FlexGrid('#theGrid_item', {
-      headersVisibility: wijmo.grid.HeadersVisibility.Column,
-      autoGenerateColumns: false,
-      showMarquee: true,
-      allowSorting: 'MultiColumn',
-      selectionMode: wijmo.grid.SelectionMode.Row,
-      isReadOnly: true,
-      frozenColumns: 2,
-      formatItem: (s, e) => { if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center'; },
-      columns: [
-       {binding: 'it1nm',  header: '항',       width: 160, align: 'left'},
-       {binding: 'it2nm',  header: '목',       width: 160, align: 'left'},
-       {binding: 'bfamt',  header: '전잔액',   width: 120, align: 'right', format: 'n0'},
-       {binding: 'dramt',  header: '차변금액', width: 120, align: 'right', format: 'n0'},
-       {binding: 'cramt',  header: '대변금액', width: 120, align: 'right', format: 'n0'},
-       {binding: 'balamt', header: '잔액',     width: 120, align: 'right', format: 'n0'},
-      ],
-     });
-     new FlexGridContextMenu(_this.itemGrid1);
-     _this.itemGrid1.downloadFileName = '항목별내역';
-     _this.itemGrid1.columnFooters.rows.push(new wijmo.grid.GroupRow());
-     let itIdx = _this.itemGrid1.columns.findIndex(c => c.binding === 'it1nm');
-     if (itIdx > -1) _this.itemGrid1.columnFooters.setCellData(0, itIdx, '합계');
-     ['bfamt','dramt','cramt','balamt'].forEach(b => {
-      const col = _this.itemGrid1.columns.getColumn(b);
-      if (col) col.aggregate = wijmo.Aggregate.Sum;
-     });
-
-     // tab1 우측 항·목 더블클릭 → tab2 이름 변경 + 이동 + 조회
+     // tab1 우 : 항·목 (원본 d_book12_0) — 계정 머리행 · 항(첫 줄만) · 목 · 항소계
+     _this.itemGrid1 = _this._grid('#theGrid_item', [
+      {binding: 'it1nmShow', header: '항',       width: 200, align: 'left'},
+      {binding: 'it2nmShow', header: '목',       width: 180, align: 'left'},
+      {binding: 'bfamt',     header: '전잔액',   width: 130, align: 'right', format: 'n0'},
+      {binding: 'dramt',     header: '차변금액', width: 130, align: 'right', format: 'n0'},
+      {binding: 'cramt',     header: '대변금액', width: 130, align: 'right', format: 'n0'},
+      {binding: 'balamt',    header: '잔액',     width: 130, align: 'right', format: 'n0'},
+     ]);
+     _this.itemGrid1.downloadFileName = '관항별목별집계내역';
      _this.itemGrid1.hostElement.addEventListener('dblclick', function (e) {
       const ht = _this.itemGrid1.hitTest(e);
-      if (ht.cellType === wijmo.grid.CellType.Cell) {
-       const item = _this.itemGrid1.selectedItems[0];
-       if (item) _this.goToDetailFromSummary(item);
-      }
+      if (ht.cellType !== wijmo.grid.CellType.Cell) return;
+      const it = _this.itemGrid1.rows[ht.row].dataItem;
+      if (!it || it._kind !== 'd') return;
+      _this.goToDetail({acccd: it.acccd, it1cd: it.it1cd, it2cd: ''}, (it.accnm || '') + ' - ' + (it.it1nm || ''));
      });
 
-     // ══════════════════════════════════════
-     // tab2 : 상세내역 (관→항→목 3단계 그룹 + 소계)
-     // ══════════════════════════════════════
-     _this.itemDetailGrid = new wijmo.grid.FlexGrid('#theGrid_item_detail', {
-      headersVisibility: wijmo.grid.HeadersVisibility.Column,
-      autoGenerateColumns: false,
-      showMarquee: true,
-      allowSorting: false,
-      selectionMode: wijmo.grid.SelectionMode.Row,
-      isReadOnly: true,
-      frozenColumns: 3,
-      showGroups: true,
-      groupHeaderFormat: '{value}',
-      formatItem: (s, e) => {
-       if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center';
-      },
-      columns: [
-       {binding: 'mssecnm', header: '재원',     width: 110, align: 'center'},
-       {binding: 'it1nm',   header: '항',       width: 150, align: 'left'},
-       {binding: 'it2nm',   header: '목',       width: 150, align: 'left'},
-       {binding: 'yymmdd',  header: '전표일자', width: 110, align: 'center'},
-       {binding: 'dramt',   header: '차변금액', width: 140, align: 'right', format: 'n0'},
-       {binding: 'cramt',   header: '대변금액', width: 140, align: 'right', format: 'n0'},
-      ],
-     });
-     new FlexGridContextMenu(_this.itemDetailGrid);
-     _this.itemDetailGrid.downloadFileName = '상세내역';
-
-     ['dramt','cramt'].forEach(b => {
-      const col = _this.itemDetailGrid.columns.getColumn(b);
-      if (col) col.aggregate = wijmo.Aggregate.Sum;
-     });
-
-     // 그룹 푸터 : 목(레벨2)=목항소계, 관(레벨0)=계정소계, 항(레벨1)=표시 안함
-     _this.itemDetailGrid.formatItem.addHandler(function (s, e) {
-      if (e.panel.cellType === wijmo.grid.CellType.Cell) {
-       const row = s.rows[e.row];
-       if (row instanceof wijmo.grid.GroupRow && row.dataItem == null) {
-        const gr = row;
-        if (gr.level === 1) return;  // 항 소계는 표시 안 함
-        const label = (gr.level === 2) ? '목항소계' : '계정소계';
-        const it2Idx = s.columns.findIndex(c => c.binding === 'it2nm');
-        if (e.col === it2Idx) {
-         e.cell.style.color = '#d33'; e.cell.style.fontWeight = '600';
-         e.cell.textContent = label;
-        }
-        const b = s.columns[e.col] && s.columns[e.col].binding;
-        if (b === 'dramt' || b === 'cramt') {
-         e.cell.style.color = '#d33'; e.cell.style.fontWeight = '600';
-        }
-       }
-      }
-     });
-
-     // tab2 행 선택 → tab3·tab4 함께 조회
+     // tab2 (원본 d_book12_1) — 재원 / 항 / 목 / 전표일자 / 차변 / 대변 / 잔액 / 잔액
+     _this.itemDetailGrid = _this._grid('#theGrid_item_detail', [
+      {binding: 'mssecnm',   header: '재원',     width: 90,  align: 'center'},
+      {binding: 'it1nmShow', header: '항',       width: 200, align: 'left'},
+      {binding: 'it2nmShow', header: '목',       width: 180, align: 'left'},
+      {binding: 'datef',     header: '전표일자', width: 110, align: 'center'},
+      {binding: 'dramt',     header: '차변금액', width: 130, align: 'right', format: 'n0'},
+      {binding: 'cramt',     header: '대변금액', width: 130, align: 'right', format: 'n0'},
+      {binding: 'runamt',    header: '잔액',     width: 140, align: 'right', format: 'n0'},
+      {binding: 'bfamt',     header: '잔액',     width: 130, align: 'right', format: 'n0'},
+     ]);
+     _this.itemDetailGrid.downloadFileName = '관항별목별 월별집계내역';
      _this.itemDetailGrid.selectionChanged.addHandler(function () {
-      const item = _this.itemDetailGrid.selectedItems[0];
-      if (item) _this.searchDetailByMaster(item);
+      const it = _this.itemDetailGrid.selectedItems[0];
+      if (!it || it._kind !== 'd' || !it.it2cd) return;
+      const k = {acccd: it.acccd, it1cd: it.it1cd, it2cd: it.it2cd, accnm: it.accnm, it1nm: it.it1nm};
+      const t = _this.tab3Key;
+      if (t && t.acccd === k.acccd && t.it1cd === k.it1cd && t.it2cd === k.it2cd) return;
+      _this.tab3Key = k;
+      _this.searchDetails();
      });
 
-     // ══════════════════════════════════════
-     // tab3 : 상세내역(재원별)
-     // 전표일자 / 목 / 재원 / 비고 / 차변 / 대변 / 잔액
-     // ══════════════════════════════════════
-     _this.detailGrid3 = new wijmo.grid.FlexGrid('#theGrid_detail3', {
-      headersVisibility: wijmo.grid.HeadersVisibility.Column,
-      autoGenerateColumns: false,
-      showMarquee: true,
-      allowSorting: 'MultiColumn',
-      selectionMode: wijmo.grid.SelectionMode.Row,
-      isReadOnly: true,
-      frozenColumns: 2,
-      formatItem: (s, e) => { if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center'; },
-      columns: [
-       {binding: 'yymmdd',  header: '전표일자', width: 100, align: 'center'},
-       {binding: 'it2nm',   header: '목',       width: 150, align: 'left'},
-       {binding: 'mssecnm', header: '재원',     width: 110, align: 'center'},
-       {binding: 'summy',   header: '비고',     width: '*', align: 'left'},
-       {binding: 'dramt',   header: '차변금액', width: 130, align: 'right', format: 'n0'},
-       {binding: 'cramt',   header: '대변금액', width: 130, align: 'right', format: 'n0'},
-       {binding: 'balamt',  header: '잔액',     width: 130, align: 'right', format: 'n0'},
-      ],
-     });
-     new FlexGridContextMenu(_this.detailGrid3);
-     _this.detailGrid3.downloadFileName = '상세내역(재원별)';
-     _this.applySubtotalStyle(_this.detailGrid3, 'summy');
-     _this.detailGrid3.hostElement.addEventListener('dblclick', function (e) {
-      const ht = _this.detailGrid3.hitTest(e);
-      if (ht.cellType === wijmo.grid.CellType.Cell) {
-       const item = _this.detailGrid3.selectedItems[0];
-       if (item) _this.openSlipFromRow(item);
-      }
-     });
+     // tab3 (원본 d_book12_2) — 전표일자 / 목 / 재원 / 비고 / 차변 / 대변 / 잔액
+     _this.detailGrid3 = _this._grid('#theGrid_detail3', [
+      {binding: 'datef',   header: '전표일자', width: 110, align: 'center'},
+      {binding: 'it2nm',   header: '목',       width: 150, align: 'left'},
+      {binding: 'mssecnm', header: '재원',     width: 90,  align: 'center'},
+      {binding: 'summy',   header: '비고',     width: '*', align: 'left'},
+      {binding: 'dramt',   header: '차변금액', width: 130, align: 'right', format: 'n0'},
+      {binding: 'cramt',   header: '대변금액', width: 130, align: 'right', format: 'n0'},
+      {binding: 'balamt',  header: '잔액',     width: 140, align: 'right', format: 'n0'},
+     ]);
+     _this.detailGrid3.downloadFileName = '관항별목별 상세내역(재원별)';
 
-     // ══════════════════════════════════════
-     // tab4 : 상세내역
-     // 전표일자 / 목 / 비고 / 카드번호 / 차변 / 대변 / 잔액
-     // ══════════════════════════════════════
-     _this.detailGrid4 = new wijmo.grid.FlexGrid('#theGrid_detail4', {
-      headersVisibility: wijmo.grid.HeadersVisibility.Column,
-      autoGenerateColumns: false,
-      showMarquee: true,
-      allowSorting: 'MultiColumn',
-      selectionMode: wijmo.grid.SelectionMode.Row,
-      isReadOnly: true,
-      frozenColumns: 2,
-      formatItem: (s, e) => { if (e.panel.cellType === wijmo.grid.CellType.ColumnHeader) e.cell.style.textAlign = 'center'; },
-      columns: [
-       {binding: 'yymmdd',  header: '전표일자', width: 100, align: 'center'},
-       {binding: 'it2nm',   header: '목',       width: 150, align: 'left'},
-       {binding: 'summy',   header: '비고',     width: '*', align: 'left'},
-       {binding: 'cardnum', header: '카드번호', width: 130, align: 'center'},
-       {binding: 'dramt',   header: '차변금액', width: 130, align: 'right', format: 'n0'},
-       {binding: 'cramt',   header: '대변금액', width: 130, align: 'right', format: 'n0'},
-       {binding: 'balamt',  header: '잔액',     width: 130, align: 'right', format: 'n0'},
-      ],
-     });
-     new FlexGridContextMenu(_this.detailGrid4);
-     _this.detailGrid4.downloadFileName = '상세내역';
-     _this.applySubtotalStyle(_this.detailGrid4, 'summy');
-     _this.detailGrid4.hostElement.addEventListener('dblclick', function (e) {
-      const ht = _this.detailGrid4.hitTest(e);
-      if (ht.cellType === wijmo.grid.CellType.Cell) {
-       const item = _this.detailGrid4.selectedItems[0];
-       if (item) _this.openSlipFromRow(item);
-      }
-     });
+     // tab4 (원본 d_book12_3) — 전표일자 / 목 / 비고 / 카드번호 / 차변 / 대변 / 잔액
+     _this.detailGrid4 = _this._grid('#theGrid_detail4', [
+      {binding: 'datef',   header: '전표일자', width: 110, align: 'center'},
+      {binding: 'it2nm',   header: '목',       width: 150, align: 'left'},
+      {binding: 'summy',   header: '비고',     width: '*', align: 'left'},
+      {binding: 'cardnum', header: '카드번호', width: 160, align: 'center'},
+      {binding: 'dramt',   header: '차변금액', width: 130, align: 'right', format: 'n0'},
+      {binding: 'cramt',   header: '대변금액', width: 130, align: 'right', format: 'n0'},
+      {binding: 'balamt',  header: '잔액',     width: 140, align: 'right', format: 'n0'},
+     ]);
+     _this.detailGrid4.downloadFileName = '관항별목별 상세내역';
 
+     [_this.detailGrid3, _this.detailGrid4].forEach(g => {
+      g.hostElement.addEventListener('dblclick', function (e) {
+       if (g.hitTest(e).cellType !== wijmo.grid.CellType.Cell) return;
+       const it = g.selectedItems[0];
+       if (it) _this.openSlipFromRow(it);
+      });
+     });
     }//init
 
-    // ══════════════════════════════════════
-    // tab1 좌 : 관 목록 조회
-    // ══════════════════════════════════════
+    _d8(v) { return String(v == null ? '' : v).replace(/[^0-9]/g, ''); }
+    _fmtD(d8) { return d8 === '00000000' || d8 === '' ? '전일이월' : d8.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'); }
+    _bal(r) { const bf = Number(r.bfamt) || 0, dr = Number(r.dramt) || 0, cr = Number(r.cramt) || 0; return String(r.drcr) === '1' ? bf + dr - cr : bf + cr - dr; }
+    _cond() {
+     return {start: $('#searchfrdate').val(), end: $('#searchtodate').val(), mssec: $('#mssec').val() || ''};
+    }
+
+    // ══════ tab1 좌 : 계정과목 ══════
     searchSummary() {
      let _this = this;
-     let data = {
-      start: $('#searchfrdate1').val(),
-      end: $('#searchtodate1').val(),
-      mssec: $('#mssec1').val(),
-      acccd: $('#acccd1').val(),
-      it1cd: $('#it1cd1').val(),
-      it2cd: $('#it2cd1').val(),
-      tiosec: $('#tiosec1').val()
-     };
-     AjaxUtil.getAsyncData(this.url + '/read', data, function (result) {
-      if (result != null && result.success) {
-       _this.accGrid1.itemsSource = result.data || [];
-       setTimeout(function () { if (_this.accGrid1.rows.length > 0) _this.accGrid1.select(0, 0); }, 50);
-      } else { console.log('집계(관) 조회 오류'); }
+     AjaxUtil.getAsyncData(this.url + '/read', Object.assign(_this._cond(), {acccd: $('#acccd').val()}), function (result) {
+      if (!(result != null && result.success)) { console.log('집계(관) 조회 오류'); return; }
+      _this.accGrid1.itemsSource = result.data || [];
+      // 첫 행이 이미 선택돼 있으면 selectionChanged 가 안 뜨므로 오른쪽을 직접 채운다
+      setTimeout(function () {
+       if (_this.accGrid1.rows.length > 0) {
+        _this.accGrid1.select(0, 0);
+        _this.loadItemsByAcc(_this.accGrid1.rows[0].dataItem);
+       } else _this.itemGrid1.itemsSource = [];
+      }, 50);
      });
     }
 
-    // 좌 관 선택 → 우 항+목 조회
+    // ══════ tab1 우 : 항·목 (d_book12_0) ══════
     loadItemsByAcc(master) {
      let _this = this;
-     let data = {
-      start: $('#searchfrdate1').val(),
-      end: $('#searchtodate1').val(),
-      mssec: $('#mssec1').val(),
-      acccd: master.acccd || '',
-      it1cd: '',
-      it2cd: ''
-     };
-     AjaxUtil.getAsyncData(this.url + '/readItem', data, function (result) {
-      if (result != null && result.success) {
-       _this.itemGrid1.itemsSource = result.data || [];
-      } else { console.log('항목별 내역 조회 오류'); }
+     if (!master) return;
+     AjaxUtil.getAsyncData(this.url + '/readItem', Object.assign(_this._cond(), {
+      acccd: master.acccd || '', it1cd: $('#it1cd').val() || '', it2cd: $('#it2cd').val() || ''
+     }), function (result) {
+      if (!(result != null && result.success)) { console.log('항목별 내역 조회 오류'); return; }
+      // 원본처럼 차변 · 대변이 모두 0 인 행(전잔액만 있는 행)은 뺀다
+      const src = (result.data || []).filter(r => (Number(r.dramt) || 0) !== 0 || (Number(r.cramt) || 0) !== 0);
+      const out = [];
+      if (src.length) out.push({_kind: 'h', it1nmShow: master.accnm || ''});
+      let itK = null, t = null;
+      const flush = () => { if (t) out.push({_kind: 's', it2nmShow: '', dramt: t.dr, cramt: t.cr, balamt: t.bal}); };
+      // 원본 정렬 : 계정 → 항코드 (같은 항 안의 목 순서는 조회된 그대로)
+      src.forEach((r, i) => r._i = i);
+      //   원본 화면 확인 결과 : 항코드가 달라도(00335 / 00409) 빨간 소계는 계정 끝에 한 줄만 나온다
+      //   → 소계는 계정 단위, 항 이름은 바뀔 때마다 보인다
+      src.sort((x, y) => String(x.acccd).localeCompare(String(y.acccd)) || String(x.it1cd).localeCompare(String(y.it1cd)) || x._i - y._i);
+      let nmK = null, itK2 = null;
+      src.forEach(r => {
+       const k = r.acccd;
+       const newIt = k !== itK;
+       if (newIt) { flush(); t = {dr: 0, cr: 0, bal: 0}; }
+       const showNm = newIt || (r.it1nm || '') !== nmK || r.it1cd !== (itK2);
+       itK2 = r.it1cd;
+       const dr = Number(r.dramt) || 0, cr = Number(r.cramt) || 0, bal = _this._bal(r);
+       out.push(Object.assign({}, r, {_kind: 'd', it1nmShow: showNm ? r.it1nm : '', it2nmShow: r.it2nm, bfamt: Number(r.bfamt) || 0, dramt: dr, cramt: cr, balamt: bal}));
+       t.dr += dr; t.cr += cr; t.bal += bal; itK = k; nmK = r.it1nm || '';
+      });
+      flush();
+      _this.itemGrid1.itemsSource = out;
      });
     }
 
-    // tab1 우 항·목 더블클릭 → tab2 이름 변경 + 이동 + 조회
-    goToDetailFromSummary(item) {
+    // ══════ tab2 이동 ══════
+    goToDetail(key, name) {
+     this.tab2Key = {acccd: key.acccd || '', it1cd: key.it1cd || '', it2cd: key.it2cd || ''};
+     this.tab2Name = name || '상세내역';
+     $('#tab2Link').text(this.tab2Name).attr('title', this.tab2Name);
+     $('#chkTotal').prop('checked', false);
+     this.activateTab(2);
+     this.searchItemDetail();
+    }
+
+    // ══════ tab2 (d_book12_1) ══════
+    //   계정 머리행 · 항/목은 첫 줄만 · 잔액은 항이 바뀌면 다시 누계 · 목소계 · 계정소계(항 단위)
+    searchItemDetail() {
      let _this = this;
-     let name = (item.accnm || '')
-      + (item.it1nm ? ' - ' + item.it1nm : '')
-      + (item.it2nm ? ' - ' + item.it2nm : '');
-     _this.tab2Name = name || '상세내역';
+     const k = _this.tab2Key;
+     AjaxUtil.getAsyncData(this.url + '/readItemDetail', Object.assign(_this._cond(), {
+      acccd: k.acccd, it1cd: k.it1cd, it2cd: k.it2cd
+     }), function (result) {
+      if (!(result != null && result.success)) { console.log('상세(tab2) 조회 오류'); return; }
+      const src = (result.data || []).map(r => Object.assign({}, r, {d8: _this._d8(r.yymmdd)}));
+      // 원본 d_book12_1 정렬 : mssec, acccd, it1cd, it2cd, yymmdd (재원이 맨 앞)
+      src.sort((a, b) => String(a.mssec || '').localeCompare(String(b.mssec || '')) || String(a.acccd).localeCompare(String(b.acccd))
+       || String(a.it1cd).localeCompare(String(b.it1cd)) || String(a.it2cd || '').localeCompare(String(b.it2cd || ''))
+       || a.d8.localeCompare(b.d8));
+      const out = [];
+      let accK = null, itK = null, i2K = null, run = 0, m = null, g = null;
+      const flushM = () => { if (m) out.push({_kind: 's', datef: '목소계', dramt: m.dr, cramt: m.cr}); m = null; };
+      const flushG = () => { if (g) out.push({_kind: 's', datef: '계정소계', dramt: g.dr, cramt: g.cr, runamt: g.run, bfamt: g.bf}); g = null; };
+      src.forEach(r => {
+       const ik = r.it1cd, mk = ik + '|' + (r.it2cd || '');   // 원본 그룹 : acccd / acccd,it1cd / acccd,it1cd,it2cd
+       const newAcc = r.acccd !== accK, newIt = newAcc || ik !== itK, newM = newIt || mk !== i2K;
+       if (newM) flushM();
+       if (newIt) { flushG(); run = 0; }
+       if (newAcc) out.push({_kind: 'h', mssecnm: '', it1nmShow: r.accnm || ''});
+       if (newIt) g = {dr: 0, cr: 0, run: 0, bf: 0};
+       if (newM) m = {dr: 0, cr: 0};
+       const dr = Number(r.dramt) || 0, cr = Number(r.cramt) || 0, bf = Number(r.bfamt) || 0;
+       run += bf;
+       out.push(Object.assign({}, r, {_kind: 'd', it1nmShow: newIt ? r.it1nm : '', it2nmShow: newM ? r.it2nm : '',
+        datef: _this._fmtD(r.d8), dramt: dr, cramt: cr, bfamt: bf, runamt: run}));
+       m.dr += dr; m.cr += cr; g.dr += dr; g.cr += cr; g.run += run; g.bf += bf;
+       accK = r.acccd; itK = ik; i2K = mk;
+      });
+      flushM(); flushG();
+      _this.itemDetailGrid.itemsSource = out;
+      _this.tab3Key = null;
+      setTimeout(() => {
+       const i = out.findIndex(o => o._kind === 'd' && o.it2cd);
+       if (i > -1) _this.itemDetailGrid.select(i, 0);
+      }, 0);
+     });
+    }
+
+    // ══════ tab3 · tab4 (d_book12_2 / d_book12_3) : tab2 에서 고른 계정 · 항 · 목 ══════
+    searchDetails() {
+     let _this = this;
+     const k = _this.tab3Key;
+     if (!k) { _this.detailGrid3.itemsSource = []; _this.detailGrid4.itemsSource = []; _this.rows3 = []; _this.rows4 = []; return; }
+     const data = Object.assign(_this._cond(), {acccd: k.acccd, it1cd: k.it1cd, it2cd: k.it2cd, mssec: '%'});
+     AjaxUtil.getAsyncData(this.url + '/readDetail', data, function (res) {
+      if (res != null && res.success) { _this.rows3 = _this.buildLedger(res.data || []); _this.detailGrid3.itemsSource = _this.rows3; }
+     });
+     AjaxUtil.getAsyncData(this.url + '/readDetail2', data, function (res) {
+      if (res != null && res.success) { _this.rows4 = _this.buildLedger(res.data || []); _this.detailGrid4.itemsSource = _this.rows4; }
+     });
+    }
+
+    // 원장 행 만들기 : 잔액 누계(이월 · 전표만), 월소계(97) · 월누계(98) 는 잔액 빈칸, 맨 끝 '계'
+    buildLedger(src) {
+     const _this = this;
+     const rows = src.map(r => Object.assign({}, r, {d8: _this._d8(r.yymmdd), dramt: Number(r.dramt) || 0, cramt: Number(r.cramt) || 0, bfamt: Number(r.bfamt) || 0}))
+     .filter(r => r.d8.endsWith('97') || r.d8.endsWith('98') || r.dramt !== 0 || r.cramt !== 0);
+     rows.sort((a, b) => a.d8.localeCompare(b.d8) || String(a.spnum || '').localeCompare(String(b.spnum || '')) || (Number(a.rowseq) || 0) - (Number(b.rowseq) || 0));
+     const out = [];
+     let run = 0, cDr = 0, cCr = 0, tDr = 0, tCr = 0, last = null, prev = null;
+     rows.forEach(r => {
+      const isSub = r.d8 !== '00000000' && (r.d8.endsWith('97') || r.d8.endsWith('98'));
+      if (isSub && r.d8.endsWith('97')) {
+       out.push({_kind: 'm', d8: r.d8, datef: prev === 'm' ? '' : '월소계', mssecnm: r.mssecnm || '', dramt: r.dramt, cramt: r.cramt, balamt: null});
+       prev = 'm'; last = null; return;
+      }
+      if (isSub) {
+       if (prev !== 'c') out.push({_kind: 'c', d8: r.d8, datef: '월누계', dramt: cDr, cramt: cCr, balamt: null});
+       prev = 'c'; return;
+      }
+      prev = null;
+      run += r.bfamt; cDr += r.dramt; cCr += r.cramt; tDr += r.dramt; tCr += r.cramt;
+      const f = _this._fmtD(r.d8);
+      r._kind = 'd'; r.balamt = run; r.datef = (f === last) ? '' : f; r.mkey = f; last = f;
+      if (r.d8 === '00000000' && !r.summy) r.summy = '전일이월';
+      out.push(r);
+     });
+     if (out.length) out.push({_kind: 's', datef: '', summy: '계', dramt: tDr, cramt: tCr, balamt: null});
+     return out;
+    }
+
+    openSlipFromRow(item) {
+     if (item._kind !== 'd') return;
+     const d8 = item.d8 || this._d8(item.yymmdd);
+     if (!d8 || d8 === '00000000') { Alert.alert('확인', '전표일자가 있는 내역을 선택해주세요.'); return; }
+     if (!item.spnum || item.spnum === '9999' || item.spnum === '0000') return;
+     this.openSlipPopup({yymmdd: d8, spnum: item.spnum, acccd: item.acccd || ''});
+    }
+
+    // 총계정상세 (원본 dw_cdt itemchanged 'allchk')
+    //   체크 : 계정 · 항 · 목 전체로 상세내역 조회 + 이동 / 해제 : 왼쪽 계정 + 오른쪽 항으로 다시 조회 (탭은 그대로)
+    applyTotalFlag(checked) {
+     const _this = this;
+     if (checked) {
+      _this.tab2Key = {acccd: '', it1cd: '', it2cd: ''};
+      _this.tab2Name = '상세내역';
+     } else {
+      const acc = _this.accGrid1.selectedItems[0];
+      const it = _this.itemGrid1.selectedItems[0];
+      const item = (it && it._kind === 'd') ? it : null;
+      _this.tab2Key = {acccd: acc ? acc.acccd || '' : '', it1cd: item ? item.it1cd || '' : '', it2cd: ''};
+      _this.tab2Name = acc ? (acc.accnm || '') + (item ? ' - ' + (item.it1nm || '') : '') : '상세내역';
+     }
      $('#tab2Link').text(_this.tab2Name).attr('title', _this.tab2Name);
-
-     $('#acccd2').val(item.acccd || '');  $('#accnm2').val(item.accnm || '');
-     $('#it1cd2').val(item.it1cd || '');  $('#it1nm2').val(item.it1nm || '');
-     $('#it2cd2').val(item.it2cd || '');  $('#it2nm2').val(item.it2nm || '');
-     $('#searchfrdate2').val($('#searchfrdate1').val());
-     $('#searchtodate2').val($('#searchtodate1').val());
-     $('#mssec2').val($('#mssec1').val());
-     // 구분(세입/세출) 승계 : 행에 tiosec가 있으면 우선, 없으면 tab1 값
-     $('#tiosec2').val((item.tiosec != null && String(item.tiosec).trim() !== '') ? String(item.tiosec).trim() : ($('#tiosec1').val() || '1'));
-
-     _this.activateTab(2);
+     if (checked) _this.activateTab(2);
      _this.searchItemDetail();
     }
 
-    // tab2 : 상세내역(마스터) 조회 - 관→항→목 3단계 그룹
-    searchItemDetail() {
-     let _this = this;
-     let data = {
-      start: $('#searchfrdate2').val(),
-      end:   $('#searchtodate2').val(),
-      mssec: $('#mssec2').val(),
-      acccd: $('#acccd2').val(),
-      it1cd: $('#it1cd2').val(),
-      it2cd: $('#it2cd2').val(),
-      tiosec: $('#tiosec2').val()
-     };
-     AjaxUtil.getAsyncData(this.url + '/readItemDetail', data, function (result) {
-      if (result != null && result.success) {
-       const rows = result.data || [];
-       const cv = new wijmo.collections.CollectionView(rows);
-       cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('accnm')); // 관
-       cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('it1nm')); // 항
-       // 목 : 값이 있으면 목명, 없으면 항명 반환 → 빈 목 그룹 안 생김
-       cv.groupDescriptions.push(new wijmo.collections.PropertyGroupDescription('it2nm', function (item, prop) {
-        const v = item[prop];
-        return (v == null || String(v).trim() === '') ? (item.it1nm || '') : v;
-       }));
-       _this.itemDetailGrid.itemsSource = cv;
-      } else { console.log('상세(tab2) 조회 오류'); }
+    // ══════════════════════════════════════
+    // 인쇄 : 보고 있는 탭의 원본 인쇄용 DW 모양
+    //   탭2 d_book12_1_print / 탭3 d_book12_2_print / 탭4 d_book12_3_print
+    // ══════════════════════════════════════
+    print() {
+     const no = getActiveTabNo();
+     if (no === 2) this.printItemDetail();
+     else if (no === 3) this.printDetail3();
+     else if (no === 4) this.printDetail4();
+     else Alert.alert('확인', '집계내역 탭의 인쇄 양식(DW)은 아직 받지 못했습니다. 상세내역 탭에서 인쇄해 주세요.');
+    }
+
+    _esc(v) { return String(v == null ? '' : v).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c])); }
+    _n0(v) { return (v == null || v === '') ? '' : Number(v).toLocaleString('ko-KR'); }
+
+    _openPrint(title, sub, colsHtml, headHtml, bodyHtml) {
+     const _this = this, esc = this._esc;
+     AjaxUtil.getAsyncData(_this.url + '/readOrg', {}, function (res) {
+      const org = (res && res.data && res.data.spjangnm) || '';
+      const now = new Date(), p2 = n => String(n).padStart(2, '0');
+      const ts = now.getFullYear() + '-' + p2(now.getMonth() + 1) + '-' + p2(now.getDate()) + ' ' + p2(now.getHours()) + ':' + p2(now.getMinutes());
+      const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title><style>'
+       + '@page{size:A4 portrait;margin:12mm 10mm 14mm;@bottom-center{content:"페이지 : " counter(page) " (" counter(pages) ")";font-size:10pt}}'
+       + 'body{font-family:"Malgun Gothic",sans-serif;font-size:9.5pt;margin:0}'
+       + 'h1{text-align:center;font-size:20pt;font-weight:bold;letter-spacing:4px;margin:4px 0}'
+       + '.d{margin-bottom:2px}.hr{display:flex;align-items:flex-end;margin-bottom:4px}.hr div{flex:1}'
+       + '.hr .s{text-align:center;font-size:12pt;font-weight:bold}.hr .t{text-align:right}'
+       + 'table.g{width:100%;border-collapse:collapse}.g th,.g td{border:1px solid #555;padding:2px 4px;height:18px}'
+       + '.g th{font-weight:normal}thead{display:table-header-group}tr{page-break-inside:avoid}'
+       + '.c{text-align:center}.r{text-align:right}.b td{font-weight:bold}'
+       + '</style></head><body><h1>' + esc(title) + '</h1>'
+       + '<div class="d">기준일자 : ' + esc($('#searchfrdate').val()) + ' - ' + esc($('#searchtodate').val()) + '</div>'
+       + '<div class="hr"><div>' + esc(org) + '</div><div class="s">' + esc(sub) + '</div><div class="t">출력일시 : ' + esc(ts) + '</div></div>'
+       + '<table class="g"><colgroup>' + colsHtml + '</colgroup><thead><tr>' + headHtml + '</tr></thead><tbody>' + bodyHtml + '</tbody></table></body></html>';
+      const w = window.open('', '_blank', 'width=1000,height=800');
+      if (!w) { Alert.alert('확인', '팝업이 차단되어 있습니다. 팝업을 허용해 주세요.'); return; }
+      w.document.open(); w.document.write(html); w.document.close();
+      w.onload = function () { w.focus(); w.print(); };
      });
     }
 
-    // tab2 행 선택 → tab3(재원별)·tab4 함께 조회
-    searchDetailByMaster(master) {
-     let _this = this;
-     let data = {
-      start: (master.frdate || $('#searchfrdate2').val()),
-      end:   (master.todate || $('#searchtodate2').val()),
-      acccd: master.acccd || '',
-      it1cd: master.it1cd || '',
-      it2cd: master.it2cd || '',
-      mssec: '%'   // PB원본: tab3·tab4는 재원 전체
-     };
-     // tab3 (재원별)
-     AjaxUtil.getAsyncData(this.url + '/readDetail', data, function (result) {
-      if (result != null && result.success) _this.bindDetailGrid(_this.detailGrid3, result.data || []);
-      else console.log('상세(tab3) 조회 오류');
-     });
-     // tab4
-     AjaxUtil.getAsyncData(this.url + '/readDetail2', data, function (result) {
-      if (result != null && result.success) _this.bindDetailGrid(_this.detailGrid4, result.data || []);
-      else console.log('상세(tab4) 조회 오류');
+    // 탭2 인쇄 (d_book12_1_print) : 항 / 목 / 전표일자 / 차변 / 대변 / 잔액(그 행 금액), 항소계 · 계정소계
+    printItemDetail() {
+     const _this = this, esc = this._esc, n0 = this._n0, k = _this.tab2Key;
+     if (!_this.itemDetailGrid.rows.length) { Alert.alert('확인', '상세내역을 조회한 뒤 인쇄하세요.'); return; }
+     AjaxUtil.getAsyncData(_this.url + '/readPrintItemDetail', Object.assign(_this._cond(), {acccd: k.acccd, it1cd: k.it1cd}), function (res) {
+      const rows = ((res && res.data) || []).map(r => Object.assign({}, r, {d8: _this._d8(r.yymmdd)}));
+      if (!rows.length) { Alert.alert('확인', '인쇄할 내역이 없습니다.'); return; }
+      rows.sort((a, b) => String(a.acccd).localeCompare(String(b.acccd)) || String(a.it1cd).localeCompare(String(b.it1cd))
+       || String(a.it1nm || '').localeCompare(String(b.it1nm || '')) || a.d8.localeCompare(b.d8));
+      let body = '', accK = null, itK = null, it = null, ac = null, accnm = rows[0].accnm || '';
+      const sub = (lbl, t) => '<tr class="b"><td></td><td></td><td class="c">' + lbl + '</td><td class="r">' + n0(t.dr) + '</td><td class="r">' + n0(t.cr) + '</td><td class="r">' + n0(t.bf) + '</td></tr>';
+      rows.forEach(r => {
+       const ik = r.it1cd + '|' + (r.it1nm || '');
+       const newAcc = r.acccd !== accK, newIt = newAcc || ik !== itK;
+       if (newIt && it) body += sub('항소계', it);
+       if (newAcc && ac) body += sub('계정소계', ac);
+       if (newAcc) { ac = {dr: 0, cr: 0, bf: 0}; if (accK !== null) body += '<tr><td colspan="6" style="font-weight:bold">' + esc(r.accnm) + '</td></tr>'; }
+       if (newIt) it = {dr: 0, cr: 0, bf: 0};
+       const dr = Number(r.dramt) || 0, cr = Number(r.cramt) || 0, bf = Number(r.bfamt) || 0;
+       body += '<tr><td>' + (newIt ? esc(r.it1nm) : '') + '</td><td>' + esc(r.it2nm) + '</td><td class="c">' + esc(_this._fmtD(r.d8))
+        + '</td><td class="r">' + n0(dr) + '</td><td class="r">' + n0(cr) + '</td><td class="r">' + n0(bf) + '</td></tr>';
+       it.dr += dr; it.cr += cr; it.bf += bf; ac.dr += dr; ac.cr += cr; ac.bf += bf;
+       accK = r.acccd; itK = ik;
+      });
+      if (it) body += sub('항소계', it);
+      if (ac) body += sub('계정소계', ac);
+      _this._openPrint('관항별목별원장(집계내역)', accnm,
+       '<col style="width:20%"><col style="width:18%"><col style="width:11%"><col style="width:17%"><col style="width:17%"><col style="width:17%">',
+       '<th>항</th><th>목</th><th>전표일자</th><th>차변금액</th><th>대변금액</th><th>잔액</th>', body);
      });
     }
 
-    // 상세 그리드 공통 : PB 행정리 + 98제외 합계 푸터
-    bindDetailGrid(grid, rows) {
-     rows = rows || [];
-     // 차/대변 모두 0인 행 제거 (소계 97/98 유지)
-     rows = rows.filter(r => {
-      const yy = String(r.yymmdd || '');
-      if (yy.endsWith('97') || yy.endsWith('98')) return true;
-      const dr = Number(r.dramt) || 0, cr = Number(r.cramt) || 0;
-      return (dr !== 0 || cr !== 0);
+    // 탭3 인쇄 (d_book12_2_print) : 원본 인쇄 쿼리는 월소계 · 월누계가 없다 (주석 처리)
+    printDetail3() {
+     const _this = this, esc = this._esc, n0 = this._n0, k = _this.tab3Key;
+     if (!k) { Alert.alert('확인', '상세내역(재원별)을 조회한 뒤 인쇄하세요.'); return; }
+     AjaxUtil.getAsyncData(_this.url + '/readPrintDetail', Object.assign(_this._cond(), {acccd: k.acccd, it1cd: k.it1cd, it2cd: k.it2cd}), function (res) {
+      const rows = _this.buildLedger((res && res.data) || []).filter(r => r._kind === 'd' || r._kind === 's');
+      if (!rows.length) { Alert.alert('확인', '인쇄할 내역이 없습니다.'); return; }
+      let body = '';
+      rows.forEach(r => {
+       const b = r._kind === 's';
+       body += '<tr' + (b ? ' class="b"' : '') + '><td class="c">' + esc(b ? '계' : r.datef) + '</td><td>' + esc(b ? '' : r.it2nm) + '</td><td class="c">' + esc(b ? '' : r.mssecnm)
+        + '</td><td>' + esc(b ? '' : r.summy) + '</td><td class="r">' + n0(r.dramt) + '</td><td class="r">' + n0(r.cramt) + '</td><td class="r">' + n0(r.balamt) + '</td></tr>';
+      });
+      _this._openPrint('관항별목별원장', (k.accnm || '') + ' - ' + (k.it1nm || ''),
+       '<col style="width:10%"><col style="width:13%"><col style="width:7%"><col style="width:28%"><col style="width:14%"><col style="width:14%"><col style="width:14%">',
+       '<th>전표일자</th><th>목</th><th>재원</th><th>비고</th><th>차변금액</th><th>대변금액</th><th>잔액</th>', body);
      });
-     grid.itemsSource = rows;
-
-     const foot = this.calcFooterExcludeSub(rows);
-     const cf = grid.columnFooters;
-     if (cf.rows.length === 0) cf.rows.push(new wijmo.grid.GroupRow());
-     const cSummy = grid.columns.findIndex(c => c.binding === 'summy');
-     const cDr = grid.columns.findIndex(c => c.binding === 'dramt');
-     const cCr = grid.columns.findIndex(c => c.binding === 'cramt');
-     if (cSummy > -1) cf.setCellData(0, cSummy, '합계');
-     if (cDr > -1) cf.setCellData(0, cDr, foot.dramt);
-     if (cCr > -1) cf.setCellData(0, cCr, foot.cramt);
     }
 
-    // 97/98 소계행 제외 합계
-    calcFooterExcludeSub(rows) {
-     let dr = 0, cr = 0;
+    // 탭4 인쇄 (d_book12_3_print) : 화면과 같은 쿼리 → 화면 데이터 그대로
+    printDetail4() {
+     const _this = this, esc = this._esc, n0 = this._n0, k = _this.tab3Key || {};
+     const rows = _this.rows4 || [];
+     if (!rows.length) { Alert.alert('확인', '상세내역을 조회한 뒤 인쇄하세요.'); return; }
+     let body = '';
      rows.forEach(r => {
-      const yy = String(r.yymmdd || '');
-      if (yy.endsWith('97') || yy.endsWith('98')) return;
-      dr += Number(r.dramt) || 0;
-      cr += Number(r.cramt) || 0;
+      const b = r._kind === 'c' || r._kind === 's';
+      const lbl = r._kind === 's' ? '계' : r.datef;
+      body += '<tr' + (b ? ' class="b"' : '') + '><td class="c">' + esc(lbl) + '</td><td>' + esc(r._kind === 'd' ? r.it2nm : '') + '</td><td>' + esc(r._kind === 'd' ? r.summy : '')
+       + '</td><td class="r">' + n0(r.dramt) + '</td><td class="r">' + n0(r.cramt) + '</td><td class="r">' + n0(r.balamt) + '</td></tr>';
      });
-     return { dramt: dr, cramt: cr };
-    }
-
-    // 소계행(97/98) 빨간색 + 라벨 (비고 컬럼에)
-    applySubtotalStyle(grid, labelBinding) {
-     grid.formatItem.addHandler(function (s, e) {
-      if (e.panel.cellType === wijmo.grid.CellType.Cell) {
-       const item = s.rows[e.row].dataItem;
-       if (!item) return;
-       const yy = String(item.yymmdd || '');
-       if (yy.endsWith('97') || yy.endsWith('98')) {
-        e.cell.style.color = '#d33';
-        e.cell.style.fontWeight = '600';
-        if (s.columns[e.col] && s.columns[e.col].binding === labelBinding) {
-         e.cell.textContent = yy.endsWith('97') ? '월소계' : '계정소계';
-        }
-        if (s.columns[e.col] && s.columns[e.col].binding === 'yymmdd') {
-         e.cell.textContent = '';
-        }
-       }
-      }
-     });
-    }
-
-    // 상세행 더블클릭 → 전표 팝업 (소계/이월 제외)
-    openSlipFromRow(item) {
-     const yy = String(item.yymmdd || '');
-     if (yy.endsWith('97') || yy.endsWith('98')) return;
-     if (!item.spnum || item.spnum === '9999' || item.spnum === '0000') return;
-     // 전표일자 : yymmdd가 화면표기(2026-06-10)일 수 있으니 숫자만 추출
-     let spdate = String(item.yymmdd || item.spdate || '').replace(/[^0-9]/g, '');
-     this.openSlipPopup({ yymmdd: spdate, spnum: item.spnum, acccd: item.acccd || '' });
+     _this._openPrint('관항별목별원장', (k.accnm || '') + ' - ' + (k.it1nm || ''),
+      '<col style="width:11%"><col style="width:15%"><col style="width:32%"><col style="width:14%"><col style="width:14%"><col style="width:14%">',
+      '<th>전표일자</th><th>목</th><th>비고</th><th>차변금액</th><th>대변금액</th><th>잔액</th>', body);
     }
 
     // ============================================================
@@ -876,14 +851,10 @@
     applyAccnmData(item, tabNo) {
      $('#accnm' + tabNo).val(item.accnm || '');
      $('#acccd' + tabNo).val(item.acccd || '');
-     // 관 팝업 결과에 tiosec가 있으면 화면 구분 셀렉트도 동기화
-     if (item.tiosec != null && String(item.tiosec).trim() !== '') {
-      $('#tiosec' + tabNo).val(String(item.tiosec).trim());
-     }
      // 관을 바꾸면 하위 항·목 초기화
      $('#it1nm' + tabNo).val(''); $('#it1cd' + tabNo).val('');
      $('#it2nm' + tabNo).val(''); $('#it2cd' + tabNo).val('');
-     this.searchMainData(tabNo);
+     this.searchMainData(1);
     }
 
     // ============================================================
@@ -892,7 +863,7 @@
     searchIt1nm(tabNo) {
      let _this = this;
      let keyword = $('#it1nm' + tabNo).val();
-     let tiosec = $('#tiosec' + tabNo).val() || '1';   // 화면 구분(세입/세출)
+     let tiosec = '';   // 원본 open : tiosec = '%' (구분 없음)
      AjaxUtil.getAsyncData(_this.entry_url + '/findIt1nm', {it1nm: keyword, tiosec: tiosec}, function (res) {
       let list = res.data || [];
       if (!list || list.length === 0) { Alert.alert('', '항 조회 결과가 없습니다.'); return; }
@@ -941,7 +912,7 @@
      if (item.accnm) $('#accnm' + tabNo).val(item.accnm);
      // 항을 바꾸면 하위 목 초기화
      $('#it2nm' + tabNo).val(''); $('#it2cd' + tabNo).val('');
-     this.searchMainData(tabNo);
+     this.searchMainData(1);
     }
 
     // ============================================================
@@ -950,7 +921,7 @@
     searchIt2nm(tabNo) {
      let _this = this;
      let keyword = $('#it2nm' + tabNo).val();
-     let tiosec = $('#tiosec' + tabNo).val() || '1';   // 화면 구분(세입/세출)
+     let tiosec = '';   // 원본 open : tiosec = '%' (구분 없음)
      AjaxUtil.getAsyncData(_this.entry_url + '/findIt2nm', {it2nm: keyword, tiosec: tiosec}, function (res) {
       let list = res.data || [];
       if (!list || list.length === 0) { Alert.alert('', '목 조회 결과가 없습니다.'); return; }
@@ -999,7 +970,7 @@
      if (item.it1nm) $('#it1nm' + tabNo).val(item.it1nm);
      if (item.acccd) $('#acccd' + tabNo).val(item.acccd);
      if (item.accnm) $('#accnm' + tabNo).val(item.accnm);
-     this.searchMainData(tabNo);
+     this.searchMainData(1);
     }
 
     activateTab(no) {
@@ -1009,10 +980,13 @@
      $('#tab' + no).addClass('active');
     }
 
+    // 원본 ue_retrieve : 1 · 2 탭 → 집계를 다시 조회 / 3 · 4 탭 → 상세내역에서 고른 목
     searchMainData(tabNo) {
      tabNo = tabNo || 1;
+     if ($('#acccd').val() && !$('#accnm').val().trim()) { Alert.alert('확인', '계정과목이 올바르지 않습니다.'); return; }
      if (tabNo === 1) this.searchSummary();
      else if (tabNo === 2) this.searchItemDetail();
+     else this.searchDetails();
     }
 
    }//CategoryItemDetailLedgerPage
@@ -1020,73 +994,48 @@
    function getActiveTabNo() {
     let $active = $('.tab-item.active');
     if (!$active.length) $active = $('.tab-item:visible').first();
-    let id = ($active.attr('id') || 'tab1').replace('tab', '');
-    let no = parseInt(id, 10);
+    let no = parseInt(($active.attr('id') || 'tab1').replace('tab', ''), 10);
     return isNaN(no) ? 1 : no;
    }
 
    let page = null;
 
-   $(document).ready(function (e) {
+   $(document).ready(function () {
     page = new CategoryItemDetailLedgerPage();
 
-    let fr = new Date();
-    fr.setDate(1);
-    let frStr = CommonUtil.formatYYYYMMDD(fr);
-    let toStr = getNowDate();
+    // 원본 open : 올해 1월 1일 ~ 오늘
+    const now = new Date();
+    $('#searchfrdate').val(CommonUtil.formatYYYYMMDD(new Date(now.getFullYear(), 0, 1)));
+    $('#searchtodate').val(getNowDate());
+    AjaxUtil.fillSelectOptions($('#mssec'), 'mssec', 'all', false);
 
-    for (let i = 1; i <= 4; i++) {
-     $('#searchfrdate' + i).val(frStr);
-     $('#searchtodate' + i).val(toStr);
-     let $sel = $('#mssec' + i);
-     if ($sel.length) AjaxUtil.fillSelectOptions($sel, 'mssec', 'all', false);
-     $('#btnSearch' + i).on('click', (function (tabNo) {
-      return function () { page.searchMainData(tabNo); };
-     })(i));
+    $('#btnSearch').on('click', function () { page.searchMainData(getActiveTabNo()); });
+    $('#btnPrint').on('click', function () { page.print(); });
+    $('#chkTotal').on('change', function () { page.applyTotalFlag($(this).is(':checked')); });
 
-     // 관 엔터 → 관 팝업
-     $('#accnm' + i).on('keydown', (function (tabNo) {
-      return function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); page.searchAccnm(tabNo); } };
-     })(i));
-     // 관 비우면 하위 항·목 초기화
-     $('#accnm' + i).on('input', (function (tabNo) {
-      return function () {
-       if ($(this).val() === '') {
-        $('#acccd' + tabNo).val('');
-        $('#it1nm' + tabNo).val(''); $('#it1cd' + tabNo).val('');
-        $('#it2nm' + tabNo).val(''); $('#it2cd' + tabNo).val('');
-       }
-      };
-     })(i));
+    // 관 · 항 · 목 : 엔터 → 팝업, 비우면 코드와 하위도 비움
+    $('#accnm').on('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); page.searchAccnm(''); } })
+    .on('input', function () { if ($(this).val() === '') { $('#acccd, #it1nm, #it1cd, #it2nm, #it2cd').val(''); } });
+    $('#it1nm').on('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); page.searchIt1nm(''); } })
+    .on('input', function () { if ($(this).val() === '') { $('#it1cd, #it2nm, #it2cd').val(''); } });
+    $('#it2nm').on('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); page.searchIt2nm(''); } })
+    .on('input', function () {
+     if ($(this).val() === '') $('#it2cd').val('');
+    });
 
-     // 항 엔터 → 항 팝업
-     $('#it1nm' + i).on('keydown', (function (tabNo) {
-      return function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); page.searchIt1nm(tabNo); } };
-     })(i));
-     // 항 비우면 하위 목 초기화
-     $('#it1nm' + i).on('input', (function (tabNo) {
-      return function () {
-       if ($(this).val() === '') {
-        $('#it1cd' + tabNo).val('');
-        $('#it2nm' + tabNo).val(''); $('#it2cd' + tabNo).val('');
-       }
-      };
-     })(i));
+    // 조회줄은 하나 — 탭을 옮기면 그 탭 맨 위로 옮긴다
+    $('.tab-links a').on('click', function () {
+     const $t = $($(this).attr('href'));
+     if ($t.length) $t.prepend($('#cdtBox'));
+    });
 
-     // 목 엔터 → 목 팝업
-     $('#it2nm' + i).on('keydown', (function (tabNo) {
-      return function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); page.searchIt2nm(tabNo); } };
-     })(i));
-     // 목 비우면 히든 코드 초기화
-     $('#it2nm' + i).on('input', (function (tabNo) {
-      return function () { if ($(this).val() === '') $('#it2cd' + tabNo).val(''); };
-     })(i));
-    }
-
-    page.searchMainData(1);
+    page.searchMainData(1);   // 원본 open : 바로 조회
 
     $(document).on('keydown', function (ev) {
-     if (ev.key === 'F4') { ev.preventDefault(); page.searchMainData(getActiveTabNo()); }
+     if (ev.key === 'F4') {
+      ev.preventDefault();
+      page.searchMainData(getActiveTabNo());
+     }
     });
    });
   </script>

@@ -174,7 +174,8 @@ public class CategoryItemDetailLedgerService {
            AND A.it1cd LIKE :it1cd
            AND A.it2cd LIKE :it2cd
          GROUP BY A.acccd, A.accnm, A.it1cd, A.it1nm, A.it2cd, A.it2nm, A.drcr
-         ORDER BY A.acccd, A.it1cd, A.it2cd
+         -- ORDER BY 없음 : 원본 d_book12_0 SQL 과 같게 두고, 정렬(acccd, it1cd)은 화면에서 한다
+         --   (같은 항 안의 목 순서가 원본처럼 DB 가 내준 순서 그대로 나오도록)
         """;
 		return sqlRunner.getRows(sql, param);
 	}
@@ -627,4 +628,123 @@ public class CategoryItemDetailLedgerService {
 	}
 
 
+
+	private String likeAll(String v) { return (v == null || v.trim().isEmpty()) ? "%" : v.trim(); }
+
+	// 인쇄 머리글 : 기관명
+	public Map<String, String> selectOrg() {
+		return getBizInfoBySpjangcd(TenantContext.get());
+	}
+
+	// ============================================================
+	// 인쇄 : 상세내역 (원본 d_book12_1_print) — 목 조건 없음, C.tiosec 조인
+	//   재원 조건의 'B.mssec IS NULL' 은 원본 쿼리 그대로 옮김
+	// ============================================================
+	public Object selectPrintItemDetail(String start, String end, String mssec, String acccd, String it1cd) {
+		MapSqlParameterSource param = buildBaseParam(start, end);
+		param.addValue("mssec", mssec == null ? "" : mssec.trim());
+		param.addValue("acccd", likeAll(acccd));
+		param.addValue("it1cd", likeAll(it1cd));
+		String sql = """
+        SELECT A.yymmdd, A.acccd, A.accnm, A.it1cd, A.it1nm, A.it2cd, A.it2nm, A.drcr, A.mssec,
+               SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt, SUM(A.bfamt) AS bfamt,
+               :frdate AS frdate, :todate AS todate
+          FROM (
+        SELECT '00000000' AS yymmdd, A.acccd, B.accnm, A.it1cd, A.it1nm, '' AS it2cd, '' AS it2nm, B.drcr,
+               A.dramt, A.cramt,
+               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt, '' AS mssec
+          FROM TB_AB014 A, TB_AC001 B
+         WHERE A.custcd = B.custcd AND A.acccd = B.acccd AND B.spyn = '1'
+           AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.yymm = :indate
+           AND LEFT(A.acccd,1) IN ('1','2','3')
+           AND NOT (A.dramt = 0 AND A.cramt = 0)
+        UNION ALL
+        SELECT '00000000', A.acccd, B.accnm, A.it1cd, D.it1nm, '', '', B.drcr, A.dramt, A.cramt,
+               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END, A.mssec
+          FROM TB_AA010 A, TB_AC001 B, TB_AA009 C, VW_X0003 D
+         WHERE A.custcd = B.custcd AND A.acccd = B.acccd
+           AND A.custcd = C.custcd AND A.spjangcd = C.spjangcd AND A.spdate = C.spdate AND A.spnum = C.spnum
+           AND A.it1cd = D.it1cd AND C.tiosec = D.tiosec
+           AND B.spyn = '1' AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.spdate > :indate + '00' AND A.spdate < :frdate
+           AND NOT (A.dramt = 0 AND A.cramt = 0)
+           AND ( A.mssec LIKE :mssec + '%' OR B.mssec IS NULL )
+           AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
+        UNION ALL
+        SELECT A.spdate, A.acccd, B.accnm, A.it1cd, D.it1nm, A.it2cd, E.it2nm, B.drcr, A.dramt, A.cramt,
+               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END, A.mssec
+          FROM TB_AA010 A, TB_AC001 B, TB_AA009 C, VW_X0003 D, TB_X0004 E
+         WHERE A.custcd = B.custcd AND A.acccd = B.acccd
+           AND A.custcd = C.custcd AND A.spjangcd = C.spjangcd AND A.spdate = C.spdate AND A.spnum = C.spnum
+           AND A.it1cd = D.it1cd AND C.tiosec = D.tiosec
+           AND A.it2cd = E.it2cd AND C.tiosec = E.tiosec
+           AND B.spyn = '1' AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.spdate BETWEEN :frdate AND :todate
+           AND NOT (A.dramt = 0 AND A.cramt = 0)
+           AND ( A.mssec LIKE :mssec + '%' OR B.mssec IS NULL )
+           AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
+          ) A
+         WHERE A.acccd LIKE :acccd AND A.it1cd LIKE :it1cd
+         GROUP BY A.yymmdd, A.acccd, A.accnm, A.it1cd, A.it1nm, A.it2cd, A.it2nm, A.drcr, A.mssec
+        """;
+		return sqlRunner.getRows(sql, param);
+	}
+
+	// ============================================================
+	// 인쇄 : 상세내역(재원별) (원본 d_book12_2_print) — 월소계 · 월누계 없음
+	// ============================================================
+	public Object selectPrintDetail(String start, String end, String mssec, String acccd, String it1cd, String it2cd) {
+		MapSqlParameterSource param = buildBaseParam(start, end);
+		param.addValue("mssec", mssec == null ? "" : mssec.trim());
+		param.addValue("acccd", acccd == null ? "" : acccd.trim());
+		param.addValue("it1cd", it1cd == null ? "" : it1cd.trim());
+		param.addValue("it2cd", it2cd == null ? "" : it2cd.trim());
+		String sql = """
+        SELECT A.yymmdd, A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm, A.it2cd, A.it2nm, A.summy, A.drcr,
+               SUM(A.dramt) AS dramt, SUM(A.cramt) AS cramt, SUM(A.bfamt) AS bfamt,
+               A.mssecnm, MAX(A.rowseq) AS rowseq, :frdate AS frdate, :todate AS todate
+          FROM (
+        SELECT '00000000' AS yymmdd, '0000' AS spnum, A.acccd, B.accnm, A.it1cd, A.it1nm,
+               '' AS it2cd, '' AS it2nm, '' AS summy, B.drcr, A.dramt, A.cramt, '' AS mssecnm,
+               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END AS bfamt, '0' AS rowseq
+          FROM TB_AB014 A, TB_AC001 B
+         WHERE A.custcd = B.custcd AND A.acccd = B.acccd AND B.spyn = '1'
+           AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.yymm = :indate
+           AND LEFT(A.acccd,1) IN ('1','2','3')
+           AND NOT (A.dramt = 0 AND A.cramt = 0)
+        UNION ALL
+        SELECT '00000000', '0000', A.acccd, B.accnm, A.it1cd, D.it1nm, '', '', '', B.drcr, A.dramt, A.cramt,
+               (SELECT mssecnm FROM tb_x0005 WHERE mssec = A.mssec),
+               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END, A.rowseq
+          FROM TB_AA010 A, TB_AC001 B, TB_AA009 C, VW_X0003 D
+         WHERE A.custcd = B.custcd AND A.acccd = B.acccd
+           AND A.custcd = C.custcd AND A.spjangcd = C.spjangcd AND A.spdate = C.spdate AND A.spnum = C.spnum
+           AND A.it1cd = D.it1cd AND C.tiosec = D.tiosec
+           AND B.spyn = '1' AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.spdate > :indate + '00' AND A.spdate < :frdate
+           AND NOT (A.dramt = 0 AND A.cramt = 0)
+           AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
+           AND ( A.mssec LIKE :mssec + '%' OR B.mssec IS NULL )
+        UNION ALL
+        SELECT A.spdate, A.spnum, A.acccd, B.accnm, A.it1cd, D.it1nm, A.it2cd, E.it2nm, A.summy, B.drcr, A.dramt, A.cramt,
+               (SELECT mssecnm FROM tb_x0005 WHERE mssec = A.mssec),
+               CASE WHEN B.drcr = '1' THEN A.dramt - A.cramt ELSE A.cramt - A.dramt END, A.rowseq
+          FROM TB_AA010 A, TB_AC001 B, TB_AA009 C, VW_X0003 D, TB_X0004 E
+         WHERE A.custcd = B.custcd AND A.acccd = B.acccd
+           AND A.custcd = C.custcd AND A.spjangcd = C.spjangcd AND A.spdate = C.spdate AND A.spnum = C.spnum
+           AND A.it1cd = D.it1cd AND C.tiosec = D.tiosec
+           AND A.it2cd = E.it2cd AND C.tiosec = E.tiosec
+           AND B.spyn = '1' AND A.custcd = :custcd AND A.spjangcd = :spjangcd
+           AND A.spdate BETWEEN :frdate AND :todate
+           AND NOT (A.dramt = 0 AND A.cramt = 0)
+           AND ( A.iwolflag <> '1' OR A.iwolflag IS NULL )
+           AND ( A.mssec LIKE :mssec + '%' OR B.mssec IS NULL )
+          ) A
+         WHERE A.acccd = :acccd AND A.it1cd = :it1cd AND A.it2cd = :it2cd
+         GROUP BY A.yymmdd, A.spnum, A.acccd, A.accnm, A.it1cd, A.it1nm, A.it2cd, A.it2nm, A.summy, A.drcr, A.mssecnm
+        """;
+		return sqlRunner.getRows(sql, param);
+	}
 }

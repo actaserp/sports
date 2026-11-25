@@ -97,4 +97,39 @@ public class CategoryItemDetailLedgerController { //관항목별원장
 		result.data = categoryItemDetailLedgerService.selectSlip(yymmdd, spnum);
 		return result;
 	}
+
+	// 인쇄 머리글 : 기관명
+	@GetMapping("/readOrg")
+	public AjaxResult searchOrg() {
+		AjaxResult result = new AjaxResult();
+		result.data = categoryItemDetailLedgerService.selectOrg();
+		return result;
+	}
+
+	// 인쇄 : 상세내역 (d_book12_1_print)
+	@GetMapping("/readPrintItemDetail")
+	public AjaxResult searchPrintItemDetail(
+		@RequestParam(value = "start") String start,
+		@RequestParam(value = "end") String end,
+		@RequestParam(value = "mssec", required = false) String mssec,
+		@RequestParam(value = "acccd", required = false) String acccd,
+		@RequestParam(value = "it1cd", required = false) String it1cd) {
+		AjaxResult result = new AjaxResult();
+		result.data = categoryItemDetailLedgerService.selectPrintItemDetail(start, end, mssec, acccd, it1cd);
+		return result;
+	}
+
+	// 인쇄 : 상세내역(재원별) (d_book12_2_print)
+	@GetMapping("/readPrintDetail")
+	public AjaxResult searchPrintDetail(
+		@RequestParam(value = "start") String start,
+		@RequestParam(value = "end") String end,
+		@RequestParam(value = "mssec", required = false) String mssec,
+		@RequestParam(value = "acccd", required = false) String acccd,
+		@RequestParam(value = "it1cd", required = false) String it1cd,
+		@RequestParam(value = "it2cd", required = false) String it2cd) {
+		AjaxResult result = new AjaxResult();
+		result.data = categoryItemDetailLedgerService.selectPrintDetail(start, end, mssec, acccd, it1cd, it2cd);
+		return result;
+	}
 }
