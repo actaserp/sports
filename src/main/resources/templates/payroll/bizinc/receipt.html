@@ -1,0 +1,451 @@
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
+  <!-- 사업소득원천징수영수증 (원본 w_j3013) — 메뉴코드 wm_bizinc_receipt -->
+  <link rel="stylesheet" th:href="@{/css/common/ms-page.css}"/>
+  <link rel="stylesheet" th:href="@{/css/common/edit-table.css}"/>
+  <style>
+    .layout-contents { flex-direction: column; }
+    .rc-top { flex: 0 0 auto; margin-bottom: 5px; }
+    .rc-list, .rc-detail { overflow: hidden; min-height: 0; display: flex; flex-direction: column; }
+    .rc-list .container-fluid, .rc-detail .container-fluid { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; overflow: hidden; }
+    .rc-list #grid, .rc-detail #detail { flex: 1 1 auto; min-height: 0; overflow: auto; }
+    .rc-top .search-wrap { flex-wrap: wrap; justify-content: flex-start; align-items: flex-end; gap: 8px 14px; }
+    .rc-top .search-wrap dl { flex: 0 0 auto; margin: 0; }
+    .rc-top .search-wrap dl dt, .rc-top .search-wrap dl dt label { white-space: nowrap; }
+    .rc-top .rc-ym { display: flex; align-items: center; gap: 4px; }
+    .rc-top .rc-ym input { width: 70px !important; text-align: center; }
+    .rc-top .rc-ym select { width: 70px !important; }
+    .rc-top select.rc-prt { width: 100px !important; }
+    .rc-top input[type=date] { width: 140px !important; }
+    .rc-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .rc-btns .btn { white-space: nowrap; }
+    .rc-chks { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; height: 34px; }
+    .be-chk { display: inline-flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; font-weight: 400; white-space: nowrap; }
+    .be-chk input[type="checkbox"] {
+        -webkit-appearance: auto !important; -moz-appearance: auto !important; appearance: auto !important;
+        flex: 0 0 16px !important; width: 16px !important; height: 16px !important;
+        min-width: 16px !important; max-width: 16px !important; min-height: 16px !important;
+        margin: 0 !important; padding: 0 !important;
+        border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important;
+        vertical-align: middle !important; accent-color: #2563eb;
+    }
+    .be-chk input[type="checkbox"]::before, .be-chk input[type="checkbox"]::after { content: none !important; display: none !important; }
+    .rc-who { margin: 0 0 8px; font-size: 13px; color: #475569; }
+    .rc-who b { color: #2563eb; }
+    /* 출력 미리보기 팝업 (사업별세출내역과 같은 모양) */
+    .report-popup { width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; padding: 4px; }
+    .report-popup .report-toolbar { display: flex; justify-content: space-between; align-items: center; padding-bottom: 6px; flex: 0 0 auto; }
+    .report-popup .report-toolbar .btn { margin-left: 6px; }
+    .report-popup .report-toolbar .nav-group .btn:first-child { margin-left: 0; }
+    .report-popup .report-toolbar .page-info { margin-left: 14px; font-size: 13px; font-weight: 600; }
+    .report-popup .report-toolbar .orient-sel { margin-left: 10px; height: 30px; font-size: 13px; }
+    .report-popup .report-toolbar .btn[disabled] { opacity: .45; cursor: default; }
+    .report-popup .report-viewport { flex: 1 1 auto; overflow: auto; background: #e9ebef; border: 1px solid #d5d9e0; padding: 8px; }
+    .report-popup .report-scale { margin: 0 auto; }
+    .report-popup #reportFrame { border: 0; background: #fff; display: block; transform-origin: top left; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+  </style>
+
+  <div class="layout-contents">
+    <!-- 조회조건 (원본 d_j3013_condition + 신고서제출일) -->
+    <section class="section rc-top">
+      <div class="section-top">
+        <div class="search-wrap">
+          <dl><dt><label for="cAcumy">기준연월</label></dt>
+            <dd class="rc-ym"><input class="form-control2" id="cAcumy" type="text" maxlength="4"/>
+              <select class="form-control2" id="cAcumm"></select></dd></dl>
+          <dl><dt><span class="eq"></span></dt>
+            <dd class="rc-chks">
+              <label class="be-chk"><input id="cRpt1" type="checkbox"/><span>발행자보고</span></label>
+              <label class="be-chk"><input id="cRpt2" type="checkbox"/><span>발행자보관</span></label>
+              <label class="be-chk"><input id="cRpt3" type="checkbox" checked/><span>소득자보관</span></label>
+              <label class="be-chk"><input id="cYearly" type="checkbox" checked/><span>년간조회</span></label>
+            </dd></dl>
+          <!-- 출력방향은 인쇄 미리보기에서 고른다 (값만 여기 보관, 기본 세로 = 원본 prtflag 0) -->
+          <select id="cPrt" hidden><option value="0" selected>세로출력</option><option value="1">가로출력</option></select>
+          <dl><dt><label for="cRptDate">신고서제출일</label></dt>
+            <dd><input class="form-control2" id="cRptDate" type="date"/></dd></dl>
+          <dl><dt><span class="eq"></span></dt>
+            <dd class="rc-btns">
+              <a class="btn btn-delete" id="btnSearch" title="조회 (F4)">
+                <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘"> 검색</a>
+              <a class="btn btn-delete" id="btnPrint">인쇄</a>
+              <a class="btn btn-delete" id="btnExcel">엑셀</a>
+            </dd></dl>
+        </div>
+      </div>
+    </section>
+
+    <div style="display: flex; gap: 5px; flex: 1 1 auto; min-height: 0;">
+      <!-- 왼쪽 : 소득자 목록 (d_j3013_list) -->
+      <section class="section rc-list" style="width: 38%;">
+        <div class="container-fluid">
+          <div id="grid"></div>
+          <div class="et-foot"><span id="gridCount"></span></div>
+        </div>
+      </section>
+      <!-- 오른쪽 : 지급내역 (d_j3013_preview) -->
+      <section class="section rc-detail" style="width: 62%;">
+        <div class="container-fluid">
+          <p class="rc-who" id="who"></p>
+          <div id="detail"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script th:src="@{/js/common/edit-table.js}"></script>
+  <script th:src="@{/js/common/edit-table-custom.js}"></script>
+  <script type="text/javascript" th:inline="none">
+   const digits = v => String(v == null ? '' : v).replace(/[^0-9]/g, '');
+   const num = v => { const n = Number(String(v == null ? '' : v).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? 0 : n; };
+   // 원본 등록번호 식 : 사업자번호 없으면 내국인 주민번호 / 외국인번호
+   const regno = r => {
+    const s = digits(r.saupnum);
+    if (s) return s.length === 10 ? s.slice(0, 3) + '-' + s.slice(3, 5) + '-' + s.slice(5) : r.saupnum;
+    if (r.foreryn === '1') { const d = digits(r.rnum); return d.length === 13 ? d.slice(0, 6) + '-' + d.slice(6) : (r.rnum || ''); }
+    return r.forernum || '';
+   };
+
+
+   // ── 원천징수영수증 양식 ─────────────────────────────
+   const Form = (() => {
+    const e = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+    const n0 = v => (v == null || v === '') ? '' : Number(v).toLocaleString('ko-KR');
+    const saup = v => { const d = digits(v); return d.length === 10 ? d.slice(0, 3) + '-' + d.slice(3, 5) + '-' + d.slice(5) : (v || ''); };
+    const rrn = v => { const d = digits(v); return d.length === 13 ? d.slice(0, 6) + '-' + d.slice(6) : (v || ''); };
+    const corp = v => { const d = digits(v); return d.length === 13 ? d.slice(0, 6) + '-' + d.slice(6) : (v || ''); };
+    // 원본 업종구분 식 (41 · 44 는 49 기타)
+    const job = c => ({'43': '43 의사', '45': '45 문학.학술.예술등의 저작자', '46': '46 가수.배우.탤런트', '47': '47 직업운동가', '48': '48 보험모집인'})[c] || '49  기타';
+    const sendTxt = s => s.length === 8 ? s.slice(0, 4) + ' 년 ' + s.slice(4, 6) + ' 월 ' + s.slice(6) + ' 일' : '';
+    const css = land => `
+     @page { size: A4 ${land ? 'landscape' : 'portrait'}; margin: 8mm; }
+     * { box-sizing: border-box; }
+     body { margin: 0; font-family: '굴림', Gulim, 'Malgun Gothic', sans-serif; font-size: 9pt; color: #000; }
+     .pg { width: ${land ? '281mm' : '194mm'}; margin: 0 auto 6mm; page-break-after: always; }
+     .pg:last-child { page-break-after: auto; }
+     table.f { width: 100%; border-collapse: collapse; table-layout: fixed; }
+     /* 칸이 좁으면 자르지 않고 두 줄로 (항목 이름이 가려지던 것) */
+     table.f td { border: 1px solid #000; padding: 0.8mm 1mm; height: 6mm; vertical-align: middle; white-space: normal; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.25; }
+     table.f td.r { white-space: nowrap; }
+     .t1 { white-space: nowrap; }
+     .c { text-align: center; } .r { text-align: right; } .b { font-weight: 700; }
+     .t1 { font-size: 12.5pt; font-weight: 700; letter-spacing: -0.3px; overflow: visible !important; }
+     .small { font-size: 7.5pt; }
+     .nob td { border: 0; }
+     @media screen { body { background: #e5e7eb; padding: 6mm 0; } .pg { background: #fff; padding: 6mm; box-shadow: 0 0 6px rgba(0,0,0,.25); } }`;
+    const doc = (body, land, auto, frame) => `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>사업소득 원천징수영수증</title><style>${css(land)}${frame ? 'body{background:#fff !important;padding:8mm !important;margin:0} .pg{box-shadow:none !important;padding:0 !important;margin:0 auto !important}' : ''}</style></head>
+     <body>${body}${auto ? '<script>window.onload=function(){window.print();}<\/script>' : ''}</body></html>`;
+
+    const payer = h => `
+      <tr><td class="c" rowspan="2">징 수<br>의무자</td><td colspan="3">1.사업자등록번호</td><td colspan="4">${e(saup(h.b_saupnum))}</td>
+          <td colspan="3">2.법인명 또는 상호</td><td colspan="5">${e(h.compnm)}</td><td colspan="2">3.성명</td><td colspan="4">${e(h.prenm)}</td></tr>
+      <tr><td colspan="3">4.주민(법인)등록번호</td><td colspan="4">${e(corp(h.corpnum))}</td>
+          <td colspan="3">5.소재지 또는 주소</td><td colspan="11">${e(((h.adresa || '') + ' ' + (h.adresb || '')).trim())}</td></tr>
+      <tr><td class="c" rowspan="4">소득자</td><td colspan="3">6.상 호</td><td colspan="9">${e(h.comname)}</td>
+          <td colspan="3">7.사업자등록번호</td><td colspan="6">${e(saup(h.saupnum))}</td></tr>
+      <tr><td colspan="3">8.사업장 소재지</td><td colspan="18">${e(((h.comaddr1 || '') + ' ' + (h.comaddr2 || '')).trim())}</td></tr>
+      <tr><td colspan="3">${'{N9}'}.성 명</td><td colspan="9">${e(h.pername)}</td>
+          <td colspan="3">${'{N10}'}.주민등록번호</td><td colspan="6">${e(rrn(h.rnum))}</td></tr>
+      <tr><td colspan="3">${'{N11}'}.주 소</td><td colspan="18">${e(((h.addr1 || '') + ' ' + (h.addr2 || '')).trim())}</td></tr>`;
+    const cols22 = '<colgroup>' + '<col/>'.repeat(22) + '</colgroup>';
+
+    // 세로 (d_j3013_1_print) — 지급 20줄
+    const port = (p, tn, send) => {
+     const h = p.head || {};
+     const first = p.lines[1] || h;
+     let lines = '';
+     for (let i = 1; i <= 20; i++) {
+      const l = p.lines[i], d = l ? digits(l.paydate) : '', b = l ? digits(l.paybasic) : '';
+      lines += `<tr><td class="c">${d.slice(0, 4)}</td><td class="c">${d.slice(4, 6)}</td><td class="c">${d.slice(6, 8)}</td>
+       <td class="c">${b.slice(0, 4)}</td><td class="c">${b.slice(4, 6)}</td>
+       <td class="r" colspan="5">${l ? n0(l.paysum) : ''}</td><td class="r" colspan="2">${l ? n0(l.taxrate) + ' %' : ''}</td>
+       <td class="r" colspan="4">${l ? n0(l.incotax) : ''}</td><td class="r" colspan="3">${l ? n0(l.rtax) : ''}</td>
+       <td class="r" colspan="3">${l ? n0(Number(l.incotax || 0) + Number(l.rtax || 0)) : ''}</td></tr>`;
+     }
+     const own = tn === '(소득자보관용)';
+     return `<div class="pg">
+      <div class="r small">(3쪽 중 제3쪽)</div>
+      <table class="f">${cols22}
+       <tr><td class="c" colspan="2" rowspan="2">귀속<br>연도</td><td class="c" colspan="2" rowspan="2">${e(digits(first.paydate).slice(0, 4))} 년</td>
+           <td class="c t1" colspan="12" style="border-bottom:0">[ V ] 거주자의 사업소득 원천징수영수증</td>
+           <td class="c" colspan="3">내 · 외국인</td><td class="c small" colspan="2">내국인1<br>외국인9</td><td class="c b">${h.foreryn === '2' ? '9' : '1'}</td></tr>
+       <tr><td class="c t1" colspan="12" style="border-top:0;border-bottom:0">[ &nbsp;&nbsp; ] 거주자의 사업소득 지급명세서</td>
+           <td class="c" colspan="2">거주<br>지국</td><td colspan="2"></td><td class="c small" colspan="2">거주지국<br>코 드</td></tr>
+       <tr><td colspan="4" style="border-top:0"></td><td class="c b" colspan="12" style="border-top:0">( [ ${own ? 'V' : '&nbsp;&nbsp;'} ] 소득자 보관용 &nbsp;&nbsp; [ ${own ? '&nbsp;&nbsp;' : 'V'} ] 발행자 보관용 )</td><td colspan="6"></td></tr>
+       ${payer(h).replace('{N9}', '10').replace('{N10}', '10').replace('{N11}', '11')}
+       <tr><td colspan="3">12.업종구분</td><td colspan="19">${e(job(h.jobclafi))}</td></tr>
+       <tr><td class="c" colspan="3">13.지 급</td><td class="c" colspan="2">14.소득귀속</td><td class="c" colspan="5" rowspan="2">15.지급총액</td>
+           <td class="c" colspan="2" rowspan="2">16.세율</td><td class="c" colspan="10">원 천 징 수 세 액</td></tr>
+       <tr><td class="c">연</td><td class="c">월</td><td class="c">일</td><td class="c">연</td><td class="c">월</td>
+           <td class="c" colspan="4">17.소득세</td><td class="c" colspan="3">18.지방소득세</td><td class="c" colspan="3">19.계</td></tr>
+       ${lines}
+       <tr class="nob"><td colspan="22" style="border-left:1px solid #000;border-right:1px solid #000;padding-top:3mm">&nbsp;&nbsp;위의 원천징수세액(수입금액)을 영수(지급)합니다.</td></tr>
+       <tr class="nob"><td class="c" colspan="22" style="border-left:1px solid #000;border-right:1px solid #000">${e(sendTxt(send))}</td></tr>
+       <tr class="nob"><td class="r" colspan="22" style="border-left:1px solid #000;border-right:1px solid #000">징수(보고)의무자 &nbsp;${e(h.compnm)}&nbsp; (서명 또는 인)</td></tr>
+       <tr class="nob"><td colspan="22" style="border-left:1px solid #000;border-right:1px solid #000;border-bottom:1px solid #000;padding-bottom:3mm">&nbsp;&nbsp;${e(h.comname)} &nbsp;귀하</td></tr>
+      </table></div>`;
+    };
+
+    // 가로 (d_j3013_print) — 지급 3줄
+    const land = (p, tn, send) => {
+     const h = p.head || {};
+     const first = p.lines[1] || h;
+     const jobs = [['43', '의 사'], ['45', '문학·학술·예술 등의 저작자'], ['46', '가수·배우·탤런트'], ['47', '직업운동가'], ['48', '보험모집인'], ['49', '기 타']];
+     const jc = ['43', '45', '46', '47', '48'].includes(h.jobclafi) ? h.jobclafi : '49';
+     let lines = '';
+     for (let i = 1; i <= 6; i++) {
+      const l = p.lines[i], d = l ? digits(l.paydate) : '', b = l ? digits(l.paybasic) : '';
+      lines += `<tr><td class="c" colspan="2">${d.slice(0, 4)}</td><td class="c">${d.slice(4, 6)}</td><td class="c">${d.slice(6, 8)}</td>
+       <td class="c" colspan="2">${b.slice(0, 4)}</td><td class="c">${b.slice(4, 6)}</td>
+       <td class="r" colspan="3">${l ? n0(l.paysum) : ''}</td><td class="r" colspan="3">${l ? n0(l.taxrate) + ' %' : ''}</td>
+       <td class="r" colspan="3">${l ? n0(l.incotax) : ''}</td><td class="r" colspan="3">${l ? n0(l.rtax) : ''}</td>
+       <td class="r" colspan="3">${l ? n0(Number(l.incotax || 0) + Number(l.rtax || 0)) : ''}</td></tr>`;
+     }
+     return `<div class="pg">
+      <table class="f nob" style="margin-bottom:1mm"><tr><td class="small">[별지 제23호 서식(2)] (2000.4.3 개정)</td><td class="r small">(제1쪽)</td></tr></table>
+      <table class="f">${cols22}
+       <tr><td colspan="22" style="border-bottom:0;height:3mm"></td></tr>
+       <tr><td colspan="2" class="c" style="border-top:0">관리번호</td><td colspan="3" style="border-top:0"></td>
+           <td class="c t1" colspan="11" rowspan="2" style="border-top:0">☑사업소득 원천징수영수증<br>□사 업 소 득 지 급 조 서</td>
+           <td class="c" colspan="3">거 주 구 분</td><td class="c" colspan="3">${h.resclafi === '9' ? '비거주자' : '거주자'}</td></tr>
+       <tr><td colspan="2" class="c">귀속연도</td><td colspan="3" class="c">${e(digits(first.paybasic).slice(0, 4))} 년</td>
+           <td class="c" colspan="3">내 · 외국인</td><td class="c" colspan="3">${h.foreryn === '2' ? '외국인' : '내국인'}</td></tr>
+       <tr><td colspan="5" style="border-top:0"></td><td class="c b" colspan="11">${e(tn)}</td><td colspan="6"></td></tr>
+       ${payer(h).replace('{N9}', '9').replace('{N10}', '10').replace('{N11}', '11')}
+       <tr><td class="c" colspan="4" rowspan="2">12.구 분</td>${jobs.map(j => `<td class="c small" colspan="3">${j[1]}</td>`).join('')}</tr>
+       <tr>${jobs.map(j => `<td class="c" colspan="3">${j[0] === jc ? 'V' : ''}</td>`).join('')}</tr>
+       <tr><td class="c" colspan="4">13.지 급</td><td class="c" colspan="3">14.소득귀속</td><td class="c" colspan="3" rowspan="2">15.지급총액</td>
+           <td class="c" colspan="3" rowspan="2">16.세 율</td><td class="c" colspan="9">원 천 징 수 세 액</td></tr>
+       <tr><td class="c" colspan="2">연</td><td class="c">월</td><td class="c">일</td><td class="c" colspan="2">연</td><td class="c">월</td>
+           <td class="c" colspan="3">17.소득세</td><td class="c" colspan="3">18.주민세</td><td class="c" colspan="3">19.계</td></tr>
+       ${lines}
+       <tr class="nob"><td colspan="22" style="border-left:1px solid #000;border-right:1px solid #000;padding-top:3mm">&nbsp;&nbsp;위의 원천징수세액(수입금액)을 영수(지급)합니다.</td></tr>
+       <tr class="nob"><td class="c" colspan="22" style="border-left:1px solid #000;border-right:1px solid #000">${e(sendTxt(send))}</td></tr>
+       <tr class="nob"><td class="r" colspan="22" style="border-left:1px solid #000;border-right:1px solid #000">징수(보고)의무자 &nbsp;${e(h.compnm)}&nbsp; (서명 또는 인)</td></tr>
+       <tr class="nob"><td colspan="22" style="border-left:1px solid #000;border-right:1px solid #000">&nbsp;&nbsp;${e(h.comname)} &nbsp;귀하</td></tr>
+       <tr><td colspan="22" class="small" style="white-space:normal">※ 1. 원천징수의무자는 지급일이 속하는 연도의 다음 연도 2월 말일(휴업 또는 폐업한 경우에는 휴업일 또는 폐업일이 속하는 달의 다음 다음달 말일)까지 지급조서를 제출하여야 합니다.<br>
+        &nbsp;&nbsp;&nbsp;2. 이 서식은 거주자가 사업소득이 발생한 경우에 한하여 작성하며, 비거주자는 별지 제23호서식(4)을 사용하여야 합니다.<br>
+        &nbsp;&nbsp;&nbsp;3. 세액이 소액부징수에 해당하는 경우에는 세액을 "0"으로 기재합니다.</td></tr>
+      </table>
+      <table class="f nob small"><tr><td>22226 - 85331<br>99.4.7. 승인</td><td class="r">297㎜ × 210㎜<br>(인쇄용지(특급) 34g/㎡(재활용품))</td></tr></table>
+     </div>`;
+    };
+    return {doc, port, land};
+   })();
+
+   class ReceiptPage {
+    constructor() {
+     this.url = '/api/payroll/bizinc_receipt';
+     this.cond = null;   // 조회한 때의 조건 (오른쪽 표도 같은 기간)
+
+     this.grid = new EditTable('#grid', {
+      saveKey: 'bizinc_receipt', countEl: '#gridCount', emptyText: '[검색]을 누르세요.',
+      columns: [
+       {key: '_regno', header: '등록번호', width: 140, align: 'center', readOnly: true},
+       {key: '_name', header: '사업소득자명', width: '1*', readOnly: true},
+       {key: 'printchk', header: '인쇄', width: 60, type: 'check'}
+      ],
+      onSelect: row => this.onPerson(row)
+     });
+
+     // 원본 d_j3013_preview — 「계」는 PB 그대로 지급액 − (소득세 + 주민세), 세율도 합계
+     this.detail = new EditTable('#detail', {
+      saveKey: 'bizinc_receipt_detail', readOnly: true, emptyText: '', selectFirst: false, footerLabel: '계',
+      columns: [
+       {key: '_md', header: '지급 월/일', width: 90, align: 'center'},
+       {key: 'paysum', header: '지급총액', width: '1*', format: 'n0', sum: true},
+       {key: 'taxrate', header: '세율', width: 70, format: 'n0', sum: true},
+       {key: 'incotax', header: '소득세', width: '1*', format: 'n0', sum: true},
+       {key: 'rtax', header: '주민세', width: '1*', format: 'n0', sum: true},
+       {key: '_net', header: '계', width: '1*', format: 'n0', sum: true}
+      ]
+     });
+    }
+
+    init() {
+     const t = new Date();
+     // 원본 open : 기준연월 = 작년 12월, 신고서제출일 = 오늘
+     $('#cAcumy').val(t.getFullYear() - 1);
+     $('#cAcumm').html(Array.from({length: 12}, (_, i) => String(i + 1).padStart(2, '0'))
+      .map(m => '<option value="' + m + '">' + m + '</option>').join('')).val('12');
+     $('#cRptDate').val(t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'));
+
+     $('#btnSearch').on('click', () => this.search());
+     $('#btnExcel').on('click', () => this.excel());
+     $('#btnPrint').on('click', () => this.print(false));   // 인쇄 → 미리보기 팝업 (팝업 안 [인쇄]로 출력)
+     $('#cAcumy').on('keydown', e => { if (e.key === 'Enter') this.search(); });
+     // 원본 dw_1 ItemChanged : 조건을 바꾸면 목록 · 지급내역을 비운다
+     $('#cAcumy, #cAcumm, #cYearly').on('change', () => this.clear());
+     $(document).on('keydown', e => { if (e.key === 'F4') { e.preventDefault(); this.search(); } });
+     $('#cAcumy').focus();
+     this.search();   // 화면에 들어오면 바로 조회
+    }
+
+    clear() {
+     this.cond = null;
+     this.grid.setData([]); this.detail.setData([]); $('#who').text('');
+    }
+
+    params() {
+     return {acumy: $('#cAcumy').val().trim(), acumm: $('#cAcumm').val(), yearly: $('#cYearly').is(':checked') ? '1' : '0'};
+    }
+
+    // 조회 (원본 ue_retrieve)
+    search() {
+     const p = this.params();
+     if (!p.acumy) { Alert.alert('확인', '기준연을 입력하십시오.'); $('#cAcumy').focus(); return; }
+     if (digits(p.acumy).length !== 4) { Alert.alert('확인', '기준연을 4자리로 입력하십시오.'); $('#cAcumy').focus(); return; }
+     AjaxUtil.getAsyncData(this.url + '/read', p, res => {
+      if (res && res.success === false) { Alert.alert('확인', res.message); return; }
+      const list = (res && res.data) || [];
+      list.forEach(r => {
+       r._regno = regno(r);
+       r._name = r.comname ? r.comname : (r.pername || '');
+       r.printchk = '1';
+      });
+      this.cond = p;
+      this.detail.setData([]); $('#who').text('');
+      this.grid.setData(list);
+      if (!list.length) { Alert.alert('확인', '기준년도에 해당하는 사원이 존재하지 않습니다.'); $('#cAcumy').focus(); }
+     });
+    }
+
+    onPerson(row) {
+     if (!row || !this.cond) return;
+     AjaxUtil.getAsyncData(this.url + '/detail', Object.assign({seq: row.seq}, this.cond), res => {
+      const list = (res && res.data) || [];
+      list.forEach(r => {
+       ['paysum', 'taxrate', 'incotax', 'rtax'].forEach(k => r[k] = num(r[k]));
+       const d = digits(r.paydate);
+       r._md = d.length === 8 ? d.slice(4, 6) + '/' + d.slice(6) : '';
+       r._net = r.paysum - (r.incotax + r.rtax);
+      });
+      this.detail.setData(list);
+      $('#who').html('<b>' + row._name + '</b> (' + row._regno + ')');
+     });
+    }
+
+
+    // ── 인쇄 (원본 ue_print_retrieve + d_j3013_1_print 세로 / d_j3013_print 가로) ──
+    print(auto) {
+     if (!this.cond) { Alert.alert('확인', '먼저 조회하십시오.'); return; }
+     const types = [['#cRpt1', '(발행자보고용)'], ['#cRpt2', '(발행자보관용)'], ['#cRpt3', '(소득자보관용)']]
+      .filter(x => $(x[0]).is(':checked')).map(x => x[1]);
+     if (!types.length) { Alert.alert('확인', '발행구분을 선택하십시오.'); return; }
+     const seqs = this.grid.getData().filter(r => r.printchk === '1' || r.printchk === 1 || r.printchk === true).map(r => r.seq);
+     if (!seqs.length) { Alert.alert('확인', '선택된 자료가 없습니다.'); return; }
+     AjaxUtil.postJsonData(this.url + '/print', Object.assign({seqs}, this.cond), res => {
+      if (!res || !res.success) { Alert.alert('확인', (res && res.message) || '조회 중 오류가 발생했습니다.'); return; }
+      const rows = res.data || [];
+      if (!rows.length) { Alert.alert('확인', '사원 자료가 존재하지 않습니다.'); return; }
+      this.rpt = {rows, types, send: digits($('#cRptDate').val())};
+      this.rptBuild();
+      if (auto) this.rptPrint(); else this.rptOpen();
+     });
+    }
+
+    // 출력방향에 맞춰 장(페이지) HTML 을 만든다 — 발행구분마다 한 벌씩
+    rptBuild() {
+     const land = $('#cPrt').val() === '1';
+     const r = this.rpt, pages = this.buildPages(r.rows, land);
+     r.land = land;
+     r.html = []; r.keys = [];   // keys : 장마다 (발행구분, 소득자) — 방향을 바꿔도 같은 사람 장으로 가려고
+     r.types.forEach(tn => pages.forEach(p => {
+      r.html.push(land ? Form.land(p, tn, r.send) : Form.port(p, tn, r.send));
+      r.keys.push(tn + '|' + (p.head ? p.head.seq : ''));
+     }));
+     r.no = 1;
+    }
+
+    // 미리보기 팝업 (사업별세출내역 출력 화면과 같은 틀)
+    rptOpen() {
+     if (this.rptPopup) { this.rptPopup.close(); this.rptPopup = null; }
+     const $c = $(`<div class="content_wrap popup report-popup">
+       <div class="report-toolbar">
+        <span class="nav-group">
+         <button class="btn btn-delete" id="btnRptFirst" type="button">|◀ 처음</button>
+         <button class="btn btn-delete" id="btnRptPrev" type="button">◀ 이전</button>
+         <button class="btn btn-delete" id="btnRptNext" type="button">다음 ▶</button>
+         <button class="btn btn-delete" id="btnRptLast" type="button">맨뒤 ▶|</button>
+         <span class="page-info" id="rptPageInfo"></span>
+         <select class="orient-sel" id="rptOrient"><option value="0">세로</option><option value="1">가로</option></select>
+        </span>
+        <span class="act-group">
+         <button class="btn btn-delete" id="btnReportPrint" type="button">인쇄</button>
+         <button class="btn btn-delete" id="btnReportClose" type="button">닫기</button>
+        </span>
+       </div>
+       <div class="report-viewport"><div class="report-scale"><iframe id="reportFrame" scrolling="no"></iframe></div></div>
+      </div>`);
+     this.rptPopup = new PopupDraggable('사업소득 원천징수영수증');
+     this.rptPopup.open({width: 1100, height: 700, $content: $c});
+     $('#rptOrient').val($('#cPrt').val()).on('change', e => { $('#cPrt').val(e.target.value);
+      const key = this.rpt.keys ? this.rpt.keys[this.rpt.no - 1] : null;   // 보던 사람
+      this.rptBuild();
+      const i = key ? this.rpt.keys.indexOf(key) : -1;
+      this.rptShow(i >= 0 ? i + 1 : 1);
+     });
+     $('#btnRptFirst').on('click', () => this.rptShow(1));
+     $('#btnRptPrev').on('click', () => this.rptShow(this.rpt.no - 1));
+     $('#btnRptNext').on('click', () => this.rptShow(this.rpt.no + 1));
+     $('#btnRptLast').on('click', () => this.rptShow(this.rpt.html.length));
+     $('#btnReportPrint').on('click', () => this.rptPrint());
+     $('#btnReportClose').on('click', () => { if (this.rptPopup) { this.rptPopup.close(); this.rptPopup = null; } });
+     this.rptShow(1);
+    }
+
+    rptShow(no) {
+     const r = this.rpt, n = r.html.length;
+     if (!n) return;
+     no = Math.max(1, Math.min(no, n)); r.no = no;
+     const fdoc = $('#reportFrame')[0].contentWindow.document;
+     fdoc.open(); fdoc.write(Form.doc(r.html[no - 1], r.land, false, true)); fdoc.close();
+     $('#rptPageInfo').text('페이지 : ' + no + ' (' + n + ')');
+     $('#btnRptFirst, #btnRptPrev').prop('disabled', no === 1);
+     $('#btnRptNext, #btnRptLast').prop('disabled', no === n);
+     // 용지를 팝업 가로 폭에 맞춰 축소 (넘치는 세로는 스크롤)
+     const mm = 96 / 25.4, w = (r.land ? 297 : 210) * mm, h = (r.land ? 210 : 297) * mm;
+     const s = Math.min(($('.report-viewport').innerWidth() - 24) / w, 1);
+     $('#reportFrame').css({width: w + 'px', height: h + 'px', transform: 'scale(' + s + ')'});
+     $('.report-scale').css({width: (w * s) + 'px', height: (h * s) + 'px'});
+     $('.report-viewport').scrollTop(0);
+    }
+
+    // 인쇄 : 전체 장을 새 창에 이어 붙여 출력
+    rptPrint() {
+     const r = this.rpt;
+     const w = window.open('', '_blank', 'width=1024,height=768');
+     if (!w) { Alert.alert('', '팝업이 차단되어 인쇄창을 열 수 없습니다. 브라우저 팝업 차단을 해제하세요.'); return; }
+     w.document.open(); w.document.write(Form.doc(r.html.join(''), r.land, false)); w.document.close();
+     w.focus();
+     setTimeout(() => w.print(), 300);
+    }
+    // 소득자별 지급 순번으로 한 장씩 채운다 : 세로 20줄, 가로 6줄마다 새 장
+    //  (PB 가로는 4번째 지급부터 빠지고 4장째부터 빈 양식이 나오던 오류가 있어 3줄마다 다음 장으로 넘김)
+    buildPages(rows, land) {
+     const per = land ? 6 : 20;
+     const pages = []; let page = null, gid = 0, prevSeq = null;
+     for (const r of rows) {
+      gid = r.seq === prevSeq ? gid + 1 : 1; prevSeq = r.seq;
+      const slot = (gid - 1) % per + 1;
+      if (slot === 1) { page = {head: r, lines: {}}; pages.push(page); }
+      page.lines[slot] = r;
+     }
+     return pages;
+    }
+
+    // 엑셀 (원본 dw_exl = dw_3 공유) : 오른쪽 지급내역
+    excel() {
+     if (!this.detail.getView().length) { Alert.alert('', '내보낼 자료가 없습니다.'); return; }
+     const cur = this.grid.current();
+     this.detail.exportXlsx('사업소득원천징수_' + (cur ? cur._name : ''));
+    }
+   }
+
+   const page = new ReceiptPage();
+   $(document).ready(() => page.init());
+  </script>
+</th:block>
+</html>

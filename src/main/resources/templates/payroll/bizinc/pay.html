@@ -1,0 +1,724 @@
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
+  <!-- 사업소득급여등록 (원본 w_j3011) — 메뉴코드 wm_bizinc_pay -->
+  <link rel="stylesheet" th:href="@{/css/common/ms-page.css}"/>
+  <link rel="stylesheet" th:href="@{/css/common/edit-table.css}"/>
+  <style>
+    /* 탭 하나뿐이라 탭 없이 버튼만 오른쪽에 */
+    .tab-head { display: flex; justify-content: flex-end; margin: 0 0 10px; }
+    .button-list { display: flex; justify-content: flex-end; list-style: none; padding: 0; margin: 0; gap: 10px; }
+    .button-list li { margin: 0; padding: 0; }
+    .button-wrap { margin-left: auto; }
+    .button-wrap ul { display: flex; gap: 10px; padding: 0; margin: 0; list-style: none; }
+
+    .bp-list, .bp-detail { overflow: hidden; min-height: 0; }
+    .bp-list .container-fluid { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; overflow: hidden; }
+    .bp-list #grid { flex: 1 1 auto; min-height: 0; overflow: auto; }
+    .bp-list .search-wrap { flex-wrap: wrap; justify-content: flex-start; align-items: flex-end; gap: 8px 12px; }
+    .bp-list .search-wrap dl { flex: 0 0 auto; margin: 0; }
+    .bp-list .search-wrap dl dt, .bp-list .search-wrap dl dt label { white-space: nowrap; }
+    .bp-list .search-wrap input[type=text] { width: 110px !important; }
+    .bp-list .search-wrap input[type=month] { width: 130px !important; }
+    .bp-list .search-wrap input[type=date] { width: 140px !important; }
+    .bp-list .search-wrap select { width: 100px !important; }
+    .bp-ym { display: flex; align-items: center; gap: 4px; }
+    .bp-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .bp-btns .btn { white-space: nowrap; }
+
+    .bp-detail { display: flex; flex-direction: column; }
+    .bp-detail .bp-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .bp-form input[type=text], .bp-form input[type=date], .bp-form input[type=month], .bp-form select { width: 100%; box-sizing: border-box; }
+    .bp-form input.bp-num { text-align: right; }
+    .bp-form input[readonly] { background: #f3f5f7; }
+    .bp-inline { display: flex; gap: 6px; align-items: center; }
+    .bp-inline > input { flex: 1 1 auto; min-width: 0; }
+    .bp-state { margin: 0; font-size: 13px; color: #475569; }
+    .bp-state b { color: #2563eb; }
+    .bp-hist { min-height: 200px; display: flex; flex-direction: column; }
+    .bp-hist #hist { flex: 1 1 auto; min-height: 0; overflow: auto; }
+    .bp-hist h4 { margin: 0 0 6px; font-size: 14px; }
+    .bp-tot { width: 100%; border-collapse: collapse; table-layout: fixed; flex: 0 0 auto; margin-top: 6px; }
+    .bp-tot th, .bp-tot td { border: 1px solid #CBD3DB; padding: 5px 8px; font-size: 13px; }
+    .bp-tot th { background: #EDF1F4; font-weight: 700; color: #111; text-align: center; }
+    .bp-tot td { text-align: right; }
+    .bp-tot th.side { width: 44px; letter-spacing: 2px; }
+    .et-gray td { color: #9aa3ad !important; background: #f1f3f5; }
+
+    .be-radio { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+    .be-radio label { display: inline-flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; line-height: 1.3; white-space: nowrap; font-weight: 400; }
+    .be-radio input[type="radio"] {
+        -webkit-appearance: auto !important; -moz-appearance: auto !important; appearance: auto !important;
+        flex: 0 0 16px !important; width: 16px !important; height: 16px !important;
+        min-width: 16px !important; max-width: 16px !important; min-height: 16px !important;
+        margin: 0 !important; padding: 0 !important;
+        border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important;
+        vertical-align: middle !important; accent-color: #2563eb;
+    }
+    .be-radio input[type="radio"]::before, .be-radio input[type="radio"]::after { content: none !important; display: none !important; }
+
+    /* 일괄입력 팝업 (원본 w_j3011_pop) */
+    .be-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, .45); z-index: 2000; display: none; }
+    .be-modal.on { display: flex; align-items: center; justify-content: center; }
+    .be-modal-box { background: #fff; width: min(1400px, 96vw); height: 88vh; display: flex; flex-direction: column;
+                    border-radius: 8px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    .be-modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .be-modal-head h3 { margin: 0; font-size: 17px; }
+    .pop-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .pop-top label { white-space: nowrap; }
+    .pop-top select { width: 140px; }
+    .pop-top .tip { color: #1d4ed8; font-size: 12px; }
+    .pop-top .right { margin-left: auto; display: flex; gap: 6px; }
+    .pop-grid { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .pop-grid #popGrid { flex: 1 1 auto; min-height: 0; overflow: auto; }
+    #pasteBox { display: none; margin-bottom: 8px; }
+    #pasteBox.on { display: block; }
+    #pasteBox textarea { width: 100%; height: 120px; font-family: monospace; }
+  </style>
+
+  <div class="layout-contents">
+    <div style="display: flex; gap: 5px">
+      <!-- 왼쪽 : 조회조건 + 소득자 목록 (원본 d_j3011_condition · d_j3011_list2) -->
+      <section class="section bp-list" style="width: 40%;">
+        <div class="section-top">
+          <div class="search-wrap">
+            <dl><dt><label for="cFlag">기준</label></dt>
+              <dd><select class="form-control2" id="cFlag"><option value="1" selected>지급월</option><option value="0">귀속월</option></select></dd></dl>
+            <dl><dt><label for="cYm1">기간</label></dt>
+              <dd class="bp-ym"><input class="form-control2" id="cYm1" type="month"/> ~ <input class="form-control2" id="cYm2" type="month"/></dd></dl>
+            <dl><dt><label for="cGubun1">구분</label></dt>
+              <dd><select class="form-control2" id="cGubun1"></select></dd></dl>
+            <dl><dt><label for="cGubun2">상세</label></dt>
+              <dd><select class="form-control2" id="cGubun2"></select></dd></dl>
+            <dl><dt><label for="cPernm">소득자명</label></dt>
+              <dd><input class="form-control2" id="cPernm" type="text" maxlength="20"/></dd></dl>
+            <dl><dt><label for="cPaydate">지급일자</label></dt>
+              <dd><input class="form-control2" id="cPaydate" type="date"/></dd></dl>
+            <dl><dt><span class="eq"></span></dt>
+              <dd class="bp-btns">
+                <a class="btn btn-delete" id="btnSearch" title="조회 (F4)">
+                  <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘"> 검색</a>
+                <a class="btn btn-delete" id="btnExcel">엑셀</a>
+                <a class="btn btn-delete y_write_auth" id="btnList">리스트등록</a>
+              </dd></dl>
+          </div>
+        </div>
+        <div class="container-fluid">
+          <div id="grid"></div>
+          <div class="et-foot"><span id="gridCount"></span></div>
+          <!-- 원본 하단 합계 상자 : 조회 기간 전체 -->
+          <table class="bp-tot" id="tot"></table>
+        </div>
+      </section>
+
+      <!-- 오른쪽 : 입력폼 (d_j3011_input) + 지급내역 (d_j3012_preview2) -->
+      <section class="section bp-detail" style="width: 60%;">
+          <div class="tab-head">
+            <div class="button-wrap button-list">
+              <ul>
+                <li><button class="btn-excellt btn-default y_write_auth" id="btnNew" type="button"><i class="fas fa-plus"></i>신규등록</button></li>
+                <li><button class="btn-delete btn-danger y_write_auth" id="btnDelete" type="button"><i class="fas fa-trash"></i>삭제</button></li>
+                <li><button class="btn-excellt btn-defaul y_write_auth" id="btnSave" title="저장 (Ctrl+S)" type="button"><i class="fas fa-save"></i>저장</button></li>
+              </ul>
+            </div>
+          </div>
+          <div class="bp-body">
+              <p class="bp-state" id="state"></p>
+              <table class="write-table bp-form" id="form">
+                <colgroup><col style="width:120px"/><col/><col style="width:120px"/><col/></colgroup>
+                <tbody>
+                <tr>
+                  <th><label for="fPaybasic"><span class="eq">*</span>대상월</label></th>
+                  <td><input id="fPaybasic" type="month"/></td>
+                  <th><label for="fPaydate"><span class="eq">*</span>지급일자</label></th>
+                  <td><input id="fPaydate" type="date"/></td>
+                </tr>
+                <tr>
+                  <th><label for="fPaysum">지급액</label></th>
+                  <td><input class="bp-num" id="fPaysum" type="text"/></td>
+                  <th><label>지급구분</label></th>
+                  <td><div class="be-radio">
+                    <label><input name="payclafi" type="radio" value="1"/><span>일반사업소득</span></label>
+                    <label><input name="payclafi" type="radio" value="2"/><span>기타</span></label></div></td>
+                </tr>
+                <tr>
+                  <th><label for="fTaxrate">세율(%)</label></th>
+                  <td><input class="bp-num" id="fTaxrate" type="text"/></td>
+                  <th><label for="fComname">소득자</label></th>
+                  <td><input id="fComname" type="text" readonly/></td>
+                </tr>
+                <tr>
+                  <th><label for="fIncotax">소득세</label></th>
+                  <td><input class="bp-num" id="fIncotax" type="text"/></td>
+                  <th><label for="fRtax">주민세</label></th>
+                  <td><input class="bp-num" id="fRtax" type="text"/></td>
+                </tr>
+                <tr>
+                  <th><label for="fChagamt">차감지급액</label></th>
+                  <td><input class="bp-num" id="fChagamt" type="text" readonly/></td>
+                  <th><label for="fRemark">비고</label></th>
+                  <td><input id="fRemark" type="text" maxlength="50"/></td>
+                </tr>
+                <tr>
+                  <th><label for="fSpjangcd">회계처리 사업장</label></th>
+                  <td><select id="fSpjangcd"></select></td>
+                  <th><label for="fDivicd">부서</label></th>
+                  <td><select id="fDivicd"></select></td>
+                </tr>
+                </tbody>
+              </table>
+              <div class="bp-hist">
+                <h4>지급내역</h4>
+                <div id="hist"></div>
+              </div>
+          </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- 리스트등록 (원본 w_j3011_pop) -->
+  <div class="be-modal" id="popModal">
+    <div class="be-modal-box">
+      <div class="be-modal-head">
+        <h3>사업소득자 급여등록</h3>
+        <button class="ms-btn" type="button" onclick="page.closePop()">닫기</button>
+      </div>
+      <div class="pop-top">
+        <label for="pPaydate">지급일</label>
+        <select class="form-control2" id="pPaydate"></select>
+        <button class="ms-btn solid" type="button" onclick="page.popSearch()">조회</button>
+        <button class="ms-btn" type="button" onclick="page.popAdd()">행추가</button>
+        <button class="ms-btn" type="button" onclick="page.popCopy()">급여소득복사</button>
+        <button class="ms-btn" type="button" onclick="page.popPasteOpen()">엑셀가져오기</button>
+        <span class="tip">엑셀항목 : 귀속년월(202107) / 지급일(20210731) / 지급액(1000000) 순으로 복사해 붙여넣으세요.</span>
+        <div class="right">
+          <button class="ms-btn" type="button" onclick="page.popDelete()">줄 삭제</button>
+          <button class="ms-btn solid y_write_auth" type="button" onclick="page.popSave()">저장</button>
+          <button class="ms-btn" type="button" onclick="page.popExcel()">엑셀</button>
+        </div>
+      </div>
+      <div id="pasteBox">
+        <textarea id="pasteText" placeholder="엑셀에서 복사한 자료를 여기에 붙여넣으세요 (Ctrl+V)"></textarea>
+        <div style="margin-top:6px; display:flex; gap:6px; justify-content:flex-end;">
+          <button class="ms-btn solid" type="button" onclick="page.popPaste()">가져오기</button>
+          <button class="ms-btn" type="button" onclick="$('#pasteBox').removeClass('on')">취소</button>
+        </div>
+      </div>
+      <div class="pop-grid"><div id="popGrid"></div></div>
+      <div class="et-foot"><span id="popCount"></span></div>
+    </div>
+  </div>
+  <!-- 급여소득복사 (원본 w_tb_3011_copypop) -->
+  <div class="be-modal" id="copyModal" style="z-index:2100">
+    <div class="be-modal-box" style="width:360px; height:auto;">
+      <div class="be-modal-head"><h3>급여소득복사</h3></div>
+      <table class="write-table bp-form">
+        <colgroup><col style="width:110px"/><col/></colgroup>
+        <tbody>
+        <tr><th><label for="cpPaybasic">귀속년월</label></th><td><input id="cpPaybasic" type="month"/></td></tr>
+        <tr><th><label for="cpPaydate">지급일자</label></th><td><input id="cpPaydate" type="date"/></td></tr>
+        </tbody>
+      </table>
+      <div style="display:flex; gap:6px; margin-top:10px;">
+        <button class="ms-btn solid" style="flex:1" type="button" onclick="page.copyRun()">복사</button>
+        <button class="ms-btn" style="flex:1" type="button" onclick="$('#copyModal').removeClass('on')">닫기</button>
+      </div>
+    </div>
+  </div>
+  <div id="xlsGrid" style="display:none"></div>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script th:src="@{/js/common/edit-table.js}"></script>
+  <script th:src="@{/js/common/edit-table-custom.js}"></script>
+  <script type="text/javascript">
+   const PAYCLAFI = [{v: '1', n: '일반사업소득'}, {v: '2', n: '기타'}];
+   const digits = v => String(v == null ? '' : v).replace(/[^0-9]/g, '');
+   const num = v => { const n = Number(String(v == null ? '' : v).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? 0 : n; };
+   const comma = v => (v === '' || v == null) ? '' : Number(v).toLocaleString('ko-KR', {maximumFractionDigits: 2});
+   const fmtSaup = v => { const d = digits(v); return d.length === 10 ? d.slice(0, 3) + '-' + d.slice(3, 5) + '-' + d.slice(5) : (v || ''); };
+   const fmtRnum = v => { const d = digits(v); return d.length === 13 ? d.slice(0, 6) + '-' + d.slice(6) : (v || ''); };
+   const fmtYm = v => { const d = digits(v); return d.length >= 6 ? d.slice(0, 4) + '-' + d.slice(4, 6) : ''; };
+   const fmtDate = v => { const d = digits(v); return d.length === 8 ? d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6) : ''; };
+   const fmtDot = v => { const d = digits(v); return d.length === 8 ? d.slice(0, 4) + '.' + d.slice(4, 6) + '.' + d.slice(6) : (v || ''); };
+   const regno = r => r.saupnum ? fmtSaup(r.saupnum) : (r.foreryn === '2' && r.forernum ? r.forernum : fmtRnum(r.rnum));
+   // 세율 : 거주자 3% / 5%, 비거주자(9) 2% / 20%
+   const rateOf = (resclafi, payclafi) => resclafi === '9' ? (payclafi === '1' ? 2 : 20) : (payclafi === '1' ? 3 : 5);
+   const rtaxOf = inco => Math.trunc(inco / 10);
+
+   class PayPage {
+    constructor() {
+     this.url = '/api/payroll/bizinc_pay';
+     this.codes = {gubun1: [], gubun2: [], spjang: [], divi: []};
+     this.person = null;   // 왼쪽에서 고른 소득자
+     this.org = null;      // 입력폼에 불러온 원래 키 (신규면 null)
+     this.snap = '';
+     this.earners = [];
+     this.popDeleted = [];
+
+     this.grid = new EditTable('#grid', {
+      saveKey: 'bizinc_pay', countEl: '#gridCount', readOnly: true, emptyText: '자료가 없습니다.',
+      columns: [
+       {key: '_regno', header: '주민번호', width: 140, align: 'center'},
+       {key: 'comname', header: '사업소득자 명칭', width: '1*', wrap: true},
+       {key: 'conyn', header: '계약만료', width: 70, align: 'center', format: v => v === '1' ? '만료' : ''}
+      ],
+      onSelect: row => this.onPerson(row)
+     });
+
+     this.hist = new EditTable('#hist', {
+      saveKey: 'bizinc_pay_hist', readOnly: true, emptyText: '지급내역이 없습니다.', selectFirst: false,
+      columns: [
+       {key: 'paydate', header: '지급일자', width: 100, align: 'center', format: v => fmtDot(v)},
+       {key: 'paybasic', header: '귀속월', width: 80, align: 'center', format: v => fmtYm(v)},
+       {key: 'paysum', header: '지급액', width: '1*', format: 'n0', sum: true},
+       {key: 'payclafi', header: '지급구분', width: 100, align: 'center', format: v => (PAYCLAFI.find(o => o.v === v) || {}).n || v},
+       {key: 'taxrate', header: '세율(%)', width: 70, format: 'n0'},
+       {key: 'incotax', header: '소득세', width: '1*', format: 'n0', sum: true},
+       {key: 'rtax', header: '주민세', width: '1*', format: 'n0', sum: true},
+       {key: 'taxsum', header: '계', width: '1*', format: 'n0', sum: true}
+      ],
+      footerLabel: '계',
+      onSelect: row => this.onHist(row)
+     });
+
+     this.popGrid = new EditTable('#popGrid', {
+      saveKey: 'bizinc_pay_pop', countEl: '#popCount', emptyText: '지급일을 고르고 [조회] 하거나 [행추가] 하세요.',
+      footerLabel: '계', selectFirst: false,
+      columns: [
+       {key: 'rowseq', header: 'SEQ', width: 50, align: 'center', readOnly: true},
+       {key: 'seq', header: '코드', width: 110, align: 'center', readOnly: true},
+       {key: 'seq_pick', header: '사업자명', width: 160, type: 'select', options: [], sum: 'count'},
+       {key: '_regno', header: '주민번호', width: 130, align: 'center', readOnly: true},
+       {key: 'paybasic', header: '귀속년월', width: 80, align: 'center', maxLength: 6},
+       {key: 'paydate', header: '지급일', width: 95, align: 'center', maxLength: 8},
+       {key: 'payclafi', header: '지급구분', width: 110, type: 'select', options: PAYCLAFI},
+       {key: 'taxrate', header: '세율', width: 55, type: 'number'},
+       {key: 'paysum', header: '지급액', width: 110, type: 'number', format: 'n0', sum: true},
+       {key: 'incotax', header: '소득세', width: 100, type: 'number', format: 'n0', sum: true},
+       {key: 'rtax', header: '주민세', width: 90, type: 'number', format: 'n0', sum: true},
+       {key: '_cha', header: '차인지급액', width: 110, readOnly: true, format: 'n0', sum: true},
+       {key: 'remark', header: '비고', width: '1*', maxLength: 50}
+      ],
+      onChange: (row, key, v) => this.popChanged(row, key, v)
+     });
+    }
+
+    init() {
+     const t = new Date(), y = t.getFullYear(), m = String(t.getMonth() + 1).padStart(2, '0');
+     $('#cYm1').val(y + '-01'); $('#cYm2').val(y + '-' + m);
+     $('#cPaydate').val(y + '-' + m + '-' + String(t.getDate()).padStart(2, '0'));
+
+     AjaxUtil.getAsyncData(this.url + '/codes', {}, res => {
+      this.codes = (res && res.data) || this.codes;
+      const opts = (list, first) => (first != null ? '<option value="">' + first + '</option>' : '') +
+       (list || []).map(o => '<option value="' + o.v + '">' + o.n + '</option>').join('');
+      $('#cGubun1').html(opts(this.codes.gubun1, '전체')); $('#cGubun2').html(opts(this.codes.gubun2, '전체'));
+      $('#fSpjangcd').html(opts(this.codes.spjang, ''));
+      this.fillDivi('');
+      this.search();
+     });
+
+     $('#btnSearch').on('click', () => this.guard(() => this.search()));
+     $('#btnNew').on('click', () => this.guard(() => this.newRow()));
+     $('#btnSave').on('click', () => this.save());
+     $('#btnDelete').on('click', () => this.remove());
+     $('#btnExcel').on('click', () => this.excel());
+     $('#btnList').on('click', () => this.openPop());
+     $('#cPernm').on('keydown', e => { if (e.key === 'Enter') $('#btnSearch').click(); });
+     $('#fSpjangcd').on('change', () => this.fillDivi($('#fSpjangcd').val()));
+
+     // 세금 계산 (원본 dw_3 ItemChanged) — 지급액 · 지급구분 · 세율 · 소득세
+     $('#fPaysum, #fTaxrate').on('input', () => this.calc('pay'));
+     $('#fIncotax').on('input', () => this.calc('inco'));
+     $('#fRtax').on('input', () => this.calc('rtax'));
+     $('input[name=payclafi]').on('change', () => {
+      if (this.person) $('#fTaxrate').val(rateOf(this.person.resclafi || '1', $('input[name=payclafi]:checked').val()));
+      this.calc('pay');
+     });
+     $('#fPaysum, #fIncotax, #fRtax').on('blur', function () { if (this.value !== '') this.value = comma(num(this.value)); });
+
+     $(document).on('keydown', e => {
+      if ($('#popModal').hasClass('on')) return;
+      if (e.key === 'F4') { e.preventDefault(); $('#btnSearch').click(); }
+      if (e.ctrlKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); this.save(); }
+     });
+    }
+
+    fillDivi(spjangcd) {
+     const list = (this.codes.divi || []).filter(o => !spjangcd || o.s === spjangcd);
+     const cur = $('#fDivicd').val();
+     $('#fDivicd').html('<option value=""></option>' + list.map(o => '<option value="' + o.v + '">' + o.n + '</option>').join(''));
+     $('#fDivicd').val(cur);
+    }
+
+    cond() {
+     return {
+      flag: $('#cFlag').val(), ym1: digits($('#cYm1').val()), ym2: digits($('#cYm2').val()),
+      gubun1: $('#cGubun1').val(), gubun2: $('#cGubun2').val(), pernm: $('#cPernm').val().trim()
+     };
+    }
+
+    // 조회 (원본 ue_retrieve) : 기간 · 지급일자 필수
+    search(keepSeq) {
+     const c = this.cond();
+     if (c.ym1.length !== 6 || c.ym2.length !== 6) { Alert.alert('확인', '기간을 입력하십시오.'); return; }
+     if (c.ym1 > c.ym2) { Alert.alert('확인', '기간의 시작월이 끝월보다 늦습니다.'); return; }
+     if (digits($('#cPaydate').val()).length !== 8) { Alert.alert('확인', '지급일자를 입력하십시오.'); return; }
+     AjaxUtil.getAsyncData(this.url + '/read', c, res => {
+      if (res && res.success === false) { Alert.alert('확인', res.message); return; }
+      const list = (res && res.data) || [];
+      list.forEach(r => { r._regno = regno(r); r.paysum = num(r.paysum); });
+      this.person = null; this.org = null; this.snap = '';
+      this.grid.setData(list);
+      this.showTotals(c);
+      const want = keepSeq ? this.grid.findRow(r => r.seq === keepSeq) : null;
+      const first = want || (list.length ? this.grid.getView()[0] : null);
+      if (first) this.grid.select(first); else { this.hist.setData([]); this.fillForm(null); }
+     });
+    }
+
+    showTotals(c) {
+     AjaxUtil.getAsyncData(this.url + '/totals', {flag: c.flag, ym1: c.ym1, ym2: c.ym2}, res => {
+      const s = (res && res.data) || {};
+      const n = k => Math.round(num(s[k])).toLocaleString('ko-KR');
+      $('#tot').html('<colgroup><col style="width:44px"/><col style="width:80px"/><col/><col style="width:90px"/><col/></colgroup>'
+       + '<tr><th class="side" rowspan="3">' + '지급월' + '</th><th>소득세</th><td>' + n('incotax') + '</td><th>건수</th><td>' + n('cnt') + '</td></tr>'
+       + '<tr><th>주민세</th><td>' + n('rtax') + '</td><th>감면액</th><td></td></tr>'
+       + '<tr><th>지급총액</th><td>' + n('paysum') + '</td><th>차인지급액</th><td>' + n('netamt') + '</td></tr>');
+     });
+    }
+
+    // 소득자를 고르면 지급내역을 불러오고 첫 줄을 폼에 (없으면 그 사람으로 신규)
+    onPerson(row, keepKey) {
+     if (!row) return;
+     const go = () => {
+      // 사람을 바꾸는 순간 비교 기준을 비운다 — 안 그러면 새 사람 번호가 옛 기준과 달라 「수정된 자료」로 잘못 잡힘
+      this.snap = ''; this.org = null;
+      this.person = row;
+      const c = this.cond();
+      AjaxUtil.getAsyncData(this.url + '/history', {seq: row.seq, flag: c.flag, ym1: c.ym1, ym2: c.ym2}, res => {
+       const list = (res && res.data) || [];
+       list.forEach(r => ['paysum', 'taxrate', 'incotax', 'rtax', 'taxsum'].forEach(k => r[k] = num(r[k])));
+       this.hist.setData(list);
+       const want = keepKey ? this.hist.findRow(r => r.paybasic === keepKey.paybasic && r.paydate === keepKey.paydate && r.payclafi === keepKey.payclafi) : null;
+       if (want) this.hist.select(want);
+       else if (list.length) this.hist.select(this.hist.getView()[0]);
+       else this.newRow();
+      });
+     };
+     if (this.dirty()) Alert.confirm('확인', '수정된 자료가 있습니다.\n저장하시겠습니까?', () => this.save(go), () => go());
+     else go();
+    }
+
+    // 지급내역 줄을 고르면 입력폼에 (원본 dw_4 RowFocusChanged)
+    onHist(h) {
+     if (!h) return;
+     const go = () => AjaxUtil.getAsyncData(this.url + '/one',
+      {seq: h.seq, paybasic: h.paybasic, paydate: h.paydate, payclafi: h.payclafi}, res => {
+       const r = res && res.data;
+       if (!r) { this.newRow(); return; }
+       this.org = {seq: r.seq, paybasic: r.paybasic, paydate: r.paydate, payclafi: r.payclafi};
+       this.fillForm(r);
+      });
+     if (this.dirty()) Alert.confirm('확인', '수정된 자료가 있습니다.\n저장하시겠습니까?', () => this.save(go), () => go());
+     else go();
+    }
+
+    readForm() {
+     return {
+      seq: this.person ? this.person.seq : '',
+      paybasic: digits($('#fPaybasic').val()), paydate: digits($('#fPaydate').val()),
+      payclafi: $('input[name=payclafi]:checked').val() || '1',
+      paysum: num($('#fPaysum').val()), taxrate: num($('#fTaxrate').val()),
+      incotax: num($('#fIncotax').val()), rtax: num($('#fRtax').val()),
+      spjangcd: $('#fSpjangcd').val() || '', divicd: $('#fDivicd').val() || '',
+      remark: $('#fRemark').val().trim()
+     };
+    }
+
+    fillForm(r) {
+     const on = !!this.person;
+     $('#form input, #form select').not('#fComname, #fChagamt').prop('disabled', !on);
+     r = r || {};
+     $('#fPaybasic').val(fmtYm(r.paybasic)); $('#fPaydate').val(fmtDate(r.paydate));
+     $('input[name=payclafi][value="' + (r.payclafi || '1') + '"]').prop('checked', true);
+     $('#fPaysum').val(comma(r.paysum)); $('#fTaxrate').val(r.taxrate == null ? '' : num(r.taxrate));
+     $('#fIncotax').val(comma(r.incotax)); $('#fRtax').val(comma(r.rtax));
+     $('#fComname').val(this.person ? this.person.comname : '');
+     $('#fSpjangcd').val(r.spjangcd || this.codes.spjangcd || '');
+     this.fillDivi($('#fSpjangcd').val()); $('#fDivicd').val(r.divicd || '');
+     $('#fRemark').val(r.remark || '');
+     this.calc('none');
+     const slip = r.spnum ? ' · 전표 ' + fmtDot(r.spdate) + '-' + r.spnum : '';
+     $('#state').html(!on ? '왼쪽에서 소득자를 고르세요.' : this.org ? '<b>' + this.person.comname + '</b> 지급자료' + slip : '<b>' + this.person.comname + '</b> 신규 입력 중입니다.');
+     this.snap = JSON.stringify(this.readForm());
+    }
+
+    // 원본 : 지급액 바꿀 때 소득세는 절사하지 않고, 주민세 = 소득세 / 10 절사
+    calc(src) {
+     const pay = num($('#fPaysum').val()), rate = num($('#fTaxrate').val());
+     if (src === 'pay') {
+      const inco = Math.round(pay * rate / 100 * 100) / 100;
+      $('#fIncotax').val(comma(inco)); $('#fRtax').val(comma(rtaxOf(inco)));
+     } else if (src === 'inco') {
+      $('#fRtax').val(comma(rtaxOf(num($('#fIncotax').val()))));
+     }
+     $('#fChagamt').val(this.person ? comma(pay - (num($('#fIncotax').val()) + num($('#fRtax').val()))) : '');
+    }
+
+    dirty() { return this.snap !== '' && !!this.person && JSON.stringify(this.readForm()) !== this.snap; }
+
+    guard(next) {
+     if (!this.dirty()) { next(); return; }
+     Alert.confirm('확인', '수정된 자료가 있습니다.\n저장하시겠습니까?', () => this.save(next), () => next());
+    }
+
+    // 신규 (원본 ue_new) : 고른 소득자로, 지급일자는 조회조건 지급일자, 대상월은 그 달
+    newRow() {
+     if (!this.person) { Alert.alert('', '왼쪽에서 소득자를 고르세요.'); return; }
+     const pd = digits($('#cPaydate').val());
+     this.org = null;
+     this.hist.select(null);
+     this.fillForm({paybasic: pd.slice(0, 6), paydate: pd, payclafi: '1',
+      taxrate: rateOf(this.person.resclafi || '1', '1'), spjangcd: this.codes.spjangcd});
+     $('#fPaysum').focus();
+    }
+
+    // 저장 (원본 ue_Validation + ue_save)
+    save(after) {
+     if (!this.person) { Alert.alert('', '왼쪽에서 소득자를 고르세요.'); return; }
+     const f = this.readForm();
+     if (f.paybasic.length !== 6) { Alert.alert('확인', '대상월을 입력하십시오.'); $('#fPaybasic').focus(); return; }
+     if (f.paydate.length !== 8) { Alert.alert('확인', '지급일자를 입력하십시오.'); $('#fPaydate').focus(); return; }
+     AjaxUtil.postJsonData(this.url + '/save', {row: f, org: this.org}, res => {
+      if (!res || !res.success) { Alert.alert('확인', (res && res.message) || '저장 중 오류가 발생했습니다.'); return; }
+      this.snap = JSON.stringify(this.readForm());
+      if (typeof after === 'function') { Alert.alert('', '저장되었습니다.', () => after()); return; }
+      const key = {paybasic: f.paybasic, paydate: f.paydate, payclafi: f.payclafi};
+      Alert.alert('', '저장되었습니다.', () => {
+       const p = this.person; p.paysum = 1;   // 회색 표시 (다음 조회 때 정확히 다시 계산)
+       this.grid.refresh(); this.snap = ''; this.onPerson(p, key);
+      });
+     });
+    }
+
+    // 삭제 (원본 ue_delete) — 지급구분까지 PK 전체로 한 건
+    remove() {
+     if (!this.org) { Alert.alert('', '삭제할 지급자료를 아래 지급내역에서 고르세요.'); return; }
+     const k = this.org;
+     Alert.confirm('삭제', '▶ 지급자료를 삭제합니다.\n   ♣ 소득자 : ' + this.person.comname + '\n   ♣ 대상월 : ' + fmtYm(k.paybasic) + '\n   ♣ 지급일 : ' + fmtDot(k.paydate), () => {
+      AjaxUtil.postJsonData(this.url + '/delete', k, res => {
+       if (res && res.success) { this.snap = ''; Alert.alert('', '삭제되었습니다.', () => this.onPerson(this.person)); }
+       else Alert.alert('확인', (res && res.message) || '삭제 중 오류가 발생했습니다.');
+      });
+     });
+    }
+
+    // 엑셀 (원본 d_j3011_input_pop_exl4) : 조회 기간을 지급월로 걸어 모은 지급명세 + 「계」 줄
+    excel() {
+     const c = this.cond();
+     AjaxUtil.getAsyncData(this.url + '/excel', {ym1: c.ym1, ym2: c.ym2}, res => {
+      const list = (res && res.data) || [];
+      if (!list.length) { Alert.alert('', '내보낼 자료가 없습니다.'); return; }
+      list.forEach(r => {
+       ['paysum', 'incotax', 'rtax'].forEach(k => r[k] = num(r[k]));
+       r._saup = fmtSaup(r.saupnum); r._rnum = r.foreryn === '2' && r.forernum ? r.forernum : fmtRnum(r.rnum);
+       r._ded = r.incotax + r.rtax; r._net = r.paysum - r._ded; r.cnt = 1;
+      });
+      const s = k => list.reduce((a, r) => a + r[k], 0);
+      list.push({paybasic: '계', seq: list.length + '명', paysum: s('paysum'), incotax: s('incotax'), rtax: s('rtax'),
+       _ded: s('_ded'), _net: s('_net'), cnt: list.length});
+      const cols = [
+       {key: 'paybasic', header: '귀속년월'}, {key: 'paydate', header: '지급일'}, {key: 'seq', header: '코드'},
+       {key: 'comname', header: '사업자명'}, {key: '_saup', header: '사업자번호'}, {key: '_rnum', header: '주민번호'},
+       {key: 'cnt', header: '건수', type: 'number'}, {key: 'paysum', header: '지급액', type: 'number'},
+       {key: 'incotax', header: '소득세', type: 'number'}, {key: 'rtax', header: '주민세', type: 'number'},
+       {key: '_ded', header: '공제합계', type: 'number'}, {key: '_net', header: '차인지급액', type: 'number'}
+      ];
+      const g = new EditTable('#xlsGrid', {readOnly: true, columns: cols});
+      g.setData(list);
+      g.exportXlsx('사업소득지급명세_' + c.ym1 + '_' + c.ym2, cols);
+     });
+    }
+
+    // ── 리스트등록 팝업 (원본 w_j3011_pop) ─────────────────
+    openPop() {
+     $('#popModal').addClass('on');
+     this.popDeleted = [];
+     this.popGrid.setData([]);
+     AjaxUtil.getAsyncData(this.url + '/pop/earners', {}, res => {
+      this.earners = (res && res.data) || [];
+      this.popGrid.updateColumn('seq_pick', {options: this.earners.map(e => ({v: e.seq, n: e.comname}))});
+     });
+     AjaxUtil.getAsyncData(this.url + '/pop/paydates', {}, res => {
+      const list = (res && res.data) || [];
+      $('#pPaydate').html('<option value=""></option>' + list.map(r => '<option value="' + r.paydate + '">' + fmtDot(r.paydate) + '</option>').join(''));
+     });
+    }
+
+    closePop() {
+     const go = () => { $('#popModal').removeClass('on'); $('#pasteBox').removeClass('on'); this.search(this.person && this.person.seq); };
+     if (this.popGrid.hasChanges() || this.popDeleted.length) Alert.confirm('확인', '저장하지 않은 자료가 있습니다.\n닫으시겠습니까?', go);
+     else go();
+    }
+
+    popRow(r) {
+     const e = this.earners.find(x => x.seq === r.seq) || {};
+     r.seq_pick = r.seq || '';
+     r.resclafi = r.resclafi || e.resclafi || '1';
+     r._regno = r.seq ? regno(r.comname ? r : e) : '';
+     ['paysum', 'taxrate', 'incotax', 'rtax'].forEach(k => r[k] = r[k] == null || r[k] === '' ? null : num(r[k]));
+     r._cha = num(r.paysum) - (num(r.incotax) + num(r.rtax));
+     return r;
+    }
+
+    popSearch() {
+     const pd = $('#pPaydate').val();
+     if (!pd) { Alert.alert('확인', '지급일을 고르세요.'); return; }
+     AjaxUtil.getAsyncData(this.url + '/pop/read', {paydate: pd}, res => {
+      const list = ((res && res.data) || []).map(r => {
+       this.popRow(r);
+       r._org = {seq: r.seq, paybasic: r.paybasic, paydate: r.paydate, payclafi: r.payclafi};
+       return r;
+      });
+      this.popDeleted = [];
+      this.popGrid.setData(list);
+     });
+    }
+
+    renumber() { this.popGrid.getData().forEach((r, i) => { r.rowseq = i + 1; }); this.popGrid.refresh(); }
+
+    // [행추가] : 고른 줄 아래에, 윗줄의 귀속년월 · 지급일을 이어받고 세율 3
+    popAdd() {
+     const cur = this.popGrid.current();
+     const data = this.popGrid.getData();
+     const prev = cur || data[data.length - 1];
+     const row = this.popRow({seq: '', paybasic: prev ? prev.paybasic : '', paydate: prev ? prev.paydate : ($('#pPaydate').val() || ''),
+      payclafi: '1', taxrate: 3, spjangcd: this.codes.spjangcd});
+     this.popGrid.addRow(row, {after: cur || undefined, focus: 'seq_pick'});
+     this.renumber();
+    }
+
+    // 칸을 고칠 때마다 다시 계산 (원본 dw_1 EditChanged)
+    popChanged(row, key, v) {
+     if (key === 'seq_pick') {
+      const e = this.earners.find(x => x.seq === v) || {};
+      row.seq = e.seq || ''; row.comname = e.comname || ''; row.resclafi = e.resclafi || '1';
+      row.saupnum = e.saupnum; row.rnum = e.rnum; row.forernum = e.forernum; row.foreryn = e.foreryn;
+      row._regno = e.seq ? regno(e) : '';
+     } else if (key === 'paysum') {
+      const inco = num(v) * num(row.taxrate) / 100;
+      row.incotax = inco; row.rtax = rtaxOf(inco);
+     } else if (key === 'payclafi') {
+      row.taxrate = rateOf(row.resclafi || '1', v);
+      const inco = num(row.paysum) * row.taxrate / 100;
+      row.incotax = inco; row.rtax = rtaxOf(inco);
+     } else if (key === 'incotax') {
+      row.rtax = rtaxOf(num(v));
+     }
+     row._cha = num(row.paysum) - (num(row.incotax) + num(row.rtax));
+     // 입력 중인 칸은 그대로 두고 계산된 칸만 다시 그림
+     ['seq', '_regno', 'taxrate', 'incotax', 'rtax', '_cha'].filter(k => k !== key).forEach(k => this.popGrid.refreshCell(row, k));
+    }
+
+    // [엑셀가져오기] : 브라우저는 클립보드를 바로 못 읽으므로 붙여넣기 칸을 연다
+    popPasteOpen() { $('#pasteText').val(''); $('#pasteBox').addClass('on'); $('#pasteText').focus(); }
+
+    popPaste() {
+     const lines = $('#pasteText').val().split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+     if (!lines.length) { Alert.alert('등록', '저장된 자료가 없습니다.'); return; }
+     let n = 0;
+     lines.forEach(l => {
+      const c = l.split('\t');
+      const amt = Math.trunc(num(c[2]));
+      const inco = Math.trunc(amt * 3 / 100);   // 원본 변수가 Long 이라 원 미만 절사
+      this.popGrid.addRow(this.popRow({seq: '', paybasic: digits(c[0]).slice(0, 6), paydate: digits(c[1]).slice(0, 8),
+       payclafi: '1', taxrate: 3, paysum: amt, incotax: inco, rtax: rtaxOf(inco), spjangcd: this.codes.spjangcd}), {focus: false});
+      n++;
+     });
+     this.renumber();
+     $('#pasteBox').removeClass('on');
+     Alert.alert('', n + '줄을 가져왔습니다. 각 줄의 사업자명을 고른 뒤 저장하세요.');
+    }
+
+    // [급여소득복사] (원본 w_tb_3011_copypop) : 지급일자 오늘, 귀속년월 이번 달
+    popCopy() {
+     if (!this.popGrid.getData().length || !$('#pPaydate').val()) { Alert.alert('확인', '복사하고자 하는 지급일자를 선택하세요'); return; }
+     const t = new Date(), y = t.getFullYear(), m = String(t.getMonth() + 1).padStart(2, '0');
+     $('#cpPaybasic').val(y + '-' + m);
+     $('#cpPaydate').val(y + '-' + m + '-' + String(t.getDate()).padStart(2, '0'));
+     $('#copyModal').addClass('on');
+    }
+
+    // 원본 wf_paycopy : 고른 지급일의 자료를 새 귀속년월 · 지급일자로 복사 (DB 에 바로)
+    copyRun() {
+     const nb = digits($('#cpPaybasic').val()), nd = digits($('#cpPaydate').val()), src = $('#pPaydate').val();
+     if (nb.length !== 6) { Alert.alert('확인', '귀속년월을 입력하세요'); return; }
+     if (nd.length !== 8) { Alert.alert('확인', '지급일자를 입력하세요'); return; }
+     AjaxUtil.getAsyncData(this.url + '/pop/copy/check', {srcPaydate: src, paybasic: nb, paydate: nd}, res => {
+      const c = (res && res.data) || {};
+      if (!c.srcPaybasic) { Alert.alert('확인', '복사하고자 하는 지급일자를 다시 선택하세요'); return; }
+      const run = replace => AjaxUtil.postJsonData(this.url + '/pop/copy',
+       {srcPaydate: src, srcPaybasic: c.srcPaybasic, paybasic: nb, paydate: nd, replace}, r => {
+        if (!r || !r.success) { Alert.alert('확인', (r && r.message) || '복사 중 오류가 발생했습니다.'); return; }
+        $('#copyModal').removeClass('on');
+        Alert.alert('확인', '복사되었습니다.', () => {
+         AjaxUtil.getAsyncData(this.url + '/pop/paydates', {}, r2 => {
+          const list = (r2 && r2.data) || [];
+          $('#pPaydate').html('<option value=""></option>' + list.map(x => '<option value="' + x.paydate + '">' + fmtDot(x.paydate) + '</option>').join(''));
+          $('#pPaydate').val(src);
+         });
+        });
+       });
+      Alert.confirm('확인', '귀속년월 : ' + fmtYm(c.srcPaybasic) + ' --> ' + fmtYm(nb) + ' 로 복사하시겠습니까?', () => {
+       if (c.exists > 0) Alert.confirm('확인', '이미 등록되어있습니다. 삭제후 진행하시겠습니까?', () => run(true));
+       else run(false);
+      });
+     });
+    }
+
+    popDelete() {
+     const cur = this.popGrid.current();
+     if (!cur) { Alert.alert('', '삭제할 줄을 고르세요.'); return; }
+     if (cur._org) this.popDeleted.push(cur._org);
+     this.popGrid.removeRow(cur);
+     this.renumber();
+    }
+
+    popSave() {
+     const rows = this.popGrid.getData().filter(r => r._new || r._dirty);
+     if (!rows.length && !this.popDeleted.length) { Alert.alert('', '저장할 자료가 없습니다.'); return; }
+     for (const r of rows) {
+      if (!r.seq) { Alert.alert('확인', r.rowseq + '번째 줄 : 사업자명을 고르세요.'); return; }
+      if (digits(r.paybasic).length !== 6) { Alert.alert('확인', r.rowseq + '번째 줄 : 귀속년월(6자리)을 입력하세요.'); return; }
+      if (digits(r.paydate).length !== 8) { Alert.alert('확인', r.rowseq + '번째 줄 : 지급일(8자리)을 입력하세요.'); return; }
+     }
+     const send = rows.map(r => ({
+      seq: r.seq, paybasic: digits(r.paybasic), paydate: digits(r.paydate), payclafi: r.payclafi || '1',
+      paysum: num(r.paysum), taxrate: num(r.taxrate), incotax: num(r.incotax), rtax: num(r.rtax),
+      spjangcd: r.spjangcd || '', divicd: r.divicd || '', remark: r.remark || '', rowseq: r.rowseq, _org: r._org || null
+     }));
+     AjaxUtil.postJsonData(this.url + '/pop/save', {rows: send, deleted: this.popDeleted}, res => {
+      if (!res || !res.success) { Alert.alert('확인', (res && res.message) || '저장 중 오류가 발생했습니다.'); return; }
+      Alert.alert('', '저장되었습니다.', () => {
+       const pd = digits((send[0] || {}).paydate) || $('#pPaydate').val();
+       AjaxUtil.getAsyncData(this.url + '/pop/paydates', {}, r2 => {
+        const list = (r2 && r2.data) || [];
+        $('#pPaydate').html('<option value=""></option>' + list.map(x => '<option value="' + x.paydate + '">' + fmtDot(x.paydate) + '</option>').join(''));
+        if (pd) { $('#pPaydate').val(pd); this.popSearch(); }
+       });
+      });
+     });
+    }
+
+    popExcel() {
+     if (!this.popGrid.getView().length) { Alert.alert('', '내보낼 자료가 없습니다.'); return; }
+     this.popGrid.exportXlsx('사업소득자급여등록');
+    }
+   }
+
+   const page = new PayPage();
+   $(document).ready(() => page.init());
+  </script>
+</th:block>
+</html>

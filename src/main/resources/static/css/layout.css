@@ -433,7 +433,7 @@ header .right .alarm-box .alarm-tab-links .active a {
     border-bottom: 2px solid #3069B3;
 }
 
-.num {
+header .alarm .num {
     display: inline-flex;
     justify-content: center;
     text-align: center;
@@ -1056,7 +1056,21 @@ footer {
 .layout-contents {
     /*min-height: calc(100% - 70px);*/
     box-sizing: border-box;
-    padding: 20px 30px 30px 30px;
+    padding: 20px 30px 0 30px;   /* 아래 여백 없음 (2026-11-27, JooAi 와 같게 · 푸터 숨김) */
+}
+
+/* 맨 아래 상자는 아래 여백 없이 화면 끝까지 (2026-11-27, JooAi layout.css 와 같은 규칙)
+ *  sf21_frame.css 의 section { margin-bottom:10px !important } 를 맨 아래 줄에서만 끈다. 위아래로 쌓인 상자 사이 간격은 그대로 */
+.layout-contents > :nth-last-child(1 of :not(script, style, input, template)),
+.layout-contents > :nth-last-child(1 of :not(script, style, input, template)) > section,
+.layout-contents > :nth-last-child(1 of :not(script, style, input, template)) > .tab-wrap {
+    margin-bottom: 0 !important;
+}
+
+/* 화면마다 .layout-contents 아래에 붙어 있던 «Copyright 0000 corp» 푸터(약 34개 화면, 높이 28px + 위 여백 24px).
+ *  본문이 100vh 라 이 푸터만큼 화면이 넘쳐 스크롤이 생기고, 위로 밀리면 제목이 가려졌다 (2026-11-27) */
+.layout-contents ~ footer {
+    display: none !important;
 }
 
 
@@ -1152,78 +1166,72 @@ section .section-top {
 /*=================================================================================
  * TAB style
  =================================================================================*/
+/* 탭 공통 모양 (2026-11-23) : 거래처 정보 탭 기준 — 밑줄 위에 얹힌 탭
+ *  글자는 진한 색(#222), 탭마다 연회색 바탕 + 테두리로 칸을 나누고, 고른 탭(li.active)은 흰 바탕 + 위쪽 파란 줄 + 굵은 글자
+ *  예전 : 파란 바탕 탭(섹션 밖) / 둥근 묶음 버튼 탭(섹션 안) 두 가지였음 → 모두 같은 모양 */
 .tab-links {
     display: flex;
-    margin-left: 1px;
-    margin-bottom: -1px;
-    /*overflow: hidden;*/
+    flex-wrap: wrap;
+    gap: 3px;
+    margin: 0 0 10px;
+    border-bottom: 1px solid #c9d1dc;
 }
 
 .tab-links li {
     position: relative;
 }
 
-.tab-links li:first-child a {
-    border-radius: 6px 0 0 0;
-}
-
-.tab-links li:last-child a {
-    border-radius: 0 6px 0 0;
-}
-
 .tab-links li a {
     display: inline-flex;
     justify-content: center;
-    align-items: center;         /* 세로 중앙 정렬 추가 */
-    min-width: 80px;             /* 90 → 80 */
-    height: 32px;                /* 높이를 명시 (padding 대신 높이로 관리) */
-    padding: 0 20px;             /* 8px 32px → 좌우만 */
-    background-color: #3069B3;
-    color: #fff;
-    font-size: 14px;             /* 17 → 14 */
+    align-items: center;
+    min-width: 0;
+    margin: 0 0 -1px;
+    padding: 7px 16px;
+    border: 1px solid #d3d9e2;
+    border-bottom-color: #c9d1dc;
+    border-radius: 5px 5px 0 0;
+    background: #eef1f5;
+    color: #222;
+    font-size: 13px;
     font-weight: 500;
-    text-align: center;
-    transition: all .3s;
+    white-space: nowrap;
+    transition: background-color .15s;
+}
+
+.tab-links li a:hover {
+    background: #e2e7ee;
+    color: #111;
 }
 
 .tab-links li.active a {
-    background-color: #fff;
-    color: #03428E;
+    border-color: #c9d1dc;
+    border-bottom-color: #fff;      /* 밑줄을 덮어 아래 내용과 이어짐 */
+    background: #fff;
+    box-shadow: inset 0 2px 0 #2b5fc4;   /* 위쪽 파란 줄 */
+    color: #111;
     font-weight: 700;
 }
 
-section .tab-links {
-}
-
-section .tab-links li a {
-    height: 30px;                /* 섹션 내부 탭은 버튼과 동일하게 30px */
-    padding: 0 12px;             /* 8px 10px → 좌우만 */
-    margin-right: -1px;
-    border: 1px solid #E4E4E4;
+/* 섹션 밖에 놓인 탭 묶음(.tab-wrap) : 거래처 정보처럼 흰 상자 안에 탭 + 내용이 들어가게 (2026-11-23)
+ *  공정정보 등은 탭이 회색 바탕 위에 따로 있고 내용 상자만 흰색이었음 → 탭 묶음 전체를 section 과 같은 흰 상자로 */
+.layout-contents .tab-wrap:not(section .tab-wrap) {
+    padding: 20px;
+    margin-bottom: 10px;
     background-color: #fff;
-    color: #808080;
+    border: 1px solid #E5E7EC;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+    overflow: auto;
 }
 
-section .tab-links li:first-child a {
-    border-radius: 10px 0 0 10px;   /* 12 → 10, 높이 30px에 맞춰 */
-}
-
-section .tab-links li:last-child a {
-    border-radius: 0 10px 10px 0;
-    margin-right: 0;
-}
-
-section .tab-links li.active a {
-    background-color: #3069B3;
-    color: #fff;
-}
-
+/* 탭 아래 상자 : 탭이 밑줄 위에 따로 서므로 네 모서리 모두 둥글게 (예전엔 탭이 붙어 왼쪽 위가 각졌음) */
 .tab-contents > section, .tab-item > .row > section:first-child {
-    border-radius: 0 15px 15px 15px;
+    border-radius: 15px;
 }
 
 .tab-contents > .row > section {
-    border-radius: 0 15px 15px 15px;
+    border-radius: 15px;
 }
 
 .tab-item {

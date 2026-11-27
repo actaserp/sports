@@ -43,12 +43,12 @@
            마우스가 없는 기기(pointer:coarse)에서만 감춘다 — PC 관리 화면은 그대로다.
            ★ LayoutState 가 .footer 의 outerHeight() 로 본문 높이를 계산하는데,
              숨기면 0 이 되어 본문이 그만큼 넓어진다. 계산식은 손댈 필요 없다. */
-        @media (pointer: coarse) {
-            /* 푸터를 감추면 그 자리가 그대로 빈다 — 본문 높이가 푸터를 뺀 값으로
-               계산돼 있기 때문이다. 감추는 것과 «그만큼 늘리는 것»을 같이 해야 한다. */
-            .footer { display: none !important; }
-            .tab-content { height: calc(100% - var(--tabs-h, 0px)) !important; }
-        }
+        /* (2026-11-27) PC 에서도 푸터를 숨긴다 — 본문을 화면 맨 아래까지 쓰기 위해 (JooAi 와 같게).
+           예전에는 터치 기기(@media (pointer: coarse))에서만 숨겼다.
+           푸터를 감추면 그 자리가 그대로 빈다 — 본문 높이가 푸터를 뺀 값으로
+           계산돼 있기 때문이다. 감추는 것과 «그만큼 늘리는 것»을 같이 해야 한다. */
+        .footer { display: none !important; }
+        .tab-content { height: calc(100% - var(--tabs-h, 0px)) !important; }
 
         .left {
             cursor: pointer;
@@ -313,6 +313,26 @@
 
 
 
+    </style>
+    <style>
+        /* ── 2026-11-27 메인 틀 높이 정리 (JooAi index.html 2026-11-23 과 같은 규칙) ──
+           .con_area 가 헤더 아래에서 height:100% 로 시작해 문서가 화면보다 헤더(68px)만큼 길었다.
+           → 화면 본문(iframe) 아래쪽이 브라우저 밖으로 밀려 «아래가 잘려» 보였다.
+           → 페이지 스크롤을 막고, 본문 = 헤더 아래 ~ 화면 맨 아래, 탭 본문 = 탭 줄 아래를 꽉 채움.
+             main.css · nth-tabs.css 는 그대로 두고 여기서 덮는다. LayoutState 가 넣는 인라인 높이 · 위치는 !important 로 무시 */
+        html, body { height: 100%; overflow: hidden; }
+        .page-wrapper { height: 100%; min-height: 0; overflow: hidden; }
+        .page-wrapper > .menu_area,
+        .page-wrapper > .con_area { top: 68px; bottom: 0; height: auto !important; align-self: stretch; }   /* main.css 의 align-self:baseline 이면 최신 크롬에서 위아래로 안 늘어남 */
+        .page-wrapper.layout-collapsed > .con_area { top: 0; }
+        .con_area .nth-tabs { display: flex; flex-direction: column; height: 100% !important; }
+        .con_area .nth-tabs > .page-tabs { flex: 0 0 auto; }
+        .con_area .nth-tabs > .tab-content {
+            position: relative !important; top: auto !important; left: 0 !important;
+            width: 100% !important; height: auto !important; flex: 1 1 auto; min-height: 0;
+        }
+        .con_area .tab-content > .tab-pane,
+        .con_area .nth-tabs-frame { height: 100% !important; }
     </style>
 </head>
 
@@ -783,6 +803,7 @@
                     $('#navbarBarMenu2 .open_menu').toggleClass('menu_open', collapsed);
                     $('.menu_area').toggleClass('hidden', collapsed);
                     $('.dashboard-layout-header').toggleClass('header-collapsed', collapsed);
+                    $('.page-wrapper').toggleClass('layout-collapsed', collapsed);   // 2026-11-27 헤더 숨기면 본문을 맨 위부터 (JooAi 와 같게)
 
                     // 태블릿에서 푸터를 CSS 로 감추면 outerHeight() 가 0 이 된다(의도된 값)
                     let footerH = $('.footer').is(':visible') ? ($('.footer').outerHeight() || 0) : 0;

@@ -232,7 +232,7 @@ public class CardHistoryService {
 					cardNum,
 					searchfrdate,
 					searchtodate
-				);
+				)[0];   // [0] 저장 건수 ([1] 중복 건수)
 
 				totalSavedCount += savedCount;
 			}
@@ -249,10 +249,12 @@ public class CardHistoryService {
 		return result;
 	}
 
-	private int collectPeriodCardApprovalLog(
+	/** @return [0] 새로 저장한 건수, [1] 이미 저장돼 있어 건너뛴 건수 */
+	private int[] collectPeriodCardApprovalLog(
 		String spjangcd, String custcd, String corpNum, String id, String cardNum, String startDate, String endDate) {
 
 		int totalSavedCount = 0;
+		int dupCount = 0;
 
 		try {
 
@@ -348,7 +350,8 @@ public class CardHistoryService {
 					int count = ((Number) checkResult.get(0).get("cnt")).intValue();
 
 					if (count > 0) {
-						log.info("[중복 제외] 이미 저장된 데이터 - useKey={}, approvalNum={}, cardNum={}",
+						dupCount++;
+						log.debug("[중복 제외] 이미 저장된 데이터 - useKey={}, approvalNum={}, cardNum={}",
 								nvl(logItem.getUseKey()),
 								nvl(logItem.getApprovalNum()),
 								maskCardNum(logItem.getCardNum()));
@@ -411,7 +414,7 @@ public class CardHistoryService {
 					}
 				}
 				if (currentPage >= result.getMaxPageNum()) {
-					log.info("[페이지 종료] 마지막 페이지 도달 - currentPage={}, maxPageNum={}",
+					log.debug("[페이지 종료] 마지막 페이지 도달 - currentPage={}, maxPageNum={}",
 						currentPage, result.getMaxPageNum());
 					break;
 				}
@@ -419,14 +422,14 @@ public class CardHistoryService {
 				currentPage++;
 			}
 
-			log.info("========== 카드내역 조회 종료 - 총 저장건수: {} ==========", totalSavedCount);
+			log.debug("========== 카드내역 조회 종료 - 저장: {}건, 중복: {}건 ==========", totalSavedCount, dupCount);
 
 		} catch (Exception e) {
 			log.error("카드내역 조회 오류 - spjangcd={}, corpNum={}, id={}, cardNum={}, startDate={}, endDate={}",
 				spjangcd, corpNum, id, maskCardNum(cardNum), startDate, endDate, e);
 		}
 
-		return totalSavedCount;
+		return new int[]{ totalSavedCount, dupCount };
 	}
 
 	private BigDecimal toBigDecimal(String value) {
@@ -655,7 +658,7 @@ public class CardHistoryService {
 
 				this.sqlRunner.execute(updateSql, dicParam);
 
-				log.info("저장 완료 PK={} / {}", bnkcode, bizNo);
+				log.debug("저장 완료 PK={} / {}", bnkcode, bizNo);
 
 				updateCount++;
 			}
@@ -715,7 +718,7 @@ public class CardHistoryService {
 				List<Map<String, String>> bizList = getBizInfoFromTenantDb(custcd);
 
 				if (bizList.isEmpty()) {
-					log.warn("스케줄러 - 외부DB 사업장 없음, custcd={}", custcd);
+					log.debug("스케줄러 - 외부DB 사업장 없음, 사업장={}({})", spjangcd, custcd);
 					continue;
 				}
 
@@ -735,31 +738,37 @@ public class CardHistoryService {
 					List<Map<String, Object>> cards = getbaroCardList();
 
 					if (cards == null || cards.isEmpty()) {
-						log.info("스케줄러 - 등록된 카드 없음, spjangcd={}", realSpjangcd);
+						log.debug("스케줄러 - 등록된 카드 없음, 사업장={}({})", spjangcd, custcd);
 						continue;
 					}
 
 					int totalSavedCount = 0;
+					int totalDupCount   = 0;
+					int noIdCount       = 0;   // 바로빌 아이디가 없는 카드
 
 					for (Map<String, Object> card : cards) {
 						String cardNum = getString(card.get("cardnum"));
 						String id      = getString(card.get("baroid"));
 
 						if (cardNum.isEmpty() || id.isEmpty()) {
-							log.warn("스케줄러 카드정보 누락 cardNum={}, id={}", cardNum, id);
+							noIdCount++;
+							log.debug("스케줄러 카드정보 누락 cardNum={}, id={}", cardNum, id);
 							continue;
 						}
 
 						cardNum = cardNum.replace("-", "").replace(" ", "");
 
-						int savedCount = collectPeriodCardApprovalLog(
+						int[] r = collectPeriodCardApprovalLog(
 							realSpjangcd, realCustcd, corpNum, id, cardNum, startDate, endDate
 						);
 
-						totalSavedCount += savedCount;
+						totalSavedCount += r[0];
+						totalDupCount   += r[1];
 					}
 
-					log.info("스케줄러 카드내역 수집 완료 - spjangcd={}, 저장건수={}", realSpjangcd, totalSavedCount);
+					// 사업장별 합계 한 줄 (사업장 표시는 ZZ 대신 라우팅 키 · 회사코드)
+					log.info("카드내역 수집 완료 - 사업장={}({}), 신규 {}건, 중복 {}건, 아이디 없는 카드 {}장",
+						spjangcd, custcd, totalSavedCount, totalDupCount, noIdCount);
 				}
 
 			} catch (Exception e) {
@@ -1103,7 +1112,6 @@ public class CardHistoryService {
                         :inputdate, :rowseq
                     )
                     """;
-					this.sqlRunner.execute(insertSql, debitParam);  // ✅ creditParam 으로 확인 필요
 					this.sqlRunner.execute(insertSql, creditParam);
 				}
 

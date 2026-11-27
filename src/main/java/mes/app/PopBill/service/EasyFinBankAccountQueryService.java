@@ -7,7 +7,6 @@ import mes.domain.services.SqlRunner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -92,11 +91,11 @@ public class EasyFinBankAccountQueryService {
 
 		// ✅ 비동기 스레드에 테넌트 컨텍스트 세팅 (없으면 dbKey=null로 라우팅 실패)
 		TenantContext.set(spjangcd);
-		log.info("===== saveBankDataAsync 시작 - spjangcd={}, custcd={} =====", spjangcd, custcd);
+		log.debug("===== saveBankDataAsync 시작 - spjangcd={}, custcd={} =====", spjangcd, custcd);
 
 		try {
 			if (list == null || list.isEmpty()) {
-				log.info("저장할 거래내역이 없습니다.");
+				log.debug("저장할 거래내역이 없습니다.");
 				return;
 			}
 
@@ -104,12 +103,12 @@ public class EasyFinBankAccountQueryService {
 															 .map(EasyFinBankSearchDetail::getTid)
 															 .toList();
 
-			log.info("중복 체크 tid 총 {}건", tidList.size());
+			log.debug("중복 체크 tid 총 {}건", tidList.size());
 
 			List<Map<String, Object>> existingList = getExistingTids(custcd, spjangcd, bankcd, tidList);
 			if (existingList == null) existingList = List.of();
 
-			log.info("기존 저장된 tid 수: {}건", existingList.size());
+			log.debug("기존 저장된 tid 수: {}건", existingList.size());
 
 			Set<String> existingTids = existingList.stream()
 																	 .map(row -> (String) row.get("fintech_use_num"))
@@ -200,7 +199,7 @@ public class EasyFinBankAccountQueryService {
                 """;
 
 					sqlRunner.execute(sql, param);
-					log.info("저장 성공 tid={}", tid);
+					log.debug("저장 성공 tid={}", tid);
 					savedCount++;
 
 				} catch (Exception e) {
@@ -208,7 +207,8 @@ public class EasyFinBankAccountQueryService {
 				}
 			}
 
-			log.info("===== saveBankDataAsync 완료 - 저장: {}건, 스킵: {}건 =====", savedCount, skipCount);
+			log.info("계좌내역 수집 완료 - 사업장={}({}), 계좌={} {}, 신규 {}건, 중복 {}건",
+				spjangcd, custcd, bankname, accountNumber, savedCount, skipCount);
 
 		} finally {
 			// ✅ 스레드 재사용 시 컨텍스트 오염 방지
@@ -231,7 +231,7 @@ public class EasyFinBankAccountQueryService {
 	private List<Map<String, Object>> getExistingTids(
 		String custcd, String spjangcd, String bankcd, List<String> tidList) {
 
-		log.info("중복 tid 조회");
+		log.debug("중복 tid 조회");
 
 		MapSqlParameterSource param = new MapSqlParameterSource();
 		param.addValue("custcd",   custcd);

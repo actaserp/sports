@@ -1,0 +1,573 @@
+<html layout:decorate="~{layout_page}">
+<th:block layout:fragment="content">
+  <!-- 사업소득자등록 (원본 w_j3010) — 메뉴코드 wm_bizinc_earner -->
+  <link rel="stylesheet" th:href="@{/css/common/ms-page.css}"/>
+  <link rel="stylesheet" th:href="@{/css/common/edit-table.css}"/>
+  <style>
+    /* 탭 하나뿐이라 탭 없이 버튼만 오른쪽에 */
+    .tab-head { display: flex; justify-content: flex-end; margin: 0 0 10px; }
+    /* 오른쪽 탭 머리 버튼 (거래처 정보 화면과 같은 규칙) */
+    .button-list { display: flex; justify-content: flex-end; list-style: none; padding: 0; margin: 0; gap: 10px; }
+    .button-list li { margin: 0; padding: 0; }
+    .button-wrap { margin-left: auto; }
+    .button-wrap ul { display: flex; gap: 10px; padding: 0; margin: 0; list-style: none; }
+
+    /* 목록 : 상자 안에서만 스크롤 */
+    .be-list .container-fluid { display: flex; flex-direction: column; min-height: 0; }
+    .be-list #grid { flex: 1 1 auto; min-height: 0; overflow: auto; }
+    .be-list .et-foot { flex: 0 0 auto; }
+    .be-srch-btns { display: flex; gap: 6px; }
+    /* 조회줄 : 좁은 상자라 칸이 찌그러지며 이름이 두 줄로 깨지던 것 → 칸 너비를 정하고 넘치면 다음 줄로 */
+    .be-list .search-wrap { flex-wrap: wrap; justify-content: flex-start; align-items: flex-end; gap: 8px 12px; }
+    .be-list .search-wrap dl { flex: 0 0 auto; margin: 0; }
+    .be-list .search-wrap dl dt, .be-list .search-wrap dl dt label { white-space: nowrap; }
+    .be-list .search-wrap input[type=text] { width: 120px !important; }
+    .be-list .search-wrap select { width: 110px !important; }
+    .be-srch-btns .btn { white-space: nowrap; }
+    /* 아래 잘림 : 두 상자가 화면 높이를 넘지 않게 (넘치는 내용은 상자 안 스크롤) */
+    .be-list, .be-detail { overflow: hidden; min-height: 0; }
+    .be-list .container-fluid { flex: 1 1 auto; overflow: hidden; }
+    .be-detail { display: flex; flex-direction: column; }
+    /* 목록 아래 계 · 총인원 (원본 board_1 / board_2) — 목록과 같은 칸 너비 */
+    .be-sum { width: 100%; border-collapse: collapse; table-layout: fixed; flex: 0 0 auto; margin-top: -1px; }
+    .be-sum td { border: 1px solid #CBD3DB; padding: 6px 8px; font-size: 13px; font-weight: 700; color: #111; background: #EDF1F4; }
+    .be-sum td.lbl { text-align: center; letter-spacing: 2px; }
+    .be-sum td.cnt { text-align: right; }
+    .be-sum tr.total td { background: #DCE3E9; }
+
+    /* 입력폼 : 상자 안에서만 스크롤 */
+    .be-detail .be-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    .be-form input[type=text], .be-form input[type=date], .be-form select { width: 100%; box-sizing: border-box; }
+    .be-form .be-inline { display: flex; gap: 6px; align-items: center; }
+    .be-form .be-inline > input { flex: 1 1 auto; min-width: 0; }
+    .be-form .be-inline .be-zip { flex: 0 0 100px; }
+    .be-form .be-inline button { flex: 0 0 auto; white-space: nowrap; }
+    .be-state { margin: 0 0 6px; font-size: 13px; color: #475569; }
+    .be-state b { color: #2563eb; }
+
+    /* 라디오 · 체크 — 화면 개발 규칙(전역 ui.css 동그라미 끄기) */
+    .be-radio { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+    .be-radio.grid { display: grid; grid-template-columns: repeat(2, minmax(140px, 1fr)); gap: 6px 18px; }
+    .be-radio label { display: inline-flex; align-items: center; gap: 6px; margin: 0; cursor: pointer;
+                      line-height: 1.3; white-space: nowrap; font-weight: 400; }
+    .be-radio input[type="radio"], .be-chk input[type="checkbox"] {
+        -webkit-appearance: auto !important; -moz-appearance: auto !important; appearance: auto !important;
+        flex: 0 0 16px !important; width: 16px !important; height: 16px !important;
+        min-width: 16px !important; max-width: 16px !important; min-height: 16px !important;
+        margin: 0 !important; padding: 0 !important;
+        border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important;
+        vertical-align: middle !important; accent-color: #2563eb;
+    }
+    .be-radio input[type="radio"]::before, .be-radio input[type="radio"]::after,
+    .be-chk input[type="checkbox"]::before, .be-chk input[type="checkbox"]::after { content: none !important; display: none !important; }
+    .be-chk { display: inline-flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; font-weight: 400; }
+
+    /* 계좌현황 팝업 */
+    .be-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, .45); z-index: 2000; display: none; }
+    .be-modal.on { display: flex; align-items: center; justify-content: center; }
+    .be-modal-box { background: #fff; width: min(1200px, 94vw); max-height: 88vh; display: flex; flex-direction: column;
+                    border-radius: 8px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    .be-modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .be-modal-head h3 { margin: 0; font-size: 17px; }
+    .be-modal-box .be-mgrid { flex: 1 1 auto; min-height: 300px; overflow: hidden; display: flex; flex-direction: column; }
+    .be-modal-box .be-mgrid #accGrid { flex: 1 1 auto; min-height: 0; overflow: auto; }
+    /* 팝업 조회줄 : 칸을 줄여 한 줄에 놓고 버튼은 오른쪽 끝 */
+    #accModal .ms-top { display: flex; flex-wrap: nowrap; align-items: center; gap: 10px; }
+    #accModal .ms-cdt { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; margin: 0; }
+    #accModal .ms-cdt label { white-space: nowrap; }
+    #accModal .ms-cdt input { width: 110px !important; min-width: 0; }
+    #accModal .ms-cdt select { width: 100px !important; min-width: 0; }
+    #accModal .ms-actions { margin-left: auto; display: flex; gap: 6px; flex: 0 0 auto; }
+  </style>
+
+  <div class="layout-contents">
+    <!-- 화면 모양 : 거래처 정보(definition/company.html)와 같은 틀 — 왼쪽 목록 상자 · 오른쪽 탭 상자 -->
+    <div style="display: flex; gap: 5px">
+      <!-- 왼쪽 : 조회조건 + 목록 (원본 d_j3010_condition · d_j3010_list) -->
+      <section class="section be-list" style="width: 40%;">
+        <div class="section-top">
+          <div class="search-wrap">
+            <dl><dt><label for="cPernm">소득자명</label></dt>
+              <dd><input class="form-control2" id="cPernm" type="text" maxlength="20"/></dd></dl>
+            <dl><dt><label for="cRnum">주민번호</label></dt>
+              <dd><input class="form-control2" id="cRnum" type="text" maxlength="14"/></dd></dl>
+            <dl><dt><label for="cClafi">소득구분</label></dt>
+              <dd><select class="form-control2" id="cClafi"><option value="1">사업소득</option><option value="2">기타소득</option><option value="%">전체</option></select></dd></dl>
+            <dl><dt><label for="cConyn">계약</label></dt>
+              <dd><select class="form-control2" id="cConyn"><option value="0">계약중</option><option value="1">만료</option><option value="%">전체</option></select></dd></dl>
+            <dl><dt><label for="cGubun1">구분</label></dt>
+              <dd><select class="form-control2" id="cGubun1"></select></dd></dl>
+            <dl><dt><label for="cGubun2">상세</label></dt>
+              <dd><select class="form-control2" id="cGubun2"></select></dd></dl>
+            <dl><dt><span class="eq"></span></dt>
+              <dd class="be-srch-btns">
+                <a class="btn btn-delete" id="btnSearch" title="조회 (F4)">
+                  <img th:src="@{/images/icon/btn-srch.svg}" alt="검색 아이콘"> 검색</a>
+                <a class="btn btn-delete" id="btnExcel" title="엑셀">엑셀</a>
+                <a class="btn btn-delete" id="btnAccount" title="계좌현황">계좌현황</a>
+              </dd></dl>
+          </div>
+        </div>
+        <div class="container-fluid">
+          <div id="grid"></div>
+          <table class="be-sum" id="sum"></table>
+        </div>
+      </section>
+
+      <!-- 오른쪽 : 입력폼 (원본 d_j3010_input) -->
+      <section class="section be-detail" style="width: 60%;">
+        <div class="tab-head">
+            <div class="button-wrap button-list">
+              <ul>
+                <li><button class="btn-excellt btn-default y_write_auth" id="btnNew" type="button"><i class="fas fa-plus"></i>신규등록</button></li>
+                <li><button class="btn-delete btn-danger y_write_auth" id="btnDelete" type="button"><i class="fas fa-trash"></i>삭제</button></li>
+                <li><button class="btn-excellt btn-defaul y_write_auth" id="btnSave" title="저장 (Ctrl+S)" type="button"><i class="fas fa-save"></i>저장</button></li>
+              </ul>
+            </div>
+          </div>
+          <div class="be-body">
+              <div class="be-form-wrap">
+                <p class="be-state" id="state"></p>
+                <table class="write-table be-form" id="form">
+                  <caption style="text-align: left; margin-bottom: 8px;">상세테이블</caption>
+                  <colgroup><col style="width:130px"/><col/><col style="width:120px"/><col/></colgroup>
+                  <tbody>
+                  <tr>
+                    <th><label for="condate">계약일자</label></th>
+                    <td><input id="condate" type="date"/></td>
+                    <th><label for="clafiNm">소득구분</label></th>
+                    <td><div class="be-inline"><input id="clafiNm" type="text" readonly/>
+                      <button class="btn-excellt btn-default y_write_auth" id="btnCopy" type="button" title="사업소득 ↔ 기타소득 복사">복사</button></div></td>
+                  </tr>
+                  <tr>
+                    <th><label for="saupnum">사업자등록번호</label></th>
+                    <td><input id="saupnum" type="text" maxlength="12" placeholder="000-00-00000"/></td>
+                    <th><label for="pername">성명</label></th>
+                    <td><input id="pername" type="text" maxlength="30"/></td>
+                  </tr>
+                  <tr>
+                    <th><label for="comname"><span class="eq">*</span>사업소득자명칭</label></th>
+                    <td colspan="3"><input id="comname" type="text" maxlength="50"/></td>
+                  </tr>
+                  <tr>
+                    <th><label>거주자구분</label></th>
+                    <td><div class="be-radio">
+                      <label><input name="resclafi" type="radio" value="1"/><span>거주자</span></label>
+                      <label><input name="resclafi" type="radio" value="9"/><span>비거주자</span></label></div></td>
+                    <th><label>외국인구분</label></th>
+                    <td><div class="be-radio">
+                      <label><input name="foreryn" type="radio" value="1"/><span>내국인</span></label>
+                      <label><input name="foreryn" type="radio" value="2"/><span>외국인</span></label></div></td>
+                  </tr>
+                  <tr>
+                    <th><label for="rnum">주민등록번호</label></th>
+                    <td><input id="rnum" type="text" maxlength="14" placeholder="000000-0000000"/></td>
+                    <th><label for="forernum">외국인번호</label></th>
+                    <td><input id="forernum" type="text" maxlength="30"/></td>
+                  </tr>
+                  <tr>
+                    <th><label for="gubun1">구분</label></th>
+                    <td><select id="gubun1"></select></td>
+                    <th><label for="gubun2">상세</label></th>
+                    <td><select id="gubun2"></select></td>
+                  </tr>
+                  <tr>
+                    <th><label for="bankcd">은행</label></th>
+                    <td><select id="bankcd"></select></td>
+                    <th><label for="accnum">계좌</label></th>
+                    <td><input id="accnum" type="text" maxlength="30"/></td>
+                  </tr>
+                  <tr>
+                    <th><label for="conyn">계약만료</label></th>
+                    <td colspan="3"><label class="be-chk"><input id="conyn" type="checkbox"/><span>만료</span></label></td>
+                  </tr>
+                  <tr>
+                    <th rowspan="2"><label for="comaddr1">사업장소재지</label></th>
+                    <td colspan="3"><div class="be-inline"><input class="be-zip" id="comzipcd" type="text" maxlength="6" readonly placeholder="우편번호"/>
+                      <input id="comaddr1" type="text" maxlength="50"/>
+                      <button class="btn-excellt btn-default" type="button" onclick="page.findZip('comzipcd','comaddr1','comaddr2')">찾기</button></div></td>
+                  </tr>
+                  <tr><td colspan="3"><input id="comaddr2" type="text" maxlength="50" placeholder="상세주소"/></td></tr>
+                  <tr>
+                    <th rowspan="2"><label for="addr1">주소</label></th>
+                    <td colspan="3"><div class="be-inline"><input class="be-zip" id="zipcd" type="text" maxlength="6" readonly placeholder="우편번호"/>
+                      <input id="addr1" type="text" maxlength="50"/>
+                      <button class="btn-excellt btn-default" type="button" onclick="page.findZip('zipcd','addr1','addr2')">찾기</button></div></td>
+                  </tr>
+                  <tr><td colspan="3"><input id="addr2" type="text" maxlength="50" placeholder="상세주소"/></td></tr>
+                  <tr>
+                    <th><label>소득 구분</label></th>
+                    <td colspan="3"><div class="be-radio grid" id="jobBox"></div></td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- 계좌현황 (원본 w_j3010_list / d_j3010_list02) -->
+  <div class="be-modal ms-page" id="accModal">
+    <div class="be-modal-box">
+      <div class="be-modal-head">
+        <h3>계좌현황</h3>
+        <button class="ms-btn" type="button" onclick="page.closeAccount()">닫기</button>
+      </div>
+      <div class="ms-top">
+        <div class="ms-cdt"><label for="aPernm">소득자명</label><input id="aPernm" type="text" maxlength="20"/></div>
+        <div class="ms-cdt"><label for="aRnum">주민번호</label><input id="aRnum" type="text" maxlength="14"/></div>
+        <div class="ms-cdt"><label for="aClafi">소득구분</label>
+          <select id="aClafi"><option value="%">전체</option><option value="1">사업소득</option><option value="2">기타소득</option></select></div>
+        <div class="ms-cdt"><label for="aConyn">계약</label>
+          <select id="aConyn"><option value="0">계약중</option><option value="1">만료</option><option value="%">전체</option></select></div>
+        <div class="ms-cdt"><label for="aGubun1">구분</label><select id="aGubun1"></select></div>
+        <div class="ms-cdt"><label for="aGubun2">상세</label><select id="aGubun2"></select></div>
+        <div class="ms-actions">
+          <button class="ms-btn solid" type="button" onclick="page.searchAccount()">조회</button>
+          <button class="ms-btn" type="button" onclick="page.excelAccount()">엑셀</button>
+        </div>
+      </div>
+      <div class="be-mgrid"><div id="accGrid"></div></div>
+      <div class="et-foot"><span id="accCount"></span></div>
+    </div>
+  </div>
+</th:block>
+
+<th:block layout:fragment="scripts">
+  <script th:src="@{/js/common/edit-table.js}"></script>
+  <script th:src="@{/js/common/edit-table-custom.js}"></script>
+  <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+  <script type="text/javascript">
+   // 원본 jobclafi 코드표 (42 없음). 원본 화면처럼 두 줄로 놓는다
+   const JOBS = [
+    {v: '41', n: '변호사'}, {v: '45', n: '저작자'},
+    {v: '43', n: '의사'}, {v: '47', n: '직업운동자'},
+    {v: '44', n: '건축사·기술사'}, {v: '48', n: '보험모집인'},
+    {v: '46', n: '가수·배우·탤런트'}, {v: '49', n: '기타'}
+   ];
+   const CLAFI_NM = {'1': '사업소득', '2': '기타소득'};
+   const MY_CLAFI = '1';   // 이 화면이 저장하는 소득구분
+
+   const digits = v => String(v == null ? '' : v).replace(/[^0-9]/g, '');
+   const fmtSaup = v => { const d = digits(v); return d.length === 10 ? d.slice(0, 3) + '-' + d.slice(3, 5) + '-' + d.slice(5) : (v || ''); };
+   const fmtRnum = v => { const d = digits(v); return d.length === 13 ? d.slice(0, 6) + '-' + d.slice(6) : (v || ''); };
+   const fmtDate = v => { const d = digits(v); return d.length === 8 ? d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6) : ''; };
+   const todayStr = () => { const t = new Date(); return t.getFullYear() + String(t.getMonth() + 1).padStart(2, '0') + String(t.getDate()).padStart(2, '0'); };
+   // 주민번호 끝자리 (원본 gf_check_reginum 과 같은 규칙. 2020.10 이후 발급번호는 맞지 않을 수 있다)
+   const rrnOk = n => {
+    if (!/^\d{13}$/.test(n)) return false;
+    const w = [2, 3, 4, 5, 6, 7, 8, 9, 2, 3, 4, 5];
+    let s = 0; for (let i = 0; i < 12; i++) s += Number(n[i]) * w[i];
+    return (11 - s % 11) % 10 === Number(n[12]);
+   };
+
+   class EarnerPage {
+    constructor() {
+     this.url = '/api/payroll/bizinc_earner';
+     this.codes = {gubun1: [], gubun2: [], bank: []};
+     this.cur = null;          // 오른쪽에 불러온 원본 행 (신규면 null)
+     this.snap = '';           // 불러온 직후 입력값 — 고쳤는지 비교용
+
+     this.grid = new EditTable('#grid', {
+      saveKey: 'bizinc_earner', emptyText: '자료가 없습니다. [신규]로 추가하세요.',
+      columns: [
+       {key: '_regno', header: '등록번호', width: 150, align: 'center', readOnly: true},
+       {key: 'comname', header: '소득자 명칭', width: '1*', readOnly: true, wrap: true},
+       {key: 'clafi', header: '구분', width: 80, align: 'center', readOnly: true,
+        options: [{v: '1', n: '사업소득'}, {v: '2', n: '기타소득'}], format: v => CLAFI_NM[v] || v}
+      ],
+      onSelect: row => this.onSelect(row)
+     });
+
+     // 원본 d_j3010_list02 — 은행 대량이체 양식 (TXT1~4 는 빈 칸)
+     this.accGrid = new EditTable('#accGrid', {
+      saveKey: 'bizinc_account', countEl: '#accCount', emptyText: '자료가 없습니다.',
+      columns: [
+       {key: 'banknm', header: '은행명', width: 120, readOnly: true},
+       {key: 'accnum', header: '계좌번호', width: 160, readOnly: true},
+       {key: '_t1', header: 'TXT1', width: 55, readOnly: true},
+       {key: '_t2', header: 'TXT2', width: 55, readOnly: true},
+       {key: '_t3', header: 'TXT3', width: 55, readOnly: true},
+       {key: '_t4', header: 'TXT4', width: 55, readOnly: true},
+       {key: '_name', header: '이름', width: 110, readOnly: true},
+       {key: '_regno', header: '주민번호', width: 140, align: 'center', readOnly: true},
+       {key: 'comname', header: '소득자명', width: '1*', readOnly: true},
+       {key: '_accDigits', header: '계좌번호', width: 160, readOnly: true}
+      ]
+     });
+
+     $('#jobBox').html(JOBS.map(j =>
+      '<label><input name="jobclafi" type="radio" value="' + j.v + '"/><span>' + j.n + '</span></label>').join(''));
+    }
+
+    init() {
+     AjaxUtil.getAsyncData(this.url + '/codes', {}, res => {
+      this.codes = (res && res.data) || this.codes;
+      const fill = (sel, list, first) => $(sel).html('<option value="">' + first + '</option>' +
+       (list || []).map(o => '<option value="' + o.v + '">' + o.n + '</option>').join(''));
+      fill('#cGubun1', this.codes.gubun1, '전체'); fill('#cGubun2', this.codes.gubun2, '전체');
+      fill('#aGubun1', this.codes.gubun1, '전체'); fill('#aGubun2', this.codes.gubun2, '전체');
+      fill('#gubun1', this.codes.gubun1, ''); fill('#gubun2', this.codes.gubun2, '');
+      fill('#bankcd', this.codes.bank, '');
+      this.search();
+     });
+
+     $('#btnSearch').on('click', () => this.guard(() => this.search()));
+     $('#btnNew').on('click', () => this.guard(() => this.newRow()));
+     $('#btnSave').on('click', () => this.save());
+     $('#btnDelete').on('click', () => this.remove());
+     $('#btnCopy').on('click', () => this.copy());
+     $('#btnExcel').on('click', () => this.excel());
+     $('#btnAccount').on('click', () => this.openAccount());
+     $('#cPernm, #cRnum').on('keydown', e => { if (e.key === 'Enter') $('#btnSearch').click(); });
+     $('#aPernm, #aRnum').on('keydown', e => { if (e.key === 'Enter') this.searchAccount(); });
+     $('#saupnum').on('blur', function () { this.value = fmtSaup(this.value); });
+     $('#rnum').on('blur', function () { this.value = fmtRnum(this.value); });
+     $(document).on('keydown', e => {
+      if (e.key === 'F4') { e.preventDefault(); $('#btnSearch').click(); }
+      if (e.ctrlKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); this.save(); }
+     });
+    }
+
+    params(p) {
+     const rn = $('#' + p + 'Rnum').val().trim();
+     return {
+      pernm: $('#' + p + 'Pernm').val().trim(), rnum: digits(rn) || rn,
+      clafi: $('#' + p + 'Clafi').val(), conyn: $('#' + p + 'Conyn').val(),
+      gubun1: $('#' + p + 'Gubun1').val(), gubun2: $('#' + p + 'Gubun2').val()
+     };
+    }
+
+    // 조회 (원본 ue_retrieve). 0건이면 신규 상태로.
+    search(selectSeq) {
+     AjaxUtil.getAsyncData(this.url + '/read', this.params('c'), res => {
+      const list = (res && res.data) || [];
+      list.forEach(r => r._regno = r.saupnum ? fmtSaup(r.saupnum)
+       : (r.foreryn === '2' && r.forernum ? r.forernum : fmtRnum(r.rnum)));
+      this.cur = null; this.snap = '';
+      this.grid.setData(list);
+      this.showSum(list);
+      const want = selectSeq ? this.grid.findRow(r => r.seq === selectSeq) : null;
+      const first = want || (list.length ? this.grid.getView()[0] : null);
+      if (first) this.grid.select(first); else this.newRow();
+     });
+    }
+
+    // 원본 board_1 / board_2 : 구분별 계 · 총인원
+    showSum(list) {
+     const c1 = list.filter(r => r.clafi === '1').length, c2 = list.filter(r => r.clafi === '2').length;
+     // 목록 칸 너비(등록번호 · 명칭 · 구분)와 맞춰 「계」는 앞 두 칸, 건수는 구분 칸에
+     const w = $('#grid col').map((i, c) => c.style.width).get();
+     const cols = '<colgroup><col/><col style="width:' + (w[2] || '80px') + '"/></colgroup>';
+     const row = (label, n, cls) => '<tr class="' + (cls || '') + '"><td class="lbl">' + label + '</td><td class="cnt">' + n + '</td></tr>';
+     // 소득구분을 전체로 조회하면 원본처럼 구분별 「계」가 따로 나온다
+     let html = cols;
+     if (c1 && c2) html += row('계 (사업소득)', c1) + row('계 (기타소득)', c2);
+     else html += row('계', list.length);
+     html += row('총인원', list.length, 'total');
+     $('#sum').html(html);
+    }
+
+    // ── 입력폼 ──────────────────────────────
+    readForm() {
+     return {
+      seq: this.cur ? this.cur.seq : '',
+      condate: digits($('#condate').val()),
+      saupnum: digits($('#saupnum').val()),
+      comname: $('#comname').val().trim(),
+      resclafi: $('input[name=resclafi]:checked').val() || '1',
+      foreryn: $('input[name=foreryn]:checked').val() || '1',
+      rnum: digits($('#rnum').val()),
+      forernum: $('#forernum').val().trim(),
+      pername: $('#pername').val().trim(),
+      conyn: $('#conyn').is(':checked') ? '1' : '0',
+      gubun1: $('#gubun1').val() || '', gubun2: $('#gubun2').val() || '',
+      bankcd: $('#bankcd').val() || '', accnum: $('#accnum').val().trim(),
+      comzipcd: $('#comzipcd').val().trim(), comaddr1: $('#comaddr1').val().trim(), comaddr2: $('#comaddr2').val().trim(),
+      zipcd: $('#zipcd').val().trim(), addr1: $('#addr1').val().trim(), addr2: $('#addr2').val().trim(),
+      jobclafi: $('input[name=jobclafi]:checked').val() || '49'
+     };
+    }
+
+    fillForm(r) {
+     r = r || {};
+     $('#condate').val(fmtDate(r.condate));
+     $('#clafiNm').val(CLAFI_NM[r.clafi || MY_CLAFI] || '');
+     $('#saupnum').val(fmtSaup(r.saupnum));
+     $('#comname').val(r.comname || '');
+     $('input[name=resclafi][value="' + (r.resclafi || '1') + '"]').prop('checked', true);
+     $('input[name=foreryn][value="' + (r.foreryn || '1') + '"]').prop('checked', true);
+     $('#rnum').val(fmtRnum(r.rnum));
+     $('#forernum').val(r.forernum || '');
+     $('#pername').val(r.pername || '');
+     $('#conyn').prop('checked', r.conyn === '1');
+     $('#gubun1').val(r.gubun1 || ''); $('#gubun2').val(r.gubun2 || '');
+     $('#bankcd').val(r.bankcd || ''); $('#accnum').val(r.accnum || '');
+     $('#comzipcd').val(r.comzipcd || ''); $('#comaddr1').val(r.comaddr1 || ''); $('#comaddr2').val(r.comaddr2 || '');
+     $('#zipcd').val(r.zipcd || ''); $('#addr1').val(r.addr1 || ''); $('#addr2').val(r.addr2 || '');
+     $('input[name=jobclafi][value="' + (r.jobclafi || '49') + '"]').prop('checked', true);
+
+     // 기타소득자는 이 화면에서 고치지 않는다 (원본 입력폼 조회가 clafi = '1')
+     const other = !!(r.clafi && r.clafi !== MY_CLAFI);
+     $('#form input, #form select').not('#clafiNm').prop('disabled', other);
+     $('#btnCopy').prop('disabled', !this.cur);
+     $('#state').html(!this.cur ? '<b>신규</b> 입력 중입니다.'
+      : other ? '기타소득자입니다. 수정은 기타소득자등록 화면에서 하세요. [복사]로 사업소득자로 옮길 수 있습니다.'
+      : '등록번호 <b>' + this.cur.seq + '</b>');
+     this.snap = JSON.stringify(this.readForm());
+    }
+
+    isOther() { return !!(this.cur && this.cur.clafi !== MY_CLAFI); }
+    dirty() { return this.snap !== '' && !this.isOther() && JSON.stringify(this.readForm()) !== this.snap; }
+
+    // 고친 내용이 있으면 저장할지 묻고 next 실행 (원본 ue_Column_Status 확인)
+    guard(next) {
+     if (!this.dirty()) { next(); return; }
+     Alert.confirm('확인', '수정된 자료가 있습니다.\n저장하시겠습니까?', () => this.save(next), () => next());
+    }
+
+    onSelect(row) {
+     if (!row || row === this.cur) return;
+     const go = () => { this.cur = row; this.fillForm(row); };
+     if (this.dirty()) Alert.confirm('확인', '수정된 자료가 있습니다.\n저장하시겠습니까?', () => this.save(go), () => go());
+     else go();
+    }
+
+    // 신규 (원본 ue_new) : 계약일자 오늘, 계약중
+    newRow() {
+     this.cur = null;
+     this.fillForm({clafi: MY_CLAFI, condate: todayStr(), conyn: '0', resclafi: '1', foreryn: '1', jobclafi: '49'});
+     $('#condate').focus();
+    }
+
+    // 저장 (원본 ue_Validation + ue_save). after 가 있으면 저장 후 그 동작을 이어서 한다(다른 행 이동 등)
+    save(after) {
+     if (this.isOther()) { Alert.alert('', '기타소득자는 기타소득자등록 화면에서 저장하세요.'); return; }
+     const f = this.readForm();
+     if (!f.comname) { Alert.alert('확인', '사업소득자명칭을 입력하십시오.'); $('#comname').focus(); return; }
+     if (f.saupnum && f.saupnum.length !== 10) { Alert.alert('확인', '사업자등록번호는 10자리입니다.'); $('#saupnum').focus(); return; }
+     if (f.rnum && f.rnum.length !== 13) { Alert.alert('확인', '주민등록번호를 13자리 모두 입력하십시오.'); $('#rnum').focus(); return; }
+
+     const send = forceFlag => {
+      AjaxUtil.postJsonData(this.url + '/save', {row: f, force: forceFlag || ''}, res => {
+       if (!res || !res.success) { Alert.alert('확인', (res && res.message) || '저장 중 오류가 발생했습니다.'); return; }
+       const d = res.data || {};
+       if (d.confirm === 'saupnum') {
+        // 원본 : 이미 등록된 사업자번호 → [아니오]면 그 행으로 이동
+        Alert.confirm('확인', '이미 등록되었습니다. 계속 진행하시겠습니까?', () => send('1'), () => {
+         const ex = this.grid.findRow(r => r.seq === d.seq);
+         if (ex) { this.snap = JSON.stringify(this.readForm()); this.grid.select(ex); }
+        });
+        return;
+       }
+       this.snap = JSON.stringify(this.readForm());
+       if (typeof after === 'function') {
+        // 다른 행으로 옮기던 중이면 목록만 새로 고치고 이어서 진행
+        Alert.alert('', '저장되었습니다.', () => after());
+        return;
+       }
+       Alert.alert('', '저장되었습니다.', () => this.search(d.seq));
+      });
+     };
+
+     // 내국인인데 주민번호 끝자리 규칙이 맞지 않으면 확인 (원본은 막았으나 2020.10 이후 발급번호 때문에 확인으로 바꿈)
+     if (f.rnum && f.foreryn === '1' && !rrnOk(f.rnum)) {
+      Alert.confirm('확인', '주민등록번호 형식이 맞지 않습니다.\n그대로 저장하시겠습니까?', () => send(''), () => $('#rnum').focus());
+     } else send('');
+    }
+
+    // 삭제 (원본 ue_delete) — 급여자료(TB_J3011)가 있으면 서버에서 막는다
+    remove() {
+     if (!this.cur) { this.newRow(); return; }
+     if (this.isOther()) { Alert.alert('', '기타소득자는 기타소득자등록 화면에서 삭제하세요.'); return; }
+     const r = this.cur;
+     Alert.confirm('삭제', '▶ 사업소득자 정보를 삭제합니다.\n   ♣ 등록번호 : ' + r.seq + '\n   ♣ 명    칭 : ' + (r.comname || ''), () => {
+      AjaxUtil.postJsonData(this.url + '/delete', {seq: r.seq}, res => {
+       if (res && res.success) { this.snap = ''; Alert.alert('', '삭제되었습니다.', () => this.search()); }
+       else Alert.alert('확인', (res && res.message) || '삭제 중 오류가 발생했습니다.');
+      });
+     });
+    }
+
+    // 복사 (원본 입력폼 [복사]) : 사업소득 ↔ 기타소득
+    copy() {
+     if (!this.cur) { Alert.alert('', '저장된 소득자를 고른 뒤 복사하세요.'); return; }
+     const r = this.cur;
+     const msg = r.clafi === '1' ? '기타소득자로 복사하시겠습니까?' : '사업소득자로 복사하시겠습니까?';
+     Alert.confirm('확인', msg, () => {
+      AjaxUtil.postJsonData(this.url + '/copy', {clafi: r.clafi, seq: r.seq}, res => {
+       if (res && res.success) Alert.alert('', '복사되었습니다.', () => this.search(r.seq));
+       else Alert.alert('확인', (res && res.message) || '복사 중 오류가 발생했습니다.');
+      });
+     });
+    }
+
+    // 엑셀 (원본 d_j3010_list_exl 열)
+    excel() {
+     if (!this.grid.getView().length) { Alert.alert('', '내보낼 자료가 없습니다.'); return; }
+     const name = (list, v) => ((list || []).find(o => o.v === v) || {}).n || (v || '');
+     this.grid.exportXlsx('사업소득자목록', [
+      {key: 'condate', header: '계약일자', format: v => fmtDate(v)},
+      {key: 'saupnum', header: '사업자번호', format: v => fmtSaup(v)},
+      {key: 'comname', header: '소득자명칭'},
+      {key: 'rnum', header: '주민번호', format: v => fmtRnum(v)},
+      {key: 'forernum', header: '외국인번호'},
+      {key: 'pername', header: '성명'},
+      {key: 'gubun1', header: '구분', format: v => name(this.codes.gubun1, v)},
+      {key: 'gubun2', header: '상세', format: v => name(this.codes.gubun2, v)},
+      {key: 'banknm', header: '은행'},
+      {key: 'accnum', header: '계좌'},
+      {key: 'comaddr1', header: '주소', format: (v, r) => ((r.comaddr1 || '') + ' ' + (r.comaddr2 || '')).trim()},
+      {key: 'jobclafi', header: 'Jobclafi', format: v => name(JOBS, v)}
+     ]);
+    }
+
+    // 우편번호 찾기
+    findZip(zipId, addrId, addr2Id) {
+     if ($('#' + zipId).prop('disabled')) return;
+     new daum.Postcode({
+      oncomplete: data => {
+       $('#' + zipId).val(data.zonecode);
+       $('#' + addrId).val(data.roadAddress || data.jibunAddress);
+       $('#' + addr2Id).focus();
+      }
+     }).open();
+    }
+
+    // ── 계좌현황 ────────────────────────────
+    openAccount() {
+     // 원본 창을 열 때 소득구분 기본값 = 전체
+     $('#aPernm').val($('#cPernm').val()); $('#aRnum').val($('#cRnum').val());
+     $('#aClafi').val('%'); $('#aConyn').val($('#cConyn').val());
+     $('#aGubun1').val($('#cGubun1').val()); $('#aGubun2').val($('#cGubun2').val());
+     $('#accModal').addClass('on');
+     this.searchAccount();
+    }
+
+    closeAccount() { $('#accModal').removeClass('on'); }
+
+    searchAccount() {
+     AjaxUtil.getAsyncData(this.url + '/read', this.params('a'), res => {
+      const list = (res && res.data) || [];
+      list.forEach(r => {
+       r._t1 = ''; r._t2 = ''; r._t3 = ''; r._t4 = '';
+       r._name = r.pername || r.comname || '';                                // 원본 comname_1 (확인 전 기본안 : 성명, 없으면 명칭)
+       r._regno = r.foreryn === '1' ? fmtRnum(r.rnum) : (r.forernum || '');   // if(foreryn = '1', rnum, forernum)
+       r._accDigits = digits(r.accnum);                                       // 원본 dec(accnum) (기본안 : 숫자만, 앞자리 0 유지)
+      });
+      this.accGrid.setData(list);
+     });
+    }
+
+    excelAccount() {
+     if (!this.accGrid.getView().length) { Alert.alert('', '내보낼 자료가 없습니다.'); return; }
+     this.accGrid.exportXlsx('계좌현황');   // .xlsx : 계좌번호 앞자리 0 이 지워지지 않음
+    }
+   }
+
+   const page = new EarnerPage();
+   $(document).ready(() => page.init());
+  </script>
+</th:block>
+</html>
